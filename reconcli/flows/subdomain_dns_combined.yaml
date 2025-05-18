@@ -1,0 +1,32 @@
+- name: Create Output Directory
+  command: mkdir -p {{Output}}
+
+- name: Collect with Subfinder
+  command: subfinder -all -d {{Target}} -o {{Output}}/subfinder.txt
+
+- name: Collect with Amass
+  command: amass enum -passive -config ~/.config/amass/config.ini -d {{Target}} -o {{Output}}/amass.txt
+
+- name: Collect with Assetfinder
+  command: assetfinder --subs-only {{Target}} > {{Output}}/assetfinder.txt
+
+- name: Collect with Findomain
+  command: findomain --quiet -t {{Target}} -u {{Output}}/findomain.txt
+
+- name: Merge all subdomains
+  command: cat {{Output}}/*.txt | sort -u > {{Output}}/subs_all.txt
+
+- name: Generate permutations with AlterX
+  command: alterx -enrich -silent -l {{Output}}/subs_all.txt -o {{Output}}/permutations_limited.txt -limit 1000000
+
+- name: Resolve Subdomains with DNSx
+  command: dnsx -silent -resp -l {{Output}}/permutations_limited.txt -r {{Resolvers}} -o {{Output}}/subs_resolved.txt
+
+- name: Tag resolved subdomains
+  command: python3 /home/jarek/reconcli_dnscli_full/reconcli/tagger.py --input {{Output}}/subs_resolved.txt --output {{Output}}/subs_tagged.json
+
+- name: Enrich IPs
+  command: python3 /home/jarek/reconcli_dnscli_full/reconcli/enricher.py --input {{Output}}/subs_tagged.json --output {{Output}}/subs_enriched_full.json
+
+- name: Generate Markdown Report
+  command: python3 /home/jarek/reconcli_dnscli_full/reconcli/mdreport.py --input {{Output}}/subs_enriched_full.json --output {{Output}}/dns_summary.md

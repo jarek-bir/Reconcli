@@ -1,0 +1,2 @@
+[console_scripts]
+reconcli = reconcli.main:cli
