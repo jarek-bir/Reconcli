@@ -53,6 +53,18 @@ class NotificationManager:
 
         return success
 
+    def send_url_results(self, results: List[Dict], scan_metadata: Dict) -> bool:
+        """Send URL discovery scan results to configured notification channels"""
+        success = True
+
+        if self.slack_webhook:
+            success &= self._send_slack_url_notification(results, scan_metadata)
+
+        if self.discord_webhook:
+            success &= self._send_discord_url_notification(results, scan_metadata)
+
+        return success
+
     def _send_slack_vhost_notification(
         self, domain: str, target_ip: str, results: List[Dict], metadata: Dict
     ) -> bool:
@@ -458,6 +470,170 @@ class NotificationManager:
                 click.echo(f"❌ Failed to send Discord notification: {e}")
             return False
 
+    def _send_slack_url_notification(self, results: List[Dict], metadata: Dict) -> bool:
+        """Send URL discovery results to Slack"""
+        if not self.slack_webhook:
+            return False
+
+        try:
+            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+            # Build Slack message for URL discovery results
+            total_urls = metadata.get("total_urls_found", len(results))
+            domains_processed = metadata.get("domains_processed", 1)
+            tools_used = metadata.get("tools_used", [])
+
+            color = "good" if total_urls > 0 else "warning"
+            title = f"🔗 URL Discovery: {total_urls} URLs found"
+
+            fields = [
+                {"title": "Total URLs", "value": f"`{total_urls}`", "short": True},
+                {
+                    "title": "Domains Processed",
+                    "value": f"`{domains_processed}`",
+                    "short": True,
+                },
+                {
+                    "title": "Tools Used",
+                    "value": f"`{', '.join(tools_used) if tools_used else 'None'}`",
+                    "short": False,
+                },
+            ]
+
+            # Add sample URLs if available
+            if results and len(results) > 0:
+                sample_urls = []
+                for result in results[:5]:  # Show first 5 URLs
+                    if isinstance(result, dict):
+                        url = result.get("url", str(result))
+                    else:
+                        url = str(result)
+                    sample_urls.append(f"• `{url}`")
+
+                if sample_urls:
+                    fields.append(
+                        {
+                            "title": "Sample URLs",
+                            "value": "\n".join(sample_urls)
+                            + (
+                                f"\n... and {total_urls - len(sample_urls)} more"
+                                if total_urls > 5
+                                else ""
+                            ),
+                            "short": False,
+                        }
+                    )
+
+            attachment = {
+                "color": color,
+                "title": title,
+                "fields": fields,
+                "footer": "Reconcli URL Discovery",
+                "ts": int(datetime.now().timestamp()),
+            }
+
+            payload = {"attachments": [attachment]}
+
+            response = httpx.post(self.slack_webhook, json=payload, timeout=10)
+            response.raise_for_status()
+
+            if self.verbose:
+                click.echo("📱 Slack notification sent successfully")
+            return True
+
+        except Exception as e:
+            if self.verbose:
+                click.echo(f"❌ Failed to send Slack notification: {e}")
+            return False
+
+    def _send_discord_url_notification(
+        self, results: List[Dict], metadata: Dict
+    ) -> bool:
+        """Send URL discovery results to Discord"""
+        if not self.discord_webhook:
+            return False
+
+        try:
+            timestamp = datetime.now().isoformat()
+
+            # Build Discord embed for URL discovery results
+            total_urls = metadata.get("total_urls_found", len(results))
+            domains_processed = metadata.get("domains_processed", 1)
+            tools_used = metadata.get("tools_used", [])
+
+            color = (
+                0x00FF00 if total_urls > 0 else 0xFFAA00
+            )  # Green if URLs found, amber if none
+            title = f"🔗 URL Discovery Complete"
+            description = (
+                f"Found {total_urls} URLs across {domains_processed} domain(s)"
+            )
+
+            fields = [
+                {
+                    "name": "Total URLs",
+                    "value": f"`{total_urls}`",
+                    "inline": True,
+                },
+                {
+                    "name": "Domains Processed",
+                    "value": f"`{domains_processed}`",
+                    "inline": True,
+                },
+                {
+                    "name": "Tools Used",
+                    "value": f"`{', '.join(tools_used) if tools_used else 'None'}`",
+                    "inline": False,
+                },
+            ]
+
+            # Add sample URLs if available
+            if results and len(results) > 0:
+                sample_urls = []
+                for result in results[:5]:  # Show first 5 URLs
+                    if isinstance(result, dict):
+                        url = result.get("url", str(result))
+                    else:
+                        url = str(result)
+                    sample_urls.append(f"• `{url}`")
+
+                if sample_urls:
+                    fields.append(
+                        {
+                            "name": "Sample URLs",
+                            "value": "\n".join(sample_urls)
+                            + (
+                                f"\n... and {total_urls - len(sample_urls)} more"
+                                if total_urls > 5
+                                else ""
+                            ),
+                            "inline": False,
+                        }
+                    )
+
+            embed = {
+                "title": title,
+                "description": description,
+                "color": color,
+                "fields": fields,
+                "footer": {"text": "Reconcli URL Discovery"},
+                "timestamp": timestamp,
+            }
+
+            payload = {"embeds": [embed]}
+
+            response = httpx.post(self.discord_webhook, json=payload, timeout=10)
+            response.raise_for_status()
+
+            if self.verbose:
+                click.echo("📱 Discord notification sent successfully")
+            return True
+
+        except Exception as e:
+            if self.verbose:
+                click.echo(f"❌ Failed to send Discord notification: {e}")
+            return False
+
 
 def send_notification(notification_type: str, **kwargs) -> bool:
     """
@@ -489,6 +665,8 @@ def send_notification(notification_type: str, **kwargs) -> bool:
         return notifier.send_takeover_results(
             kwargs["results"], kwargs["scan_metadata"]
         )
+    elif notification_type == "url":
+        return notifier.send_url_results(kwargs["results"], kwargs["scan_metadata"])
     else:
         if verbose:
             click.echo(f"❌ Unknown notification type: {notification_type}")
