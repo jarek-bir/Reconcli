@@ -95,7 +95,7 @@ def save_outputs(domain, tagged, output_dir, save_markdown, save_json):
 
 
 @click.command()
-@click.option("--input", help="File with resolved subdomains or plain list")
+@click.option("--input", "--domain", help="File with resolved subdomains or plain list")
 @click.option(
     "--from-subs-resolved",
     is_flag=True,

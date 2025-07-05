@@ -13,6 +13,8 @@ reconcli/subdocli.py
 reconcli/tagger.py
 reconcli/takeovercli.py
 reconcli/tldrcli.py
+reconcli/tldrcli_optimized.py
+reconcli/tldrcli_optimized_module.py
 reconcli/url_tagger.py
 reconcli/urlcli.py
 reconcli/urlsorter.py

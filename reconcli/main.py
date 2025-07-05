@@ -13,6 +13,7 @@ from reconcli.takeovercli import takeovercli
 from reconcli.whoisfreakscli import cli as whoisfreaks_cli
 from reconcli.subdocli import subdocli
 from reconcli.tldrcli import cli as tldr_cli
+from reconcli.tldrcli_optimized_module import cli as tldr_opti_cli
 
 
 @click.group()
@@ -77,6 +78,10 @@ subdocli.short_help = "Comprehensive subdomain enumeration using multiple source
 # TLD Reconnaissance
 cli.add_command(tldr_cli, name="tldr")
 tldr_cli.short_help = "Alternative TLD reconnaissance and domain discovery"
+
+# TLD Reconnaissance (Optimized)
+cli.add_command(tldr_opti_cli, name="tldrcli-opti")
+tldr_opti_cli.short_help = "🚀 HIGH-PERFORMANCE TLD reconnaissance (11x faster)"
 
 
 if __name__ == "__main__":
