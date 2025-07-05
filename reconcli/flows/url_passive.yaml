@@ -1,0 +1,12 @@
+wayback: true
+gau: true
+katana: false
+gospider: false
+sitemap: false
+favicon: false
+extract_js: true
+js_scan: false
+save_json: true
+save_markdown: true
+tag_only: true
+dedupe: true

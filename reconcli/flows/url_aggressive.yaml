@@ -1,0 +1,25 @@
+gau: true
+wayback: true
+katana: true
+gospider: true
+sitemap: true
+favicon: true
+extract_js: true
+js_scan: true
+save_json: true
+save_markdown: true
+tag_only: false
+dedupe: true
+smart_filter: true
+
+gau:
+  flags: ["--subs", "--blacklist"]
+
+waybackurls:
+  flags: []
+
+katana:
+  flags: ["-jc", "-d", "10", "-ef", "jpg,png,svg,gif"]
+
+gospider:
+  flags: ["-c", "3", "-d", "2", "--robots", "--sitemap", "--js"]

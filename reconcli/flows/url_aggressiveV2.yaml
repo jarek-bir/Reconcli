@@ -1,0 +1,17 @@
+tools:
+  waybackurls:
+    enabled: true
+    flags: ["-p", "200", "-q"]
+  gau:
+    enabled: true
+    flags: ["--subs", "--retries", "2"]
+  katana:
+    enabled: true
+    flags: ["-jc", "-u"]
+  gospider:
+    enabled: true
+    flags: ["-c", "5", "-d", "2"]
+  sitemap:
+    enabled: true
+  favicon:
+    enabled: true
