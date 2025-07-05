@@ -189,30 +189,52 @@ reconcli jscli --input js_urls.txt --threads 10 \
 ```
 
 ### 🌍 TLD Reconnaissance (`tldr`)
-- **Alternative TLD Discovery**: Systematically check domains across 100+ TLD variations
-- **Comprehensive Coverage**: Popular, country, new generic, and business TLDs
-- **DNS & HTTP Probing**: Full resolution and HTTP/HTTPS status verification
-- **Custom TLD Lists**: Support for custom TLD files and category selection
+- **Massive TLD Coverage**: Systematically check domains across **2,672+ TLD variations**
+- **9 Comprehensive Categories**: Popular, country, new generic, business, crypto/blockchain, emerging tech, geographic, industry-specific, and specialized TLDs
+- **DNS & HTTP Probing**: Full resolution and HTTP/HTTPS status verification with detailed analytics
+- **Custom TLD Lists**: Support for custom TLD files and flexible category selection
 - **Wildcard Detection**: Automatic detection and filtering of wildcard domains
 - **Active Filtering**: Focus on active/responsive domains only
-- **WHOIS Integration**: Basic domain availability checking
-- **Professional Reports**: JSON and Markdown output with detailed statistics
+- **WHOIS Integration**: Basic domain availability checking with typosquatting detection
+- **Professional Reports**: JSON and Markdown output with detailed statistics and categorization
+- **Typosquatting Research**: Built-in variations and common typos for security research
+- **Cryptocurrency Focus**: Specialized blockchain, DeFi, and crypto-related TLD categories
+
+**🎯 TLD Category Breakdown**:
+- **Popular** (81): Classic TLDs like .com, .net, .org, plus trending ones (.app, .dev, .tech)
+- **Country** (253): Complete list of country-code TLDs from all regions
+- **New Generic** (582): Modern gTLDs covering technology, business, lifestyle, and entertainment
+- **Business** (423): Corporate structures, professional services, and industry-specific domains
+- **Crypto/Blockchain** (106): Cryptocurrency, DeFi, NFT, and blockchain-focused TLDs
+- **Emerging Tech** (107): AI, machine learning, IoT, quantum computing, and futuristic domains
+- **Geographic** (351): Major cities, regions, states, and geographic features worldwide
+- **Industry Specific** (559): Automotive, real estate, healthcare, legal, financial, and more
+- **Specialized** (210): Adult content, suspicious/alternative, typosquatting variations for security research
 
 ```bash
-# Basic TLD reconnaissance
+# Basic TLD reconnaissance with popular and country TLDs
 reconcli tldr -d example --categories popular,country --verbose
 
-# Advanced TLD scan with HTTP probing
+# Advanced comprehensive TLD scan across all 2,672+ TLDs
 reconcli tldr -d mycompany --categories all --http-check \
   --filter-active --save-json --verbose
 
-# Custom TLD list with wildcard exclusion
-reconcli tldr -d brand --tld-list custom_tlds.txt \
-  --exclude-wildcards --whois-check --save-markdown
+# Cryptocurrency and blockchain focused reconnaissance
+reconcli tldr -d cryptobrand --categories crypto_blockchain,emerging_tech \
+  --http-check --filter-active --save-markdown
 
-# Security-focused scan with notifications
-reconcli tldr -d target --categories business,new_generic \
+# Security research with typosquatting and specialized TLDs
+reconcli tldr -d target --categories specialized,geographic \
+  --exclude-wildcards --whois-check --verbose
+
+# Custom TLD list with industry-specific focus
+reconcli tldr -d brand --categories business,industry_specific \
   --http-check --filter-active --slack-webhook "https://hooks.slack.com/..."
+
+# Maximum coverage scan for comprehensive domain discovery
+reconcli tldr -d enterprise --categories all --threads 100 \
+  --http-check --whois-check --exclude-wildcards \
+  --save-json --save-markdown --verbose
 ```
 
 ### 🌐 Additional Core Modules
