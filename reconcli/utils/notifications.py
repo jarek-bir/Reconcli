@@ -65,6 +65,18 @@ class NotificationManager:
 
         return success
 
+    def send_dns_results(self, results: List[Dict], scan_metadata: Dict) -> bool:
+        """Send DNS resolution scan results to configured notification channels"""
+        success = True
+
+        if self.slack_webhook:
+            success &= self._send_slack_dns_notification(results, scan_metadata)
+
+        if self.discord_webhook:
+            success &= self._send_discord_dns_notification(results, scan_metadata)
+
+        return success
+
     def _send_slack_vhost_notification(
         self, domain: str, target_ip: str, results: List[Dict], metadata: Dict
     ) -> bool:
@@ -634,6 +646,162 @@ class NotificationManager:
                 click.echo(f"❌ Failed to send Discord notification: {e}")
             return False
 
+    def _send_slack_dns_notification(self, results: List[Dict], metadata: Dict) -> bool:
+        """Send DNS resolution results to Slack"""
+        if not self.slack_webhook:
+            return False
+
+        try:
+            # Build Slack message for DNS resolution results
+            total_subdomains = metadata.get("total_subdomains", len(results))
+            resolved_count = metadata.get("resolved_count", 0)
+            resolution_rate = metadata.get("resolution_rate", 0)
+            top_tags = metadata.get("top_tags", {})
+
+            color = "good" if resolved_count > 0 else "warning"
+            title = f"🔍 DNS Resolution: {resolved_count}/{total_subdomains} subdomains resolved"
+
+            fields = [
+                {"title": "Total Subdomains", "value": f"`{total_subdomains}`", "short": True},
+                {"title": "Successfully Resolved", "value": f"`{resolved_count}`", "short": True},
+                {"title": "Resolution Rate", "value": f"`{resolution_rate}%`", "short": True},
+                {"title": "Scan Duration", "value": f"`{metadata.get('scan_duration', 'unknown')}`", "short": True},
+            ]
+
+            # Add top tags if available
+            if top_tags:
+                tags_text = "\n".join([f"• {tag}: {count}" for tag, count in list(top_tags.items())[:5]])
+                fields.append({
+                    "title": "Top Classifications",
+                    "value": tags_text,
+                    "short": False,
+                })
+
+            # Add sample resolved subdomains
+            if results:
+                resolved_samples = [r for r in results[:5] if r.get('ip') != 'unresolved']
+                if resolved_samples:
+                    samples_text = "\n".join([
+                        f"• `{r['subdomain']}` → {r['ip']}" + 
+                        (f" ({', '.join(r['tags'])})" if r.get('tags') else "")
+                        for r in resolved_samples
+                    ])
+                    fields.append({
+                        "title": "Sample Results",
+                        "value": samples_text,
+                        "short": False,
+                    })
+
+            attachment = {
+                "color": color,
+                "title": title,
+                "fields": fields,
+                "footer": "Reconcli DNS Scanner",
+                "ts": int(datetime.now().timestamp()),
+            }
+
+            payload = {"attachments": [attachment]}
+
+            response = httpx.post(self.slack_webhook, json=payload, timeout=10)
+            response.raise_for_status()
+
+            if self.verbose:
+                click.echo("📱 Slack notification sent successfully")
+            return True
+
+        except Exception as e:
+            if self.verbose:
+                click.echo(f"❌ Failed to send Slack notification: {e}")
+            return False
+
+    def _send_discord_dns_notification(self, results: List[Dict], metadata: Dict) -> bool:
+        """Send DNS resolution results to Discord"""
+        if not self.discord_webhook:
+            return False
+
+        try:
+            timestamp = datetime.now().isoformat()
+
+            # Build Discord embed for DNS resolution results
+            total_subdomains = metadata.get("total_subdomains", len(results))
+            resolved_count = metadata.get("resolved_count", 0)
+            resolution_rate = metadata.get("resolution_rate", 0)
+            top_tags = metadata.get("top_tags", {})
+
+            color = 0x00FF00 if resolved_count > 0 else 0xFFAA00  # Green if resolved, amber if none
+            title = f"🔍 DNS Resolution Complete"
+            description = f"Resolved {resolved_count}/{total_subdomains} subdomains ({resolution_rate}%)"
+
+            fields = [
+                {
+                    "name": "Total Subdomains",
+                    "value": f"`{total_subdomains}`",
+                    "inline": True,
+                },
+                {
+                    "name": "Successfully Resolved",
+                    "value": f"`{resolved_count}`",
+                    "inline": True,
+                },
+                {
+                    "name": "Resolution Rate",
+                    "value": f"`{resolution_rate}%`",
+                    "inline": True,
+                },
+                {
+                    "name": "Scan Duration",
+                    "value": f"`{metadata.get('scan_duration', 'unknown')}`",
+                    "inline": True,
+                },
+            ]
+
+            # Add top tags if available
+            if top_tags:
+                tags_text = "\n".join([f"• {tag}: {count}" for tag, count in list(top_tags.items())[:5]])
+                fields.append({
+                    "name": "Top Classifications",
+                    "value": tags_text,
+                    "inline": False,
+                })
+
+            # Add sample resolved subdomains
+            if results:
+                resolved_samples = [r for r in results[:5] if r.get('ip') != 'unresolved']
+                if resolved_samples:
+                    samples_text = "\n".join([
+                        f"• `{r['subdomain']}` → {r['ip']}" + 
+                        (f" ({', '.join(r['tags'])})" if r.get('tags') else "")
+                        for r in resolved_samples
+                    ])
+                    fields.append({
+                        "name": "Sample Results",
+                        "value": samples_text,
+                        "inline": False,
+                    })
+
+            embed = {
+                "title": title,
+                "description": description,
+                "color": color,
+                "fields": fields,
+                "footer": {"text": "Reconcli DNS Scanner"},
+                "timestamp": timestamp,
+            }
+
+            payload = {"embeds": [embed]}
+
+            response = httpx.post(self.discord_webhook, json=payload, timeout=10)
+            response.raise_for_status()
+
+            if self.verbose:
+                click.echo("📱 Discord notification sent successfully")
+            return True
+
+        except Exception as e:
+            if self.verbose:
+                click.echo(f"❌ Failed to send Discord notification: {e}")
+            return False
+
 
 def send_notification(notification_type: str, **kwargs) -> bool:
     """
@@ -667,6 +835,8 @@ def send_notification(notification_type: str, **kwargs) -> bool:
         )
     elif notification_type == "url":
         return notifier.send_url_results(kwargs["results"], kwargs["scan_metadata"])
+    elif notification_type == "dns":
+        return notifier.send_dns_results(kwargs["results"], kwargs["scan_metadata"])
     else:
         if verbose:
             click.echo(f"❌ Unknown notification type: {notification_type}")
