@@ -44,35 +44,217 @@ except ImportError:
 # Comprehensive TLD lists for different categories
 DEFAULT_TLDS = {
     "popular": [
-        "com", "net", "org", "edu", "gov", "mil", "int", "co", "io", "me", "tv", "cc",
-        "biz", "info", "name", "pro", "mobi", "travel", "jobs", "tel", "cat", "asia"
+        "com",
+        "net",
+        "org",
+        "edu",
+        "gov",
+        "mil",
+        "int",
+        "co",
+        "io",
+        "me",
+        "tv",
+        "cc",
+        "biz",
+        "info",
+        "name",
+        "pro",
+        "mobi",
+        "travel",
+        "jobs",
+        "tel",
+        "cat",
+        "asia",
     ],
     "country": [
-        "us", "uk", "ca", "au", "de", "fr", "jp", "cn", "ru", "br", "in", "mx", "es",
-        "it", "nl", "pl", "se", "no", "dk", "fi", "be", "ch", "at", "cz", "hu", "pt",
-        "ie", "gr", "tr", "il", "kr", "th", "sg", "my", "ph", "id", "vn", "pk", "bd",
-        "lk", "mm", "kh", "la", "mn", "np", "bt", "mv", "af", "kz", "kg", "tj", "tm",
-        "uz", "az", "am", "ge", "by", "ua", "md", "ro", "bg", "hr", "si", "sk", "lt",
-        "lv", "ee", "is", "fo", "gl", "sj", "ad", "mc", "sm", "va", "li", "lu", "mt"
+        "us",
+        "uk",
+        "ca",
+        "au",
+        "de",
+        "fr",
+        "jp",
+        "cn",
+        "ru",
+        "br",
+        "in",
+        "mx",
+        "es",
+        "it",
+        "nl",
+        "pl",
+        "se",
+        "no",
+        "dk",
+        "fi",
+        "be",
+        "ch",
+        "at",
+        "cz",
+        "hu",
+        "pt",
+        "ie",
+        "gr",
+        "tr",
+        "il",
+        "kr",
+        "th",
+        "sg",
+        "my",
+        "ph",
+        "id",
+        "vn",
+        "pk",
+        "bd",
+        "lk",
+        "mm",
+        "kh",
+        "la",
+        "mn",
+        "np",
+        "bt",
+        "mv",
+        "af",
+        "kz",
+        "kg",
+        "tj",
+        "tm",
+        "uz",
+        "az",
+        "am",
+        "ge",
+        "by",
+        "ua",
+        "md",
+        "ro",
+        "bg",
+        "hr",
+        "si",
+        "sk",
+        "lt",
+        "lv",
+        "ee",
+        "is",
+        "fo",
+        "gl",
+        "sj",
+        "ad",
+        "mc",
+        "sm",
+        "va",
+        "li",
+        "lu",
+        "mt",
     ],
     "new_generic": [
-        "app", "dev", "tech", "cloud", "online", "site", "website", "store", "shop",
-        "blog", "news", "media", "photo", "video", "music", "game", "sport", "health",
-        "food", "travel", "hotel", "restaurant", "cafe", "bar", "club", "gym", "spa",
-        "beauty", "fashion", "style", "design", "art", "culture", "museum", "gallery",
-        "theater", "cinema", "book", "library", "school", "university", "academy",
-        "training", "course", "coach", "guru", "expert", "consulting", "agency",
-        "studio", "lab", "center", "institute", "foundation", "charity", "church",
-        "community", "social", "network", "email", "chat", "forum", "wiki", "blog"
+        "app",
+        "dev",
+        "tech",
+        "cloud",
+        "online",
+        "site",
+        "website",
+        "store",
+        "shop",
+        "blog",
+        "news",
+        "media",
+        "photo",
+        "video",
+        "music",
+        "game",
+        "sport",
+        "health",
+        "food",
+        "travel",
+        "hotel",
+        "restaurant",
+        "cafe",
+        "bar",
+        "club",
+        "gym",
+        "spa",
+        "beauty",
+        "fashion",
+        "style",
+        "design",
+        "art",
+        "culture",
+        "museum",
+        "gallery",
+        "theater",
+        "cinema",
+        "book",
+        "library",
+        "school",
+        "university",
+        "academy",
+        "training",
+        "course",
+        "coach",
+        "guru",
+        "expert",
+        "consulting",
+        "agency",
+        "studio",
+        "lab",
+        "center",
+        "institute",
+        "foundation",
+        "charity",
+        "church",
+        "community",
+        "social",
+        "network",
+        "email",
+        "chat",
+        "forum",
+        "wiki",
+        "blog",
     ],
     "business": [
-        "ltd", "llc", "inc", "corp", "company", "business", "enterprise", "group",
-        "holdings", "ventures", "capital", "invest", "fund", "bank", "finance",
-        "insurance", "law", "legal", "consulting", "marketing", "advertising",
-        "media", "publishing", "software", "technology", "engineering", "construction",
-        "manufacturing", "logistics", "transport", "energy", "mining", "agriculture",
-        "healthcare", "pharma", "medical", "dental", "vet", "clinic", "hospital"
-    ]
+        "ltd",
+        "llc",
+        "inc",
+        "corp",
+        "company",
+        "business",
+        "enterprise",
+        "group",
+        "holdings",
+        "ventures",
+        "capital",
+        "invest",
+        "fund",
+        "bank",
+        "finance",
+        "insurance",
+        "law",
+        "legal",
+        "consulting",
+        "marketing",
+        "advertising",
+        "media",
+        "publishing",
+        "software",
+        "technology",
+        "engineering",
+        "construction",
+        "manufacturing",
+        "logistics",
+        "transport",
+        "energy",
+        "mining",
+        "agriculture",
+        "healthcare",
+        "pharma",
+        "medical",
+        "dental",
+        "vet",
+        "clinic",
+        "hospital",
+    ],
 }
 
 # HTTP status codes that indicate a potential active domain
@@ -81,13 +263,25 @@ ACTIVE_HTTP_CODES = [200, 301, 302, 303, 307, 308, 403, 404, 405, 429, 500, 502,
 
 @click.command()
 @click.option("--domain", "-d", required=True, help="Base domain name (without TLD)")
-@click.option("--output-dir", default="output_tldrcli", help="Directory to save results")
-@click.option("--tld-list", type=click.Path(exists=True), help="Custom TLD list file (one per line)")
-@click.option("--categories", default="popular,country", help="TLD categories to use: popular,country,new_generic,business,all")
+@click.option(
+    "--output-dir", default="output_tldrcli", help="Directory to save results"
+)
+@click.option(
+    "--tld-list",
+    type=click.Path(exists=True),
+    help="Custom TLD list file (one per line)",
+)
+@click.option(
+    "--categories",
+    default="popular,country",
+    help="TLD categories to use: popular,country,new_generic,business,all",
+)
 @click.option("--threads", default=50, help="Number of concurrent threads")
 @click.option("--timeout", default=5, help="DNS/HTTP timeout in seconds")
 @click.option("--retries", default=2, help="Number of retries for failed requests")
-@click.option("--dns-only", is_flag=True, help="Only perform DNS resolution (no HTTP probing)")
+@click.option(
+    "--dns-only", is_flag=True, help="Only perform DNS resolution (no HTTP probing)"
+)
 @click.option("--http-check", is_flag=True, help="Perform HTTP/HTTPS status checks")
 @click.option("--verbose", "-v", is_flag=True, help="Enable verbose output")
 @click.option("--save-json", is_flag=True, help="Save results in JSON format")
@@ -95,11 +289,21 @@ ACTIVE_HTTP_CODES = [200, 301, 302, 303, 307, 308, 403, 404, 405, 429, 500, 502,
 @click.option("--resume", is_flag=True, help="Resume previous scan")
 @click.option("--clear-resume", is_flag=True, help="Clear previous resume state")
 @click.option("--show-resume", is_flag=True, help="Show status of previous scans")
-@click.option("--filter-active", is_flag=True, help="Only show domains that resolve or respond to HTTP")
+@click.option(
+    "--filter-active",
+    is_flag=True,
+    help="Only show domains that resolve or respond to HTTP",
+)
 @click.option("--slack-webhook", help="Slack webhook URL for notifications")
 @click.option("--discord-webhook", help="Discord webhook URL for notifications")
-@click.option("--whois-check", is_flag=True, help="Perform basic WHOIS availability check")
-@click.option("--exclude-wildcards", is_flag=True, help="Exclude domains that appear to be wildcards")
+@click.option(
+    "--whois-check", is_flag=True, help="Perform basic WHOIS availability check"
+)
+@click.option(
+    "--exclude-wildcards",
+    is_flag=True,
+    help="Exclude domains that appear to be wildcards",
+)
 def cli(
     domain,
     output_dir,
@@ -123,10 +327,10 @@ def cli(
     exclude_wildcards,
 ):
     """Advanced TLD reconnaissance - discover domains across alternative TLDs
-    
+
     Systematically checks if a domain exists across different top-level domains,
     performs DNS resolution, HTTP probing, and basic availability analysis.
-    
+
     Examples:
         tldrcli -d example --categories popular,country --http-check --verbose
         tldrcli -d mycompany --tld-list custom_tlds.txt --filter-active
@@ -158,9 +362,11 @@ def cli(
 
     # Build TLD list
     tld_list_final = build_tld_list(tld_list, categories, verbose)
-    
+
     if not tld_list_final:
-        click.echo("[!] ❌ No TLDs to check. Please specify valid categories or TLD list.")
+        click.echo(
+            "[!] ❌ No TLDs to check. Please specify valid categories or TLD list."
+        )
         return
 
     if verbose:
@@ -174,7 +380,9 @@ def cli(
 
     if resume and resume_state:
         if verbose:
-            click.echo(f"[+] 📁 Loading resume state with {len(resume_state)} previous scan(s)")
+            click.echo(
+                f"[+] 📁 Loading resume state with {len(resume_state)} previous scan(s)"
+            )
         # Find the most recent incomplete scan
         for key, data in sorted(
             resume_state.items(), key=lambda x: x[1].get("start_time", ""), reverse=True
@@ -229,11 +437,17 @@ def cli(
 
     # Update counts
     resolved_count = len([r for r in results if r["dns_resolved"]])
-    http_active_count = len([r for r in results if r.get("http_status") in ACTIVE_HTTP_CODES])
+    http_active_count = len(
+        [r for r in results if r.get("http_status") in ACTIVE_HTTP_CODES]
+    )
 
     current_scan["processed_count"] = len(tld_list_final)
-    current_scan["resolved_count"] = current_scan.get("resolved_count", 0) + resolved_count
-    current_scan["http_active_count"] = current_scan.get("http_active_count", 0) + http_active_count
+    current_scan["resolved_count"] = (
+        current_scan.get("resolved_count", 0) + resolved_count
+    )
+    current_scan["http_active_count"] = (
+        current_scan.get("http_active_count", 0) + http_active_count
+    )
     current_scan["completed"] = True
     current_scan["completion_time"] = datetime.now().isoformat()
 
@@ -242,9 +456,15 @@ def cli(
     # Apply filtering if requested
     if filter_active:
         before_filter = len(results)
-        results = [r for r in results if r["dns_resolved"] or r.get("http_status") in ACTIVE_HTTP_CODES]
+        results = [
+            r
+            for r in results
+            if r["dns_resolved"] or r.get("http_status") in ACTIVE_HTTP_CODES
+        ]
         if verbose:
-            click.echo(f"[+] 🧹 Filtered to active domains: {before_filter} → {len(results)} results")
+            click.echo(
+                f"[+] 🧹 Filtered to active domains: {before_filter} → {len(results)} results"
+            )
 
     # Save outputs in multiple formats
     save_outputs(results, output_dir, save_json, save_markdown, verbose)
@@ -282,15 +502,21 @@ def cli(
     click.echo(f"[+] 📁 Results saved to: {output_dir}")
 
 
-def build_tld_list(tld_file: Optional[str], categories: str, verbose: bool) -> List[str]:
+def build_tld_list(
+    tld_file: Optional[str], categories: str, verbose: bool
+) -> List[str]:
     """Build comprehensive TLD list from file or categories"""
     tlds = set()
 
     # Load from file if provided
     if tld_file:
         try:
-            with open(tld_file, 'r') as f:
-                file_tlds = [line.strip().lstrip('.') for line in f if line.strip() and not line.startswith('#')]
+            with open(tld_file, "r") as f:
+                file_tlds = [
+                    line.strip().lstrip(".")
+                    for line in f
+                    if line.strip() and not line.startswith("#")
+                ]
                 tlds.update(file_tlds)
             if verbose:
                 click.echo(f"[+] 📄 Loaded {len(file_tlds)} TLDs from file")
@@ -300,8 +526,8 @@ def build_tld_list(tld_file: Optional[str], categories: str, verbose: bool) -> L
 
     # Add from categories
     if categories:
-        category_list = [cat.strip() for cat in categories.split(',')]
-        
+        category_list = [cat.strip() for cat in categories.split(",")]
+
         for category in category_list:
             if category == "all":
                 for cat_tlds in DEFAULT_TLDS.values():
@@ -364,7 +590,9 @@ def process_tlds_concurrent(
 
             # HTTP/HTTPS checking
             if http_check and result["dns_resolved"] and not result["is_wildcard"]:
-                http_status, https_status = check_http_status(full_domain, timeout, retries)
+                http_status, https_status = check_http_status(
+                    full_domain, timeout, retries
+                )
                 result["http_status"] = http_status
                 result["https_status"] = https_status
 
@@ -400,7 +628,9 @@ def process_tlds_concurrent(
 
                 # Update progress bar with stats
                 resolved = len([r for r in results if r["dns_resolved"]])
-                active = len([r for r in results if r.get("http_status") in ACTIVE_HTTP_CODES])
+                active = len(
+                    [r for r in results if r.get("http_status") in ACTIVE_HTTP_CODES]
+                )
                 pbar.set_postfix(resolved=resolved, active=active)
 
     return results
@@ -410,22 +640,26 @@ def detect_wildcard(domain: str, tld: str, resolved_ip: str, timeout: int) -> bo
     """Simple wildcard detection by testing random subdomain"""
     import random
     import string
-    
+
     try:
         # Generate random subdomain
-        random_sub = ''.join(random.choices(string.ascii_lowercase + string.digits, k=15))
+        random_sub = "".join(
+            random.choices(string.ascii_lowercase + string.digits, k=15)
+        )
         test_domain = f"{random_sub}.{domain}.{tld}"
-        
+
         socket.setdefaulttimeout(timeout)
         test_ip = socket.gethostbyname(test_domain)
-        
+
         # If random subdomain resolves to same IP, likely wildcard
         return test_ip == resolved_ip
     except:
         return False
 
 
-def check_http_status(domain: str, timeout: int, retries: int) -> Tuple[Optional[int], Optional[int]]:
+def check_http_status(
+    domain: str, timeout: int, retries: int
+) -> Tuple[Optional[int], Optional[int]]:
     """Check HTTP and HTTPS status codes"""
     import urllib.request
     import urllib.error
@@ -438,10 +672,14 @@ def check_http_status(domain: str, timeout: int, retries: int) -> Tuple[Optional
                 ssl_context = ssl.create_default_context()
                 ssl_context.check_hostname = False
                 ssl_context.verify_mode = ssl.CERT_NONE
-                
-                req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0 (TLD-Recon/1.0)'})
-                
-                with urllib.request.urlopen(req, timeout=timeout, context=ssl_context) as response:
+
+                req = urllib.request.Request(
+                    url, headers={"User-Agent": "Mozilla/5.0 (TLD-Recon/1.0)"}
+                )
+
+                with urllib.request.urlopen(
+                    req, timeout=timeout, context=ssl_context
+                ) as response:
                     return response.getcode()
             except urllib.error.HTTPError as e:
                 return e.code
@@ -453,7 +691,7 @@ def check_http_status(domain: str, timeout: int, retries: int) -> Tuple[Optional
 
     http_status = get_status(f"http://{domain}")
     https_status = get_status(f"https://{domain}")
-    
+
     return http_status, https_status
 
 
@@ -464,6 +702,7 @@ def simple_whois_check(domain: str, timeout: int) -> Optional[bool]:
     # or integrate with WHOIS APIs
     try:
         import subprocess
+
         result = subprocess.run(
             ["whois", domain],
             capture_output=True,
@@ -490,22 +729,24 @@ def save_outputs(
     with open(output_path, "w") as f:
         for result in results:
             status_parts = []
-            
+
             if result["dns_resolved"]:
                 status_parts.append(f"IP:{result['ip_address']}")
             else:
                 status_parts.append("DNS:FAIL")
-                
+
             if result.get("http_status"):
                 status_parts.append(f"HTTP:{result['http_status']}")
             if result.get("https_status"):
                 status_parts.append(f"HTTPS:{result['https_status']}")
-                
+
             if result.get("is_wildcard"):
                 status_parts.append("WILDCARD")
-                
+
             if result.get("whois_available") is not None:
-                status_parts.append(f"WHOIS:{'REG' if result['whois_available'] else 'AVAIL'}")
+                status_parts.append(
+                    f"WHOIS:{'REG' if result['whois_available'] else 'AVAIL'}"
+                )
 
             status_str = " | ".join(status_parts) if status_parts else "INACTIVE"
             f.write(f"{result['domain']} - {status_str}\n")
@@ -520,7 +761,9 @@ def save_outputs(
                 "timestamp": datetime.now().isoformat(),
                 "total_domains": len(results),
                 "resolved_count": len([r for r in results if r["dns_resolved"]]),
-                "active_count": len([r for r in results if r.get("http_status") in ACTIVE_HTTP_CODES]),
+                "active_count": len(
+                    [r for r in results if r.get("http_status") in ACTIVE_HTTP_CODES]
+                ),
                 "tool": "tldrcli",
             },
             "results": results,
@@ -540,8 +783,12 @@ def save_outputs(
             f.write("# TLD Reconnaissance Results\n\n")
             f.write(f"**Scan Date:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
             f.write(f"**Total Domains:** {len(results)}\n")
-            f.write(f"**DNS Resolved:** {len([r for r in results if r['dns_resolved']])}\n")
-            f.write(f"**HTTP Active:** {len([r for r in results if r.get('http_status') in ACTIVE_HTTP_CODES])}\n\n")
+            f.write(
+                f"**DNS Resolved:** {len([r for r in results if r['dns_resolved']])}\n"
+            )
+            f.write(
+                f"**HTTP Active:** {len([r for r in results if r.get('http_status') in ACTIVE_HTTP_CODES])}\n\n"
+            )
 
             f.write("## Results\n\n")
             f.write("| Domain | TLD | DNS | IP Address | HTTP | HTTPS | Status |\n")
@@ -552,7 +799,7 @@ def save_outputs(
                 ip_addr = result["ip_address"] or "-"
                 http_status = result.get("http_status", "-")
                 https_status = result.get("https_status", "-")
-                
+
                 status_flags = []
                 if result.get("is_wildcard"):
                     status_flags.append("🌟 Wildcard")
@@ -560,10 +807,12 @@ def save_outputs(
                     status_flags.append("📋 Registered")
                 elif result.get("whois_available") is False:
                     status_flags.append("🆓 Available")
-                
+
                 status = " ".join(status_flags) if status_flags else "-"
 
-                f.write(f"| {result['domain']} | {result['tld']} | {dns_status} | {ip_addr} | {http_status} | {https_status} | {status} |\n")
+                f.write(
+                    f"| {result['domain']} | {result['tld']} | {dns_status} | {ip_addr} | {http_status} | {https_status} | {status} |\n"
+                )
 
         if verbose:
             click.echo(f"[+] 📝 Saved Markdown results to {md_path}")
@@ -574,8 +823,12 @@ def generate_statistics(results: List[Dict], verbose: bool) -> Dict:
     stats = {
         "total_domains": len(results),
         "dns_resolved": len([r for r in results if r["dns_resolved"]]),
-        "http_active": len([r for r in results if r.get("http_status") in ACTIVE_HTTP_CODES]),
-        "https_active": len([r for r in results if r.get("https_status") in ACTIVE_HTTP_CODES]),
+        "http_active": len(
+            [r for r in results if r.get("http_status") in ACTIVE_HTTP_CODES]
+        ),
+        "https_active": len(
+            [r for r in results if r.get("https_status") in ACTIVE_HTTP_CODES]
+        ),
         "wildcards": len([r for r in results if r.get("is_wildcard")]),
         "registered": len([r for r in results if r.get("whois_available")]),
         "available": len([r for r in results if r.get("whois_available") is False]),
@@ -587,11 +840,11 @@ def generate_statistics(results: List[Dict], verbose: bool) -> Dict:
         click.echo(f"   - DNS resolved: {stats['dns_resolved']}")
         click.echo(f"   - HTTP active: {stats['http_active']}")
         click.echo(f"   - HTTPS active: {stats['https_active']}")
-        if stats['wildcards'] > 0:
+        if stats["wildcards"] > 0:
             click.echo(f"   - Wildcards detected: {stats['wildcards']}")
-        if stats['registered'] > 0:
+        if stats["registered"] > 0:
             click.echo(f"   - Registered domains: {stats['registered']}")
-        if stats['available'] > 0:
+        if stats["available"] > 0:
             click.echo(f"   - Available domains: {stats['available']}")
 
     return stats
@@ -670,7 +923,9 @@ def show_resume_status(output_dir: str):
 
             if scan_data.get("completed"):
                 click.echo(f"   Status: ✅ Completed")
-                click.echo(f"   Completed: {scan_data.get('completion_time', 'unknown')}")
+                click.echo(
+                    f"   Completed: {scan_data.get('completion_time', 'unknown')}"
+                )
                 click.echo(f"   Processed: {scan_data.get('processed_count', 0)}")
                 click.echo(f"   DNS Resolved: {scan_data.get('resolved_count', 0)}")
                 click.echo(f"   HTTP Active: {scan_data.get('http_active_count', 0)}")
