@@ -1,0 +1,86 @@
+{
+  "analysis_metadata": {
+    "timestamp": "2025-07-05T18:28:58.942579",
+    "tool": "whoisfreakscli-analyze"
+  },
+  "analysis_results": {
+    "registrar_analysis": {
+      "total_registrars": 2,
+      "top_registrars": {
+        "MarkMonitor Inc.": 3,
+        "home.pl S.A.": 1
+      },
+      "registrar_distribution": {
+        "home.pl S.A.": 1,
+        "MarkMonitor Inc.": 3
+      }
+    },
+    "expiration_analysis": {
+      "expiring_soon": [],
+      "expired_domains": [
+        "pyszne.pl",
+        "amazon.com"
+      ],
+      "expiry_year_distribution": {
+        "2025": 2,
+        "2028": 1,
+        "2024": 1
+      },
+      "total_expiring": 0,
+      "total_expired": 2
+    },
+    "privacy_analysis": {
+      "total_with_privacy": 0,
+      "privacy_service_distribution": {},
+      "privacy_percentage": 0.0
+    },
+    "risk_analysis": {
+      "risk_distribution": {
+        "HIGH": 0,
+        "MEDIUM": 0,
+        "LOW": 0,
+        "NONE": 4
+      },
+      "common_risk_factors": {},
+      "high_risk_count": 0,
+      "total_at_risk": 0
+    },
+    "nameserver_analysis": {
+      "total_providers": 10,
+      "top_providers": {
+        "AWS": 4,
+        "Google": 4,
+        "dns1": 1,
+        "dns2": 1,
+        "dns3": 1,
+        "dns4": 1,
+        "pdns1": 1,
+        "pdns6": 1,
+        "ns1": 1,
+        "ns2": 1
+      },
+      "provider_distribution": {
+        "AWS": 4,
+        "Google": 4,
+        "dns1": 1,
+        "dns2": 1,
+        "dns3": 1,
+        "dns4": 1,
+        "pdns1": 1,
+        "pdns6": 1,
+        "ns1": 1,
+        "ns2": 1
+      }
+    },
+    "creation_date_analysis": {
+      "creation_year_distribution": {
+        "2012": 1,
+        "1997": 1,
+        "2007": 1,
+        "1994": 1
+      },
+      "recent_domains": [],
+      "total_recent": 0
+    }
+  }
+}

@@ -102,9 +102,9 @@ PTR_PATTERNS = {
     help="Exclude unresolved subdomains from output",
 )
 @click.option(
-    "--whois-file", 
-    type=click.Path(exists=True), 
-    help="Path to WhoisFreaks output file (JSON) to enrich DNS results with WHOIS data"
+    "--whois-file",
+    type=click.Path(exists=True),
+    help="Path to WhoisFreaks output file (JSON) to enrich DNS results with WHOIS data",
 )
 def cli(
     input,
@@ -231,7 +231,7 @@ def cli(
     if whois_file:
         if verbose:
             click.echo(f"[+] 🔍 Enriching DNS results with WHOIS data...")
-        
+
         whois_data = load_whois_data(whois_file, verbose)
         if whois_data:
             enriched_results = []
@@ -239,10 +239,14 @@ def cli(
                 enriched_result = enrich_with_whois_data(result, whois_data, verbose)
                 enriched_results.append(enriched_result)
             results = enriched_results
-            
+
             if verbose:
-                whois_enriched = len([r for r in results if r.get('whois', {}).get('registrar')])
-                click.echo(f"[+] 📄 WHOIS data added to {whois_enriched}/{len(results)} results")
+                whois_enriched = len(
+                    [r for r in results if r.get("whois", {}).get("registrar")]
+                )
+                click.echo(
+                    f"[+] 📄 WHOIS data added to {whois_enriched}/{len(results)} results"
+                )
 
     # Apply filtering if requested
     if filter_tags:
@@ -411,26 +415,26 @@ def save_outputs(
     with open(tagged_output_path, "w") as outf:
         for result in results:
             tags_str = ",".join(result["tags"]) if result["tags"] else "-"
-            
+
             # Basic DNS line
             line = f"{result['subdomain']} {result['ip']} PTR: {result['ptr'] or '-'} TAGS: {tags_str}"
-            
+
             # Add WHOIS info if available
-            if result.get('whois'):
-                whois_info = result['whois']
+            if result.get("whois"):
+                whois_info = result["whois"]
                 whois_parts = []
-                if whois_info.get('registrar'):
+                if whois_info.get("registrar"):
                     whois_parts.append(f"REG: {whois_info['registrar']}")
-                if whois_info.get('organization'):
+                if whois_info.get("organization"):
                     whois_parts.append(f"ORG: {whois_info['organization']}")
-                if whois_info.get('country'):
+                if whois_info.get("country"):
                     whois_parts.append(f"COUNTRY: {whois_info['country']}")
-                if whois_info.get('expiration_date'):
+                if whois_info.get("expiration_date"):
                     whois_parts.append(f"EXPIRES: {whois_info['expiration_date']}")
-                
+
                 if whois_parts:
                     line += f" WHOIS: {' | '.join(whois_parts)}"
-            
+
             outf.write(line + "\n")
 
     if verbose:
@@ -467,22 +471,28 @@ def save_outputs(
             )
 
             f.write("## Results\n\n")
-            
+
             # Check if any result has WHOIS data to determine table format
-            has_whois = any(result.get('whois', {}).get('registrar') for result in results)
-            
+            has_whois = any(
+                result.get("whois", {}).get("registrar") for result in results
+            )
+
             if has_whois:
-                f.write("| Subdomain | IP Address | PTR Record | Tags | Registrar | Organization | Country | Expires |\n")
-                f.write("|-----------|------------|------------|------|-----------|--------------|---------|----------|\n")
-                
+                f.write(
+                    "| Subdomain | IP Address | PTR Record | Tags | Registrar | Organization | Country | Expires |\n"
+                )
+                f.write(
+                    "|-----------|------------|------------|------|-----------|--------------|---------|----------|\n"
+                )
+
                 for result in results:
                     tags_str = ", ".join(result["tags"]) if result["tags"] else "-"
-                    whois = result.get('whois', {})
-                    registrar = whois.get('registrar', '-')
-                    organization = whois.get('organization', '-')
-                    country = whois.get('country', '-')
-                    expires = whois.get('expiration_date', '-')
-                    
+                    whois = result.get("whois", {})
+                    registrar = whois.get("registrar", "-")
+                    organization = whois.get("organization", "-")
+                    country = whois.get("country", "-")
+                    expires = whois.get("expiration_date", "-")
+
                     f.write(
                         f"| {result['subdomain']} | {result['ip']} | {result['ptr'] or '-'} | {tags_str} | {registrar} | {organization} | {country} | {expires} |\n"
                     )
@@ -600,16 +610,20 @@ def show_resume_status(output_dir: str):
             click.echo()
 
 
-def load_whois_data(whois_file_path: str, verbose: bool = False) -> Union[Dict[str, Any], List[Any], Any]:
+def load_whois_data(
+    whois_file_path: str, verbose: bool = False
+) -> Union[Dict[str, Any], List[Any], Any]:
     """Load and parse WhoisFreaks output file"""
     try:
-        with open(whois_file_path, 'r', encoding='utf-8') as f:
+        with open(whois_file_path, "r", encoding="utf-8") as f:
             whois_data = json.load(f)
-        
+
         if verbose:
             click.echo(f"[+] 📄 Loaded WHOIS data from {whois_file_path}")
-            click.echo(f"[+] 📊 WHOIS entries: {len(whois_data) if isinstance(whois_data, (list, dict)) else 'unknown'}")
-        
+            click.echo(
+                f"[+] 📊 WHOIS entries: {len(whois_data) if isinstance(whois_data, (list, dict)) else 'unknown'}"
+            )
+
         return whois_data
     except Exception as e:
         if verbose:
@@ -619,41 +633,53 @@ def load_whois_data(whois_file_path: str, verbose: bool = False) -> Union[Dict[s
 
 def extract_domain_from_subdomain(subdomain: str) -> str:
     """Extract root domain from subdomain for WHOIS lookup"""
-    parts = subdomain.lower().split('.')
+    parts = subdomain.lower().split(".")
     if len(parts) >= 2:
         # Handle common TLDs and ccTLDs
-        if len(parts) >= 3 and parts[-2] in ['co', 'com', 'net', 'org', 'gov', 'edu', 'ac']:
-            return '.'.join(parts[-3:])  # domain.co.uk, domain.com.au, etc.
+        if len(parts) >= 3 and parts[-2] in [
+            "co",
+            "com",
+            "net",
+            "org",
+            "gov",
+            "edu",
+            "ac",
+        ]:
+            return ".".join(parts[-3:])  # domain.co.uk, domain.com.au, etc.
         else:
-            return '.'.join(parts[-2:])  # domain.com, domain.org, etc.
+            return ".".join(parts[-2:])  # domain.com, domain.org, etc.
     return subdomain
 
 
-def enrich_with_whois_data(result: Dict, whois_data: Union[Dict[str, Any], List[Any], Any], verbose: bool = False) -> Dict:
+def enrich_with_whois_data(
+    result: Dict,
+    whois_data: Union[Dict[str, Any], List[Any], Any],
+    verbose: bool = False,
+) -> Dict:
     """Enrich DNS result with WHOIS information"""
-    subdomain = result.get('subdomain', '')
+    subdomain = result.get("subdomain", "")
     root_domain = extract_domain_from_subdomain(subdomain)
-    
+
     # Initialize WHOIS fields
     whois_info = {
-        'registrar': '',
-        'creation_date': '',
-        'expiration_date': '',
-        'nameservers': [],
-        'organization': '',
-        'country': '',
-        'admin_email': '',
-        'status': []
+        "registrar": "",
+        "creation_date": "",
+        "expiration_date": "",
+        "nameservers": [],
+        "organization": "",
+        "country": "",
+        "admin_email": "",
+        "status": [],
     }
-    
+
     # Try to find WHOIS data for this domain
     domain_whois = None
-    
+
     # Support different WhoisFreaks output formats
     if isinstance(whois_data, dict):
         # Check if it's a single domain response
-        if 'domain_name' in whois_data:
-            if whois_data['domain_name'].lower() == root_domain:
+        if "domain_name" in whois_data:
+            if whois_data["domain_name"].lower() == root_domain:
                 domain_whois = whois_data
         # Check if it's a dictionary with domains as keys
         elif root_domain in whois_data:
@@ -667,46 +693,62 @@ def enrich_with_whois_data(result: Dict, whois_data: Union[Dict[str, Any], List[
     elif isinstance(whois_data, list):
         # Search through list of WHOIS entries
         for entry in whois_data:
-            if isinstance(entry, dict) and 'domain_name' in entry:
-                if entry['domain_name'].lower() == root_domain:
+            if isinstance(entry, dict) and "domain_name" in entry:
+                if entry["domain_name"].lower() == root_domain:
                     domain_whois = entry
                     break
-    
+
     # Extract WHOIS information if found
     if domain_whois:
         try:
-            whois_info['registrar'] = domain_whois.get('registrar', domain_whois.get('registrar_name', ''))
-            whois_info['creation_date'] = domain_whois.get('creation_date', domain_whois.get('created_date', ''))
-            whois_info['expiration_date'] = domain_whois.get('expiration_date', domain_whois.get('expires_date', ''))
-            whois_info['organization'] = domain_whois.get('registrant_organization', domain_whois.get('organization', ''))
-            whois_info['country'] = domain_whois.get('registrant_country', domain_whois.get('country', ''))
-            whois_info['admin_email'] = domain_whois.get('admin_email', domain_whois.get('email', ''))
-            
+            whois_info["registrar"] = domain_whois.get(
+                "registrar", domain_whois.get("registrar_name", "")
+            )
+            whois_info["creation_date"] = domain_whois.get(
+                "creation_date", domain_whois.get("created_date", "")
+            )
+            whois_info["expiration_date"] = domain_whois.get(
+                "expiration_date", domain_whois.get("expires_date", "")
+            )
+            whois_info["organization"] = domain_whois.get(
+                "registrant_organization", domain_whois.get("organization", "")
+            )
+            whois_info["country"] = domain_whois.get(
+                "registrant_country", domain_whois.get("country", "")
+            )
+            whois_info["admin_email"] = domain_whois.get(
+                "admin_email", domain_whois.get("email", "")
+            )
+
             # Handle nameservers
-            ns_data = domain_whois.get('nameservers', domain_whois.get('name_servers', []))
+            ns_data = domain_whois.get(
+                "nameservers", domain_whois.get("name_servers", [])
+            )
             if isinstance(ns_data, list):
-                whois_info['nameservers'] = ns_data
+                whois_info["nameservers"] = ns_data
             elif isinstance(ns_data, str):
-                whois_info['nameservers'] = [ns_data]
-                
+                whois_info["nameservers"] = [ns_data]
+
             # Handle status
-            status_data = domain_whois.get('status', domain_whois.get('domain_status', []))
+            status_data = domain_whois.get(
+                "status", domain_whois.get("domain_status", [])
+            )
             if isinstance(status_data, list):
-                whois_info['status'] = status_data
+                whois_info["status"] = status_data
             elif isinstance(status_data, str):
-                whois_info['status'] = [status_data]
-                
+                whois_info["status"] = [status_data]
+
             if verbose:
                 click.echo(f"[+] 🔍 WHOIS data found for {root_domain}")
-                
+
         except Exception as e:
             if verbose:
                 click.echo(f"[!] ⚠️  Error parsing WHOIS data for {root_domain}: {e}")
-    
+
     # Add WHOIS information to result
-    result['whois'] = whois_info
-    result['root_domain'] = root_domain
-    
+    result["whois"] = whois_info
+    result["root_domain"] = root_domain
+
     return result
 
 

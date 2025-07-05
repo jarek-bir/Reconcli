@@ -313,7 +313,7 @@ def bulk_whois_lookup(domains: List[str], api_key: str, threads: int, delay: flo
             # WhoisFreaks API endpoint
             url = f"https://api.whoisfreaks.com/v1.0/whois"
             params = {
-                "apikey": api_key,
+                "apiKey": api_key,
                 "whois": "live",
                 "domainName": domain.strip()
             }
@@ -376,7 +376,9 @@ def perform_risk_analysis(results: List[Dict], verbose: bool) -> List[Dict]:
         risk_score = 0
 
         # Check registrar reputation
-        registrar = whois_data.get("registrarName", "").lower()
+        registrar = (whois_data.get("registrarName") or 
+                    whois_data.get("domain_registrar", {}).get("registrar_name") or
+                    "").lower()
         if any(susp in registrar for susp in RISK_PATTERNS["suspicious_registrars"]):
             risk_factors.append("suspicious_registrar")
             risk_score += 20
@@ -389,7 +391,9 @@ def perform_risk_analysis(results: List[Dict], verbose: bool) -> List[Dict]:
             risk_score += 15
 
         # Check domain age
-        creation_date = whois_data.get("createdDate")
+        creation_date = (whois_data.get("createdDate") or 
+                        whois_data.get("create_date") or
+                        whois_data.get("creation_date"))
         if creation_date:
             try:
                 created = datetime.fromisoformat(creation_date.replace('Z', '+00:00'))
@@ -442,7 +446,9 @@ def check_expiring_domains(results: List[Dict], expire_days: int, verbose: bool)
             continue
             
         whois_data = result.get("whois_data", {})
-        expiry_date = whois_data.get("expiresDate")
+        expiry_date = (whois_data.get("expiresDate") or 
+                      whois_data.get("expiry_date") or
+                      whois_data.get("expires_date"))
         
         if expiry_date:
             try:
@@ -705,8 +711,13 @@ def save_whois_outputs(results: List[Dict], output_dir: str, save_json: bool, sa
             
             if status == "success":
                 whois_data = result.get("whois_data", {})
-                registrar = whois_data.get("registrarName", "Unknown")
-                expiry = whois_data.get("expiresDate", "Unknown")
+                # Handle different field structures from WhoisFreaks API
+                registrar = (whois_data.get("registrarName") or 
+                           whois_data.get("domain_registrar", {}).get("registrar_name") or
+                           "Unknown")
+                expiry = (whois_data.get("expiresDate") or 
+                         whois_data.get("expiry_date") or
+                         "Unknown")
                 
                 # Risk analysis
                 risk_info = ""
@@ -765,8 +776,13 @@ def save_whois_outputs(results: List[Dict], output_dir: str, save_json: bool, sa
                 domain = result.get("domain", "unknown")
                 if result.get("status") == "success":
                     whois_data = result.get("whois_data", {})
-                    registrar = whois_data.get("registrarName", "Unknown")
-                    expiry = whois_data.get("expiresDate", "Unknown")
+                    # Handle different field structures from WhoisFreaks API
+                    registrar = (whois_data.get("registrarName") or 
+                               whois_data.get("domain_registrar", {}).get("registrar_name") or
+                               "Unknown")
+                    expiry = (whois_data.get("expiresDate") or 
+                             whois_data.get("expiry_date") or
+                             "Unknown")
                     risk_level = result.get("risk_analysis", {}).get("risk_level", "N/A")
                     status = "✅ Success"
                 else:

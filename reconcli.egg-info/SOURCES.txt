@@ -2,12 +2,20 @@ setup.py
 reconcli/__init__.py
 reconcli/dnscli.py
 reconcli/enricher.py
+reconcli/httpcli.py
+reconcli/ipscli.py
+reconcli/jscli.py
 reconcli/main.py
 reconcli/mdreport.py
 reconcli/one_shot.py
 reconcli/tagger.py
+reconcli/takeovercli.py
+reconcli/url_tagger.py
 reconcli/urlcli.py
+reconcli/urlsorter.py
+reconcli/vhostcheck.py
 reconcli/vhostcli.py
+reconcli/zonewalkcli.py
 reconcli.egg-info/PKG-INFO
 reconcli.egg-info/SOURCES.txt
 reconcli.egg-info/dependency_links.txt
@@ -17,4 +25,5 @@ reconcli.egg-info/top_level.txt
 reconcli/utils/__init__.py
 reconcli/utils/loaders.py
 reconcli/utils/mdexport.py
+reconcli/utils/notifications.py
 reconcli/utils/resume.py

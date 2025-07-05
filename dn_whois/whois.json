@@ -1,0 +1,232 @@
+{
+    "domainName": "pyszne.pl",
+    "queryTime": "2025-07-05 16:34:44",
+    "dnsTypes": {
+        "A": 1,
+        "MX": 15,
+        "NS": 2,
+        "SOA": 6,
+        "SPF": 99,
+        "TXT": 16
+    },
+    "dnsRecords": [
+        {
+            "name": "pyszne.pl",
+            "type": 1,
+            "dnsType": "A",
+            "ttl": 300,
+            "rawText": "pyszne.pl.\t\t300\tIN\tA\t104.17.60.56",
+            "rRsetType": 1,
+            "address": "104.17.60.56"
+        },
+        {
+            "name": "pyszne.pl",
+            "type": 1,
+            "dnsType": "A",
+            "ttl": 300,
+            "rawText": "pyszne.pl.\t\t300\tIN\tA\t104.17.61.56",
+            "rRsetType": 1,
+            "address": "104.17.61.56"
+        },
+        {
+            "name": "pyszne.pl",
+            "type": 15,
+            "dnsType": "MX",
+            "ttl": 21600,
+            "rawText": "pyszne.pl.\t\t21600\tIN\tMX\t10 aspmx2.googlemail.com.",
+            "rRsetType": 15,
+            "target": "aspmx2.googlemail.com.",
+            "priority": 10
+        },
+        {
+            "name": "pyszne.pl",
+            "type": 15,
+            "dnsType": "MX",
+            "ttl": 21600,
+            "rawText": "pyszne.pl.\t\t21600\tIN\tMX\t1 aspmx.l.google.com.",
+            "rRsetType": 15,
+            "target": "aspmx.l.google.com.",
+            "priority": 1
+        },
+        {
+            "name": "pyszne.pl",
+            "type": 15,
+            "dnsType": "MX",
+            "ttl": 21600,
+            "rawText": "pyszne.pl.\t\t21600\tIN\tMX\t5 alt2.aspmx.l.google.com.",
+            "rRsetType": 15,
+            "target": "alt2.aspmx.l.google.com.",
+            "priority": 5
+        },
+        {
+            "name": "pyszne.pl",
+            "type": 15,
+            "dnsType": "MX",
+            "ttl": 21600,
+            "rawText": "pyszne.pl.\t\t21600\tIN\tMX\t10 aspmx3.googlemail.com.",
+            "rRsetType": 15,
+            "target": "aspmx3.googlemail.com.",
+            "priority": 10
+        },
+        {
+            "name": "pyszne.pl",
+            "type": 15,
+            "dnsType": "MX",
+            "ttl": 21600,
+            "rawText": "pyszne.pl.\t\t21600\tIN\tMX\t5 alt1.aspmx.l.google.com.",
+            "rRsetType": 15,
+            "target": "alt1.aspmx.l.google.com.",
+            "priority": 5
+        },
+        {
+            "name": "pyszne.pl",
+            "type": 2,
+            "dnsType": "NS",
+            "ttl": 21600,
+            "rawText": "pyszne.pl.\t\t21600\tIN\tNS\tns-316.awsdns-39.com.",
+            "rRsetType": 2,
+            "singleName": "ns-316.awsdns-39.com."
+        },
+        {
+            "name": "pyszne.pl",
+            "type": 2,
+            "dnsType": "NS",
+            "ttl": 21600,
+            "rawText": "pyszne.pl.\t\t21600\tIN\tNS\tns-1301.awsdns-34.org.",
+            "rRsetType": 2,
+            "singleName": "ns-1301.awsdns-34.org."
+        },
+        {
+            "name": "pyszne.pl",
+            "type": 2,
+            "dnsType": "NS",
+            "ttl": 21600,
+            "rawText": "pyszne.pl.\t\t21600\tIN\tNS\tns-1809.awsdns-34.co.uk.",
+            "rRsetType": 2,
+            "singleName": "ns-1809.awsdns-34.co.uk."
+        },
+        {
+            "name": "pyszne.pl",
+            "type": 2,
+            "dnsType": "NS",
+            "ttl": 21600,
+            "rawText": "pyszne.pl.\t\t21600\tIN\tNS\tns-745.awsdns-29.net.",
+            "rRsetType": 2,
+            "singleName": "ns-745.awsdns-29.net."
+        },
+        {
+            "name": "pyszne.pl",
+            "type": 6,
+            "dnsType": "SOA",
+            "ttl": 900,
+            "rawText": "pyszne.pl.\t\t900\tIN\tSOA\tns-1301.awsdns-34.org. awsdns-hostmaster.amazon.com. 1 7200 900 1209600 86400",
+            "rRsetType": 6,
+            "admin": "awsdns-hostmaster.amazon.com.",
+            "host": "ns-1301.awsdns-34.org.",
+            "expire": 1209600,
+            "minimum": 86400,
+            "refresh": 7200,
+            "retry": 900,
+            "serial": 1
+        },
+        {
+            "name": "pyszne.pl",
+            "type": 99,
+            "dnsType": "SPF",
+            "ttl": 900,
+            "rawText": "pyszne.pl.\t\t900\tIN\tSPF\t\"v=spf1 include:_spf.pyszne.pl -all\"",
+            "rRsetType": 99,
+            "strings": [
+                "v=spf1 include:_spf.pyszne.pl -all"
+            ]
+        },
+        {
+            "name": "pyszne.pl",
+            "type": 16,
+            "dnsType": "TXT",
+            "ttl": 900,
+            "rawText": "pyszne.pl.\t\t900\tIN\tTXT\t\"google-site-verification=7jiUh_UP8CGpo8STNuwoEVejWJEtI4LaK5Sw_faAgss\"",
+            "rRsetType": 16,
+            "strings": [
+                "google-site-verification=7jiUh_UP8CGpo8STNuwoEVejWJEtI4LaK5Sw_faAgss"
+            ]
+        },
+        {
+            "name": "pyszne.pl",
+            "type": 16,
+            "dnsType": "TXT",
+            "ttl": 900,
+            "rawText": "pyszne.pl.\t\t900\tIN\tTXT\t\"google-site-verification=_WzhY56DPHPoK_dOtwH719n_PIYVKNNzyOrQV_WYe-M\"",
+            "rRsetType": 16,
+            "strings": [
+                "google-site-verification=_WzhY56DPHPoK_dOtwH719n_PIYVKNNzyOrQV_WYe-M"
+            ]
+        },
+        {
+            "name": "pyszne.pl",
+            "type": 16,
+            "dnsType": "TXT",
+            "ttl": 900,
+            "rawText": "pyszne.pl.\t\t900\tIN\tTXT\t\"pardot1048033=fd60d3c6e46ae09afa079c171b347ccc37dfda35f228296a636c8a63151fdb0a\"",
+            "rRsetType": 16,
+            "strings": [
+                "pardot1048033=fd60d3c6e46ae09afa079c171b347ccc37dfda35f228296a636c8a63151fdb0a"
+            ]
+        },
+        {
+            "name": "pyszne.pl",
+            "type": 16,
+            "dnsType": "TXT",
+            "ttl": 900,
+            "rawText": "pyszne.pl.\t\t900\tIN\tTXT\t\"google-site-verification=EUX51Fb-_X35FNd65cftcqQulPf5WaoEhcpgjI6nkAY\"",
+            "rRsetType": 16,
+            "strings": [
+                "google-site-verification=EUX51Fb-_X35FNd65cftcqQulPf5WaoEhcpgjI6nkAY"
+            ]
+        },
+        {
+            "name": "pyszne.pl",
+            "type": 16,
+            "dnsType": "TXT",
+            "ttl": 900,
+            "rawText": "pyszne.pl.\t\t900\tIN\tTXT\t\"google-site-verification=th6vcq64YwSsEz7xcDCwG-0EI1yQhbuEgFitM4hAKUU\"",
+            "rRsetType": 16,
+            "strings": [
+                "google-site-verification=th6vcq64YwSsEz7xcDCwG-0EI1yQhbuEgFitM4hAKUU"
+            ]
+        },
+        {
+            "name": "pyszne.pl",
+            "type": 16,
+            "dnsType": "TXT",
+            "ttl": 900,
+            "rawText": "pyszne.pl.\t\t900\tIN\tTXT\t\"google-site-verification=ka_HKHTK-Dc4XKoOimO6yGfWVBAq63sNdX4zlfHBf3g\"",
+            "rRsetType": 16,
+            "strings": [
+                "google-site-verification=ka_HKHTK-Dc4XKoOimO6yGfWVBAq63sNdX4zlfHBf3g"
+            ]
+        },
+        {
+            "name": "pyszne.pl",
+            "type": 16,
+            "dnsType": "TXT",
+            "ttl": 900,
+            "rawText": "pyszne.pl.\t\t900\tIN\tTXT\t\"google-site-verification=I0fNObQIMtReNPnJ2UBIPeizo5FkVJnnkz3_LzJGcJg\"",
+            "rRsetType": 16,
+            "strings": [
+                "google-site-verification=I0fNObQIMtReNPnJ2UBIPeizo5FkVJnnkz3_LzJGcJg"
+            ]
+        },
+        {
+            "name": "pyszne.pl",
+            "type": 16,
+            "dnsType": "TXT",
+            "ttl": 900,
+            "rawText": "pyszne.pl.\t\t900\tIN\tTXT\t\"google-site-verification=SIufP582Vp2ebiDD7LQVvQBZc-UM_ARUxfqyEZsyTTk\"",
+            "rRsetType": 16,
+            "strings": [
+                "google-site-verification=SIufP582Vp2ebiDD7LQVvQBZc-UM_ARUxfqyEZsyTTk"
+            ]
+        }
+    ]
+}
