@@ -1,0 +1,34 @@
+# Katana Headless Browser Flow
+# Focus on JavaScript-heavy applications with headless browsing
+
+wayback: false
+gau: false
+katana: true
+gospider: false
+sitemap: true
+favicon: false
+
+# Headless-specific Katana settings
+katana_depth: 3
+katana_js_crawl: true # Essential for JS apps
+katana_headless: true # Headless browser mode
+katana_form_fill: true # Auto-fill forms to discover more endpoints
+katana_tech_detect: true # Detect technologies used
+katana_concurrency: 8 # Lower concurrency for headless stability
+katana_rate_limit: 100 # Conservative rate limiting
+katana_scope: null
+
+# Processing
+extract_js: true
+js_scan: true
+tag_only: false
+dedupe: true
+smart_filter: false # Keep more URLs for JS-heavy apps
+
+# Output
+save_json: true
+save_markdown: true
+
+# Performance
+timeout: 3600 # 1 hour for headless operations
+threads: 5

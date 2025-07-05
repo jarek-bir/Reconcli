@@ -8,3 +8,4 @@ json: true
 markdown: true
 tag_only: false
 dedupe: false
+timeout: 900 # 15 minutes for debug/testing

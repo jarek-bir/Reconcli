@@ -10,3 +10,4 @@ save_json: true
 save_markdown: true
 tag_only: true
 dedupe: true
+timeout: 1800 # 30 minutes

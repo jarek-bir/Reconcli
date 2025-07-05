@@ -1,3 +1,4 @@
+timeout: 2700 # 45 minutes for aggressive V2
 tools:
   waybackurls:
     enabled: true

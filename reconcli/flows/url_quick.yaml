@@ -1,0 +1,16 @@
+# Quick URL discovery for fast testing
+# Minimal configuration with short timeouts
+wayback: true
+gau: false
+katana: false
+gospider: false
+sitemap: true
+favicon: false
+extract_js: false
+js_scan: false
+save_json: false
+save_markdown: false
+tag_only: true
+dedupe: true
+smart_filter: true
+timeout: 300 # 5 minutes for quick scan

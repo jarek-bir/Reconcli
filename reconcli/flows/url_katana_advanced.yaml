@@ -1,0 +1,35 @@
+# Advanced Katana URL Discovery Flow
+# This flow uses Katana's advanced features for comprehensive crawling
+
+# Basic tool selection
+wayback: false
+gau: false
+katana: true
+gospider: false
+sitemap: true
+favicon: true
+
+# Advanced Katana configuration
+katana_depth: 5 # Deeper crawling (default: 3)
+katana_js_crawl: true # Enable JavaScript endpoint parsing
+katana_headless: true # Use headless browser mode
+katana_form_fill: true # Automatic form filling (experimental)
+katana_tech_detect: true # Enable technology detection
+katana_concurrency: 15 # Higher concurrency for faster scanning
+katana_rate_limit: 200 # Higher rate limit
+katana_scope: null # Custom scope regex (e.g., ".*\\.target\\.com.*")
+
+# Processing options
+extract_js: true
+js_scan: true
+tag_only: false
+dedupe: true
+smart_filter: true
+
+# Output options
+save_json: true
+save_markdown: true
+
+# Performance settings
+timeout: 2400 # 40 minutes for deep crawling
+threads: 10

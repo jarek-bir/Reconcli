@@ -1,0 +1,34 @@
+# Fast Katana Reconnaissance Flow
+# Quick discovery with basic Katana features
+
+wayback: true # Combine with Wayback for better coverage
+gau: true
+katana: true
+gospider: false
+sitemap: true
+favicon: true
+
+# Fast Katana settings
+katana_depth: 2 # Shallow but fast
+katana_js_crawl: false # Skip JS parsing for speed
+katana_headless: false # No headless for speed
+katana_form_fill: false # Skip form filling
+katana_tech_detect: false # Skip tech detection
+katana_concurrency: 20 # High concurrency
+katana_rate_limit: 300 # High rate limit
+katana_scope: null
+
+# Processing
+extract_js: true
+js_scan: false # Skip JS scanning for speed
+tag_only: true # Only keep tagged URLs
+dedupe: true
+smart_filter: true
+
+# Output
+save_json: false
+save_markdown: true
+
+# Performance
+timeout: 900 # 15 minutes - fast scan
+threads: 8

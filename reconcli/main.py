@@ -11,6 +11,7 @@ from reconcli.one_shot import cli as one_shot_cli
 from reconcli.zonewalkcli import cli as zonewalk_cli
 from reconcli.takeovercli import takeovercli
 from reconcli.whoisfreakscli import cli as whoisfreaks_cli
+from reconcli.subdocli import subdocli
 
 
 @click.group()
@@ -30,6 +31,7 @@ cli.add_command(one_shot_cli, name="oneshot")
 cli.add_command(zonewalk_cli, name="zonewalkcli")
 cli.add_command(takeovercli, name="takeover")  # <-- 🚀 tu dodajemy takeover
 cli.add_command(whoisfreaks_cli, name="whoisfreaks")  # <-- 🚀 nowy moduł WhoisFreaks
+cli.add_command(subdocli, name="subdocli")  # <-- 🚀 nowy moduł Subdomain
 
 
 if __name__ == "__main__":

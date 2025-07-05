@@ -1,0 +1,29 @@
+# Deep URL discovery with extended timeouts
+# For comprehensive reconnaissance of large targets
+gau: true
+wayback: true
+katana: true
+gospider: true
+sitemap: true
+favicon: true
+extract_js: true
+js_scan: true
+save_json: true
+save_markdown: true
+tag_only: false
+dedupe: true
+smart_filter: true
+timeout: 3600  # 60 minutes for deep scanning
+
+# Advanced tool configurations
+gau:
+  flags: ["--subs", "--blacklist", "--retries", "3", "--providers", "wayback,commoncrawl,otx,urlscan"]
+
+waybackurls:
+  flags: []
+
+katana:
+  flags: ["-jc", "-d", "15", "-ef", "jpg,png,svg,gif,ico", "-kf", "all", "-fx", "-gr"]
+
+gospider:
+  flags: ["-c", "10", "-d", "5", "--robots", "--sitemap", "--js", "--aws-access", "-t", "20"]

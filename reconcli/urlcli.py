@@ -94,37 +94,6 @@ def save_outputs(domain, tagged, output_dir, save_markdown, save_json):
         print(f"[+] Saved Markdown output: {md_file}")
 
 
-def scan_js(domain, output_dir, session):
-    js_file = os.path.join(output_dir, f"{domain}_js_urls.txt")
-    if not os.path.exists(js_file):
-        print(f"[!] No JS URLs found for scanning: {js_file}")
-        return
-
-    with open(js_file, "r") as f:
-        js_urls = [line.strip() for line in f if line.strip()]
-
-    findings = []
-
-    for js_url in js_urls:
-        try:
-            resp = session.get(js_url, timeout=10)
-            content = resp.text
-
-            # Proste heurystyki na sekretne klucze
-            for pattern in SENSITIVE_PATTERNS:
-                if pattern.lower() in content.lower():
-                    findings.append((js_url, pattern))
-        except Exception as e:
-            print(f"[!] Failed to fetch {js_url}: {e}")
-
-    report_file = os.path.join(output_dir, f"{domain}_js_scan.txt")
-    with open(report_file, "w") as f:
-        for url, pattern in findings:
-            f.write(f"{url} — matched pattern: {pattern}\n")
-
-    print(f"[+] JS scan results saved to {report_file}")
-
-
 @click.command()
 @click.option("--input", help="File with resolved subdomains or plain list")
 @click.option(
@@ -141,6 +110,30 @@ def scan_js(domain, output_dir, session):
 @click.option("--wayback", is_flag=True, help="Use waybackurls")
 @click.option("--gau", is_flag=True, help="Use gau")
 @click.option("--katana", is_flag=True, help="Use katana")
+@click.option("--katana-depth", default=3, help="Katana crawl depth (default: 3)")
+@click.option(
+    "--katana-js-crawl", is_flag=True, help="Enable Katana JavaScript crawling"
+)
+@click.option("--katana-headless", is_flag=True, help="Enable Katana headless mode")
+@click.option(
+    "--katana-form-fill", is_flag=True, help="Enable Katana automatic form filling"
+)
+@click.option(
+    "--katana-tech-detect", is_flag=True, help="Enable Katana technology detection"
+)
+@click.option(
+    "--katana-scope",
+    default=None,
+    help="Katana crawl scope regex (e.g., '.*\\.target\\.com.*')",
+)
+@click.option(
+    "--katana-concurrency", default=10, help="Katana concurrency level (default: 10)"
+)
+@click.option(
+    "--katana-rate-limit",
+    default=150,
+    help="Katana rate limit per second (default: 150)",
+)
 @click.option("--gospider", is_flag=True, help="Use GoSpider")
 @click.option("--sitemap", is_flag=True, help="Parse sitemap.xml")
 @click.option("--favicon", is_flag=True, help="Fetch and hash favicon")
@@ -164,7 +157,9 @@ def scan_js(domain, output_dir, session):
 @click.option("--export-tag", default=None, help="Export only URLs with this tag")
 @click.option("--verbose", is_flag=True, help="Enable verbose output")
 @click.option(
-    "--timeout", default=60, help="Timeout for individual operations (seconds)"
+    "--timeout",
+    default=1800,
+    help="Timeout for individual operations (seconds, default: 30 minutes)",
 )
 @click.option("--retries", default=3, help="Number of retries for failed operations")
 @click.option(
@@ -189,6 +184,14 @@ def main(
     wayback,
     gau,
     katana,
+    katana_depth,
+    katana_js_crawl,
+    katana_headless,
+    katana_form_fill,
+    katana_tech_detect,
+    katana_scope,
+    katana_concurrency,
+    katana_rate_limit,
     gospider,
     sitemap,
     favicon,
@@ -263,6 +266,14 @@ def main(
                 "wayback": wayback,
                 "gau": gau,
                 "katana": katana,
+                "katana_depth": katana_depth,
+                "katana_js_crawl": katana_js_crawl,
+                "katana_headless": katana_headless,
+                "katana_form_fill": katana_form_fill,
+                "katana_tech_detect": katana_tech_detect,
+                "katana_scope": katana_scope,
+                "katana_concurrency": katana_concurrency,
+                "katana_rate_limit": katana_rate_limit,
                 "gospider": gospider,
                 "sitemap": sitemap,
                 "extract_js": extract_js,
@@ -271,19 +282,20 @@ def main(
         }
         save_resume_state(output_dir, resume_state)
 
-    if verbose:
-        click.echo(f"[+] 🚀 Starting URL discovery scan")
-        click.echo(f"[+] 📁 Output directory: {output_dir}")
-        click.echo(f"[+] ⏰ Timeout: {timeout}s")
-        click.echo(f"[+] 🔄 Retries: {retries}")
-        click.echo(f"[+] 🧵 Threads: {threads}")
-
     if flow:
         with open(flow, "r") as f:
             config = yaml.safe_load(f)
         wayback = config.get("wayback", wayback)
         gau = config.get("gau", gau)
         katana = config.get("katana", katana)
+        katana_depth = config.get("katana_depth", katana_depth)
+        katana_js_crawl = config.get("katana_js_crawl", katana_js_crawl)
+        katana_headless = config.get("katana_headless", katana_headless)
+        katana_form_fill = config.get("katana_form_fill", katana_form_fill)
+        katana_tech_detect = config.get("katana_tech_detect", katana_tech_detect)
+        katana_scope = config.get("katana_scope", katana_scope)
+        katana_concurrency = config.get("katana_concurrency", katana_concurrency)
+        katana_rate_limit = config.get("katana_rate_limit", katana_rate_limit)
         gospider = config.get("gospider", gospider)
         sitemap = config.get("sitemap", sitemap)
         favicon = config.get("favicon", favicon)
@@ -293,6 +305,15 @@ def main(
         save_markdown = config.get("save_markdown", save_markdown)
         tag_only = config.get("tag_only", tag_only)
         dedupe = config.get("dedupe", dedupe)
+        # Override timeout if specified in flow
+        timeout = config.get("timeout", timeout)
+
+    if verbose:
+        click.echo(f"[+] 🚀 Starting URL discovery scan")
+        click.echo(f"[+] 📁 Output directory: {output_dir}")
+        click.echo(f"[+] ⏰ Timeout: {timeout}s")
+        click.echo(f"[+] 🔄 Retries: {retries}")
+        click.echo(f"[+] 🧵 Threads: {threads}")
 
     if from_subs_resolved:
         with open(input, "r") as f:
@@ -340,6 +361,14 @@ def main(
                 wayback,
                 gau,
                 katana,
+                katana_depth,
+                katana_js_crawl,
+                katana_headless,
+                katana_form_fill,
+                katana_tech_detect,
+                katana_scope,
+                katana_concurrency,
+                katana_rate_limit,
                 gospider,
                 sitemap,
                 favicon,
@@ -692,6 +721,14 @@ def enhanced_url_discovery(
     wayback,
     gau,
     katana,
+    katana_depth,
+    katana_js_crawl,
+    katana_headless,
+    katana_form_fill,
+    katana_tech_detect,
+    katana_scope,
+    katana_concurrency,
+    katana_rate_limit,
     gospider,
     sitemap,
     favicon,
@@ -708,21 +745,80 @@ def enhanced_url_discovery(
     if verbose:
         click.echo(f"[+] 🎯 Starting URL discovery for {domain}")
 
-    # External tools
+    # Build advanced Katana command with new options
+    katana_cmd = None
+    if katana:
+        katana_cmd = [
+            "katana",
+            "-u",
+            f"http://{domain}",
+            "-timeout",
+            str(timeout),
+            "-d",
+            str(katana_depth),
+            "-c",
+            str(katana_concurrency),
+            "-rl",
+            str(katana_rate_limit),
+            "-silent",  # Reduce noise
+        ]
+
+        # Add optional features
+        if katana_js_crawl:
+            katana_cmd.extend(["-jc"])
+            if verbose:
+                click.echo(f"[+] 🟡 Katana: JavaScript crawling enabled")
+
+        if katana_headless:
+            katana_cmd.extend(["-hl"])
+            if verbose:
+                click.echo(f"[+] 🤖 Katana: Headless mode enabled")
+
+        if katana_form_fill:
+            katana_cmd.extend(["-aff"])
+            if verbose:
+                click.echo(f"[+] 📝 Katana: Automatic form filling enabled")
+
+        if katana_tech_detect:
+            katana_cmd.extend(["-td"])
+            if verbose:
+                click.echo(f"[+] 🔍 Katana: Technology detection enabled")
+
+        if katana_scope:
+            katana_cmd.extend(["-cs", katana_scope])
+            if verbose:
+                click.echo(f"[+] 🎯 Katana: Custom scope: {katana_scope}")
+
+    # External tools with proper timeout configuration
     tools_config = [
         (wayback, ["waybackurls", domain], "waybackurls"),
-        (gau, ["gau", domain], "gau"),
-        (katana, ["katana", "-u", f"http://{domain}"], "katana"),
-        (gospider, ["gospider", "-s", f"http://{domain}", "-q"], "gospider"),
+        (gau, ["gau", "--timeout", str(timeout), domain], "gau"),
+        (katana and katana_cmd, katana_cmd, "katana"),
+        (
+            gospider,
+            ["gospider", "-s", f"http://{domain}", "-q", "-m", str(timeout)],
+            "gospider",
+        ),
     ]
 
     for enabled, cmd, tool_name in tools_config:
-        if enabled:
+        if enabled and cmd:
             tool_urls, error = run_tool_with_retry(
                 cmd, domain, tool_name, timeout, retries, verbose
             )
             if tool_urls:
                 urls.update(tool_urls)
+                if verbose and tool_name == "katana":
+                    # Parse Katana JSON output if available
+                    try:
+                        katana_enhanced_output = parse_katana_output(tool_urls, verbose)
+                        if katana_enhanced_output:
+                            save_katana_analysis(
+                                domain, katana_enhanced_output, output_dir
+                            )
+                    except Exception as e:
+                        if verbose:
+                            click.echo(f"[!] ⚠️  Katana analysis parsing failed: {e}")
             if error:
                 errors.append(error)
 
@@ -950,4 +1046,183 @@ def scan_js_enhanced(domain, output_dir, session, timeout, verbose):
     return scan_results
 
 
-# ...existing code...
+def parse_katana_output(tool_urls, verbose):
+    """Parse Katana output for enhanced analysis."""
+    try:
+        analysis = {
+            "total_urls": len(tool_urls),
+            "unique_domains": set(),
+            "file_extensions": {},
+            "url_depths": {},
+            "potential_apis": [],
+            "forms_found": [],
+            "technologies": [],
+        }
+
+        for url in tool_urls:
+            try:
+                parsed = urlparse(url)
+                analysis["unique_domains"].add(parsed.netloc)
+
+                # Analyze URL depth
+                path_parts = parsed.path.strip("/").split("/")
+                depth = len([p for p in path_parts if p])
+                analysis["url_depths"][depth] = analysis["url_depths"].get(depth, 0) + 1
+
+                # Extract file extensions
+                if "." in parsed.path:
+                    ext = parsed.path.split(".")[-1].lower()
+                    if len(ext) <= 5:  # Reasonable extension length
+                        analysis["file_extensions"][ext] = (
+                            analysis["file_extensions"].get(ext, 0) + 1
+                        )
+
+                # Detect potential API endpoints
+                if any(
+                    api_indicator in url.lower()
+                    for api_indicator in [
+                        "/api/",
+                        "/v1/",
+                        "/v2/",
+                        "/v3/",
+                        "/rest/",
+                        "/graphql",
+                        ".json",
+                        "/ajax",
+                    ]
+                ):
+                    analysis["potential_apis"].append(url)
+
+            except Exception:
+                continue
+
+        # Convert sets to lists for JSON serialization
+        analysis["unique_domains"] = list(analysis["unique_domains"])
+
+        if verbose:
+            click.echo(
+                f"[+] 📊 Katana analysis: {len(analysis['unique_domains'])} domains, {len(analysis['potential_apis'])} API endpoints"
+            )
+
+        return analysis
+
+    except Exception as e:
+        if verbose:
+            click.echo(f"[!] ❌ Katana output parsing failed: {e}")
+        return None
+
+
+def save_katana_analysis(domain, analysis, output_dir):
+    """Save enhanced Katana analysis to file."""
+    try:
+        analysis_file = os.path.join(output_dir, f"{domain}_katana_analysis.json")
+
+        # Add timestamp and domain info
+        enhanced_analysis = {
+            "domain": domain,
+            "scan_time": datetime.now().isoformat(),
+            "analysis": analysis,
+            "summary": {
+                "total_urls_found": analysis.get("total_urls", 0),
+                "unique_domains_discovered": len(analysis.get("unique_domains", [])),
+                "potential_api_endpoints": len(analysis.get("potential_apis", [])),
+                "top_file_extensions": dict(
+                    sorted(
+                        analysis.get("file_extensions", {}).items(),
+                        key=lambda x: x[1],
+                        reverse=True,
+                    )[:10]
+                ),
+                "url_depth_distribution": analysis.get("url_depths", {}),
+            },
+        }
+
+        with open(analysis_file, "w") as f:
+            json.dump(enhanced_analysis, f, indent=2)
+
+        # Also save API endpoints separately for easy access
+        if analysis.get("potential_apis"):
+            api_file = os.path.join(output_dir, f"{domain}_potential_apis.txt")
+            with open(api_file, "w") as f:
+                for api_url in analysis["potential_apis"]:
+                    f.write(api_url + "\n")
+
+        return True
+
+    except Exception as e:
+        return False
+
+
+def run_katana_with_json_output(
+    domain, katana_cmd, timeout, retries, verbose, output_dir
+):
+    """Run Katana with JSON output for enhanced analysis."""
+    try:
+        # Modify command to include JSON output
+        json_output_file = os.path.join(output_dir, f"{domain}_katana_raw.jsonl")
+        enhanced_cmd = katana_cmd + ["-jsonl", "-o", json_output_file]
+
+        if verbose:
+            click.echo(f"[+] 🔧 Running enhanced Katana with JSON output")
+
+        result = subprocess.run(
+            enhanced_cmd,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+            check=False,  # Don't raise on non-zero exit
+        )
+
+        urls = []
+        enhanced_data = []
+
+        # Parse JSONL output if available
+        if os.path.exists(json_output_file):
+            try:
+                with open(json_output_file, "r") as f:
+                    for line in f:
+                        if line.strip():
+                            try:
+                                data = json.loads(line.strip())
+                                if "url" in data:
+                                    urls.append(data["url"])
+                                enhanced_data.append(data)
+                            except json.JSONDecodeError:
+                                continue
+
+                if verbose:
+                    click.echo(
+                        f"[+] 📊 Katana JSON: {len(enhanced_data)} detailed records"
+                    )
+
+                # Save enhanced analysis
+                if enhanced_data:
+                    enhanced_file = os.path.join(
+                        output_dir, f"{domain}_katana_enhanced.json"
+                    )
+                    with open(enhanced_file, "w") as f:
+                        json.dump(
+                            {
+                                "domain": domain,
+                                "scan_time": datetime.now().isoformat(),
+                                "total_records": len(enhanced_data),
+                                "records": enhanced_data,
+                            },
+                            f,
+                            indent=2,
+                        )
+
+            except Exception as e:
+                if verbose:
+                    click.echo(f"[!] ⚠️  JSON parsing failed: {e}")
+
+        # Fallback to stdout if JSON parsing failed
+        if not urls and result.stdout:
+            urls = result.stdout.splitlines()
+
+        return urls, None
+
+    except subprocess.TimeoutExpired:
+        return [], f"Katana timeout after {timeout}s"
+    except Exception as e:
+        return [], f"Katana enhanced run failed: {str(e)}"

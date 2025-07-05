@@ -11,6 +11,7 @@ save_markdown: true
 tag_only: false
 dedupe: true
 smart_filter: true
+timeout: 2400  # 40 minutes for aggressive scan
 
 gau:
   flags: ["--subs", "--blacklist"]
