@@ -1,0 +1,70 @@
+{
+  "pyszne.pl": {
+    "domain_name": "pyszne.pl",
+    "registrar": "home.pl S.A.",
+    "creation_date": "2012-03-28",
+    "expiration_date": "2025-03-28",
+    "registrant_organization": "Takeaway.com Europe B.V.",
+    "registrant_country": "NL",
+    "admin_email": "domains@takeaway.com",
+    "nameservers": [
+      "ns-316.awsdns-39.com",
+      "ns-1301.awsdns-34.org",
+      "ns-1809.awsdns-34.co.uk",
+      "ns-745.awsdns-29.net"
+    ],
+    "status": ["ok"],
+    "dnssec": "unsigned"
+  },
+  "google.com": {
+    "domain_name": "google.com",
+    "registrar": "MarkMonitor Inc.",
+    "creation_date": "1997-09-15",
+    "expiration_date": "2028-09-14",
+    "registrant_organization": "Google LLC",
+    "registrant_country": "US",
+    "admin_email": "dns-admin@google.com",
+    "nameservers": [
+      "ns1.google.com",
+      "ns2.google.com",
+      "ns3.google.com",
+      "ns4.google.com"
+    ],
+    "status": ["clientDeleteProhibited", "clientTransferProhibited", "clientUpdateProhibited"],
+    "dnssec": "unsigned"
+  },
+  "github.com": {
+    "domain_name": "github.com",
+    "registrar": "MarkMonitor Inc.",
+    "creation_date": "2007-10-09",
+    "expiration_date": "2025-10-09",
+    "registrant_organization": "GitHub, Inc.",
+    "registrant_country": "US",
+    "admin_email": "hostmaster@github.com",
+    "nameservers": [
+      "dns1.p08.nsone.net",
+      "dns2.p08.nsone.net",
+      "dns3.p08.nsone.net",
+      "dns4.p08.nsone.net"
+    ],
+    "status": ["clientDeleteProhibited", "clientTransferProhibited", "clientUpdateProhibited"],
+    "dnssec": "unsigned"
+  },
+  "amazon.com": {
+    "domain_name": "amazon.com",
+    "registrar": "MarkMonitor Inc.",
+    "creation_date": "1994-11-01",
+    "expiration_date": "2024-10-31",
+    "registrant_organization": "Amazon.com, Inc.",
+    "registrant_country": "US",
+    "admin_email": "hostmaster@amazon.com",
+    "nameservers": [
+      "pdns1.ultradns.net",
+      "pdns6.ultradns.co.uk",
+      "ns1.p31.dynect.net",
+      "ns2.p31.dynect.net"
+    ],
+    "status": ["clientDeleteProhibited", "clientTransferProhibited", "clientUpdateProhibited"],
+    "dnssec": "unsigned"
+  }
+}
