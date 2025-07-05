@@ -4,6 +4,7 @@ Supports Slack and Discord webhooks for scan result notifications
 """
 
 import json
+import time
 import httpx
 import click
 from datetime import datetime
@@ -74,6 +75,22 @@ class NotificationManager:
 
         if self.discord_webhook:
             success &= self._send_discord_dns_notification(results, scan_metadata)
+
+        return success
+
+    def send_whoisfreaks_results(
+        self, results: List[Dict], scan_metadata: Dict
+    ) -> bool:
+        """Send WhoisFreaks scan results to configured notification channels"""
+        success = True
+
+        if self.slack_webhook:
+            success &= self._send_slack_whoisfreaks_notification(results, scan_metadata)
+
+        if self.discord_webhook:
+            success &= self._send_discord_whoisfreaks_notification(
+                results, scan_metadata
+            )
 
         return success
 
@@ -662,35 +679,61 @@ class NotificationManager:
             title = f"🔍 DNS Resolution: {resolved_count}/{total_subdomains} subdomains resolved"
 
             fields = [
-                {"title": "Total Subdomains", "value": f"`{total_subdomains}`", "short": True},
-                {"title": "Successfully Resolved", "value": f"`{resolved_count}`", "short": True},
-                {"title": "Resolution Rate", "value": f"`{resolution_rate}%`", "short": True},
-                {"title": "Scan Duration", "value": f"`{metadata.get('scan_duration', 'unknown')}`", "short": True},
+                {
+                    "title": "Total Subdomains",
+                    "value": f"`{total_subdomains}`",
+                    "short": True,
+                },
+                {
+                    "title": "Successfully Resolved",
+                    "value": f"`{resolved_count}`",
+                    "short": True,
+                },
+                {
+                    "title": "Resolution Rate",
+                    "value": f"`{resolution_rate}%`",
+                    "short": True,
+                },
+                {
+                    "title": "Scan Duration",
+                    "value": f"`{metadata.get('scan_duration', 'unknown')}`",
+                    "short": True,
+                },
             ]
 
             # Add top tags if available
             if top_tags:
-                tags_text = "\n".join([f"• {tag}: {count}" for tag, count in list(top_tags.items())[:5]])
-                fields.append({
-                    "title": "Top Classifications",
-                    "value": tags_text,
-                    "short": False,
-                })
+                tags_text = "\n".join(
+                    [f"• {tag}: {count}" for tag, count in list(top_tags.items())[:5]]
+                )
+                fields.append(
+                    {
+                        "title": "Top Classifications",
+                        "value": tags_text,
+                        "short": False,
+                    }
+                )
 
             # Add sample resolved subdomains
             if results:
-                resolved_samples = [r for r in results[:5] if r.get('ip') != 'unresolved']
+                resolved_samples = [
+                    r for r in results[:5] if r.get("ip") != "unresolved"
+                ]
                 if resolved_samples:
-                    samples_text = "\n".join([
-                        f"• `{r['subdomain']}` → {r['ip']}" + 
-                        (f" ({', '.join(r['tags'])})" if r.get('tags') else "")
-                        for r in resolved_samples
-                    ])
-                    fields.append({
-                        "title": "Sample Results",
-                        "value": samples_text,
-                        "short": False,
-                    })
+                    samples_text = "\n".join(
+                        [
+                            f"• `{r['subdomain']}` → {r['ip']}"
+                            + (f" ({', '.join(r['tags'])})" if r.get("tags") else "")
+                            for r in resolved_samples
+                        ]
+                    )
+                    fields.append(
+                        {
+                            "title": "Sample Results",
+                            "value": samples_text,
+                            "short": False,
+                        }
+                    )
 
             attachment = {
                 "color": color,
@@ -714,7 +757,9 @@ class NotificationManager:
                 click.echo(f"❌ Failed to send Slack notification: {e}")
             return False
 
-    def _send_discord_dns_notification(self, results: List[Dict], metadata: Dict) -> bool:
+    def _send_discord_dns_notification(
+        self, results: List[Dict], metadata: Dict
+    ) -> bool:
         """Send DNS resolution results to Discord"""
         if not self.discord_webhook:
             return False
@@ -728,7 +773,9 @@ class NotificationManager:
             resolution_rate = metadata.get("resolution_rate", 0)
             top_tags = metadata.get("top_tags", {})
 
-            color = 0x00FF00 if resolved_count > 0 else 0xFFAA00  # Green if resolved, amber if none
+            color = (
+                0x00FF00 if resolved_count > 0 else 0xFFAA00
+            )  # Green if resolved, amber if none
             title = f"🔍 DNS Resolution Complete"
             description = f"Resolved {resolved_count}/{total_subdomains} subdomains ({resolution_rate}%)"
 
@@ -757,27 +804,37 @@ class NotificationManager:
 
             # Add top tags if available
             if top_tags:
-                tags_text = "\n".join([f"• {tag}: {count}" for tag, count in list(top_tags.items())[:5]])
-                fields.append({
-                    "name": "Top Classifications",
-                    "value": tags_text,
-                    "inline": False,
-                })
+                tags_text = "\n".join(
+                    [f"• {tag}: {count}" for tag, count in list(top_tags.items())[:5]]
+                )
+                fields.append(
+                    {
+                        "name": "Top Classifications",
+                        "value": tags_text,
+                        "inline": False,
+                    }
+                )
 
             # Add sample resolved subdomains
             if results:
-                resolved_samples = [r for r in results[:5] if r.get('ip') != 'unresolved']
+                resolved_samples = [
+                    r for r in results[:5] if r.get("ip") != "unresolved"
+                ]
                 if resolved_samples:
-                    samples_text = "\n".join([
-                        f"• `{r['subdomain']}` → {r['ip']}" + 
-                        (f" ({', '.join(r['tags'])})" if r.get('tags') else "")
-                        for r in resolved_samples
-                    ])
-                    fields.append({
-                        "name": "Sample Results",
-                        "value": samples_text,
-                        "inline": False,
-                    })
+                    samples_text = "\n".join(
+                        [
+                            f"• `{r['subdomain']}` → {r['ip']}"
+                            + (f" ({', '.join(r['tags'])})" if r.get("tags") else "")
+                            for r in resolved_samples
+                        ]
+                    )
+                    fields.append(
+                        {
+                            "name": "Sample Results",
+                            "value": samples_text,
+                            "inline": False,
+                        }
+                    )
 
             embed = {
                 "title": title,
@@ -795,6 +852,233 @@ class NotificationManager:
 
             if self.verbose:
                 click.echo("📱 Discord notification sent successfully")
+            return True
+
+        except Exception as e:
+            if self.verbose:
+                click.echo(f"❌ Failed to send Discord notification: {e}")
+            return False
+
+    def _send_slack_whoisfreaks_notification(
+        self, results: List[Dict], metadata: Dict
+    ) -> bool:
+        """Send WhoisFreaks results to Slack"""
+        try:
+            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+            # Calculate statistics
+            total_domains = metadata.get("total_domains", len(results))
+            success_count = metadata.get("success_count", 0)
+            failed_count = metadata.get("failed_count", 0)
+            
+            # Risk statistics
+            risk_dist = metadata.get("risk_distribution", {})
+            high_risk = risk_dist.get("HIGH", 0)
+            medium_risk = risk_dist.get("MEDIUM", 0)
+            
+            # Expiring domains
+            expiring_domains = metadata.get("expiring_domains", 0)
+
+            # Build Slack message
+            if success_count > 0:
+                color = "danger" if high_risk > 0 else ("warning" if medium_risk > 0 or expiring_domains > 0 else "good")
+                title = f"🔍 WhoisFreaks Analysis: {success_count}/{total_domains} domains analyzed"
+                
+                # Risk summary
+                risk_summary = []
+                if high_risk > 0:
+                    risk_summary.append(f"🚨 {high_risk} HIGH risk")
+                if medium_risk > 0:
+                    risk_summary.append(f"⚠️ {medium_risk} MEDIUM risk")
+                if expiring_domains > 0:
+                    risk_summary.append(f"⏰ {expiring_domains} expiring soon")
+                
+                risk_text = " | ".join(risk_summary) if risk_summary else "✅ No significant risks found"
+                
+            else:
+                color = "warning"
+                title = f"🔍 WhoisFreaks Analysis: No domains successfully analyzed"
+                risk_text = "No data to analyze"
+
+            fields = [
+                {
+                    "title": "📊 Analysis Summary",
+                    "value": f"Total Domains: {total_domains}\n"
+                    f"Successful: {success_count}\n"
+                    f"Failed: {failed_count}\n"
+                    f"Success Rate: {metadata.get('success_rate', 0)}%",
+                    "short": True,
+                },
+                {
+                    "title": "🚨 Risk Assessment",
+                    "value": risk_text,
+                    "short": True,
+                },
+                {
+                    "title": "⏱️ Scan Details",
+                    "value": f"Duration: {metadata.get('scan_duration', 'unknown')}\n"
+                    f"Timestamp: {metadata.get('timestamp', 'unknown')}\n"
+                    f"Tool: {metadata.get('tool', 'whoisfreakscli')}",
+                    "short": True,
+                },
+            ]
+
+            # Add sample domain details for successful results
+            successful_results = [r for r in results if r.get("status") == "success"]
+            if successful_results:
+                for result in successful_results[:5]:  # Limit to first 5 results
+                    whois_data = result.get("whois_data", {})
+                    domain = result.get("domain", "unknown")
+                    registrar = whois_data.get("registrar", whois_data.get("registrarName", "unknown"))
+                    expiry = whois_data.get("expiration_date", whois_data.get("expiresDate", "unknown"))
+                    
+                    # Risk info
+                    risk_info = result.get("risk_analysis", {})
+                    risk_level = risk_info.get("risk_level", "NONE")
+                    risk_score = risk_info.get("risk_score", 0)
+                    
+                    # Expiry warning
+                    expiry_info = result.get("expiring_soon", {})
+                    expiry_warning = ""
+                    if expiry_info:
+                        days = expiry_info.get("days_until_expiry", 0)
+                        expiry_warning = f"\n⏰ Expires in {days} days!"
+
+                    fields.append(
+                        {
+                            "title": f"📍 {domain}",
+                            "value": f"Registrar: {registrar}\n"
+                            f"Expires: {expiry}\n"
+                            f"Risk: {risk_level} ({risk_score}){expiry_warning}",
+                            "short": False,
+                        }
+                    )
+
+            attachment = {
+                "fallback": title,
+                "color": color,
+                "title": title,
+                "fields": fields,
+                "footer": "ReconCLI WhoisFreaks Analysis",
+                "ts": int(time.time()),
+            }
+
+            payload = {"attachments": [attachment]}
+
+            response = httpx.post(self.slack_webhook, json=payload, timeout=10)
+            response.raise_for_status()
+
+            if self.verbose:
+                click.echo("✅ Slack notification sent successfully")
+            return True
+
+        except Exception as e:
+            if self.verbose:
+                click.echo(f"❌ Failed to send Slack notification: {e}")
+            return False
+
+    def _send_discord_whoisfreaks_notification(
+        self, results: List[Dict], metadata: Dict
+    ) -> bool:
+        """Send WhoisFreaks results to Discord"""
+        try:
+            timestamp = datetime.now().isoformat()
+
+            # Calculate statistics
+            total_domains = metadata.get("total_domains", len(results))
+            success_count = metadata.get("success_count", 0)
+            failed_count = metadata.get("failed_count", 0)
+            
+            # Risk statistics
+            risk_dist = metadata.get("risk_distribution", {})
+            high_risk = risk_dist.get("HIGH", 0)
+            medium_risk = risk_dist.get("MEDIUM", 0)
+            
+            # Expiring domains
+            expiring_domains = metadata.get("expiring_domains", 0)
+
+            # Build Discord embed
+            if success_count > 0:
+                color = 0xFF0000 if high_risk > 0 else (0xFFA500 if medium_risk > 0 or expiring_domains > 0 else 0x00FF00)
+                title = f"🔍 WhoisFreaks Analysis Complete"
+                description = f"**{success_count}/{total_domains}** domains analyzed successfully"
+                
+                # Risk summary
+                risk_summary = []
+                if high_risk > 0:
+                    risk_summary.append(f"🚨 **{high_risk}** HIGH risk")
+                if medium_risk > 0:
+                    risk_summary.append(f"⚠️ **{medium_risk}** MEDIUM risk")
+                if expiring_domains > 0:
+                    risk_summary.append(f"⏰ **{expiring_domains}** expiring soon")
+                
+                if risk_summary:
+                    description += f"\n\n**Security Alerts:**\n" + "\n".join(risk_summary)
+                else:
+                    description += f"\n\n✅ **No significant risks detected**"
+                    
+            else:
+                color = 0xFFA500
+                title = f"🔍 WhoisFreaks Analysis"
+                description = "No domains were successfully analyzed"
+
+            embed = {
+                "title": title,
+                "description": description,
+                "color": color,
+                "timestamp": timestamp,
+                "fields": [
+                    {
+                        "name": "📊 Analysis Summary",
+                        "value": f"```\nTotal Domains:  {total_domains}\n"
+                        f"Successful:     {success_count}\n"
+                        f"Failed:         {failed_count}\n"
+                        f"Success Rate:   {metadata.get('success_rate', 0)}%\n"
+                        f"Duration:       {metadata.get('scan_duration', 'unknown')}```",
+                        "inline": True,
+                    }
+                ],
+                "footer": {
+                    "text": f"ReconCLI WhoisFreaks • {metadata.get('tool', 'whoisfreakscli')}"
+                },
+            }
+
+            # Add sample results
+            successful_results = [r for r in results if r.get("status") == "success"]
+            if successful_results and len(successful_results) > 0:
+                sample_results = []
+                for result in successful_results[:5]:  # Limit to first 5
+                    whois_data = result.get("whois_data", {})
+                    domain = result.get("domain", "unknown")
+                    registrar = whois_data.get("registrar", whois_data.get("registrarName", "unknown"))
+                    
+                    # Risk info
+                    risk_info = result.get("risk_analysis", {})
+                    risk_level = risk_info.get("risk_level", "NONE")
+                    
+                    # Expiry warning
+                    expiry_info = result.get("expiring_soon", {})
+                    warning = ""
+                    if expiry_info:
+                        days = expiry_info.get("days_until_expiry", 0)
+                        warning = f" ⏰ Expires in {days} days"
+                    
+                    sample_results.append(f"• **{domain}** | {registrar} | Risk: {risk_level}{warning}")
+
+                if sample_results:
+                    embed["fields"].append({
+                        "name": f"📋 Sample Results ({len(sample_results)}/{len(successful_results)})",
+                        "value": "\n".join(sample_results),
+                        "inline": False,
+                    })
+
+            payload = {"embeds": [embed]}
+
+            response = httpx.post(self.discord_webhook, json=payload, timeout=10)
+            response.raise_for_status()
+
+            if self.verbose:
+                click.echo("✅ Discord notification sent successfully")
             return True
 
         except Exception as e:
@@ -837,6 +1121,8 @@ def send_notification(notification_type: str, **kwargs) -> bool:
         return notifier.send_url_results(kwargs["results"], kwargs["scan_metadata"])
     elif notification_type == "dns":
         return notifier.send_dns_results(kwargs["results"], kwargs["scan_metadata"])
+    elif notification_type == "whoisfreaks":
+        return notifier.send_whoisfreaks_results(kwargs["results"], kwargs["scan_metadata"])
     else:
         if verbose:
             click.echo(f"❌ Unknown notification type: {notification_type}")
