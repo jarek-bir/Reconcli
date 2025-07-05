@@ -45,7 +45,88 @@ reconcli vhostcli --domain example.com --ip 1.2.3.4 --wordlist wordlist.txt \
   --verbose
 ```
 
-### 🚨 Subdomain Takeover Detection (`takeover`)
+### � Enhanced Subdomain Enumeration (`subdocli`)
+- **11 Tools Integration**: Subfinder, Findomain, Assetfinder, Amass, Chaos, RapidDNS, crt.sh, BufferOver, Gobuster, FFuf, DNSRecon
+- **DNS Resolution**: Multi-threaded IP resolution
+- **HTTP Probing**: Automatic HTTP/HTTPS service detection
+- **Resume Support**: Continue interrupted scans
+- **Advanced Analytics**: Tool performance statistics and comprehensive reporting
+- **Professional Reports**: JSON and enhanced Markdown output
+
+```bash
+# Basic subdomain enumeration
+reconcli subdocli --domain example.com --verbose
+
+# Full scan with resolution and HTTP probing
+reconcli subdocli --domain example.com --resolve --probe-http \
+  --all-tools --markdown --show-stats --verbose
+
+# Resume interrupted scan
+reconcli subdocli --domain example.com --resume --verbose
+```
+
+### 🔗 URL Discovery & Analysis (`urlcli`)
+- **Multiple Tools**: GAU, Katana, Gospider, Waybackurls integration
+- **Advanced Katana Options**: Depth control, JS crawling, headless mode, form filling, tech detection
+- **Configurable Timeouts**: Per-tool timeout settings
+- **YAML Flow Support**: Predefined configuration templates
+- **Comprehensive Filtering**: URL deduplication and pattern matching
+- **Professional Reporting**: Detailed analysis with statistics
+
+```bash
+# Basic URL discovery
+reconcli urlcli --domain example.com --verbose
+
+# Advanced Katana crawling
+reconcli urlcli --domain example.com --katana-depth 3 --katana-js-crawl \
+  --katana-headless --katana-tech-detect --verbose
+
+# Using flow configuration
+reconcli urlcli --domain example.com --flow flows/url_katana_advanced.yaml
+```
+
+### 🔗 URL Sorting & Processing (`urlsorter`)
+- **Advanced Pattern Recognition**: Technology stacks, sensitive files, API endpoints
+- **Multiple Input Sources**: Files, stdin, and URL lists
+- **Smart Filtering**: Duplicates, query parameters, extensions
+- **Resume Support**: Continue large processing tasks
+- **Professional Reports**: Categorized analysis with statistics
+- **Flexible Output**: JSON and Markdown formats
+
+```bash
+# Sort URLs from file
+reconcli urlsorter --input urls.txt --verbose
+
+# Process URLs from stdin with advanced patterns
+cat urls.txt | reconcli urlsorter --stdin --advanced-patterns \
+  --remove-duplicates --markdown --verbose
+
+# Resume interrupted processing
+reconcli urlsorter --input large_urls.txt --resume --verbose
+```
+
+### 🔍 WHOIS Intelligence (`whoisfreakscli`)
+- **WhoisFreaks API Integration**: Professional WHOIS data retrieval
+- **Risk Assessment**: Domain risk scoring and analysis
+- **Expiry Monitoring**: Domain expiration tracking
+- **Bulk Processing**: Multiple domain analysis
+- **Professional Reports**: Comprehensive JSON and Markdown output
+- **Resume & Notifications**: Progress tracking and alert integration
+
+```bash
+# Single domain analysis
+reconcli whoisfreakscli --domain example.com --verbose
+
+# Bulk analysis with risk assessment
+reconcli whoisfreakscli --input domains.txt --risk-assessment \
+  --expiry-check --json --markdown --verbose
+
+# With notifications for high-risk domains
+reconcli whoisfreakscli --input domains.txt --risk-assessment \
+  --slack-webhook "https://hooks.slack.com/..." --verbose
+```
+
+### �🚨 Subdomain Takeover Detection (`takeover`)
 - **Tools**: Subzy and tko-subs integration
 - **Resume System**: Continue interrupted scans
 - **Professional Reports**: JSON and Markdown output
@@ -75,12 +156,11 @@ reconcli jscli --input js_urls.txt --threads 10 \
   --save-raw --json --markdown --verbose
 ```
 
-### 🌐 Additional Modules
-- **DNS Enumeration** (`dns`): Comprehensive DNS discovery
-- **HTTP Analysis** (`httpcli`): Web application assessment
-- **IP Analysis** (`ipscli`): Network reconnaissance
-- **URL Processing** (`urlcli`): URL manipulation and analysis
-- **Zone Walking** (`zonewalkcli`): DNS zone transfer testing
+### 🌐 Additional Core Modules
+- **DNS Enumeration** (`dnscli`): Comprehensive DNS discovery and analysis
+- **HTTP Analysis** (`httpcli`): Web application assessment and fingerprinting
+- **IP Analysis** (`ipscli`): Network reconnaissance and IP intelligence
+- **Zone Walking** (`zonewalkcli`): DNS zone transfer testing and enumeration
 
 ## Installation
 
@@ -99,15 +179,47 @@ reconcli --help
 ## Dependencies
 
 ### Required Tools
+
+#### For Subdomain Enumeration (`subdocli`)
+- **Subfinder**: `go install -v github.com/projectdiscovery/subfinder/v2/cmd/subfinder@latest`
+- **Findomain**: Download from [GitHub releases](https://github.com/Findomain/Findomain/releases)
+- **Assetfinder**: `go install github.com/tomnomnom/assetfinder@latest`
+- **Amass**: `go install -v github.com/owasp-amass/amass/v4/...@master`
+- **Chaos**: `go install -v github.com/projectdiscovery/chaos-client/cmd/chaos@latest`
+- **Gobuster**: `go install github.com/OJ/gobuster/v3@latest`
 - **FFuf**: `go install github.com/ffuf/ffuf/v2@latest`
-- **Subzy**: Install from GitHub releases
-- **HTTPx**: `pip install httpx`
+- **DNSRecon**: `pip install dnsrecon` or install from package manager
+
+#### For URL Discovery (`urlcli`)
+- **GAU**: `go install github.com/lc/gau/v2/cmd/gau@latest`
+- **Katana**: `go install github.com/projectdiscovery/katana/cmd/katana@latest`
+- **Gospider**: `go install github.com/jaeles-project/gospider@latest`
+- **Waybackurls**: `go install github.com/tomnomnom/waybackurls@latest`
+
+#### For Virtual Host Discovery (`vhostcli`)
+- **FFuf**: `go install github.com/ffuf/ffuf/v2@latest`
+- **HTTPx**: `go install -v github.com/projectdiscovery/httpx/cmd/httpx@latest`
+
+#### For Takeover Detection (`takeover`)
+- **Subzy**: Download from [GitHub releases](https://github.com/LukaSikic/subzy/releases)
+- **tko-subs**: `go install github.com/anshumanbh/tko-subs@latest`
+
+### API Keys
+
+#### WhoisFreaks API (for `whoisfreakscli`)
+1. Register at [WhoisFreaks](https://whoisfreaks.com/)
+2. Get your API key from the dashboard
+3. Set environment variable: `export WHOISFREAKS_API_KEY="your_api_key"`
+4. Or store in `~/.env_secrets` file: `WHOISFREAKS_API_KEY=your_api_key`
 
 ### Python Dependencies
-- click
-- httpx
-- requests
+- click >= 8.0
+- requests >= 2.28
+- httpx >= 0.24
 - pathlib
+- concurrent.futures
+- json
+- yaml
 
 ## Configuration
 
@@ -132,13 +244,16 @@ reconcli --help
 reconcli/
 ├── __init__.py
 ├── main.py                 # Main CLI entry point
+├── subdocli.py            # Enhanced subdomain enumeration (NEW)
+├── urlcli.py              # URL discovery and analysis (ENHANCED)
+├── urlsorter.py           # URL sorting and processing (NEW)
+├── whoisfreakscli.py      # WHOIS intelligence (NEW)
 ├── vhostcli.py            # Virtual host discovery
 ├── takeovercli.py         # Subdomain takeover detection
 ├── jscli.py               # JavaScript analysis
 ├── dnscli.py              # DNS enumeration
 ├── httpcli.py             # HTTP analysis
 ├── ipscli.py              # IP reconnaissance
-├── urlcli.py              # URL processing
 ├── zonewalkcli.py         # DNS zone walking
 ├── vhostcheck.py          # VHOST verification utilities
 ├── utils/
@@ -147,8 +262,18 @@ reconcli/
 │   ├── resume.py          # Resume functionality
 │   ├── loaders.py         # Data loading utilities
 │   └── mdexport.py        # Markdown export utilities
-├── flows/                 # Workflow definitions
+├── flows/                 # Workflow definitions (YAML configs)
+│   ├── README.md          # Flow documentation
+│   ├── url_katana_advanced.yaml
+│   ├── url_katana_headless.yaml
+│   ├── url_katana_fast.yaml
+│   ├── url_passive.yaml
+│   ├── url_aggressive.yaml
+│   ├── url_deep.yaml
+│   └── custom_patterns.yaml
 └── wordlists/            # Default wordlists
+    ├── resolvers-trickest.txt
+    └── wordlist.txt
 ```
 
 ## Advanced Usage
@@ -193,6 +318,67 @@ reconcli takeover --input subdomains.txt --json --markdown
 ```
 
 ## Examples
+
+### Complete Subdomain Discovery Workflow
+```bash
+# Comprehensive subdomain enumeration with all features
+reconcli subdocli \
+  --domain target.com \
+  --all-tools \
+  --resolve \
+  --probe-http \
+  --threads 100 \
+  --timeout 60 \
+  --markdown \
+  --show-stats \
+  --verbose
+```
+
+### Advanced URL Discovery and Analysis
+```bash
+# Deep URL crawling with Katana advanced features
+reconcli urlcli \
+  --domain target.com \
+  --katana-depth 5 \
+  --katana-js-crawl \
+  --katana-headless \
+  --katana-tech-detect \
+  --katana-form-fill \
+  --gau-timeout 120 \
+  --verbose
+
+# Using predefined flow configuration
+reconcli urlcli --domain target.com --flow flows/url_katana_advanced.yaml
+```
+
+### Smart URL Processing
+```bash
+# Process and categorize large URL lists
+reconcli urlsorter \
+  --input massive_urls.txt \
+  --advanced-patterns \
+  --remove-duplicates \
+  --remove-query-params \
+  --markdown \
+  --resume \
+  --verbose
+
+# Real-time URL processing from stdin
+cat urls.txt | reconcli urlsorter --stdin --advanced-patterns --verbose
+```
+
+### WHOIS Intelligence Gathering
+```bash
+# Bulk domain analysis with risk assessment
+reconcli whoisfreakscli \
+  --input domains.txt \
+  --risk-assessment \
+  --expiry-check \
+  --json \
+  --markdown \
+  --slack-webhook "https://hooks.slack.com/services/..." \
+  --verbose
+```
 
 ### Complete VHOST Discovery Workflow
 ```bash
@@ -294,15 +480,38 @@ This project is licensed under the MIT License - see the [LICENSE](https://githu
 
 ## 📈 Changelog
 
-### Latest Changes (v1.0.0)
-- ✅ **Enhanced urlcli.py** with robust resume, error handling, and notifications
+### Latest Changes (v2.0.0)
+
+- ✅ **NEW: subdocli.py** - Enhanced subdomain enumeration with 11 integrated tools
+  - Passive tools: Subfinder, Findomain, Assetfinder, Amass, Chaos, RapidDNS, crt.sh, BufferOver
+  - Active tools: Gobuster, FFuf, DNSRecon
+  - Multi-threaded DNS resolution and HTTP/HTTPS service probing
+  - Advanced statistics and comprehensive reporting
+
+- ✅ **NEW: whoisfreakscli.py** - Professional WHOIS intelligence gathering
+  - WhoisFreaks API integration with bulk domain processing
+  - Risk assessment and domain expiration monitoring
+  - Professional reporting with threat intelligence insights
+
+- ✅ **NEW: urlsorter.py** - Advanced URL processing and categorization
+  - Smart pattern recognition for technology stacks and sensitive files
+  - Multiple input sources (files, stdin) with resume support
+  - Advanced filtering and deduplication capabilities
+
+- ✅ **ENHANCED: urlcli.py** - Comprehensive URL discovery and analysis
+  - Advanced Katana integration (depth, JS crawling, headless mode, tech detection)
+  - Configurable timeouts for all external tools (GAU, Katana, Gospider, Waybackurls)
+  - YAML flow support with predefined configuration templates
+  - Enhanced error handling and professional reporting
+
+- ✅ **Enhanced vhostcli.py** with robust resume, error handling, and notifications
 - ✅ **Comprehensive notification system** supporting Slack and Discord webhooks
-- ✅ **Enhanced vhostcli.py** with verbose mode, progress tracking, and professional output
 - ✅ **Improved takeovercli.py** with resume system and enhanced error handling
 - ✅ **Fixed jscli.py** import paths for package compatibility
 - ✅ **Added utils/notifications.py** with full-featured notification support
-- ✅ **Professional documentation** with usage examples and badges
-- ✅ **MIT License** and comprehensive README
+- ✅ **Professional documentation** with comprehensive usage examples
+- ✅ **YAML flow configurations** for urlcli with predefined templates
+- ✅ **MIT License** and enhanced README with all new features
 
 ## 🆘 Support & Community
 
