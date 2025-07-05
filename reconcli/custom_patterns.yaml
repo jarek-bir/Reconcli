@@ -1,0 +1,5 @@
+bug_bounty: "(?i)(test|demo|dev|staging|beta|debug)"
+sensitive_endpoints: "(?i)(password|token|auth|login|secret|key)"
+file_downloads: "(?i)(download|export|backup|dump|archive)"
+user_data: "(?i)(user|profile|account|member|customer)"
+payment: "(?i)(payment|billing|invoice|credit|order)"

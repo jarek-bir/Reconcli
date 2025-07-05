@@ -870,20 +870,26 @@ class NotificationManager:
             total_domains = metadata.get("total_domains", len(results))
             success_count = metadata.get("success_count", 0)
             failed_count = metadata.get("failed_count", 0)
-            
+
             # Risk statistics
             risk_dist = metadata.get("risk_distribution", {})
             high_risk = risk_dist.get("HIGH", 0)
             medium_risk = risk_dist.get("MEDIUM", 0)
-            
+
             # Expiring domains
             expiring_domains = metadata.get("expiring_domains", 0)
 
             # Build Slack message
             if success_count > 0:
-                color = "danger" if high_risk > 0 else ("warning" if medium_risk > 0 or expiring_domains > 0 else "good")
+                color = (
+                    "danger"
+                    if high_risk > 0
+                    else (
+                        "warning" if medium_risk > 0 or expiring_domains > 0 else "good"
+                    )
+                )
                 title = f"🔍 WhoisFreaks Analysis: {success_count}/{total_domains} domains analyzed"
-                
+
                 # Risk summary
                 risk_summary = []
                 if high_risk > 0:
@@ -892,9 +898,13 @@ class NotificationManager:
                     risk_summary.append(f"⚠️ {medium_risk} MEDIUM risk")
                 if expiring_domains > 0:
                     risk_summary.append(f"⏰ {expiring_domains} expiring soon")
-                
-                risk_text = " | ".join(risk_summary) if risk_summary else "✅ No significant risks found"
-                
+
+                risk_text = (
+                    " | ".join(risk_summary)
+                    if risk_summary
+                    else "✅ No significant risks found"
+                )
+
             else:
                 color = "warning"
                 title = f"🔍 WhoisFreaks Analysis: No domains successfully analyzed"
@@ -929,14 +939,18 @@ class NotificationManager:
                 for result in successful_results[:5]:  # Limit to first 5 results
                     whois_data = result.get("whois_data", {})
                     domain = result.get("domain", "unknown")
-                    registrar = whois_data.get("registrar", whois_data.get("registrarName", "unknown"))
-                    expiry = whois_data.get("expiration_date", whois_data.get("expiresDate", "unknown"))
-                    
+                    registrar = whois_data.get(
+                        "registrar", whois_data.get("registrarName", "unknown")
+                    )
+                    expiry = whois_data.get(
+                        "expiration_date", whois_data.get("expiresDate", "unknown")
+                    )
+
                     # Risk info
                     risk_info = result.get("risk_analysis", {})
                     risk_level = risk_info.get("risk_level", "NONE")
                     risk_score = risk_info.get("risk_score", 0)
-                    
+
                     # Expiry warning
                     expiry_info = result.get("expiring_soon", {})
                     expiry_warning = ""
@@ -988,21 +1002,31 @@ class NotificationManager:
             total_domains = metadata.get("total_domains", len(results))
             success_count = metadata.get("success_count", 0)
             failed_count = metadata.get("failed_count", 0)
-            
+
             # Risk statistics
             risk_dist = metadata.get("risk_distribution", {})
             high_risk = risk_dist.get("HIGH", 0)
             medium_risk = risk_dist.get("MEDIUM", 0)
-            
+
             # Expiring domains
             expiring_domains = metadata.get("expiring_domains", 0)
 
             # Build Discord embed
             if success_count > 0:
-                color = 0xFF0000 if high_risk > 0 else (0xFFA500 if medium_risk > 0 or expiring_domains > 0 else 0x00FF00)
+                color = (
+                    0xFF0000
+                    if high_risk > 0
+                    else (
+                        0xFFA500
+                        if medium_risk > 0 or expiring_domains > 0
+                        else 0x00FF00
+                    )
+                )
                 title = f"🔍 WhoisFreaks Analysis Complete"
-                description = f"**{success_count}/{total_domains}** domains analyzed successfully"
-                
+                description = (
+                    f"**{success_count}/{total_domains}** domains analyzed successfully"
+                )
+
                 # Risk summary
                 risk_summary = []
                 if high_risk > 0:
@@ -1011,12 +1035,14 @@ class NotificationManager:
                     risk_summary.append(f"⚠️ **{medium_risk}** MEDIUM risk")
                 if expiring_domains > 0:
                     risk_summary.append(f"⏰ **{expiring_domains}** expiring soon")
-                
+
                 if risk_summary:
-                    description += f"\n\n**Security Alerts:**\n" + "\n".join(risk_summary)
+                    description += f"\n\n**Security Alerts:**\n" + "\n".join(
+                        risk_summary
+                    )
                 else:
                     description += f"\n\n✅ **No significant risks detected**"
-                    
+
             else:
                 color = 0xFFA500
                 title = f"🔍 WhoisFreaks Analysis"
@@ -1050,27 +1076,33 @@ class NotificationManager:
                 for result in successful_results[:5]:  # Limit to first 5
                     whois_data = result.get("whois_data", {})
                     domain = result.get("domain", "unknown")
-                    registrar = whois_data.get("registrar", whois_data.get("registrarName", "unknown"))
-                    
+                    registrar = whois_data.get(
+                        "registrar", whois_data.get("registrarName", "unknown")
+                    )
+
                     # Risk info
                     risk_info = result.get("risk_analysis", {})
                     risk_level = risk_info.get("risk_level", "NONE")
-                    
+
                     # Expiry warning
                     expiry_info = result.get("expiring_soon", {})
                     warning = ""
                     if expiry_info:
                         days = expiry_info.get("days_until_expiry", 0)
                         warning = f" ⏰ Expires in {days} days"
-                    
-                    sample_results.append(f"• **{domain}** | {registrar} | Risk: {risk_level}{warning}")
+
+                    sample_results.append(
+                        f"• **{domain}** | {registrar} | Risk: {risk_level}{warning}"
+                    )
 
                 if sample_results:
-                    embed["fields"].append({
-                        "name": f"📋 Sample Results ({len(sample_results)}/{len(successful_results)})",
-                        "value": "\n".join(sample_results),
-                        "inline": False,
-                    })
+                    embed["fields"].append(
+                        {
+                            "name": f"📋 Sample Results ({len(sample_results)}/{len(successful_results)})",
+                            "value": "\n".join(sample_results),
+                            "inline": False,
+                        }
+                    )
 
             payload = {"embeds": [embed]}
 
@@ -1122,7 +1154,9 @@ def send_notification(notification_type: str, **kwargs) -> bool:
     elif notification_type == "dns":
         return notifier.send_dns_results(kwargs["results"], kwargs["scan_metadata"])
     elif notification_type == "whoisfreaks":
-        return notifier.send_whoisfreaks_results(kwargs["results"], kwargs["scan_metadata"])
+        return notifier.send_whoisfreaks_results(
+            kwargs["results"], kwargs["scan_metadata"]
+        )
     else:
         if verbose:
             click.echo(f"❌ Unknown notification type: {notification_type}")
