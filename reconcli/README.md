@@ -1,8 +1,25 @@
 # ReconCLI - Modular Reconnaissance Toolkit
 
+[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![GitHub release](https://img.shields.io/github/release/jarek-bir/Reconcli.svg)](https://github.com/jarek-bir/Reconcli/releases)
+[![GitHub stars](https://img.shields.io/github/stars/jarek-bir/Reconcli.svg)](https://github.com/jarek-bir/Reconcli/stargazers)
+
 A comprehensive, modular reconnaissance toolkit designed for security professionals and bug bounty hunters.
 
-## Features
+## 🚀 Quick Start
+
+```bash
+# Install from GitHub
+git clone https://github.com/jarek-bir/Reconcli.git
+cd Reconcli
+pip install -e .
+
+# Verify installation
+reconcli --help
+```
+
+## ✨ Features
 
 ### 🎯 Virtual Host Discovery (`vhostcli`)
 - **Engines**: FFuf and HTTPx support
