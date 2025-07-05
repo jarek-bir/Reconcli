@@ -188,6 +188,33 @@ reconcli jscli --input js_urls.txt --threads 10 \
   --save-raw --json --markdown --verbose
 ```
 
+### 🌍 TLD Reconnaissance (`tldr`)
+- **Alternative TLD Discovery**: Systematically check domains across 100+ TLD variations
+- **Comprehensive Coverage**: Popular, country, new generic, and business TLDs
+- **DNS & HTTP Probing**: Full resolution and HTTP/HTTPS status verification
+- **Custom TLD Lists**: Support for custom TLD files and category selection
+- **Wildcard Detection**: Automatic detection and filtering of wildcard domains
+- **Active Filtering**: Focus on active/responsive domains only
+- **WHOIS Integration**: Basic domain availability checking
+- **Professional Reports**: JSON and Markdown output with detailed statistics
+
+```bash
+# Basic TLD reconnaissance
+reconcli tldr -d example --categories popular,country --verbose
+
+# Advanced TLD scan with HTTP probing
+reconcli tldr -d mycompany --categories all --http-check \
+  --filter-active --save-json --verbose
+
+# Custom TLD list with wildcard exclusion
+reconcli tldr -d brand --tld-list custom_tlds.txt \
+  --exclude-wildcards --whois-check --save-markdown
+
+# Security-focused scan with notifications
+reconcli tldr -d target --categories business,new_generic \
+  --http-check --filter-active --slack-webhook "https://hooks.slack.com/..."
+```
+
 ### 🌐 Additional Core Modules
 - **DNS Enumeration** (`dnscli`): Comprehensive DNS discovery and analysis
 - **HTTP Analysis** (`httpcli`): Web application assessment and fingerprinting

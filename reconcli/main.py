@@ -12,6 +12,7 @@ from reconcli.zonewalkcli import cli as zonewalk_cli
 from reconcli.takeovercli import takeovercli
 from reconcli.whoisfreakscli import cli as whoisfreaks_cli
 from reconcli.subdocli import subdocli
+from reconcli.tldrcli import cli as tldr_cli
 
 
 @click.group()
@@ -72,6 +73,10 @@ whoisfreaks_cli.short_help = "Advanced WHOIS data analysis and enrichment"
 # Subdomain Enumeration
 cli.add_command(subdocli, name="subdocli")
 subdocli.short_help = "Comprehensive subdomain enumeration using multiple sources"
+
+# TLD Reconnaissance
+cli.add_command(tldr_cli, name="tldr")
+tldr_cli.short_help = "Alternative TLD reconnaissance and domain discovery"
 
 
 if __name__ == "__main__":

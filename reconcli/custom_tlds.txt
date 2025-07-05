@@ -1,0 +1,27 @@
+# Custom TLD list for testing
+# Tech and development focused
+dev
+tech
+app
+cloud
+online
+site
+website
+
+# Business focused
+ltd
+inc
+corp
+company
+
+# Popular alternatives
+io
+me
+co
+cc
+tv
+
+# Security focused
+security
+safe
+trust
