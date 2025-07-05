@@ -65,6 +65,38 @@ reconcli subdocli --domain example.com --resolve --probe-http \
 reconcli subdocli --domain example.com --resume --verbose
 ```
 
+### 🌐 DNS Resolution & Analysis (`dns`)
+- **Enhanced DNS Resolution**: Multi-threaded IP resolution with PTR record tagging
+- **Subdomain Bruteforcing**: Custom wordlist support for subdomain discovery
+- **Custom DNS Resolvers**: Use custom resolver lists for improved performance
+- **WHOIS Integration**: Enrich DNS results with WHOIS data from WhoisFreaks
+- **Advanced Filtering**: Tag-based filtering and unresolved exclusion
+- **Resume Support**: Continue interrupted DNS scans
+- **Professional Reports**: JSON and Markdown output with detailed statistics
+- **Notification Support**: Real-time alerts via Slack/Discord webhooks
+
+```bash
+# Basic DNS resolution
+reconcli dns --input subdomains.txt --verbose
+
+# Advanced DNS with custom resolvers and wordlists
+reconcli dns --input subdomains.txt --resolvers custom_resolvers.txt \
+  --wordlists bruteforce_wordlist.txt --threads 100 --verbose
+
+# DNS resolution with WHOIS enrichment
+reconcli dns --input subdomains.txt --whois-file whois_results.json \
+  --save-json --save-markdown --verbose
+
+# Resume interrupted DNS scan with notifications
+reconcli dns --input large_subdomain_list.txt --resume \
+  --slack-webhook "https://hooks.slack.com/..." \
+  --exclude-unresolved --filter-tags "CDN,Cloud" --verbose
+
+# Quick resolution-only mode
+reconcli dns --input subdomains.txt --resolve-only \
+  --threads 200 --timeout 3 --retries 1 --verbose
+```
+
 ### 🔗 URL Discovery & Analysis (`urlcli`)
 - **Multiple Tools**: GAU, Katana, Gospider, Waybackurls integration
 - **Advanced Katana Options**: Depth control, JS crawling, headless mode, form filling, tech detection

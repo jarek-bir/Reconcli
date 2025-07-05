@@ -138,7 +138,7 @@ def cli(
     resolvers,
 ):
     """Enhanced DNS resolution and tagging for subdomains with professional features
-    
+
     Supports custom DNS resolvers and wordlist-based subdomain bruteforcing.
     Can enrich results with WHOIS data from WhoisFreaks output.
     """
@@ -180,10 +180,16 @@ def cli(
     custom_resolvers = []
     if resolvers:
         try:
-            with open(resolvers, 'r') as f:
-                custom_resolvers = [line.strip() for line in f if line.strip() and not line.startswith('#')]
+            with open(resolvers, "r") as f:
+                custom_resolvers = [
+                    line.strip()
+                    for line in f
+                    if line.strip() and not line.startswith("#")
+                ]
             if verbose:
-                click.echo(f"[+] 🌐 Loaded {len(custom_resolvers)} custom DNS resolvers")
+                click.echo(
+                    f"[+] 🌐 Loaded {len(custom_resolvers)} custom DNS resolvers"
+                )
         except Exception as e:
             if verbose:
                 click.echo(f"[!] ❌ Failed to load resolvers file: {e}")
@@ -196,14 +202,20 @@ def cli(
     if wordlists:
         if verbose:
             click.echo(f"[+] 📝 Generating subdomains from wordlist...")
-        
-        additional_subdomains = generate_subdomains_from_wordlist(input, wordlists, verbose)
+
+        additional_subdomains = generate_subdomains_from_wordlist(
+            input, wordlists, verbose
+        )
         original_count = len(subdomains)
         subdomains.extend(additional_subdomains)
-        
+
         if verbose:
-            click.echo(f"[+] 📊 Added {len(additional_subdomains)} wordlist-generated subdomains")
-            click.echo(f"[+] 📋 Total subdomains: {len(subdomains)} (original: {original_count})")
+            click.echo(
+                f"[+] 📊 Added {len(additional_subdomains)} wordlist-generated subdomains"
+            )
+            click.echo(
+                f"[+] 📋 Total subdomains: {len(subdomains)} (original: {original_count})"
+            )
     else:
         if verbose:
             click.echo(f"[+] 📋 Loaded {len(subdomains)} subdomain(s) from {input}")
@@ -258,7 +270,12 @@ def cli(
 
     # Process subdomains with enhanced concurrent resolution
     results = enhanced_dns_resolution(
-        subdomains[processed_count:], threads, timeout, retries, custom_resolvers, verbose
+        subdomains[processed_count:],
+        threads,
+        timeout,
+        retries,
+        custom_resolvers,
+        verbose,
     )
 
     # Update counts
@@ -352,7 +369,12 @@ def cli(
 
 
 def enhanced_dns_resolution(
-    subdomains: List[str], threads: int, timeout: int, retries: int, custom_resolvers: List[str], verbose: bool
+    subdomains: List[str],
+    threads: int,
+    timeout: int,
+    retries: int,
+    custom_resolvers: List[str],
+    verbose: bool,
 ) -> List[Dict]:
     """Enhanced concurrent DNS resolution with retry logic and custom resolvers"""
     results = []
@@ -367,7 +389,7 @@ def enhanced_dns_resolution(
                     # In a production environment, you might want to use dnspython library
                     # For now, we'll fall back to system resolver but log the custom resolver usage
                     pass
-                
+
                 socket.setdefaulttimeout(timeout)
                 ip = socket.gethostbyname(subdomain)
 
@@ -807,37 +829,45 @@ def enrich_with_whois_data(
     return result
 
 
-def generate_subdomains_from_wordlist(input_file: str, wordlists_file: str, verbose: bool) -> List[str]:
+def generate_subdomains_from_wordlist(
+    input_file: str, wordlists_file: str, verbose: bool
+) -> List[str]:
     """Generate additional subdomains by combining input domains with wordlist"""
     additional_subdomains = []
-    
+
     try:
         # Load wordlist
-        with open(wordlists_file, 'r') as f:
-            wordlist = [line.strip() for line in f if line.strip() and not line.startswith('#')]
-        
+        with open(wordlists_file, "r") as f:
+            wordlist = [
+                line.strip() for line in f if line.strip() and not line.startswith("#")
+            ]
+
         # Extract root domains from input file
-        with open(input_file, 'r') as f:
+        with open(input_file, "r") as f:
             input_domains = [line.strip() for line in f if line.strip()]
-        
+
         # Extract unique root domains
         root_domains = set()
         for domain in input_domains:
             root_domain = extract_domain_from_subdomain(domain)
             root_domains.add(root_domain)
-        
+
         # Generate subdomains by combining wordlist with root domains
         for root_domain in root_domains:
-            for word in wordlist[:1000]:  # Limit to first 1000 words to prevent explosion
+            for word in wordlist[
+                :1000
+            ]:  # Limit to first 1000 words to prevent explosion
                 new_subdomain = f"{word}.{root_domain}"
                 if new_subdomain not in input_domains:  # Avoid duplicates
                     additional_subdomains.append(new_subdomain)
-        
+
         if verbose:
-            click.echo(f"[+] 📝 Generated {len(additional_subdomains)} new subdomains from {len(wordlist)} words and {len(root_domains)} root domains")
-            
+            click.echo(
+                f"[+] 📝 Generated {len(additional_subdomains)} new subdomains from {len(wordlist)} words and {len(root_domains)} root domains"
+            )
+
     except Exception as e:
         if verbose:
             click.echo(f"[!] ❌ Failed to generate subdomains from wordlist: {e}")
-    
+
     return additional_subdomains
