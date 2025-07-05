@@ -1,89 +1,69 @@
-import click
-import json
 import os
-from reconcli.utils.resume import load_resume, save_resume_state
-from reconcli.utils.loaders import run_from_yaml
-from reconcli.utils.mdexport import generate_dns_summary
+import sys
+import socket
+import click
+from tqdm import tqdm
 
 
-@click.command("dns")
-@click.option("--domain", required=True, help="Target domain")
-@click.option("--resolvers", type=click.Path(), help="Path to resolvers file")
-@click.option("--wordlist", type=click.Path(), help="Path to wordlist for permutation")
-@click.option("--proxy", type=str, help="Proxy URL (e.g. http://127.0.0.1:8080)")
-@click.option("--output-dir", type=click.Path(), help="Directory to save results")
-@click.option("--flow", type=click.Path(), help="Path to YAML flow file")
+@click.command()
+@click.option("--input", type=click.Path(), help="Path to file with subdomains")
+@click.option("--output-dir", required=True, help="Directory to save results")
 @click.option(
-    "--dnsx-rate-limit", type=int, help="Rate limit for DNSx (requests per second)"
+    "--resolve-only",
+    is_flag=True,
+    help="Only resolve subdomains to IPs and tag with PTRs",
 )
-@click.option(
-    "--whois-file", type=click.Path(), help="Path to WhoisFreaks whois.json file"
-)
-@click.option("--wildcard-detect", is_flag=True, help="Detect wildcard DNS behavior")
-@click.option(
-    "--wildcard-filter", is_flag=True, help="Filter out wildcard DNS responses"
-)
-@click.option("--resume", is_flag=True, help="Resume previous session")
-@click.option("--resume-from", type=str, help="Resume from specific step")
-def cli(
-    domain,
-    resolvers,
-    wordlist,
-    proxy,
-    output_dir,
-    flow,
-    dnsx_rate_limit,
-    whois_file,
-    wildcard_detect,
-    wildcard_filter,
-    resume,
-    resume_from,
-):
+def cli(input, output_dir, resolve_only):
+    if not input or not os.path.exists(input):
+        click.echo("Error: You must provide a valid --input file with subdomains.")
+        sys.exit(1)
 
-    # ✅ Validation
-    if wildcard_detect and (not wordlist or not resolvers):
-        print(
-            "[ERR] --wordlist and --resolvers are required for wildcard detection using AlterX."
-        )
-        return
+    with open(input) as f:
+        subdomains = [line.strip() for line in f if line.strip()]
 
-    # ✅ Resume logic
-    if resume:
-        print("[RESUME] Loading previous session state...")
-        state = load_resume(output_dir)
-        print(json.dumps(state, indent=2))
-        return
+    os.makedirs(output_dir, exist_ok=True)
 
-    if resume_from:
-        print(f"[RESUME] Resuming from step: {resume_from}")
-        state = load_resume(output_dir)
-        print(json.dumps(state, indent=2))
-        # TODO: resume from specific step logic here
-        return
+    resolved = {}
+    tagged_output_path = os.path.join(output_dir, "subs_resolved_tagged.txt")
 
-    # ✅ YAML Flow execution
-    vars = {
-        "{{Target}}": domain,
-        "{{Resolvers}}": resolvers or "",
-        "{{Wordlist}}": wordlist or "",
-        "{{Output}}": output_dir or "",
-    }
+    with open(tagged_output_path, "w") as outf:
+        for sub in tqdm(subdomains, desc="Resolving subdomains"):
+            try:
+                ip = socket.gethostbyname(sub)
+            except:
+                ip = "unresolved"
 
-    if flow:
-        run_from_yaml(flow, vars)
+            ptr = ""
+            tags = []
 
-        # ✅ Save resume state
-        if output_dir:
-            save_resume_state(output_dir, {
-                "last_module": "dns",
-                "completed": True,
-                "domain": domain,
-                "flow": flow,
-                "wildcard": wildcard_detect,
-            })
-            print(f"[+] Saved resume state to {output_dir}/resume.cfg")
+            if ip != "unresolved":
+                try:
+                    ptr = socket.gethostbyaddr(ip)[0]
+                except:
+                    ptr = ""
 
-    else:
-        print(
-            "[ERR] No YAML flow file provided. Use --flow to specify a recon workflow."
-        )
+                ptr_l = ptr.lower()
+                if any(c in ptr_l for c in ["cloudflare", "akamai", "cdn", "fastly"]):
+                    tags.append("cdn")
+                if "amazonaws" in ptr_l or "aws" in ptr_l:
+                    tags.append("aws")
+                if "google" in ptr_l or "gcp" in ptr_l:
+                    tags.append("gcp")
+                if "microsoft" in ptr_l or "azure" in ptr_l:
+                    tags.append("azure")
+                if "corp" in ptr_l:
+                    tags.append("corp")
+                if "vpn" in ptr_l:
+                    tags.append("vpn")
+                if "honeypot" in ptr_l:
+                    tags.append("honeypot")
+
+            outf.write(
+                f"{sub} {ip} PTR: {ptr or '-'} TAGS: {','.join(tags) if tags else '-'}\n"
+            )
+
+    click.echo(f"[+] Done. Tagged results saved to: {tagged_output_path}")
+
+
+if __name__ == "__main__":
+    cli()
