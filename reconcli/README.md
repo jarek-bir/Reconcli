@@ -4,8 +4,13 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![GitHub release](https://img.shields.io/github/release/jarek-bir/Reconcli.svg)](https://github.com/jarek-bir/Reconcli/releases)
 [![GitHub stars](https://img.shields.io/github/stars/jarek-bir/Reconcli.svg)](https://github.com/jarek-bir/Reconcli/stargazers)
+[![GitHub forks](https://img.shields.io/github/forks/jarek-bir/Reconcli.svg)](https://github.com/jarek-bir/Reconcli/network)
+[![GitHub issues](https://img.shields.io/github/issues/jarek-bir/Reconcli.svg)](https://github.com/jarek-bir/Reconcli/issues)
+[![GitHub last commit](https://img.shields.io/github/last-commit/jarek-bir/Reconcli.svg)](https://github.com/jarek-bir/Reconcli/commits/main)
 
 A comprehensive, modular reconnaissance toolkit designed for security professionals and bug bounty hunters.
+
+🔗 **GitHub Repository**: [https://github.com/jarek-bir/Reconcli](https://github.com/jarek-bir/Reconcli)
 
 ## 🚀 Quick Start
 
@@ -81,8 +86,8 @@ reconcli jscli --input js_urls.txt --threads 10 \
 
 ```bash
 # Clone repository
-git clone <your-repo-url>
-cd reconcli
+git clone https://github.com/jarek-bir/Reconcli.git
+cd Reconcli
 
 # Install package
 pip install -e .
@@ -218,28 +223,106 @@ reconcli takeover \
   --verbose
 ```
 
+## 📊 Project Stats
+
+![GitHub repo size](https://img.shields.io/github/repo-size/jarek-bir/Reconcli)
+![GitHub code size in bytes](https://img.shields.io/github/languages/code-size/jarek-bir/Reconcli)
+![Lines of code](https://img.shields.io/tokei/lines/github/jarek-bir/Reconcli)
+
+## 🛡️ Security & Bug Bounty
+
+ReconCLI is designed with bug bounty hunters and security researchers in mind:
+
+- **Professional Output**: Clean JSON/Markdown reports for documentation
+- **Stealth Mode**: Proxy support and configurable timeouts
+- **Resume Capability**: Continue long-running scans without losing progress
+- **Notification Integration**: Real-time alerts for critical findings
+- **Modular Design**: Use only the modules you need
+
+## 🚀 Roadmap
+
+- [ ] DNS zone walking improvements
+- [ ] Enhanced JavaScript analysis with modern frameworks
+- [ ] Web application fingerprinting module
+- [ ] API endpoint discovery automation
+- [ ] Integration with popular bug bounty platforms
+- [ ] Docker containerization
+- [ ] Web-based dashboard interface
+
+## 📚 Additional Resources
+
+- **Documentation**: [GitHub Wiki](https://github.com/jarek-bir/Reconcli/wiki)
+- **Examples**: [Usage Examples](https://github.com/jarek-bir/Reconcli/tree/main/examples)
+- **Changelog**: [Release Notes](https://github.com/jarek-bir/Reconcli/releases)
+- **Security Policy**: [Security.md](https://github.com/jarek-bir/Reconcli/blob/main/SECURITY.md)
+
 ## Contributing
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
+We welcome contributions to ReconCLI! Here's how you can help:
+
+### 🐛 Reporting Issues
+- Use the [GitHub issue tracker](https://github.com/jarek-bir/Reconcli/issues)
+- Provide detailed information about the bug
+- Include steps to reproduce the issue
+
+### 🔧 Development Process
+1. Fork the repository on GitHub
+2. Create a feature branch: `git checkout -b feature/your-feature-name`
+3. Make your changes with proper commit messages
 4. Add tests if applicable
-5. Submit a pull request
+5. Run the existing tests to ensure nothing breaks
+6. Submit a pull request with a clear description
 
-## License
+### 📦 Repository Structure
+```
+reconcli/
+├── main.py              # Main CLI entry point
+├── vhostcli.py         # Virtual host discovery
+├── takeovercli.py      # Subdomain takeover detection  
+├── jscli.py            # JavaScript analysis
+├── urlcli.py           # URL processing and discovery
+├── utils/              # Shared utilities
+│   ├── notifications.py # Slack/Discord notifications
+│   ├── resume.py       # Resume functionality
+│   └── loaders.py      # Data loading utilities
+└── flows/              # YAML configuration templates
+```
 
-[Your License Here]
+## 📄 License
 
-## Changelog
+This project is licensed under the MIT License - see the [LICENSE](https://github.com/jarek-bir/Reconcli/blob/main/LICENSE) file for details.
 
-### Latest Changes
-- ✅ Added comprehensive notification system (Slack/Discord)
-- ✅ Enhanced vhostcli with verbose mode and progress tracking
-- ✅ Improved takeovercli with resume system and professional output
-- ✅ Fixed import paths for package compatibility
-- ✅ Added error handling and timeout management
-- ✅ Created professional documentation and examples
+## 📈 Changelog
 
-## Support
+### Latest Changes (v1.0.0)
+- ✅ **Enhanced urlcli.py** with robust resume, error handling, and notifications
+- ✅ **Comprehensive notification system** supporting Slack and Discord webhooks
+- ✅ **Enhanced vhostcli.py** with verbose mode, progress tracking, and professional output
+- ✅ **Improved takeovercli.py** with resume system and enhanced error handling
+- ✅ **Fixed jscli.py** import paths for package compatibility
+- ✅ **Added utils/notifications.py** with full-featured notification support
+- ✅ **Professional documentation** with usage examples and badges
+- ✅ **MIT License** and comprehensive README
 
-For questions, issues, or feature requests, please create an issue in the GitHub repository.
+## 🆘 Support & Community
+
+### 💬 Getting Help
+- **Issues**: [GitHub Issues](https://github.com/jarek-bir/Reconcli/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/jarek-bir/Reconcli/discussions)
+- **Security**: Please report security issues privately
+
+### 🌟 Show Your Support
+If ReconCLI helps you in your security research or bug bounty hunting, consider:
+- ⭐ Starring the repository on GitHub
+- 🐛 Reporting bugs and suggesting features
+- 🔧 Contributing code improvements
+- 📖 Improving documentation
+
+### 🏆 Contributors
+Special thanks to all contributors who help make ReconCLI better!
+
+---
+
+**Made with ❤️ for the security community**
+
+🔗 **Repository**: [https://github.com/jarek-bir/Reconcli](https://github.com/jarek-bir/Reconcli)
