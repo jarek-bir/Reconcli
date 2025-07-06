@@ -47,24 +47,29 @@ reconcli vhostcli --domain example.com --ip 1.2.3.4 --wordlist wordlist.txt \
 
 ### 🔍 Virtual Host Check (`vhostcheck`)
 - **Individual VHOST Testing**: Test specific virtual hosts on target IPs
+- **Batch Processing**: Test against multiple IPs from file with progress tracking
 - **Technology Detection**: Automatic detection of web technologies (Nginx, Apache, IIS, WordPress, Drupal, etc.)
 - **Response Analysis**: Detailed HTTP response analysis with status codes, sizes, and response times
 - **Comprehensive Error Handling**: Proper handling of timeouts, connection errors, and HTTP errors
-- **Output Formats**: Save results in JSON, CSV, or TXT formats
+- **Output Formats**: Save results in JSON, CSV, or TXT formats (with special batch formats)
 - **Proxy Support**: HTTP/HTTPS proxy configuration for testing through tools like Burp Suite
 - **SSL/TLS Options**: HTTPS support with insecure certificate handling
 - **Verbose Mode**: Detailed response headers and final URL information
+- **Statistics**: Success rate calculation and summary reporting for batch operations
 
 ```bash
 # Basic VHOST check
 reconcli vhostcheck --ip 192.168.1.100 --domain example.com --vhost admin
 
+# Multiple IPs from file with progress tracking
+reconcli vhostcheck --input ips.txt --domain example.com --vhost admin --verbose
+
 # HTTPS with proxy and verbose output
 reconcli vhostcheck --ip 192.168.1.100:8443 --domain example.com --vhost api \
   --https --proxy http://127.0.0.1:8080 --verbose
 
-# Save results with technology detection
-reconcli vhostcheck --ip 192.168.1.100 --domain example.com --vhost store \
+# Batch processing with results saving
+reconcli vhostcheck --input target_ips.txt --domain example.com --vhost store \
   --save-output --output-format json --verbose
 ```
 
@@ -654,11 +659,13 @@ This project is licensed under the MIT License - see the [LICENSE](https://githu
 
 - ✅ **NEW: vhostcheckcli.py** - Advanced virtual host discovery and validation
   - Individual VHOST testing with comprehensive response analysis
+  - **Batch Processing**: Multiple IPs from file with progress tracking and statistics
   - Technology detection for Nginx, Apache, IIS, WordPress, Drupal, and more
-  - Multiple output formats (JSON, CSV, TXT) with detailed results
+  - Multiple output formats (JSON, CSV, TXT) with detailed results and batch formats
   - Proxy support for testing through tools like Burp Suite
   - SSL/TLS options with insecure certificate handling
   - Comprehensive error handling for timeouts and connection issues
+  - Success rate calculation and summary reporting for batch operations
 
 - ✅ **NEW: cloudcli.py** - Comprehensive cloud provider detection and S3 bucket enumeration
   - 60+ cloud providers detection (AWS, Azure, Google Cloud, Cloudflare, DigitalOcean, etc.)

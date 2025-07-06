@@ -16,7 +16,8 @@ from datetime import datetime
 
 
 @click.command()
-@click.option("--ip", required=True, help="Target IP (e.g. 1.2.3.4 or 1.2.3.4:8080)")
+@click.option("--ip", help="Target IP (e.g. 1.2.3.4 or 1.2.3.4:8080)")
+@click.option("--input", "input_file", help="File with list of IPs (one per line)")
 @click.option("--domain", required=True, help="Main domain (e.g. example.com)")
 @click.option(
     "--vhost", required=True, help="Subdomain/VHOST to test (e.g. admin, store)"
@@ -40,6 +41,7 @@ from datetime import datetime
 @click.option("--save-output", is_flag=True, help="Save results to file")
 def vhostcheckcli(
     ip,
+    input_file,
     domain,
     vhost,
     proxy,
@@ -61,25 +63,88 @@ def vhostcheckcli(
         # Basic VHOST check
         reconcli vhostcheck --ip 192.168.1.100 --domain example.com --vhost admin
 
+        # Multiple IPs from file
+        reconcli vhostcheck --input ips.txt --domain example.com --vhost admin
+
         # HTTPS with proxy
         reconcli vhostcheck --ip 192.168.1.100:8443 --domain example.com --vhost api --https --proxy http://127.0.0.1:8080
 
         # Verbose output with file saving
-        reconcli vhostcheck --ip 192.168.1.100 --domain example.com --vhost store --verbose --save-output
+        reconcli vhostcheck --input ips.txt --domain example.com --vhost store --verbose --save-output
     """
-    click.echo(f"🔍 ReconCLI Virtual Host Check - Testing {vhost}.{domain} on {ip}")
+
+    # Validate input - either --ip or --input must be provided
+    if not ip and not input_file:
+        click.echo("❌ Error: Either --ip or --input must be provided", err=True)
+        return
+
+    if ip and input_file:
+        click.echo(
+            "❌ Error: Cannot use both --ip and --input at the same time", err=True
+        )
+        return
+
+    # Get list of IPs to process
+    if input_file:
+        if not os.path.exists(input_file):
+            click.echo(f"❌ Error: Input file '{input_file}' not found", err=True)
+            return
+
+        try:
+            with open(input_file, "r") as f:
+                ip_list = [line.strip() for line in f.readlines() if line.strip()]
+
+            if not ip_list:
+                click.echo(f"❌ Error: No valid IPs found in '{input_file}'", err=True)
+                return
+
+            click.echo(
+                f"🔍 ReconCLI Virtual Host Check - Testing {vhost}.{domain} on {len(ip_list)} IPs from {input_file}"
+            )
+        except Exception as e:
+            click.echo(f"❌ Error reading file '{input_file}': {e}", err=True)
+            return
+    else:
+        ip_list = [ip]
+        click.echo(f"🔍 ReconCLI Virtual Host Check - Testing {vhost}.{domain} on {ip}")
 
     # Create output directory if saving results
     if save_output:
         os.makedirs(output_dir, exist_ok=True)
 
-    result = check_vhost(ip, domain, vhost, proxy, https, insecure, verbose, timeout)
+    # Process all IPs
+    all_results = []
+    valid_vhosts_found = 0
+
+    for i, current_ip in enumerate(ip_list, 1):
+        if len(ip_list) > 1:
+            click.echo(f"\n[{i}/{len(ip_list)}] Processing IP: {current_ip}")
+
+        result = check_vhost(
+            current_ip, domain, vhost, proxy, https, insecure, verbose, timeout
+        )
+        all_results.append(result)
+
+        if result["is_valid"]:
+            valid_vhosts_found += 1
+
+    # Summary for multiple IPs
+    if len(ip_list) > 1:
+        click.echo(f"\n📊 Summary:")
+        click.echo(f"   Total IPs processed: {len(ip_list)}")
+        click.echo(f"   Valid VHOSTs found: {valid_vhosts_found}")
+        click.echo(f"   Success rate: {(valid_vhosts_found/len(ip_list)*100):.1f}%")
 
     # Save results if requested
     if save_output:
-        save_results(result, output_dir, output_format, ip, domain, vhost)
+        if len(ip_list) > 1:
+            save_batch_results(all_results, output_dir, output_format, domain, vhost)
+        else:
+            save_results(
+                all_results[0], output_dir, output_format, ip_list[0], domain, vhost
+            )
 
-    return result
+    return all_results
 
 
 def check_vhost(
@@ -304,6 +369,97 @@ def save_results(result, output_dir, output_format, ip, domain, vhost):
                 f.write(f"Error: {result['error']}\n")
 
     click.echo(f"💾 Results saved to: {filepath}")
+
+
+def save_batch_results(all_results, output_dir, output_format, domain, vhost):
+    """Save batch scan results to file"""
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    filename = f"vhostcheck_batch_{vhost}.{domain}_{timestamp}"
+
+    if output_format == "json":
+        import json
+
+        filepath = Path(output_dir) / f"{filename}.json"
+        with open(filepath, "w") as f:
+            json.dump(
+                {
+                    "scan_info": {
+                        "vhost": f"{vhost}.{domain}",
+                        "timestamp": timestamp,
+                        "total_ips": len(all_results),
+                        "valid_vhosts": sum(1 for r in all_results if r["is_valid"]),
+                    },
+                    "results": all_results,
+                },
+                f,
+                indent=2,
+            )
+    elif output_format == "csv":
+        import csv
+
+        filepath = Path(output_dir) / f"{filename}.csv"
+        with open(filepath, "w", newline="") as f:
+            writer = csv.writer(f)
+            writer.writerow(
+                [
+                    "VHOST",
+                    "Target IP",
+                    "Status Code",
+                    "Response Size",
+                    "Response Time",
+                    "Is Valid",
+                    "Technologies",
+                    "Server",
+                    "Title",
+                    "Error",
+                ]
+            )
+            for result in all_results:
+                writer.writerow(
+                    [
+                        result["vhost"],
+                        result["target_url"].split("://")[1].rstrip("/"),
+                        result["status_code"],
+                        result["response_size"],
+                        result["response_time"],
+                        result["is_valid"],
+                        "; ".join(result["technologies"]),
+                        result["server"],
+                        result["title"],
+                        result["error"],
+                    ]
+                )
+    else:  # txt format
+        filepath = Path(output_dir) / f"{filename}.txt"
+        with open(filepath, "w") as f:
+            f.write(f"VHOST Batch Check Results\n")
+            f.write(f"========================\n\n")
+            f.write(f"VHOST: {vhost}.{domain}\n")
+            f.write(f"Timestamp: {timestamp}\n")
+            f.write(f"Total IPs: {len(all_results)}\n")
+            f.write(f"Valid VHOSTs: {sum(1 for r in all_results if r['is_valid'])}\n")
+            f.write(
+                f"Success Rate: {(sum(1 for r in all_results if r['is_valid'])/len(all_results)*100):.1f}%\n\n"
+            )
+
+            for i, result in enumerate(all_results, 1):
+                f.write(f"[{i}] {result['target_url']}\n")
+                f.write(f"    Status: {result['status']}\n")
+                f.write(f"    Status Code: {result['status_code']}\n")
+                f.write(f"    Response Size: {result['response_size']} bytes\n")
+                f.write(f"    Response Time: {result['response_time']}ms\n")
+                f.write(f"    Is Valid VHOST: {result['is_valid']}\n")
+                if result["technologies"]:
+                    f.write(f"    Technologies: {', '.join(result['technologies'])}\n")
+                if result["server"]:
+                    f.write(f"    Server: {result['server']}\n")
+                if result["title"]:
+                    f.write(f"    Title: {result['title']}\n")
+                if result["error"]:
+                    f.write(f"    Error: {result['error']}\n")
+                f.write(f"\n")
+
+    click.echo(f"💾 Batch results saved to: {filepath}")
 
 
 if __name__ == "__main__":
