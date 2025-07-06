@@ -188,6 +188,38 @@ reconcli jscli --input js_urls.txt --threads 10 \
   --save-raw --json --markdown --verbose
 ```
 
+### ☁️ Cloud Provider Detection & S3 Enumeration (`cloudcli`)
+- **60+ Cloud Providers**: Comprehensive detection including AWS, Azure, Google Cloud, Cloudflare, DigitalOcean, and many more
+- **Multi-Source Detection**: ASN, CNAME, PTR, HTTP headers, SSL certificates analysis
+- **S3 Bucket Enumeration**: 73+ bucket naming patterns with multi-region support
+- **Batch Processing**: Process multiple domains from file with progress tracking
+- **Resume Support**: Continue interrupted scans with `--resume`, `--clear-resume`, `--show-resume`
+- **Rate Limiting**: Configurable threading and timeout controls
+- **Professional Reports**: JSON, TXT, and CSV output formats
+- **Intermediate Saves**: Progress saved every 10 domains for large batch scans
+- **Interruption Handling**: Graceful Ctrl+C handling with resume capability
+- **Detailed Analytics**: Comprehensive cloud provider identification with confidence scoring
+
+```bash
+# Single domain cloud detection
+reconcli cloudcli --domain example.com --verbose
+
+# Batch cloud detection with resume support
+reconcli cloudcli --domains-file domains.txt --resume --verbose
+
+# Cloud detection with S3 enumeration
+reconcli cloudcli --domain example.com --s3-enum --s3-regions --verbose
+
+# Batch processing with S3 enumeration and custom threading
+reconcli cloudcli --domains-file domains.txt --s3-enum --s3-threads 20 \
+  --resume --output-format json --verbose
+
+# Resume management
+reconcli cloudcli --show-resume          # Show previous scan status
+reconcli cloudcli --clear-resume         # Clear all resume states
+reconcli cloudcli --domains-file domains.txt --resume  # Continue scan
+```
+
 ### 🌍 TLD Reconnaissance (`tldr`)
 - **Massive TLD Coverage**: Systematically check domains across **2,672+ TLD variations**
 - **9 Comprehensive Categories**: Popular, country, new generic, business, crypto/blockchain, emerging tech, geographic, industry-specific, and specialized TLDs
@@ -238,6 +270,7 @@ reconcli tldr -d enterprise --categories all --threads 100 \
 ```
 
 ### 🌐 Additional Core Modules
+- **Cloud Detection & S3 Enumeration** (`cloudcli`): Comprehensive cloud provider detection and S3 bucket enumeration
 - **DNS Enumeration** (`dnscli`): Comprehensive DNS discovery and analysis
 - **HTTP Analysis** (`httpcli`): Web application assessment and fingerprinting
 - **IP Analysis** (`ipscli`): Network reconnaissance and IP intelligence
@@ -325,6 +358,7 @@ reconcli --help
 reconcli/
 ├── __init__.py
 ├── main.py                 # Main CLI entry point
+├── cloudcli.py            # Cloud provider detection & S3 enumeration (NEW)
 ├── subdocli.py            # Enhanced subdomain enumeration (NEW)
 ├── urlcli.py              # URL discovery and analysis (ENHANCED)
 ├── urlsorter.py           # URL sorting and processing (NEW)
@@ -339,6 +373,8 @@ reconcli/
 ├── vhostcheck.py          # VHOST verification utilities
 ├── utils/
 │   ├── __init__.py
+│   ├── cloud_detect.py    # Cloud provider detection engine (NEW)
+│   ├── s3_enum.py         # S3 bucket enumeration engine (NEW)
 │   ├── notifications.py   # Notification system
 │   ├── resume.py          # Resume functionality
 │   ├── loaders.py         # Data loading utilities
@@ -461,6 +497,33 @@ reconcli whoisfreakscli \
   --verbose
 ```
 
+### Complete Cloud Provider Discovery & S3 Enumeration
+```bash
+# Single domain cloud detection with S3 enumeration
+reconcli cloudcli \
+  --domain target.com \
+  --s3-enum \
+  --s3-regions \
+  --s3-threads 20 \
+  --verbose
+
+# Batch cloud detection with resume support
+reconcli cloudcli \
+  --domains-file target_domains.txt \
+  --s3-enum \
+  --resume \
+  --output-format json \
+  --output-dir cloud_results \
+  --verbose
+
+# Resume interrupted scan
+reconcli cloudcli --domains-file target_domains.txt --resume
+
+# Check scan status and clear old states
+reconcli cloudcli --show-resume
+reconcli cloudcli --clear-resume
+```
+
 ### Complete VHOST Discovery Workflow
 ```bash
 # Discover virtual hosts with notifications
@@ -508,6 +571,9 @@ ReconCLI is designed with bug bounty hunters and security researchers in mind:
 
 ## 🚀 Roadmap
 
+- [ ] Enhanced cloud provider detection with machine learning classification
+- [ ] Extended S3 enumeration with security assessment capabilities
+- [ ] Notification system integration for cloudcli with email and Slack support
 - [ ] DNS zone walking improvements
 - [ ] Enhanced JavaScript analysis with modern frameworks
 - [ ] Web application fingerprinting module
@@ -561,7 +627,22 @@ This project is licensed under the MIT License - see the [LICENSE](https://githu
 
 ## 📈 Changelog
 
-### Latest Changes (v2.0.0)
+### Latest Changes (v3.0.0)
+
+- ✅ **NEW: cloudcli.py** - Comprehensive cloud provider detection and S3 bucket enumeration
+  - 60+ cloud providers detection (AWS, Azure, Google Cloud, Cloudflare, DigitalOcean, etc.)
+  - Multi-source detection: ASN, CNAME, PTR, HTTP headers, SSL certificates
+  - S3 bucket enumeration with 73+ naming patterns and multi-region support
+  - Batch processing with resume functionality for large domain lists
+  - Rate limiting and threading controls for optimal performance
+  - Professional reporting in JSON, TXT, and CSV formats
+
+- ✅ **Enhanced resume system** - Advanced scan management
+  - `--resume` - Continue interrupted scans seamlessly
+  - `--clear-resume` - Clear all previous resume states
+  - `--show-resume` - Display status of previous scans
+  - Intermediate saves every 10 domains for large batch operations
+  - Graceful interruption handling with Ctrl+C support
 
 - ✅ **NEW: subdocli.py** - Enhanced subdomain enumeration with 11 integrated tools
   - Passive tools: Subfinder, Findomain, Assetfinder, Amass, Chaos, RapidDNS, crt.sh, BufferOver
