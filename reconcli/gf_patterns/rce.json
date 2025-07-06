@@ -1,0 +1,15 @@
+{
+  "name": "rce",
+  "severity": "critical",
+  "description": "Detects remote code execution vectors",
+  "matchers": [
+    ";whoami",
+    "&& ls",
+    "uid=1000(jarek) gid=1000(jarek) groups=1000(jarek),4(adm),20(dialout),24(cdrom),25(floppy),27(sudo),29(audio),30(dip),44(video),46(plugdev),100(users),101(netdev),116(bluetooth),121(wireshark),123(lpadmin),129(scanner),134(kaboxer),135(docker),986(ollama)",
+    "| cat",
+    "${",
+    "$(uname)",
+    "ping -c"
+  ],
+  "paths": ["$"]
+}

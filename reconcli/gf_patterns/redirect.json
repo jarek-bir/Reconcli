@@ -1,0 +1,15 @@
+{
+  "name": "redirect",
+  "severity": "medium",
+  "description": "Detects open redirect URLs",
+  "matchers": [
+    "redirect=",
+    "url=",
+    "next=",
+    "return=",
+    "continue=",
+    "target=",
+    "dest="
+  ],
+  "paths": ["$"]
+}

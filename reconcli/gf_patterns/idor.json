@@ -1,0 +1,13 @@
+{
+  "name": "idor",
+  "severity": "medium",
+  "description": "Detects IDOR-prone parameters",
+  "matchers": [
+    "user_id=",
+    "account_id=",
+    "profile=",
+    "id=",
+    "uid="
+  ],
+  "paths": ["$"]
+}

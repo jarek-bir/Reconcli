@@ -1,0 +1,15 @@
+{
+  "name": "lfi",
+  "severity": "high",
+  "description": "Detects local file inclusion vectors",
+  "matchers": [
+    "../",
+    "..%2f",
+    "etc/passwd",
+    "boot.ini",
+    "php://",
+    "data://",
+    "file://"
+  ],
+  "paths": ["$"]
+}

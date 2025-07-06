@@ -1,0 +1,18 @@
+{
+  "name": "xss",
+  "severity": "medium",
+  "description": "Detects reflected XSS vectors",
+  "matchers": [
+    "script",
+    "onerror",
+    "alert(",
+    "prompt(",
+    "<svg",
+    "<img",
+    "<iframe",
+    "<body",
+    "<video",
+    "document.cookie"
+  ],
+  "paths": ["$"]
+}

@@ -1,0 +1,13 @@
+{
+  "name": "s3bucket",
+  "severity": "info",
+  "description": "S3 bucket or AWS object exposure",
+  "matchers": [
+    "s3.amazonaws.com",
+    ".s3.amazonaws.com",
+    "amazonaws.com/bucket",
+    ".s3-",
+    "bucket.s3.amazonaws.com"
+  ],
+  "paths": ["$"]
+}

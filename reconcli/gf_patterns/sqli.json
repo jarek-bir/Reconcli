@@ -1,0 +1,15 @@
+{
+  "name": "sqli",
+  "severity": "high",
+  "description": "Detects SQL injection patterns in URL parameters",
+  "matchers": [
+    "' OR '1'='1",
+    "\" OR \"1\"=\"1",
+    "'--",
+    "'#",
+    "OR 1=1",
+    "UNION SELECT",
+    "information_schema"
+  ],
+  "paths": ["$"]
+}

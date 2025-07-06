@@ -1,7 +1,0 @@
-# Test domains with CNAME records for vulnerability testing
-www.github.com
-docs.github.com
-github.io
-www.google.com
-blog.netlify.com
-test.herokuapp.com

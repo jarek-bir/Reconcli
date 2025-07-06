@@ -1,0 +1,15 @@
+{
+  "name": "interesting",
+  "severity": "info",
+  "description": "Interesting parameters for further testing",
+  "matchers": [
+    "debug=",
+    "test=",
+    "dev=",
+    "internal=",
+    "staging=",
+    "api_key=",
+    "token="
+  ],
+  "paths": ["$"]
+}

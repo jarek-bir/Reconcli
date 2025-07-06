@@ -315,6 +315,55 @@ reconcli jscli --input js_urls.txt --threads 10 \
   --save-raw --json --markdown --verbose
 ```
 
+### 🛡️ Advanced Vulnerability Scanning (`vulncli`)
+- **🤖 AI-Powered Analysis**: Intelligent template selection and false positive reduction
+- **⚡ Multiple Engines**: Nuclei and Jaeles scanner integration with unified interface
+- **🔍 Smart Pattern Matching**: Custom GF patterns for targeted vulnerability discovery
+- **📊 Risk Assessment**: AI-powered confidence scoring and vulnerability classification
+- **🎯 Advanced Filtering**: Template selection by severity, tags, technology stacks
+- **📈 Executive Reporting**: AI-generated summaries and detailed technical reports
+- **🔄 Resume Support**: Continue interrupted scans with state management
+- **⚙️ High Performance**: Concurrent scanning with progress tracking and rate limiting
+- **🔔 Real-time Notifications**: Slack/Discord integration for critical findings
+- **📋 Professional Output**: JSON, Markdown, CSV, and XML reports with metrics
+
+#### 🤖 AI-Powered Features (Planned)
+- **Smart Template Selection**: AI analyzes targets to suggest optimal Nuclei templates
+- **False Positive Reduction**: Machine learning filters to reduce noise and improve accuracy
+- **Vulnerability Classification**: Automatic categorization with OWASP Top 10 mapping
+- **Executive Summaries**: AI-generated executive reports for management and stakeholders
+- **Risk Scoring**: Intelligent risk assessment based on context and impact analysis
+
+#### 🎯 Advanced CLI Options
+```bash
+# Basic vulnerability scan with smart defaults
+reconcli vulncli --input urls.txt --output-dir results
+
+# AI-powered scan with template optimization
+reconcli vulncli --input targets.txt --ai-template-selection \
+  --ai-false-positive-filter --confidence-threshold 0.8
+
+# Advanced Nuclei scan with custom templates and severity filtering
+reconcli vulncli --input urls.txt --engine nuclei \
+  --templates custom-templates/ --severity critical,high \
+  --exclude-tags dos,intrusive --concurrency 50
+
+# Jaeles scan with specific signatures
+reconcli vulncli --input targets.txt --engine jaeles \
+  --jaeles-signatures "~/jaeles-signatures/cves/" \
+  --jaeles-timeout 30 --parallel-jobs 10
+
+# Combined scan with GF pattern pre-filtering
+reconcli vulncli --input urls.txt --gf-patterns sqli,xss,rce \
+  --engine nuclei --ai-classify --executive-summary
+
+# Resume interrupted scan with notifications
+reconcli vulncli --input large_targets.txt --resume \
+  --slack-webhook "https://hooks.slack.com/..." \
+  --discord-webhook "https://discord.com/api/webhooks/..." \
+  --verbose --output-format json
+```
+
 ### ☁️ Cloud Provider Detection & S3 Enumeration (`cloudcli`)
 - **60+ Cloud Providers**: Comprehensive detection including AWS, Azure, Google Cloud, Cloudflare, DigitalOcean, and many more
 - **Multi-Source Detection**: ASN, CNAME, PTR, HTTP headers, SSL certificates analysis
@@ -960,6 +1009,16 @@ ReconCLI is designed with bug bounty hunters and security researchers in mind:
 
 ## 🚀 Roadmap
 
+### 🛡️ Vulnerability Scanning (vulncli)
+- [ ] **AI-Powered Dashboard**: Web-based interface for vulnerability management and analytics
+- [ ] **Orchestration Pipelines**: YAML-based vulnerability assessment workflows with conditional logic
+- [ ] **Enhanced ML Detection**: Advanced false positive reduction with custom model training
+- [ ] **Risk Scoring Engine**: Context-aware vulnerability prioritization with business impact analysis
+- [ ] **Integration Hub**: Direct integration with JIRA, ServiceNow, and vulnerability management platforms
+- [ ] **Custom Template Builder**: AI-assisted Nuclei template generation from vulnerability descriptions
+- [ ] **Continuous Monitoring**: Automated scheduled scans with trend analysis and alerting
+
+### 🚀 Platform Enhancements
 - [ ] Enhanced cloud provider detection with machine learning classification
 - [ ] Extended S3 enumeration with security assessment capabilities
 - [ ] Notification system integration for cloudcli with email and Slack support
@@ -1017,6 +1076,19 @@ This project is licensed under the MIT License - see the [LICENSE](https://githu
 ## 📈 Changelog
 
 ### Latest Changes (v3.0.0)
+
+- ✅ **NEW: vulncli.py** - Advanced AI-powered vulnerability scanning platform
+  - **🤖 AI-Powered Intelligence**: Smart Nuclei template selection and false positive reduction
+  - **⚡ Multi-Engine Support**: Nuclei and Jaeles scanners with unified interface  
+  - **🔍 Smart Pattern Matching**: Custom GF patterns for targeted vulnerability discovery
+  - **📊 Advanced Risk Assessment**: AI-powered confidence scoring and OWASP Top 10 mapping
+  - **🎯 Intelligent Filtering**: Template selection by severity, tags, and technology stacks
+  - **📈 Executive Reporting**: AI-generated summaries for technical and management audiences
+  - **🔄 Enterprise Resume Support**: State management for large-scale vulnerability assessments
+  - **⚙️ High-Performance Scanning**: Concurrent processing with rate limiting and progress tracking
+  - **🔔 Real-time Notifications**: Slack/Discord integration for critical vulnerability findings
+  - **📋 Professional Reporting**: Multi-format output (JSON, Markdown, CSV, XML) with detailed metrics
+  - **📋 Roadmap**: Dashboard interface, orchestration pipelines, and ML-enhanced detection planned
 
 - ✅ **NEW: portcli.py** - Advanced port scanning and service enumeration
   - **Multi-Scanner Support**: naabu, rustscan, and nmap with unified interface
