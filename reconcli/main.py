@@ -14,6 +14,7 @@ from reconcli.whoisfreakscli import cli as whoisfreaks_cli
 from reconcli.subdocli import subdocli
 from reconcli.tldrcli import cli as tldr_cli
 from reconcli.tldrcli_optimized_module import cli as tldr_opti_cli
+from reconcli.cloudcli import cloudcli
 
 
 @click.group()
@@ -83,6 +84,9 @@ tldr_cli.short_help = "Alternative TLD reconnaissance and domain discovery"
 cli.add_command(tldr_opti_cli, name="tldrcli-opti")
 tldr_opti_cli.short_help = "🚀 HIGH-PERFORMANCE TLD reconnaissance (11x faster)"
 
+# Cloud Service Discovery
+cli.add_command(cloudcli, name="cloudcli")
+cloudcli.short_help = "Cloud service discovery and enumeration"
 
 if __name__ == "__main__":
     cli()
