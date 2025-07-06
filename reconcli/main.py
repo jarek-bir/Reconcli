@@ -3,6 +3,7 @@ import click
 from reconcli.dnscli import cli as dns_cli
 from reconcli.urlcli import main as url_cli
 from reconcli.vhostcli import cli as vhost_cli  # ← poprawiona linia
+from reconcli.vhostcheckcli import vhostcheckcli
 from reconcli.urlsorter import cli as urlsort_cli
 from reconcli.jscli import main as js_cli
 from reconcli.httpcli import httpcli
@@ -39,6 +40,10 @@ url_cli.short_help = "Advanced URL discovery using Katana with filtering"
 # Virtual Host Discovery
 cli.add_command(vhost_cli, name="vhostcli")
 vhost_cli.short_help = "Virtual host discovery and enumeration"
+
+# Virtual Host Check
+cli.add_command(vhostcheckcli, name="vhostcheck")
+vhostcheckcli.short_help = "Advanced virtual host discovery and validation"
 
 # URL Sorting and Organization
 cli.add_command(urlsort_cli, name="urlsort")

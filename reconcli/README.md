@@ -45,6 +45,29 @@ reconcli vhostcli --domain example.com --ip 1.2.3.4 --wordlist wordlist.txt \
   --verbose
 ```
 
+### 🔍 Virtual Host Check (`vhostcheck`)
+- **Individual VHOST Testing**: Test specific virtual hosts on target IPs
+- **Technology Detection**: Automatic detection of web technologies (Nginx, Apache, IIS, WordPress, Drupal, etc.)
+- **Response Analysis**: Detailed HTTP response analysis with status codes, sizes, and response times
+- **Comprehensive Error Handling**: Proper handling of timeouts, connection errors, and HTTP errors
+- **Output Formats**: Save results in JSON, CSV, or TXT formats
+- **Proxy Support**: HTTP/HTTPS proxy configuration for testing through tools like Burp Suite
+- **SSL/TLS Options**: HTTPS support with insecure certificate handling
+- **Verbose Mode**: Detailed response headers and final URL information
+
+```bash
+# Basic VHOST check
+reconcli vhostcheck --ip 192.168.1.100 --domain example.com --vhost admin
+
+# HTTPS with proxy and verbose output
+reconcli vhostcheck --ip 192.168.1.100:8443 --domain example.com --vhost api \
+  --https --proxy http://127.0.0.1:8080 --verbose
+
+# Save results with technology detection
+reconcli vhostcheck --ip 192.168.1.100 --domain example.com --vhost store \
+  --save-output --output-format json --verbose
+```
+
 ### � Enhanced Subdomain Enumeration (`subdocli`)
 - **11 Tools Integration**: Subfinder, Findomain, Assetfinder, Amass, Chaos, RapidDNS, crt.sh, BufferOver, Gobuster, FFuf, DNSRecon
 - **DNS Resolution**: Multi-threaded IP resolution
@@ -370,7 +393,7 @@ reconcli/
 ├── httpcli.py             # HTTP analysis
 ├── ipscli.py              # IP reconnaissance
 ├── zonewalkcli.py         # DNS zone walking
-├── vhostcheck.py          # VHOST verification utilities
+├── vhostcheckcli.py       # Advanced VHOST discovery and validation
 ├── utils/
 │   ├── __init__.py
 │   ├── cloud_detect.py    # Cloud provider detection engine (NEW)
@@ -628,6 +651,14 @@ This project is licensed under the MIT License - see the [LICENSE](https://githu
 ## 📈 Changelog
 
 ### Latest Changes (v3.0.0)
+
+- ✅ **NEW: vhostcheckcli.py** - Advanced virtual host discovery and validation
+  - Individual VHOST testing with comprehensive response analysis
+  - Technology detection for Nginx, Apache, IIS, WordPress, Drupal, and more
+  - Multiple output formats (JSON, CSV, TXT) with detailed results
+  - Proxy support for testing through tools like Burp Suite
+  - SSL/TLS options with insecure certificate handling
+  - Comprehensive error handling for timeouts and connection issues
 
 - ✅ **NEW: cloudcli.py** - Comprehensive cloud provider detection and S3 bucket enumeration
   - 60+ cloud providers detection (AWS, Azure, Google Cloud, Cloudflare, DigitalOcean, etc.)
