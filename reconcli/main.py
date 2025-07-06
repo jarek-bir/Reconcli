@@ -16,6 +16,7 @@ from reconcli.subdocli import subdocli
 from reconcli.tldrcli import cli as tldr_cli
 from reconcli.tldrcli_optimized_module import cli as tldr_opti_cli
 from reconcli.cloudcli import cloudcli
+from reconcli.portcli import portcli
 
 
 @click.group()
@@ -92,6 +93,11 @@ tldr_opti_cli.short_help = "🚀 HIGH-PERFORMANCE TLD reconnaissance (11x faster
 # Cloud Service Discovery
 cli.add_command(cloudcli, name="cloudcli")
 cloudcli.short_help = "Cloud service discovery and enumeration"
+
+# Port Scanning and Service Enumeration
+cli.add_command(portcli, name="portcli")
+portcli.short_help = "Port scanning and service enumeration"
+
 
 if __name__ == "__main__":
     cli()
