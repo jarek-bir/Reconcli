@@ -73,6 +73,105 @@ reconcli vhostcheck --input target_ips.txt --domain example.com --vhost store \
   --save-output --output-format json --verbose
 ```
 
+### 🛠️ Port Scanning (`portcli`)
+- **Multiple Scanners**: naabu, rustscan, and nmap support with unified interface
+- **Flexible Input**: Single IPs, CIDR ranges, or batch processing from files
+- **Resume Functionality**: Continue interrupted scans with built-in state management
+- **🏷️ Automatic Tagging System**: Smart service categorization and filtering
+- **🔍 Service Recognition**: Automatic detection of technology stacks and services
+- **☁️ Cloud & CDN Detection**: Identify cloud providers and CDN IP ranges
+- **🎯 Advanced Filtering**: Filter by tags, services, or exclude specific categories
+- **📊 Professional Reports**: JSON and enhanced Markdown output with comprehensive analysis
+- **⚡ Performance Optimized**: Concurrent scanning with progress tracking
+
+#### 🏷️ Comprehensive Tagging System
+
+**Service Categories:**
+- `web`, `database`, `remote`, `mail`, `dns`, `ftp`, `monitoring`, `cloud`, `mgmt`, `voip`, `game`, `iot`, `messaging`
+
+**Environment Detection:**
+- `prod` (80,443,8080,9090,etc.), `dev` (3000,4200,8000,etc.), `staging` (8080,9000,etc.)
+
+**Protocol & Security:**
+- `tcp`, `udp`, `ssl`, `http`, `https`, `encrypted`
+
+**Technology Stacks:**
+- `jenkins`, `k8s-api`, `docker`, `prometheus`, `grafana`, `elk-stack`, `redis`, `postgres`, `mysql`
+
+**Cloud Providers:**
+- `aws`, `gcp`, `azure`, `digitalocean`, `cloudflare`
+
+#### 🔍 Service Recognition Patterns
+
+**Automatically detects:**
+- **CI/CD**: Jenkins, GitLab, GitHub Enterprise, TeamCity, Bamboo
+- **Kubernetes**: API servers, ingress controllers, dashboard
+- **Monitoring**: ELK Stack (Elasticsearch, Logstash, Kibana), Prometheus+Grafana
+- **Containers**: Docker registries, container management platforms
+- **Databases**: Redis, PostgreSQL, MySQL, MongoDB clusters
+- **Version Control**: Git services, code repositories
+- **Cloud Services**: AWS services, GCP, Azure endpoints
+
+#### 🎯 Advanced CLI Options
+
+**Filtering & Selection:**
+- `--filter-tags TAG1,TAG2`: Show only results with specific tags
+- `--exclude-tags TAG1,TAG2`: Exclude results with specific tags  
+- `--filter-services SERVICE1,SERVICE2`: Show only specific detected services
+- `--web-only`: Scan only common web ports (80,443,8080,8443,etc.)
+- `--top-ports N`: Scan top N most common ports
+- `--ports PORT_LIST`: Scan specific ports (e.g., "22,80,443,8080-8090")
+
+**Scanner Configuration:**
+- `--scanner {naabu,rustscan,nmap}`: Choose scanning engine
+- `--nmap-flags "FLAGS"`: Pass custom flags to nmap
+- `--timeout SECONDS`: Set scan timeout per target
+- `--rate RATE`: Control scan rate (naabu/nmap)
+
+**Output & Reporting:**
+- `--json`: Generate JSON report with full details
+- `--markdown`: Generate enhanced Markdown report
+- `--output-dir DIR`: Specify custom output directory
+- `--verbose`: Show detailed scanning progress and results
+
+```bash
+# Basic single IP scan with automatic tagging
+reconcli portcli --ip 192.168.1.100
+
+# Scan CIDR showing only production web services
+reconcli portcli --cidr 192.168.1.0/24 --filter-tags prod,web --top-ports 1000
+
+# Find Jenkins and Kubernetes services only
+reconcli portcli --input targets.txt --filter-services jenkins,k8s-api --verbose
+
+# Database services scan with detailed service detection
+reconcli portcli --input targets.txt --filter-tags database --scanner nmap \
+  --nmap-flags "-sV -sC" --json --markdown
+
+# Cloud infrastructure scan excluding CDN noise
+reconcli portcli --cidr 10.0.0.0/16 --exclude-tags cdn --filter-tags cloud,mgmt
+
+# Development environment discovery
+reconcli portcli --input internal_ips.txt --filter-tags dev,staging \
+  --exclude-tags prod --verbose
+
+# Security-focused scan for encrypted services
+reconcli portcli --input targets.txt --filter-tags ssl,encrypted \
+  --scanner nmap --nmap-flags "-sV --script ssl-enum-ciphers"
+
+# Batch scan with resume capability
+reconcli portcli --input large_network.txt --resume --top-ports 10000 \
+  --json --markdown --verbose
+
+# Monitor and messaging services discovery
+reconcli portcli --cidr 172.16.0.0/12 --filter-tags monitoring,messaging \
+  --filter-services prometheus,grafana,elk-stack --verbose
+
+# Web application discovery with service recognition
+reconcli portcli --input webservers.txt --web-only \
+  --filter-services jenkins,gitlab --markdown
+```
+
 ### � Enhanced Subdomain Enumeration (`subdocli`)
 - **11 Tools Integration**: Subfinder, Findomain, Assetfinder, Amass, Chaos, RapidDNS, crt.sh, BufferOver, Gobuster, FFuf, DNSRecon
 - **DNS Resolution**: Multi-threaded IP resolution
@@ -346,6 +445,11 @@ reconcli --help
 - **Subzy**: Download from [GitHub releases](https://github.com/LukaSikic/subzy/releases)
 - **tko-subs**: `go install github.com/anshumanbh/tko-subs@latest`
 
+#### For Port Scanning (`portcli`)
+- **naabu**: `go install -v github.com/projectdiscovery/naabu/v2/cmd/naabu@latest`
+- **rustscan**: `cargo install rustscan`
+- **nmap**: Install from [nmap.org](https://nmap.org/download.html)
+
 ### API Keys
 
 #### WhoisFreaks API (for `whoisfreakscli`)
@@ -399,6 +503,7 @@ reconcli/
 ├── ipscli.py              # IP reconnaissance
 ├── zonewalkcli.py         # DNS zone walking
 ├── vhostcheckcli.py       # Advanced VHOST discovery and validation
+├── portcli.py             # Port scanning and service enumeration
 ├── utils/
 │   ├── __init__.py
 │   ├── cloud_detect.py    # Cloud provider detection engine (NEW)
@@ -463,6 +568,142 @@ reconcli takeover --input subdomains.txt --json --markdown
 ```
 
 ## Examples
+
+### Advanced Port Scanning Workflows
+
+```bash
+# Comprehensive infrastructure assessment
+reconcli portcli \
+  --input infrastructure.txt \
+  --scanner nmap \
+  --nmap-flags "-sV -sC -O" \
+  --json \
+  --markdown \
+  --verbose
+
+# Production web services discovery
+reconcli portcli \
+  --cidr 10.0.0.0/8 \
+  --filter-tags prod,web \
+  --exclude-tags dev,staging \
+  --top-ports 1000 \
+  --json
+
+# Security assessment focusing on management interfaces
+reconcli portcli \
+  --input targets.txt \
+  --filter-tags mgmt,remote \
+  --filter-services jenkins,k8s-api \
+  --scanner nmap \
+  --nmap-flags "-sV --script vuln" \
+  --markdown
+
+# Database and messaging service discovery
+reconcli portcli \
+  --cidr 172.16.0.0/12 \
+  --filter-tags database,messaging \
+  --exclude-tags dev \
+  --verbose
+
+# Cloud infrastructure analysis
+reconcli portcli \
+  --input cloud_ips.txt \
+  --filter-tags cloud,ssl \
+  --exclude-tags cdn \
+  --json \
+  --markdown
+
+# Development environment assessment
+reconcli portcli \
+  --input dev_network.txt \
+  --filter-tags dev,staging \
+  --filter-services jenkins,gitlab \
+  --web-only \
+  --verbose
+```
+
+### Advanced IP Analysis and Intelligence Workflows
+
+```bash
+# Basic IP enrichment and geolocation analysis
+reconcli ipscli \
+  --input ips.txt \
+  --enrich \
+  --verbose
+
+# Comprehensive IP analysis with cloud detection and port scanning
+reconcli ipscli \
+  --input subdomains_resolved.txt \
+  --resolve-from subs \
+  --enrich \
+  --scan rustscan \
+  --filter-cdn \
+  --markdown \
+  --verbose
+
+# CIDR range expansion and analysis with uncover integration
+reconcli ipscli \
+  --input cidrs.txt \
+  --cidr-expand \
+  --enrich \
+  --use-uncover \
+  --uncover-engine shodan \
+  --json \
+  --verbose
+
+# Geographic and cloud provider filtering
+reconcli ipscli \
+  --input global_ips.txt \
+  --enrich \
+  --filter-country US \
+  --filter-cloud aws,gcp,azure \
+  --exclude-tags cdn,honeypot \
+  --markdown
+
+# Advanced threat intelligence with honeypot detection
+reconcli ipscli \
+  --input suspicious_ips.txt \
+  --enrich \
+  --honeypot \
+  --filter-tags government,education \
+  --exclude-tags cloud \
+  --json \
+  --verbose
+
+# ASN-based IP discovery and analysis
+reconcli ipscli \
+  --input sample_ips.txt \
+  --enrich \
+  --use-uncover \
+  --uncover-query 'asn:"AS13335"' \
+  --filter-asn cloudflare \
+  --scan simple \
+  --markdown
+
+# Resume interrupted large-scale analysis
+reconcli ipscli \
+  --resume \
+  --verbose
+
+# Extract and analyze IPs from existing uncover JSON results
+reconcli ipscli \
+  --uncover-json uncover_results.json \
+  --enrich \
+  --scan rustscan \
+  --filter-cloud aws \
+  --json
+
+# High-performance concurrent IP analysis
+reconcli ipscli \
+  --input massive_ip_list.txt \
+  --enrich \
+  --threads 20 \
+  --timeout 15 \
+  --scan simple \
+  --filter-tags hosting,isp \
+  --markdown \
+  --verbose
+```
 
 ### Complete Subdomain Discovery Workflow
 ```bash
@@ -657,6 +898,76 @@ This project is licensed under the MIT License - see the [LICENSE](https://githu
 
 ### Latest Changes (v3.0.0)
 
+- ✅ **NEW: portcli.py** - Advanced port scanning and service enumeration
+  - **Multi-Scanner Support**: naabu, rustscan, and nmap with unified interface
+  - **Smart Target Handling**: Single IPs, CIDR ranges, and batch processing from files
+  - **Resume Functionality**: Continue interrupted scans with built-in state management
+  - **🏷️ Comprehensive Tagging System**: 60+ intelligent service tags across 13 categories
+    - **Service Categories**: web, database, remote, mail, dns, ftp, monitoring, cloud, mgmt, voip, game, iot, messaging
+    - **Environment Detection**: prod, dev, staging based on port patterns and service analysis
+    - **Protocol Tags**: tcp, udp, ssl, http, https, encrypted for security assessment
+    - **Technology Stacks**: jenkins, k8s-api, docker, prometheus, grafana, elk-stack, redis, postgres, mysql
+    - **Cloud Providers**: aws, gcp, azure, digitalocean, cloudflare with automatic detection
+  - **🔍 Advanced Service Recognition**: Automatic detection of 20+ technology stacks
+    - **CI/CD Platforms**: Jenkins, GitLab, GitHub Enterprise, TeamCity, Bamboo
+    - **Container Orchestration**: Kubernetes API, Docker services, container registries
+    - **Monitoring Stack**: ELK (Elasticsearch, Logstash, Kibana), Prometheus+Grafana, Nagios
+    - **Database Systems**: Redis, PostgreSQL, MySQL, MongoDB with cluster detection
+    - **Version Control**: Git services, SVN, automated code repository identification
+  - **☁️ Cloud & CDN Intelligence**: 
+    - ASN-based cloud provider detection for AWS, GCP, Azure, DigitalOcean
+    - CDN IP range identification and filtering (Cloudflare, AWS CloudFront, etc.)
+    - Cloud service endpoint recognition and tagging
+  - **🎯 Advanced Filtering System**:
+    - `--filter-tags`: Include only specific service categories (e.g., prod,web,database)
+    - `--exclude-tags`: Exclude noise like dev environments or CDN services
+    - `--filter-services`: Target specific technologies (e.g., jenkins,k8s-api,elk-stack)
+    - `--web-only`: Focus on web application ports for bug bounty hunting
+  - **📊 Professional Reporting**:
+    - **JSON Output**: Structured data with tags, detected services, cloud info, and statistics
+    - **Enhanced Markdown**: Rich reports with service recognition, tag distribution, and visual formatting
+    - **Statistical Analysis**: Port distribution by tags, success rates, and scanning performance metrics
+  - **⚡ Performance & Reliability**:
+    - Concurrent scanning with configurable threading and timeouts
+    - Progress tracking for large batch scans with ETA calculations
+    - Robust error handling with automatic retries and detailed logging
+    - Resume capability for interrupted scans preserving state and progress
+
+- ✅ **NEW: ipscli.py** - Advanced IP intelligence and reconnaissance module
+  - **Multi-Source Enrichment**: ipinfo.io integration with geolocation, ASN, and organization data
+  - **🏷️ Intelligent IP Tagging System**: Comprehensive classification with 20+ tag categories
+    - **Geographic Tags**: country-based classification and region tagging
+    - **Infrastructure Tags**: cloud, cdn, hosting, isp, government, education detection
+    - **Service Tags**: web-server, mail-server, database, api, vpn automatic identification
+    - **Security Tags**: honeypot detection heuristics and privacy service identification
+  - **☁️ Cloud & CDN Intelligence**: 
+    - Multi-provider cloud detection (AWS, GCP, Azure, DigitalOcean) via IP ranges and ASN
+    - CDN identification and filtering (Cloudflare, AWS CloudFront, etc.)
+    - Cloud service endpoint recognition with provider-specific tagging
+  - **🔍 Advanced Discovery Integration**:
+    - **Uncover Integration**: Automated ASN detection with multi-engine support (Shodan, Censys, FOFA)
+    - **CIDR Expansion**: Safe expansion of network ranges with size limits
+    - **Multi-Format Input**: Support for subdomain resolution output and raw IP lists
+  - **🎯 Advanced Filtering & Analysis**:
+    - `--filter-country`: Geographic filtering by country codes
+    - `--filter-cloud`: Cloud provider filtering (aws,gcp,azure,digitalocean)
+    - `--filter-asn`: ASN pattern matching and organization filtering
+    - `--filter-tags`/`--exclude-tags`: Tag-based inclusion/exclusion filtering
+    - `--honeypot`: Enhanced honeypot detection with behavioral analysis
+  - **🔌 Integrated Port Scanning**:
+    - Multi-scanner support (rustscan, nmap, masscan, simple socket-based)
+    - Service detection and port-based tagging integration
+    - Custom port lists and focused scanning capabilities
+  - **📊 Professional Intelligence Reporting**:
+    - **Comprehensive Markdown Reports**: Geographic distribution, cloud analysis, service statistics
+    - **Structured JSON Output**: Complete enrichment data with tags, cloud info, and scan results
+    - **Statistical Analysis**: ASN distribution, country analysis, tag frequency, and security insights
+  - **⚡ Enterprise-Grade Features**:
+    - Resume functionality for large-scale IP analysis campaigns
+    - Concurrent processing with configurable threading and timeouts
+    - Proxy support for corporate environments and operational security
+    - Error handling with detailed logging and batch processing reliability
+
 - ✅ **NEW: vhostcheckcli.py** - Advanced virtual host discovery and validation
   - Individual VHOST testing with comprehensive response analysis
   - **Batch Processing**: Multiple IPs from file with progress tracking and statistics
@@ -717,7 +1028,7 @@ This project is licensed under the MIT License - see the [LICENSE](https://githu
 
 ### 💬 Getting Help
 - **Issues**: [GitHub Issues](https://github.com/jarek-bir/Reconcli/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/jarek-bir/Reconcli/discussions)
+- **Discussions**
 - **Security**: Please report security issues privately
 
 ### 🌟 Show Your Support
