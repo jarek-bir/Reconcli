@@ -181,9 +181,9 @@ def detect_cloud_provider(
                 except AttributeError:
                     # Older dnspython version - try query instead of resolve
                     try:
-                        answers = dns.resolver.query(domain, 'CNAME')
+                        answers = dns.resolver.query(domain, "CNAME")
                         for rdata in answers:
-                            cname_target = str(rdata).strip('.')
+                            cname_target = str(rdata).strip(".")
                             result["cname"].append(cname_target)
                             if verbose:
                                 print(f"[DEBUG] CNAME found (legacy): {cname_target}")
@@ -362,27 +362,27 @@ def detect_cloud_provider(
                         # Simplified SSL info extraction
                         subject_dict = {}
                         issuer_dict = {}
-                        
+
                         # Parse subject safely
-                        subject = cert.get('subject', [])
+                        subject = cert.get("subject", [])
                         if subject:
                             for item in subject:
                                 if isinstance(item, tuple) and len(item) >= 2:
                                     subject_dict[item[0][0]] = item[0][1]
-                        
-                        # Parse issuer safely  
-                        issuer = cert.get('issuer', [])
+
+                        # Parse issuer safely
+                        issuer = cert.get("issuer", [])
                         if issuer:
                             for item in issuer:
                                 if isinstance(item, tuple) and len(item) >= 2:
                                     issuer_dict[item[0][0]] = item[0][1]
-                        
+
                         result["ssl_info"] = {
                             "subject": subject_dict,
                             "issuer": issuer_dict,
-                            "san": cert.get('subjectAltName', [])
+                            "san": cert.get("subjectAltName", []),
                         }
-                        
+
                         # Check certificate issuer for cloud providers
                         issuer_org = issuer_dict.get("organizationName", "").lower()
                         for keyword, provider in CLOUD_KEYWORDS.items():
@@ -391,8 +391,10 @@ def detect_cloud_provider(
                                     result["cloud_guess"].append(provider)
                                     result["detection_methods"].append(f"SSL:{keyword}")
                                     if verbose:
-                                        print(f"[DEBUG] Cloud detected via SSL issuer: {provider}")
-                    
+                                        print(
+                                            f"[DEBUG] Cloud detected via SSL issuer: {provider}"
+                                        )
+
         except (socket.error, ssl.SSLError, ConnectionRefusedError) as e:
             if verbose:
                 print(f"[DEBUG] SSL certificate lookup failed: {e}")
@@ -453,7 +455,7 @@ def print_cloud_detection_results(result: Dict, verbose: bool = False) -> None:
     cloud_providers = result.get("cloud_guess", [])
     if cloud_providers:
         print(f"☁️  Detected Cloud Providers: {', '.join(cloud_providers)}")
-        
+
         if verbose:
             detection_methods = result.get("detection_methods", [])
             if detection_methods:
@@ -479,17 +481,19 @@ def print_cloud_detection_results(result: Dict, verbose: bool = False) -> None:
                 print(f"� SSL Issuer: {issuer_org}")
 
 
-def batch_detect_cloud_providers(domains: List[str], verbose: bool = False) -> List[Dict]:
+def batch_detect_cloud_providers(
+    domains: List[str], verbose: bool = False
+) -> List[Dict]:
     """Detect cloud providers for multiple domains."""
     results = []
-    
+
     for i, domain in enumerate(domains, 1):
         if verbose:
             print(f"\n[{i}/{len(domains)}] Processing: {domain}")
-        
+
         result = detect_cloud_provider(domain, verbose=verbose)
         results.append(result)
-        
+
         if not verbose:
             # Show simple progress
             cloud_providers = result.get("cloud_guess", [])
@@ -497,5 +501,5 @@ def batch_detect_cloud_providers(domains: List[str], verbose: bool = False) -> L
                 print(f"✅ {domain}: {', '.join(cloud_providers)}")
             else:
                 print(f"❌ {domain}: No cloud providers detected")
-    
+
     return results
