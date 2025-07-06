@@ -315,6 +315,55 @@ reconcli jscli --input js_urls.txt --threads 10 \
   --save-raw --json --markdown --verbose
 ```
 
+### 🛡️ Advanced Vulnerability Scanning (`vulncli`)
+- **🤖 AI-Powered Analysis**: Intelligent template selection and false positive reduction
+- **⚡ Multiple Engines**: Nuclei and Jaeles scanner integration with unified interface
+- **🔍 Smart Pattern Matching**: Custom GF patterns for targeted vulnerability discovery
+- **📊 Risk Assessment**: AI-powered confidence scoring and vulnerability classification
+- **🎯 Advanced Filtering**: Template selection by severity, tags, technology stacks
+- **📈 Executive Reporting**: AI-generated summaries and detailed technical reports
+- **🔄 Resume Support**: Continue interrupted scans with state management
+- **⚙️ High Performance**: Concurrent scanning with progress tracking and rate limiting
+- **🔔 Real-time Notifications**: Slack/Discord integration for critical findings
+- **📋 Professional Output**: JSON, Markdown, CSV, and XML reports with metrics
+
+#### 🤖 AI-Powered Features (Planned)
+- **Smart Template Selection**: AI analyzes targets to suggest optimal Nuclei templates
+- **False Positive Reduction**: Machine learning filters to reduce noise and improve accuracy
+- **Vulnerability Classification**: Automatic categorization with OWASP Top 10 mapping
+- **Executive Summaries**: AI-generated executive reports for management and stakeholders
+- **Risk Scoring**: Intelligent risk assessment based on context and impact analysis
+
+#### 🎯 Advanced CLI Options
+```bash
+# Basic vulnerability scan with smart defaults
+reconcli vulncli --input urls.txt --output-dir results
+
+# AI-powered scan with template optimization
+reconcli vulncli --input targets.txt --ai-template-selection \
+  --ai-false-positive-filter --confidence-threshold 0.8
+
+# Advanced Nuclei scan with custom templates and severity filtering
+reconcli vulncli --input urls.txt --engine nuclei \
+  --templates custom-templates/ --severity critical,high \
+  --exclude-tags dos,intrusive --concurrency 50
+
+# Jaeles scan with specific signatures
+reconcli vulncli --input targets.txt --engine jaeles \
+  --jaeles-signatures "~/jaeles-signatures/cves/" \
+  --jaeles-timeout 30 --parallel-jobs 10
+
+# Combined scan with GF pattern pre-filtering
+reconcli vulncli --input urls.txt --gf-patterns sqli,xss,rce \
+  --engine nuclei --ai-classify --executive-summary
+
+# Resume interrupted scan with notifications
+reconcli vulncli --input large_targets.txt --resume \
+  --slack-webhook "https://hooks.slack.com/..." \
+  --discord-webhook "https://discord.com/api/webhooks/..." \
+  --verbose --output-format json
+```
+
 ### ☁️ Cloud Provider Detection & S3 Enumeration (`cloudcli`)
 - **60+ Cloud Providers**: Comprehensive detection including AWS, Azure, Google Cloud, Cloudflare, DigitalOcean, and many more
 - **Multi-Source Detection**: ASN, CNAME, PTR, HTTP headers, SSL certificates analysis
@@ -398,7 +447,7 @@ reconcli tldr -d enterprise --categories all --threads 100 \
 
 ### 🌐 Additional Core Modules
 - **Cloud Detection & S3 Enumeration** (`cloudcli`): Comprehensive cloud provider detection and S3 bucket enumeration
-- **CNAME Analysis** (`cnamecli`): Advanced CNAME resolution and subdomain takeover detection
+- **CNAME Analysis** (`cnamecli`): Advanced CNAME resolution, direct A/AAAA analysis, subdomain takeover detection with Discord/Slack notifications
 - **DNS Enumeration** (`dnscli`): Comprehensive DNS discovery and analysis
 - **HTTP Analysis** (`httpcli`): Web application assessment and fingerprinting
 - **IP Analysis** (`ipscli`): Network reconnaissance and IP intelligence
@@ -836,6 +885,14 @@ reconcli cnamecli \
   --provider-tags \
   --verbose
 
+# Include direct A/AAAA record analysis (not just CNAMEs)
+reconcli cnamecli \
+  --domains targets.txt \
+  --include-direct \
+  --provider-tags \
+  --json \
+  --verbose
+
 # Full vulnerability scan with takeover detection
 reconcli cnamecli \
   --domains targets.txt \
@@ -843,6 +900,23 @@ reconcli cnamecli \
   --takeover-check \
   --provider-tags \
   --json \
+  --markdown \
+  --verbose
+
+# Full scan with direct records and Discord notifications
+reconcli cnamecli \
+  --domains targets.txt \
+  --include-direct \
+  --takeover-check \
+  --notify "https://discord.com/api/webhooks/..." \
+  --json \
+  --verbose
+
+# Slack notifications for critical findings
+reconcli cnamecli \
+  --domains targets.txt \
+  --takeover-check \
+  --notify "https://hooks.slack.com/services/..." \
   --markdown \
   --verbose
 
@@ -862,12 +936,13 @@ reconcli cnamecli \
   --markdown \
   --verbose
 
-# High-performance concurrent scan
+# High-performance concurrent scan with notifications
 reconcli cnamecli \
   --domains large_list.txt \
+  --include-direct \
   --takeover-check \
   --threads 20 \
-  --timeout 10 \
+  --notify "https://discord.com/api/webhooks/..." \
   --json \
   --output-dir cname_results \
   --verbose
@@ -884,6 +959,17 @@ reconcli cnamecli --show-resume
 reconcli cnamecli --clear-resume
 ```
 
+**🔧 Key Features:**
+- **Advanced CNAME Resolution**: Resolves CNAME chains and identifies service providers
+- **Direct A/AAAA Analysis**: Optional analysis of direct IP records with `--include-direct`
+- **Provider Detection**: Identifies 25+ cloud/CDN providers (AWS, Azure, Cloudflare, etc.)
+- **IP-based Provider Detection**: Detects cloud providers from IP addresses
+- **Subdomain Takeover Detection**: Tests for actual vulnerability patterns
+- **Real-time Notifications**: Discord/Slack webhooks for critical findings
+- **Concurrent Processing**: Multi-threaded analysis for performance
+- **Resume Support**: Continue interrupted scans
+- **Rich Reporting**: JSON and Markdown outputs with detailed statistics
+
 **Status Types:**
 - `no_cname`: Domain has no CNAME record (direct A/AAAA)
 - `resolves_ok`: CNAME exists and resolves properly
@@ -891,6 +977,19 @@ reconcli cnamecli --clear-resume
 - `potential_takeover`: CNAME points to vulnerable service and doesn't resolve
 - `dead`: Domain doesn't resolve at all (no DNS records)
 - `error`: Analysis failed due to technical issues
+
+**🚀 Quick Reference:**
+
+| Option | Purpose | Example |
+|--------|---------|---------|
+| `--include-direct` | Analyze A/AAAA records | `--include-direct` |
+| `--notify` | Discord/Slack notifications | `--notify "https://discord.com/api/webhooks/..."` |
+| `--takeover-check` | Test for vulnerabilities | `--takeover-check` |
+| `--status-filter` | Filter by status | `--status-filter potential_takeover` |
+| `--threads` | Concurrent processing | `--threads 20` |
+| `--resume` | Continue interrupted scan | `--resume` |
+
+**🎯 Supported Providers:** AWS S3, Heroku, GitHub Pages, Azure, Netlify, Shopify, WordPress.com, Cloudflare, Fastly, and 15+ more
 
 ## 📊 Project Stats
 
@@ -910,6 +1009,16 @@ ReconCLI is designed with bug bounty hunters and security researchers in mind:
 
 ## 🚀 Roadmap
 
+### 🛡️ Vulnerability Scanning (vulncli)
+- [ ] **AI-Powered Dashboard**: Web-based interface for vulnerability management and analytics
+- [ ] **Orchestration Pipelines**: YAML-based vulnerability assessment workflows with conditional logic
+- [ ] **Enhanced ML Detection**: Advanced false positive reduction with custom model training
+- [ ] **Risk Scoring Engine**: Context-aware vulnerability prioritization with business impact analysis
+- [ ] **Integration Hub**: Direct integration with JIRA, ServiceNow, and vulnerability management platforms
+- [ ] **Custom Template Builder**: AI-assisted Nuclei template generation from vulnerability descriptions
+- [ ] **Continuous Monitoring**: Automated scheduled scans with trend analysis and alerting
+
+### 🚀 Platform Enhancements
 - [ ] Enhanced cloud provider detection with machine learning classification
 - [ ] Extended S3 enumeration with security assessment capabilities
 - [ ] Notification system integration for cloudcli with email and Slack support
@@ -967,6 +1076,19 @@ This project is licensed under the MIT License - see the [LICENSE](https://githu
 ## 📈 Changelog
 
 ### Latest Changes (v3.0.0)
+
+- ✅ **NEW: vulncli.py** - Advanced AI-powered vulnerability scanning platform
+  - **🤖 AI-Powered Intelligence**: Smart Nuclei template selection and false positive reduction
+  - **⚡ Multi-Engine Support**: Nuclei and Jaeles scanners with unified interface  
+  - **🔍 Smart Pattern Matching**: Custom GF patterns for targeted vulnerability discovery
+  - **📊 Advanced Risk Assessment**: AI-powered confidence scoring and OWASP Top 10 mapping
+  - **🎯 Intelligent Filtering**: Template selection by severity, tags, and technology stacks
+  - **📈 Executive Reporting**: AI-generated summaries for technical and management audiences
+  - **🔄 Enterprise Resume Support**: State management for large-scale vulnerability assessments
+  - **⚙️ High-Performance Scanning**: Concurrent processing with rate limiting and progress tracking
+  - **🔔 Real-time Notifications**: Slack/Discord integration for critical vulnerability findings
+  - **📋 Professional Reporting**: Multi-format output (JSON, Markdown, CSV, XML) with detailed metrics
+  - **📋 Roadmap**: Dashboard interface, orchestration pipelines, and ML-enhanced detection planned
 
 - ✅ **NEW: portcli.py** - Advanced port scanning and service enumeration
   - **Multi-Scanner Support**: naabu, rustscan, and nmap with unified interface
@@ -1056,12 +1178,16 @@ This project is licensed under the MIT License - see the [LICENSE](https://githu
   - Rate limiting and threading controls for optimal performance
   - Professional reporting in JSON, TXT, and CSV formats
 
-- ✅ **NEW: cnamecli.py** - CNAME analysis and subdomain takeover detection
-  - Basic CNAME analysis with provider identification
-  - Vulnerability scan with subdomain takeover detection
-  - High-performance concurrent scanning
-  - Resume support for interrupted scans
-  - Professional reporting in JSON and Markdown formats
+- ✅ **NEW: cnamecli.py** - Advanced CNAME analysis and subdomain takeover detection
+  - **Advanced CNAME Resolution**: Multi-threaded CNAME chain analysis with 25+ provider detection
+  - **Direct A/AAAA Analysis**: Optional direct IP record analysis with `--include-direct` flag
+  - **Cloud Provider Detection**: IP-based provider identification (AWS, Azure, GCP, Cloudflare, etc.)
+  - **Subdomain Takeover Detection**: Real vulnerability testing with 20+ service patterns
+  - **Real-time Notifications**: Discord/Slack webhook integration for critical findings
+  - **Professional Reporting**: Rich JSON/Markdown reports with emoji indicators and statistics
+  - **Resume Support**: Continue interrupted scans with state management
+  - **Concurrent Processing**: High-performance multi-threaded analysis (configurable threads)
+  - **Advanced Filtering**: Status-based filtering and risk-level categorization
 
 - ✅ **Enhanced resume system** - Advanced scan management
   - `--resume` - Continue interrupted scans seamlessly
