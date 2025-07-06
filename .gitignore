@@ -9,6 +9,12 @@ __pycache__/
 *.pyo
 *.pyd
 
+# Python package build files
+*.egg-info/
+build/
+dist/
+*.egg
+
 # IDE files
 .vscode/
 .idea/
