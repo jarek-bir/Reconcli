@@ -398,6 +398,7 @@ reconcli tldr -d enterprise --categories all --threads 100 \
 
 ### 🌐 Additional Core Modules
 - **Cloud Detection & S3 Enumeration** (`cloudcli`): Comprehensive cloud provider detection and S3 bucket enumeration
+- **CNAME Analysis** (`cnamecli`): Advanced CNAME resolution and subdomain takeover detection
 - **DNS Enumeration** (`dnscli`): Comprehensive DNS discovery and analysis
 - **HTTP Analysis** (`httpcli`): Web application assessment and fingerprinting
 - **IP Analysis** (`ipscli`): Network reconnaissance and IP intelligence
@@ -449,6 +450,10 @@ reconcli --help
 - **naabu**: `go install -v github.com/projectdiscovery/naabu/v2/cmd/naabu@latest`
 - **rustscan**: `cargo install rustscan`
 - **nmap**: Install from [nmap.org](https://nmap.org/download.html)
+
+#### For CNAME Analysis (`cnamecli`)
+- **Subjack**: `go install github.com/haccer/subjack@latest`
+- **Tko-subs**: `go install github.com/anshumanbh/tko-subs@latest`
 
 ### API Keys
 
@@ -504,6 +509,7 @@ reconcli/
 ├── zonewalkcli.py         # DNS zone walking
 ├── vhostcheckcli.py       # Advanced VHOST discovery and validation
 ├── portcli.py             # Port scanning and service enumeration
+├── cnamecli.py            # CNAME analysis and subdomain takeover detection (NEW)
 ├── utils/
 │   ├── __init__.py
 │   ├── cloud_detect.py    # Cloud provider detection engine (NEW)
@@ -822,6 +828,70 @@ reconcli takeover \
   --verbose
 ```
 
+### 🔗 CNAME Analysis and Subdomain Takeover Detection
+```bash
+# Basic CNAME analysis with provider identification
+reconcli cnamecli \
+  --domains subdomains.txt \
+  --provider-tags \
+  --verbose
+
+# Full vulnerability scan with takeover detection
+reconcli cnamecli \
+  --domains targets.txt \
+  --check \
+  --takeover-check \
+  --provider-tags \
+  --json \
+  --markdown \
+  --verbose
+
+# Filter only potential takeover candidates
+reconcli cnamecli \
+  --domains large_list.txt \
+  --takeover-check \
+  --status-filter potential_takeover \
+  --json \
+  --verbose
+
+# Filter dead domains (don't resolve at all)
+reconcli cnamecli \
+  --domains subdomains.txt \
+  --check \
+  --status-filter dead \
+  --markdown \
+  --verbose
+
+# High-performance concurrent scan
+reconcli cnamecli \
+  --domains large_list.txt \
+  --takeover-check \
+  --threads 20 \
+  --timeout 10 \
+  --json \
+  --output-dir cname_results \
+  --verbose
+
+# Resume interrupted vulnerability scan
+reconcli cnamecli \
+  --domains targets.txt \
+  --takeover-check \
+  --resume \
+  --verbose
+
+# Check resume status and clear state
+reconcli cnamecli --show-resume
+reconcli cnamecli --clear-resume
+```
+
+**Status Types:**
+- `no_cname`: Domain has no CNAME record (direct A/AAAA)
+- `resolves_ok`: CNAME exists and resolves properly
+- `not_resolving`: CNAME exists but doesn't resolve 
+- `potential_takeover`: CNAME points to vulnerable service and doesn't resolve
+- `dead`: Domain doesn't resolve at all (no DNS records)
+- `error`: Analysis failed due to technical issues
+
 ## 📊 Project Stats
 
 ![GitHub repo size](https://img.shields.io/github/repo-size/jarek-bir/Reconcli)
@@ -985,6 +1055,13 @@ This project is licensed under the MIT License - see the [LICENSE](https://githu
   - Batch processing with resume functionality for large domain lists
   - Rate limiting and threading controls for optimal performance
   - Professional reporting in JSON, TXT, and CSV formats
+
+- ✅ **NEW: cnamecli.py** - CNAME analysis and subdomain takeover detection
+  - Basic CNAME analysis with provider identification
+  - Vulnerability scan with subdomain takeover detection
+  - High-performance concurrent scanning
+  - Resume support for interrupted scans
+  - Professional reporting in JSON and Markdown formats
 
 - ✅ **Enhanced resume system** - Advanced scan management
   - `--resume` - Continue interrupted scans seamlessly

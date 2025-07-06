@@ -1024,7 +1024,7 @@ def ipscli(
         if clear_resume:
             if os.path.exists(resume_path):
                 os.remove(resume_path)
-                if not silent:re
+                if not silent:
                     click.echo("[✓] Resume state cleared.")
             else:
                 if not silent:

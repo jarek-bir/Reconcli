@@ -1,0 +1,23 @@
+# Test domains for comprehensive CNAME status analysis
+# These domains should demonstrate different status types:
+
+# no_cname - domains without CNAME records
+google.com
+github.com
+
+# resolves_ok - domains with CNAME that resolve properly  
+www.github.com
+www.google.com
+
+# not_resolving - domains with CNAME that don't resolve
+nonexistent.example.com
+fake.invalid.domain
+
+# potential_takeover - domains with CNAME to vulnerable services
+# (These are made-up examples for testing)
+test.herokuapp.com
+old-app.s3.amazonaws.com
+
+# dead - domains that don't resolve at all
+totally.fake.domain.xyz
+this.does.not.exist.anywhere
