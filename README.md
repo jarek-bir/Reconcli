@@ -1,158 +1,5 @@
 # ReconCLI - Modular Reconnaissance Toolkit
 
-**License:** Project released under the MIT License. See the [LICENSE](https://github.com/jarek-bir/Reconcli/blob/main/LICENSE) file for details.
-
-[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![GitHub release](https://img.shields.io/github/release/jarek-bir/Reconcli.svg)](https://github.com/jarek-bir/Reconcli/releases)
-[![GitHub stars](https://img.shields.io/github/stars/jarek-bir/Reconcli.svg)](https://github.com/jarek-bir/Reconcli/stargazers)
-[![GitHub forks](https://img.shields.io/github/forks/jarek-bir/Reconcli.svg)](https://github.com/jarek-bir/Reconcli/network)
-[![GitHub issues](https://img.shields.io/github/issues/jarek-bir/Reconcli.svg)](https://github.com/jarek-bir/Reconcli/issues)
-[![GitHub last commit](https://img.shields.io/github/last-commit/jarek-bir/Reconcli.svg)](https://github.com/jarek-bir/Reconcli/commits/main)
-
-A comprehensive, modular reconnaissance toolkit designed for security professionals and bug bounty hunters.
-
-🔗 **GitHub Repository**: [https://github.com/jarek-bir/Reconcli](https://github.com/jarek-bir/Reconcli)  
-📚 **Documentation**: [GitHub Wiki](https://github.com/jarek-bir/Reconcli/wiki)
-
-## 🚀 Quick Start
-
-```bash
-# Install from GitHub
-git clone https://github.com/jarek-bir/Reconcli.git
-cd Reconcli
-pip install -e .
-
-# Verify installation
-reconcli --help
-```
-
-## ✨ Features
-
-### 🎯 Virtual Host Discovery (`vhostcli`)
-- **Engines**: FFuf and HTTPx support
-- **Flexible Input**: Single IP or IP list
-- **Output Formats**: JSON and Markdown reports
-- **Proxy Support**: HTTP/HTTPS proxy configuration
-- **Notifications**: Slack/Discord webhook integration
-- **Verbose Mode**: Detailed progress tracking
-
-```bash
-# Basic VHOST discovery
-reconcli vhostcli --domain example.com --ip 1.2.3.4 --wordlist wordlist.txt
-
-# With notifications
-reconcli vhostcli --domain example.com --ip 1.2.3.4 --wordlist wordlist.txt \
-  --slack-webhook "https://hooks.slack.com/..." \
-  --discord-webhook "https://discord.com/api/webhooks/..." \
-  --verbose
-```
-
-### 🛰️ Enhanced Subdomain Enumeration (`subdocli`)
-- **11 Tools Integrated**: Subfinder, Findomain, Assetfinder, Amass, Chaos, RapidDNS, crt.sh, BufferOver, Gobuster, FFuf, DNSRecon
-- **DNS Resolution**: Multi-threaded IP resolution
-- **HTTP Probing**: Automatic HTTP/HTTPS service detection
-- **Resume Support**: Continue interrupted scans
-- **Advanced Analytics**: Tool performance statistics and comprehensive reporting
-- **Professional Reports**: JSON and enhanced Markdown output
-
-```bash
-# Basic subdomain enumeration
-reconcli subdocli --domain example.com --verbose
-
-# Full scan with resolution and HTTP probing
-reconcli subdocli --domain example.com --resolve --probe-http \
-  --all-tools --markdown --show-stats --verbose
-
-# Resume interrupted scan
-reconcli subdocli --domain example.com --resume --verbose
-```
-
-### 🔗 URL Discovery & Analysis (`urlcli`)
-- **Multiple Tools**: GAU, Katana, Gospider, Waybackurls integration
-- **Advanced Katana Options**: Depth control, JS crawling, headless mode, form filling, tech detection
-- **Configurable Timeouts**: Per-tool timeout settings
-- **YAML Flow Support**: Predefined configuration templates
-- **Comprehensive Filtering**: URL deduplication and pattern matching
-- **Professional Reporting**: Detailed analysis with statistics
-
-```bash
-# Basic URL discovery
-reconcli urlcli --domain example.com --verbose
-
-# Advanced Katana crawling
-reconcli urlcli --domain example.com --katana-depth 3 --katana-js-crawl \
-  --katana-headless --katana-tech-detect --verbose
-
-# Using flow configuration
-reconcli urlcli --domain example.com --flow flows/url_katana_advanced.yaml
-```
-
-### 🗂️ URL Sorting & Processing (`urlsorter`)
-- **Advanced Pattern Recognition**: Technology stacks, sensitive files, API endpoints
-- **Multiple Input Sources**: Files, stdin, and URL lists
-- **Smart Filtering**: Duplicates, query parameters, extensions
-- **Resume Support**: Continue large processing tasks
-- **Professional Reports**: Categorized analysis with statistics
-- **Flexible Output**: JSON and Markdown formats
-
-```bash
-# Sort URLs from file
-reconcli urlsorter --input urls.txt --verbose
-
-# Process URLs from stdin with advanced patterns
-cat urls.txt | reconcli urlsorter --stdin --advanced-patterns \
-  --remove-duplicates --markdown --verbose
-
-# Resume interrupted processing
-reconcli urlsorter --input large_urls.txt --resume --verbose
-```
-
-### 🔍 WHOIS Intelligence (`whoisfreakscli`)
-- **WhoisFreaks API Integration**: Professional WHOIS data retrieval
-- **Risk Assessment**: Domain risk scoring and analysis
-- **Expiry Monitoring**: Domain expiration tracking
-- **Bulk Processing**: Multiple domain analysis
-- **Professional Reports**: Comprehensive JSON and Markdown output
-- **Resume & Notifications**: Progress tracking and alert integration
-
-```bash
-# Single domain analysis
-reconcli whoisfreakscli --domain example.com --verbose
-
-# Bulk analysis with risk assessment
-reconcli whoisfreakscli --input domains.txt --risk-assessment \
-  --expiry-check --json --markdown --verbose
-
-# With notifications for high-risk domains
-reconcli whoisfreakscli --input domains.txt --risk-assessment \
-  --slack-webhook "https://hooks.slack.com/..." --verbose
-```
-
-### 🚨 Subdomain Takeover Detection (`takeover`)
-- **Tools**: Subzy and tko-subs integration
-- **Resume System**: Continue interrupted scans
-- **Professional Reports**: JSON and Markdown output
-- **Error Handling**: Robust timeout and error management
-- **Notifications**: Real-time alerts for vulnerabilities
-
-```bash
-# Basic takeover scan
-reconcli takeover --input subdomains.txt
-
-# With resume and notifications
-reconcli takeover --input subdomains.txt --resume \
-  --slack-webhook "https://hooks.slack.com/..." \
-  --json --markdown --verbose
-```
-
-### 🔬 JavaScript Analysis (`jscli`)
-- **Secret Detection**: API keys, tokens, credentials
-- **Endpoint Discovery**: URL patterns and paths
-- **Concurrent Processing**: Multi-threaded analysis
-- **Resume Support**: Continue large scans
-- **Raw File Saving**: Preserve original JS files# ReconCLI - Modular Reconnaissance Toolkit
-
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![GitHub release](https://img.shields.io/github/release/jarek-bir/Reconcli.svg)](https://github.com/jarek-bir/Reconcli/releases)
@@ -198,6 +45,34 @@ reconcli vhostcli --domain example.com --ip 1.2.3.4 --wordlist wordlist.txt \
   --verbose
 ```
 
+### 🔍 Virtual Host Check (`vhostcheck`)
+- **Individual VHOST Testing**: Test specific virtual hosts on target IPs
+- **Batch Processing**: Test against multiple IPs from file with progress tracking
+- **Technology Detection**: Automatic detection of web technologies (Nginx, Apache, IIS, WordPress, Drupal, etc.)
+- **Response Analysis**: Detailed HTTP response analysis with status codes, sizes, and response times
+- **Comprehensive Error Handling**: Proper handling of timeouts, connection errors, and HTTP errors
+- **Output Formats**: Save results in JSON, CSV, or TXT formats (with special batch formats)
+- **Proxy Support**: HTTP/HTTPS proxy configuration for testing through tools like Burp Suite
+- **SSL/TLS Options**: HTTPS support with insecure certificate handling
+- **Verbose Mode**: Detailed response headers and final URL information
+- **Statistics**: Success rate calculation and summary reporting for batch operations
+
+```bash
+# Basic VHOST check
+reconcli vhostcheck --ip 192.168.1.100 --domain example.com --vhost admin
+
+# Multiple IPs from file with progress tracking
+reconcli vhostcheck --input ips.txt --domain example.com --vhost admin --verbose
+
+# HTTPS with proxy and verbose output
+reconcli vhostcheck --ip 192.168.1.100:8443 --domain example.com --vhost api \
+  --https --proxy http://127.0.0.1:8080 --verbose
+
+# Batch processing with results saving
+reconcli vhostcheck --input target_ips.txt --domain example.com --vhost store \
+  --save-output --output-format json --verbose
+```
+
 ### � Enhanced Subdomain Enumeration (`subdocli`)
 - **11 Tools Integration**: Subfinder, Findomain, Assetfinder, Amass, Chaos, RapidDNS, crt.sh, BufferOver, Gobuster, FFuf, DNSRecon
 - **DNS Resolution**: Multi-threaded IP resolution
@@ -208,7 +83,132 @@ reconcli vhostcli --domain example.com --ip 1.2.3.4 --wordlist wordlist.txt \
 
 ```bash
 # Basic subdomain enumeration
+reconcli subdocli --domain example.com --verbose
 
+# Full scan with resolution and HTTP probing
+reconcli subdocli --domain example.com --resolve --probe-http \
+  --all-tools --markdown --show-stats --verbose
+
+# Resume interrupted scan
+reconcli subdocli --domain example.com --resume --verbose
+```
+
+### 🌐 DNS Resolution & Analysis (`dns`)
+- **Enhanced DNS Resolution**: Multi-threaded IP resolution with PTR record tagging
+- **Subdomain Bruteforcing**: Custom wordlist support for subdomain discovery
+- **Custom DNS Resolvers**: Use custom resolver lists for improved performance
+- **WHOIS Integration**: Enrich DNS results with WHOIS data from WhoisFreaks
+- **Advanced Filtering**: Tag-based filtering and unresolved exclusion
+- **Resume Support**: Continue interrupted DNS scans
+- **Professional Reports**: JSON and Markdown output with detailed statistics
+- **Notification Support**: Real-time alerts via Slack/Discord webhooks
+
+```bash
+# Basic DNS resolution
+reconcli dns --input subdomains.txt --verbose
+
+# Advanced DNS with custom resolvers and wordlists
+reconcli dns --input subdomains.txt --resolvers custom_resolvers.txt \
+  --wordlists bruteforce_wordlist.txt --threads 100 --verbose
+
+# DNS resolution with WHOIS enrichment
+reconcli dns --input subdomains.txt --whois-file whois_results.json \
+  --save-json --save-markdown --verbose
+
+# Resume interrupted DNS scan with notifications
+reconcli dns --input large_subdomain_list.txt --resume \
+  --slack-webhook "https://hooks.slack.com/..." \
+  --exclude-unresolved --filter-tags "CDN,Cloud" --verbose
+
+# Quick resolution-only mode
+reconcli dns --input subdomains.txt --resolve-only \
+  --threads 200 --timeout 3 --retries 1 --verbose
+```
+
+### 🔗 URL Discovery & Analysis (`urlcli`)
+- **Multiple Tools**: GAU, Katana, Gospider, Waybackurls integration
+- **Advanced Katana Options**: Depth control, JS crawling, headless mode, form filling, tech detection
+- **Configurable Timeouts**: Per-tool timeout settings
+- **YAML Flow Support**: Predefined configuration templates
+- **Comprehensive Filtering**: URL deduplication and pattern matching
+- **Professional Reporting**: Detailed analysis with statistics
+
+```bash
+# Basic URL discovery
+reconcli urlcli --domain example.com --verbose
+
+# Advanced Katana crawling
+reconcli urlcli --domain example.com --katana-depth 3 --katana-js-crawl \
+  --katana-headless --katana-tech-detect --verbose
+
+# Using flow configuration
+reconcli urlcli --domain example.com --flow flows/url_katana_advanced.yaml
+```
+
+### 🔗 URL Sorting & Processing (`urlsorter`)
+- **Advanced Pattern Recognition**: Technology stacks, sensitive files, API endpoints
+- **Multiple Input Sources**: Files, stdin, and URL lists
+- **Smart Filtering**: Duplicates, query parameters, extensions
+- **Resume Support**: Continue large processing tasks
+- **Professional Reports**: Categorized analysis with statistics
+- **Flexible Output**: JSON and Markdown formats
+
+```bash
+# Sort URLs from file
+reconcli urlsorter --input urls.txt --verbose
+
+# Process URLs from stdin with advanced patterns
+cat urls.txt | reconcli urlsorter --stdin --advanced-patterns \
+  --remove-duplicates --markdown --verbose
+
+# Resume interrupted processing
+reconcli urlsorter --input large_urls.txt --resume --verbose
+```
+
+### 🔍 WHOIS Intelligence (`whoisfreakscli`)
+- **WhoisFreaks API Integration**: Professional WHOIS data retrieval
+- **Risk Assessment**: Domain risk scoring and analysis
+- **Expiry Monitoring**: Domain expiration tracking
+- **Bulk Processing**: Multiple domain analysis
+- **Professional Reports**: Comprehensive JSON and Markdown output
+- **Resume & Notifications**: Progress tracking and alert integration
+
+```bash
+# Single domain analysis
+reconcli whoisfreakscli --domain example.com --verbose
+
+# Bulk analysis with risk assessment
+reconcli whoisfreakscli --input domains.txt --risk-assessment \
+  --expiry-check --json --markdown --verbose
+
+# With notifications for high-risk domains
+reconcli whoisfreakscli --input domains.txt --risk-assessment \
+  --slack-webhook "https://hooks.slack.com/..." --verbose
+```
+
+### �🚨 Subdomain Takeover Detection (`takeover`)
+- **Tools**: Subzy and tko-subs integration
+- **Resume System**: Continue interrupted scans
+- **Professional Reports**: JSON and Markdown output
+- **Error Handling**: Robust timeout and error management
+- **Notifications**: Real-time alerts for vulnerabilities
+
+```bash
+# Basic takeover scan
+reconcli takeover --input subdomains.txt
+
+# With resume and notifications
+reconcli takeover --input subdomains.txt --resume \
+  --slack-webhook "https://hooks.slack.com/..." \
+  --json --markdown --verbose
+```
+
+### 🔍 JavaScript Analysis (`jscli`)
+- **Secret Detection**: API keys, tokens, credentials
+- **Endpoint Discovery**: URL patterns and paths
+- **Concurrent Processing**: Multi-threaded analysis
+- **Resume Support**: Continue large scans
+- **Raw File Saving**: Preserve original JS files
 
 ```bash
 # Analyze JavaScript files
@@ -216,7 +216,89 @@ reconcli jscli --input js_urls.txt --threads 10 \
   --save-raw --json --markdown --verbose
 ```
 
+### ☁️ Cloud Provider Detection & S3 Enumeration (`cloudcli`)
+- **60+ Cloud Providers**: Comprehensive detection including AWS, Azure, Google Cloud, Cloudflare, DigitalOcean, and many more
+- **Multi-Source Detection**: ASN, CNAME, PTR, HTTP headers, SSL certificates analysis
+- **S3 Bucket Enumeration**: 73+ bucket naming patterns with multi-region support
+- **Batch Processing**: Process multiple domains from file with progress tracking
+- **Resume Support**: Continue interrupted scans with `--resume`, `--clear-resume`, `--show-resume`
+- **Rate Limiting**: Configurable threading and timeout controls
+- **Professional Reports**: JSON, TXT, and CSV output formats
+- **Intermediate Saves**: Progress saved every 10 domains for large batch scans
+- **Interruption Handling**: Graceful Ctrl+C handling with resume capability
+- **Detailed Analytics**: Comprehensive cloud provider identification with confidence scoring
+
+```bash
+# Single domain cloud detection
+reconcli cloudcli --domain example.com --verbose
+
+# Batch cloud detection with resume support
+reconcli cloudcli --domains-file domains.txt --resume --verbose
+
+# Cloud detection with S3 enumeration
+reconcli cloudcli --domain example.com --s3-enum --s3-regions --verbose
+
+# Batch processing with S3 enumeration and custom threading
+reconcli cloudcli --domains-file domains.txt --s3-enum --s3-threads 20 \
+  --resume --output-format json --verbose
+
+# Resume management
+reconcli cloudcli --show-resume          # Show previous scan status
+reconcli cloudcli --clear-resume         # Clear all resume states
+reconcli cloudcli --domains-file domains.txt --resume  # Continue scan
+```
+
+### 🌍 TLD Reconnaissance (`tldr`)
+- **Massive TLD Coverage**: Systematically check domains across **2,672+ TLD variations**
+- **9 Comprehensive Categories**: Popular, country, new generic, business, crypto/blockchain, emerging tech, geographic, industry-specific, and specialized TLDs
+- **DNS & HTTP Probing**: Full resolution and HTTP/HTTPS status verification with detailed analytics
+- **Custom TLD Lists**: Support for custom TLD files and flexible category selection
+- **Wildcard Detection**: Automatic detection and filtering of wildcard domains
+- **Active Filtering**: Focus on active/responsive domains only
+- **WHOIS Integration**: Basic domain availability checking with typosquatting detection
+- **Professional Reports**: JSON and Markdown output with detailed statistics and categorization
+- **Typosquatting Research**: Built-in variations and common typos for security research
+- **Cryptocurrency Focus**: Specialized blockchain, DeFi, and crypto-related TLD categories
+
+**🎯 TLD Category Breakdown**:
+- **Popular** (81): Classic TLDs like .com, .net, .org, plus trending ones (.app, .dev, .tech)
+- **Country** (253): Complete list of country-code TLDs from all regions
+- **New Generic** (582): Modern gTLDs covering technology, business, lifestyle, and entertainment
+- **Business** (423): Corporate structures, professional services, and industry-specific domains
+- **Crypto/Blockchain** (106): Cryptocurrency, DeFi, NFT, and blockchain-focused TLDs
+- **Emerging Tech** (107): AI, machine learning, IoT, quantum computing, and futuristic domains
+- **Geographic** (351): Major cities, regions, states, and geographic features worldwide
+- **Industry Specific** (559): Automotive, real estate, healthcare, legal, financial, and more
+- **Specialized** (210): Adult content, suspicious/alternative, typosquatting variations for security research
+
+```bash
+# Basic TLD reconnaissance with popular and country TLDs
+reconcli tldr -d example --categories popular,country --verbose
+
+# Advanced comprehensive TLD scan across all 2,672+ TLDs
+reconcli tldr -d mycompany --categories all --http-check \
+  --filter-active --save-json --verbose
+
+# Cryptocurrency and blockchain focused reconnaissance
+reconcli tldr -d cryptobrand --categories crypto_blockchain,emerging_tech \
+  --http-check --filter-active --save-markdown
+
+# Security research with typosquatting and specialized TLDs
+reconcli tldr -d target --categories specialized,geographic \
+  --exclude-wildcards --whois-check --verbose
+
+# Custom TLD list with industry-specific focus
+reconcli tldr -d brand --categories business,industry_specific \
+  --http-check --filter-active --slack-webhook "https://hooks.slack.com/..."
+
+# Maximum coverage scan for comprehensive domain discovery
+reconcli tldr -d enterprise --categories all --threads 100 \
+  --http-check --whois-check --exclude-wildcards \
+  --save-json --save-markdown --verbose
+```
+
 ### 🌐 Additional Core Modules
+- **Cloud Detection & S3 Enumeration** (`cloudcli`): Comprehensive cloud provider detection and S3 bucket enumeration
 - **DNS Enumeration** (`dnscli`): Comprehensive DNS discovery and analysis
 - **HTTP Analysis** (`httpcli`): Web application assessment and fingerprinting
 - **IP Analysis** (`ipscli`): Network reconnaissance and IP intelligence
@@ -248,7 +330,7 @@ reconcli --help
 - **Chaos**: `go install -v github.com/projectdiscovery/chaos-client/cmd/chaos@latest`
 - **Gobuster**: `go install github.com/OJ/gobuster/v3@latest`
 - **FFuf**: `go install github.com/ffuf/ffuf/v2@latest`
-- **DNSRecon**: `pip install dnsrecon` or install from your package manager
+- **DNSRecon**: `pip install dnsrecon` or install from package manager
 
 #### For URL Discovery (`urlcli`)
 - **GAU**: `go install github.com/lc/gau/v2/cmd/gau@latest`
@@ -304,6 +386,7 @@ reconcli --help
 reconcli/
 ├── __init__.py
 ├── main.py                 # Main CLI entry point
+├── cloudcli.py            # Cloud provider detection & S3 enumeration (NEW)
 ├── subdocli.py            # Enhanced subdomain enumeration (NEW)
 ├── urlcli.py              # URL discovery and analysis (ENHANCED)
 ├── urlsorter.py           # URL sorting and processing (NEW)
@@ -315,9 +398,11 @@ reconcli/
 ├── httpcli.py             # HTTP analysis
 ├── ipscli.py              # IP reconnaissance
 ├── zonewalkcli.py         # DNS zone walking
-├── vhostcheck.py          # VHOST verification utilities
+├── vhostcheckcli.py       # Advanced VHOST discovery and validation
 ├── utils/
 │   ├── __init__.py
+│   ├── cloud_detect.py    # Cloud provider detection engine (NEW)
+│   ├── s3_enum.py         # S3 bucket enumeration engine (NEW)
 │   ├── notifications.py   # Notification system
 │   ├── resume.py          # Resume functionality
 │   ├── loaders.py         # Data loading utilities
@@ -440,6 +525,33 @@ reconcli whoisfreakscli \
   --verbose
 ```
 
+### Complete Cloud Provider Discovery & S3 Enumeration
+```bash
+# Single domain cloud detection with S3 enumeration
+reconcli cloudcli \
+  --domain target.com \
+  --s3-enum \
+  --s3-regions \
+  --s3-threads 20 \
+  --verbose
+
+# Batch cloud detection with resume support
+reconcli cloudcli \
+  --domains-file target_domains.txt \
+  --s3-enum \
+  --resume \
+  --output-format json \
+  --output-dir cloud_results \
+  --verbose
+
+# Resume interrupted scan
+reconcli cloudcli --domains-file target_domains.txt --resume
+
+# Check scan status and clear old states
+reconcli cloudcli --show-resume
+reconcli cloudcli --clear-resume
+```
+
 ### Complete VHOST Discovery Workflow
 ```bash
 # Discover virtual hosts with notifications
@@ -487,6 +599,9 @@ ReconCLI is designed with bug bounty hunters and security researchers in mind:
 
 ## 🚀 Roadmap
 
+- [ ] Enhanced cloud provider detection with machine learning classification
+- [ ] Extended S3 enumeration with security assessment capabilities
+- [ ] Notification system integration for cloudcli with email and Slack support
 - [ ] DNS zone walking improvements
 - [ ] Enhanced JavaScript analysis with modern frameworks
 - [ ] Web application fingerprinting module
@@ -504,7 +619,7 @@ ReconCLI is designed with bug bounty hunters and security researchers in mind:
 
 ## Contributing
 
-We welcome contributions to ReconCLI! Here’s how you can help:
+We welcome contributions to ReconCLI! Here's how you can help:
 
 ### 🐛 Reporting Issues
 - Use the [GitHub issue tracker](https://github.com/jarek-bir/Reconcli/issues)
@@ -518,12 +633,6 @@ We welcome contributions to ReconCLI! Here’s how you can help:
 4. Add tests if applicable
 5. Run the existing tests to ensure nothing breaks
 6. Submit a pull request with a clear description
-
-### 🧪 Testing
-If you want to run tests:
-```bash
-pytest
-```
 
 ### 📦 Repository Structure
 ```
@@ -542,29 +651,54 @@ reconcli/
 
 ## 📄 License
 
-This project is licensed under the MIT License – see the [LICENSE](https://github.com/jarek-bir/Reconcli/blob/main/LICENSE) file for details.
+This project is licensed under the MIT License - see the [LICENSE](https://github.com/jarek-bir/Reconcli/blob/main/LICENSE) file for details.
 
 ## 📈 Changelog
 
-### Latest Changes (v2.0.0)
+### Latest Changes (v3.0.0)
 
-- ✅ **NEW: subdocli.py** – Enhanced subdomain enumeration with 11 integrated tools
+- ✅ **NEW: vhostcheckcli.py** - Advanced virtual host discovery and validation
+  - Individual VHOST testing with comprehensive response analysis
+  - **Batch Processing**: Multiple IPs from file with progress tracking and statistics
+  - Technology detection for Nginx, Apache, IIS, WordPress, Drupal, and more
+  - Multiple output formats (JSON, CSV, TXT) with detailed results and batch formats
+  - Proxy support for testing through tools like Burp Suite
+  - SSL/TLS options with insecure certificate handling
+  - Comprehensive error handling for timeouts and connection issues
+  - Success rate calculation and summary reporting for batch operations
+
+- ✅ **NEW: cloudcli.py** - Comprehensive cloud provider detection and S3 bucket enumeration
+  - 60+ cloud providers detection (AWS, Azure, Google Cloud, Cloudflare, DigitalOcean, etc.)
+  - Multi-source detection: ASN, CNAME, PTR, HTTP headers, SSL certificates
+  - S3 bucket enumeration with 73+ naming patterns and multi-region support
+  - Batch processing with resume functionality for large domain lists
+  - Rate limiting and threading controls for optimal performance
+  - Professional reporting in JSON, TXT, and CSV formats
+
+- ✅ **Enhanced resume system** - Advanced scan management
+  - `--resume` - Continue interrupted scans seamlessly
+  - `--clear-resume` - Clear all previous resume states
+  - `--show-resume` - Display status of previous scans
+  - Intermediate saves every 10 domains for large batch operations
+  - Graceful interruption handling with Ctrl+C support
+
+- ✅ **NEW: subdocli.py** - Enhanced subdomain enumeration with 11 integrated tools
   - Passive tools: Subfinder, Findomain, Assetfinder, Amass, Chaos, RapidDNS, crt.sh, BufferOver
   - Active tools: Gobuster, FFuf, DNSRecon
   - Multi-threaded DNS resolution and HTTP/HTTPS service probing
   - Advanced statistics and comprehensive reporting
 
-- ✅ **NEW: whoisfreakscli.py** – Professional WHOIS intelligence gathering
+- ✅ **NEW: whoisfreakscli.py** - Professional WHOIS intelligence gathering
   - WhoisFreaks API integration with bulk domain processing
   - Risk assessment and domain expiration monitoring
   - Professional reporting with threat intelligence insights
 
-- ✅ **NEW: urlsorter.py** – Advanced URL processing and categorization
+- ✅ **NEW: urlsorter.py** - Advanced URL processing and categorization
   - Smart pattern recognition for technology stacks and sensitive files
   - Multiple input sources (files, stdin) with resume support
   - Advanced filtering and deduplication capabilities
 
-- ✅ **ENHANCED: urlcli.py** – Comprehensive URL discovery and analysis
+- ✅ **ENHANCED: urlcli.py** - Comprehensive URL discovery and analysis
   - Advanced Katana integration (depth, JS crawling, headless mode, tech detection)
   - Configurable timeouts for all external tools (GAU, Katana, Gospider, Waybackurls)
   - YAML flow support with predefined configuration templates
