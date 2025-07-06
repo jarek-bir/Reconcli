@@ -95,7 +95,8 @@ def save_outputs(domain, tagged, output_dir, save_markdown, save_json):
 
 
 @click.command()
-@click.option("--input", "--domain", help="File with resolved subdomains or plain list")
+@click.option("--input", help="File with resolved subdomains or plain list")
+@click.option("--domain", help="Single domain to scan (e.g., example.com)")
 @click.option(
     "--from-subs-resolved",
     is_flag=True,
@@ -176,6 +177,7 @@ def save_outputs(domain, tagged, output_dir, save_markdown, save_json):
 )
 def main(
     input,
+    domain,
     from_subs_resolved,
     output_dir,
     flow,
@@ -229,9 +231,26 @@ def main(
             return
 
     # Require input for actual scanning
-    if not input:
-        click.echo("Error: --input is required for scanning operations.")
+    if not input and not domain:
+        click.echo(
+            "Error: Either --input or --domain is required for scanning operations."
+        )
         click.echo("Use --show-resume or --clear-resume for resume management.")
+        return
+
+    # Handle single domain input
+    if domain and not input:
+        # Create temporary file for single domain
+        import tempfile
+
+        temp_file = tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".txt")
+        temp_file.write(domain + "\n")
+        temp_file.close()
+        input = temp_file.name
+        if verbose:
+            click.echo(f"[+] 🎯 Single domain mode: {domain}")
+    elif input and domain:
+        click.echo("Error: Cannot specify both --input and --domain. Choose one.")
         return
 
     # Enhanced resume system with more detailed tracking
@@ -257,6 +276,7 @@ def main(
         # Initialize new scan
         resume_state[scan_key] = {
             "input_file": input,
+            "single_domain": domain if domain else None,
             "start_time": datetime.now().isoformat(),
             "completed": False,
             "domains_processed": [],
@@ -323,7 +343,8 @@ def main(
             targets = [line.strip() for line in f if line.strip()]
 
     if verbose:
-        click.echo(f"[+] 📋 Loaded {len(targets)} target(s) from {input}")
+        target_info = f"single domain: {domain}" if domain else f"file: {input}"
+        click.echo(f"[+] 📋 Loaded {len(targets)} target(s) from {target_info}")
 
     # Configure session
     session = requests.Session()
@@ -587,6 +608,15 @@ def main(
     click.echo(f"[+] 📁 Results saved to: {output_dir}")
     if total_errors:
         click.echo(f"[!] ⚠️  {len(total_errors)} error(s) encountered during scan")
+
+    # Clean up temporary file if single domain was used
+    if domain and input and input.startswith("/tmp"):
+        try:
+            os.unlink(input)
+            if verbose:
+                click.echo(f"[+] 🧹 Cleaned up temporary file")
+        except:
+            pass
 
 
 def categorize_urls(urls):
