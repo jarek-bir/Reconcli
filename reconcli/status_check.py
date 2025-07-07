@@ -55,6 +55,7 @@ def check_core_modules():
     modules = [
         ("reconcli.main", "Main CLI module"),
         ("reconcli.vulnsqlicli", "SQL Injection Scanner"),
+        ("reconcli.apicli", "API Security Scanner"),
         ("reconcli.dnscli", "DNS Resolution"),
         ("reconcli.urlcli", "URL Discovery"),
         ("reconcli.vhostcli", "Virtual Host Discovery"),
@@ -157,6 +158,18 @@ def check_cli_functionality():
             "VulnSQLiCLI help", result.returncode == 0, "Command executed successfully"
         )
 
+        # Test apicli help
+        result = subprocess.run(
+            [sys.executable, "-m", "reconcli", "apicli", "--help"],
+            capture_output=True,
+            text=True,
+            timeout=10,
+            cwd=Path(__file__).parent,
+        )
+        check_status(
+            "ApiCLI help", result.returncode == 0, "Command executed successfully"
+        )
+
         return True
     except Exception as e:
         check_status("CLI functionality", False, f"Error: {e}")
@@ -209,6 +222,7 @@ def check_file_structure():
         ("reconcli/__init__.py", "Package init"),
         ("reconcli/main.py", "Main CLI module"),
         ("reconcli/vulnsqlicli.py", "SQL injection scanner"),
+        ("reconcli/apicli.py", "API security scanner"),
         (".github/workflows/ci.yml", "CI/CD workflow"),
         (".github/workflows/security-status.yml", "Security workflow"),
         (".github/workflows/release.yml", "Release workflow"),

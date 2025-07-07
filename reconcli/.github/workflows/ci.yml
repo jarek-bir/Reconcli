@@ -200,6 +200,10 @@ jobs:
           python -m reconcli vulnsqlicli --url "http://testphp.vulnweb.com/artists.php?artist=1" --basic-test --verbose || true
           python -m reconcli vulnsqlicli --urls-file test_sqli_urls.txt --basic-test --json-report --verbose || true
 
+          # Test API security scanner
+          python -m reconcli apicli --url "https://jsonplaceholder.typicode.com" --discover --tech-detect --verbose || true
+          python -m reconcli apicli --url "https://jsonplaceholder.typicode.com" --endpoints-file test_endpoints.txt --method-test --verbose || true
+
           # Test directory brute force
           python -m reconcli dirbcli --check-tools || true
           python -m reconcli dirbcli --url "http://testphp.vulnweb.com/" --wordlist /usr/share/dirb/wordlists/common.txt --dry-run --verbose || true

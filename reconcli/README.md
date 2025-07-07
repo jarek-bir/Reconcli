@@ -410,7 +410,37 @@ reconcli dirbcli --clear-resume                   # Clear previous scan state
 reconcli dirbcli --url https://example.com --wordlist /path/to/wordlist.txt --resume --cleanup
 ```
 
-### 🛡️ SQL Injection Vulnerability Scanner (`vulnsqlicli`)
+### � API Security Scanner (`apicli`)
+
+- **🎯 Comprehensive API Testing**: Full API security assessment and analysis
+- **🔐 Security Vulnerability Detection**: Authentication bypass, injection testing, CORS analysis
+- **🚀 Auto-Discovery**: Intelligent API endpoint discovery and enumeration
+- **📋 Method Testing**: HTTP method analysis and validation
+- **🛡️ Multi-Vector Testing**: SQL, NoSQL, XSS, Command, LDAP, XML injection testing
+- **⚡ Rate Limiting Analysis**: Rate limiting implementation testing
+- **📊 Parameter Pollution**: HTTP Parameter Pollution (HPP) testing
+- **🔧 Technology Detection**: API technology stack identification
+- **📈 Professional Reporting**: JSON, YAML, Markdown reports with security recommendations
+
+```bash
+# Basic API discovery and analysis
+reconcli apicli --url https://api.example.com --discover --tech-detect
+
+# Comprehensive security testing
+reconcli apicli --url https://api.example.com --security-test --json-report --markdown-report
+
+# Targeted vulnerability testing
+reconcli apicli --url https://api.example.com --method-test --cors-test --auth-bypass
+
+# Load endpoints from file
+reconcli apicli --url https://api.example.com --endpoints-file endpoints.txt --injection-test
+
+# Full security assessment with notifications
+reconcli apicli --url https://api.example.com --security-test --discover \
+    --slack-webhook https://hooks.slack.com/... --json-report --markdown-report
+```
+
+### �🛡️ SQL Injection Vulnerability Scanner (`vulnsqlicli`)
 
 - **🔍 Multi-Tool Support**: SQLMap, Ghauri, and GF (grep for fun) integration
 - **⚡ Advanced Detection**: Comprehensive SQL injection vulnerability assessment
