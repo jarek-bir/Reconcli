@@ -19,6 +19,7 @@ from reconcli.cloudcli import cloudcli
 from reconcli.portcli import portcli
 from reconcli.cnamecli import cnamecli  # CNAME Record Analysis and Takeover Detection
 from reconcli.vulncli import vulncli
+from reconcli.dirbcli import dirbcli
 
 
 @click.group()
@@ -107,6 +108,10 @@ cnamecli.short_help = "Detects dangling CNAMEs and takeover candidates"
 # Vulnerability Scanning with Jaeles and Nuclei
 cli.add_command(vulncli, name="vulncli")
 vulncli.short_help = "Scan URLs using GF, Dalfox, Jaeles, and Nuclei with filters"
+
+# Directory Bruteforcing
+cli.add_command(dirbcli, name="dirbcli")
+dirbcli.short_help = "Directory bruteforcing and enumeration"
 
 if __name__ == "__main__":
     cli()
