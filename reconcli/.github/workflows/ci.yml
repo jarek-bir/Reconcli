@@ -165,6 +165,12 @@ jobs:
           go install github.com/projectdiscovery/naabu/v2/cmd/naabu@latest
           go install github.com/tomnomnom/gf@latest
           go install github.com/lc/gau/v2/cmd/gau@latest
+          go install github.com/ffuf/ffuf@latest
+          go install github.com/projectdiscovery/katana/cmd/katana@latest
+
+          # Install SQL injection tools
+          sudo apt-get install -y sqlmap
+          pip install ghauri
 
           # Add Go bin to PATH
           echo "$HOME/go/bin" >> $GITHUB_PATH
@@ -188,10 +194,23 @@ jobs:
           echo "http://testphp.vulnweb.com/" > test_targets.txt
           python -m reconcli vulncli --input test_targets.txt --engine nuclei --dry-run --verbose || true
 
+          # Test SQL injection vulnerability scanner
+          echo "http://testphp.vulnweb.com/artists.php?artist=1" > test_sqli_urls.txt
+          python -m reconcli vulnsqlicli --check-tools || true
+          python -m reconcli vulnsqlicli --url "http://testphp.vulnweb.com/artists.php?artist=1" --basic-test --verbose || true
+          python -m reconcli vulnsqlicli --urls-file test_sqli_urls.txt --basic-test --json-report --verbose || true
+
+          # Test directory brute force
+          python -m reconcli dirbcli --check-tools || true
+          python -m reconcli dirbcli --url "http://testphp.vulnweb.com/" --wordlist /usr/share/dirb/wordlists/common.txt --dry-run --verbose || true
+
+          # Test virtual host discovery
+          python -m reconcli vhostcli --domain "testphp.vulnweb.com" --ip "44.228.249.3" --wordlist /usr/share/dirb/wordlists/common.txt --dry-run --verbose || true
+
       - name: Cleanup
         if: always()
         run: |
-          rm -f test_targets.txt
+          rm -f test_targets.txt test_sqli_urls.txt
 
   # Documentation Build Test
   docs:

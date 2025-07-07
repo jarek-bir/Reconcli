@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "reconcli"
-version = "3.0.0"
-description = "A comprehensive, modular reconnaissance toolkit for security professionals and bug bounty hunters"
+version = "3.1.0"
+description = "Advanced modular reconnaissance toolkit with SQL injection testing, directory brute-forcing, and comprehensive security assessment capabilities"
 readme = "README.md"
 license = { text = "MIT" }
 authors = [{ name = "Jarek Bir", email = "jarek.bir@example.com" }]
@@ -16,6 +16,15 @@ keywords = [
    "pentesting",
    "bug-bounty",
    "vulnerability-scanning",
+   "sql-injection",
+   "directory-brute-force",
+   "subdomain-enumeration",
+   "web-security",
+   "ethical-hacking",
+   "cybersecurity",
+   "automation",
+   "cli-tool",
+   "security-testing",
    "ai-powered",
 ]
 classifiers = [
@@ -68,7 +77,12 @@ Repository = "https://github.com/jarek-bir/Reconcli.git"
 Changelog = "https://github.com/jarek-bir/Reconcli/releases"
 
 [project.scripts]
-reconcli = "reconcli.main:main"
+reconcli = "reconcli.main:cli"
+vulnsqlicli = "reconcli.vulnsqlicli:main"
+dirbcli = "reconcli.dirbcli:main"
+vhostcli = "reconcli.vhostcli:main"
+urlcli = "reconcli.urlcli:main"
+dnscli = "reconcli.dnscli:main"
 
 [tool.setuptools.packages.find]
 where = ["."]

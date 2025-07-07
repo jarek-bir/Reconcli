@@ -410,7 +410,234 @@ reconcli dirbcli --clear-resume                   # Clear previous scan state
 reconcli dirbcli --url https://example.com --wordlist /path/to/wordlist.txt --resume --cleanup
 ```
 
-### ☁️ Cloud Provider Detection & S3 Enumeration (`cloudcli`)`
-<userPrompt>
-Provide the fully rewritten file, incorporating the suggested code change. You must produce the complete file.
-</userPrompt>
+### 🛡️ SQL Injection Vulnerability Scanner (`vulnsqlicli`)
+
+- **🔍 Multi-Tool Support**: SQLMap, Ghauri, and GF (grep for fun) integration
+- **⚡ Advanced Detection**: Comprehensive SQL injection vulnerability assessment
+- **🎯 Smart Pattern Matching**: GF patterns for SQL injection indicators
+- **🧪 Manual Testing**: Basic payload testing for quick detection
+- **📊 Risk Classification**: Critical, High, Medium vulnerability categorization
+- **🔧 Advanced Options**: Proxy, Tor, custom headers, tamper scripts support
+- **📋 Professional Reports**: JSON, YAML, and Markdown reports with recommendations
+- **🔔 Notifications**: Slack/Discord webhook integration for alerts
+- **🗄️ Database Enumeration**: Full DBMS exploration capabilities
+- **⚙️ Batch Processing**: Multiple URLs testing from file input
+
+#### 🎯 Advanced SQL Injection Testing
+
+```bash
+# Basic SQL injection testing
+reconcli vulnsqlicli --url "http://example.com/page.php?id=1" --basic-test
+
+# Comprehensive testing with SQLMap
+reconcli vulnsqlicli --url "http://example.com/page.php?id=1" --sqlmap --level 3 --risk 2
+
+# Fast detection with Ghauri
+reconcli vulnsqlicli --url "http://example.com/page.php?id=1" --ghauri --batch
+
+# Pattern matching with GF
+reconcli vulnsqlicli --url "http://example.com/page.php?id=1" --gf
+
+# Full enumeration after finding vulnerability
+reconcli vulnsqlicli --url "http://example.com/page.php?id=1" --sqlmap \
+  --dbs --tables --columns --current-user --passwords --privileges
+
+# Test multiple URLs with all tools
+reconcli vulnsqlicli --urls-file urls.txt --tool all \
+  --json-report --markdown-report --verbose
+
+# Advanced testing with proxy and tamper scripts
+reconcli vulnsqlicli --url "http://example.com/page.php?id=1" --sqlmap \
+  --proxy http://127.0.0.1:8080 --tamper space2comment,charencode \
+  --level 5 --risk 3 --random-agent
+
+# Steganographic testing with Tor
+reconcli vulnsqlicli --url "http://example.com/page.php?id=1" --sqlmap \
+  --tor --check-tor --random-agent --level 3 \
+  --slack-webhook "https://hooks.slack.com/..." --verbose
+```
+
+### ☁️ Cloud Provider Detection & S3 Enumeration (`cloudcli`)
+
+- **🌐 Multi-Cloud Support**: AWS, Azure, GCP detection
+- **🔍 S3 Bucket Enumeration**: Advanced S3 bucket discovery
+- **🎯 Permission Testing**: Bucket access and permission analysis
+- **📊 Comprehensive Reports**: JSON and Markdown output formats
+- **🔔 Notifications**: Slack/Discord webhook integration
+- **⚡ High Performance**: Concurrent scanning with rate limiting
+
+```bash
+# Basic cloud enumeration
+reconcli cloudcli --target example.com --all-clouds
+
+# S3 bucket enumeration with custom wordlist
+reconcli cloudcli --target example.com --s3-enum --wordlist buckets.txt
+
+# Advanced scanning with notifications
+reconcli cloudcli --target example.com --all-clouds --verbose \
+  --slack-webhook "https://hooks.slack.com/..." \
+  --json-report --markdown-report
+```
+
+## 🔧 Installation
+
+### Requirements
+- Python 3.8+
+- pip package manager
+- Required external tools (automatically checked)
+
+### Quick Installation
+```bash
+# Clone repository
+git clone https://github.com/jarek-bir/Reconcli.git
+cd Reconcli
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Install package
+pip install -e .
+
+# Verify installation
+reconcli --help
+```
+
+### External Tools
+ReconCLI integrates with various external tools. The toolkit will automatically check for tool availability and guide you through installation:
+
+```bash
+# Check tool availability
+reconcli vulnsqlicli --check-tools
+reconcli dirbcli --check-tools
+reconcli vulncli --check-tools
+```
+
+## 🚀 Usage
+
+### Basic Usage
+```bash
+# Show all available modules
+reconcli --help
+
+# Get help for specific module
+reconcli vulnsqlicli --help
+reconcli dirbcli --help
+reconcli vhostcli --help
+```
+
+### Advanced Examples
+```bash
+# Multi-module reconnaissance workflow
+reconcli dns --domain example.com --output-dir /tmp/recon
+reconcli vhostcli --domain example.com --ip-list ips.txt --wordlist common.txt
+reconcli vulnsqlicli --urls-file urls.txt --tool all --json-report
+
+# Comprehensive web application security assessment
+reconcli dirbcli --url https://example.com --tech-detect --smart-wordlist
+reconcli vulnsqlicli --url https://example.com --sqlmap --level 3 --risk 2
+reconcli vulncli --input targets.txt --engine nuclei --ai-classify
+```
+
+## 📊 Output Formats
+
+ReconCLI supports multiple output formats for comprehensive reporting:
+
+- **JSON**: Machine-readable format for automation
+- **YAML**: Human-readable structured data
+- **Markdown**: Professional reports with recommendations
+- **CSV**: Data analysis and spreadsheet integration
+
+## 🔔 Notifications
+
+All modules support webhook notifications for real-time alerts:
+
+```bash
+# Slack notifications
+--slack-webhook "https://hooks.slack.com/services/YOUR/WEBHOOK/URL"
+
+# Discord notifications
+--discord-webhook "https://discord.com/api/webhooks/YOUR/WEBHOOK/URL"
+```
+
+## 🛡️ Security Features
+
+- **Resume Support**: Continue interrupted scans
+- **Rate Limiting**: Respectful scanning practices
+- **Proxy Support**: HTTP/HTTPS proxy integration
+- **Tor Support**: Anonymous scanning capabilities
+- **Custom Headers**: Advanced request customization
+- **SSL/TLS Verification**: Secure communication options
+
+## 🧪 Testing
+
+Run the test suite to verify functionality:
+
+```bash
+# Run all tests
+python -m pytest tests/
+
+# Run specific module tests
+python -m pytest tests/test_vulnsqlicli.py -v
+
+# Check tool availability
+python -m reconcli.vulnsqlicli --check-tools
+```
+
+## 🤝 Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+### Development Setup
+```bash
+# Clone repository
+git clone https://github.com/jarek-bir/Reconcli.git
+cd Reconcli
+
+# Create virtual environment
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+
+# Install in development mode
+pip install -e .
+
+# Install development dependencies
+pip install -r requirements-dev.txt
+```
+
+### Code Style
+- Follow PEP 8 guidelines
+- Use type hints where appropriate
+- Add docstrings for all functions
+- Include comprehensive error handling
+
+## 📝 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🎯 Roadmap
+
+- [ ] AI-powered vulnerability analysis
+- [ ] Machine learning-based pattern recognition
+- [ ] Enhanced cloud provider support
+- [ ] Advanced reporting dashboard
+- [ ] Integration with popular security tools
+- [ ] Mobile application security testing
+- [ ] API security assessment improvements
+
+## 🙏 Acknowledgments
+
+- All the amazing open-source security tools that make this possible
+- The security research community for continuous innovation
+- Contributors and testers who help improve the toolkit
+
+## 📞 Support
+
+- **GitHub Issues**: [Report bugs or request features](https://github.com/jarek-bir/Reconcli/issues)
+- **Documentation**: [Visit our Wiki](https://github.com/jarek-bir/Reconcli/wiki)
+- **Community**: [Join our Discord](https://discord.gg/reconcli)
+
+---
+
+**⚠️ Disclaimer**: This tool is for educational and authorized security testing purposes only. Always ensure you have proper authorization before testing any systems.
+
+**🔒 Security**: Report security vulnerabilities responsibly through our security policy.

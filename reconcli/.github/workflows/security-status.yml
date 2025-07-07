@@ -1,0 +1,358 @@
+name: Security Scan & Status Check
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  schedule:
+    - cron: "0 6 * * 1" # Weekly on Monday at 6 AM UTC
+
+jobs:
+  security-audit:
+    name: "🔒 Security Audit"
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install safety bandit semgrep
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+
+      - name: Run Safety (Dependency Vulnerability Scan)
+        run: |
+          safety check --json --output safety-report.json || true
+          safety check --short-report
+
+      - name: Run Bandit (Security Issues in Code)
+        run: |
+          bandit -r reconcli/ -f json -o bandit-report.json || true
+          bandit -r reconcli/ -f txt
+
+      - name: Run Semgrep (SAST)
+        run: |
+          semgrep --config=auto reconcli/ --json --output=semgrep-report.json || true
+          semgrep --config=auto reconcli/ --text
+
+      - name: Upload security reports
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: security-reports
+          path: |
+            safety-report.json
+            bandit-report.json
+            semgrep-report.json
+
+      - name: Comment PR with security issues
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const fs = require('fs');
+            let comment = '## 🔒 Security Audit Results\n\n';
+
+            // Read security reports and add to comment
+            try {
+              const banditReport = JSON.parse(fs.readFileSync('bandit-report.json', 'utf8'));
+              if (banditReport.results && banditReport.results.length > 0) {
+                comment += `⚠️ **Bandit found ${banditReport.results.length} security issues**\n`;
+              } else {
+                comment += '✅ **Bandit**: No security issues found\n';
+              }
+            } catch (e) {
+              comment += '❓ **Bandit**: Report not available\n';
+            }
+
+            try {
+              const safetyReport = JSON.parse(fs.readFileSync('safety-report.json', 'utf8'));
+              if (safetyReport && safetyReport.length > 0) {
+                comment += `⚠️ **Safety found ${safetyReport.length} vulnerable dependencies**\n`;
+              } else {
+                comment += '✅ **Safety**: No vulnerable dependencies found\n';
+              }
+            } catch (e) {
+              comment += '❓ **Safety**: Report not available\n';
+            }
+
+            comment += '\n📋 Detailed reports are available in the workflow artifacts.';
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+
+  dependency-review:
+    name: "📦 Dependency Review"
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Dependency Review
+        uses: actions/dependency-review-action@v3
+        with:
+          fail-on-severity: high
+
+  tool-status-check:
+    name: "🔧 External Tool Status Check"
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: Install Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: "1.21"
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests click pyyaml
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          pip install -e .
+
+      - name: Install external security tools
+        run: |
+          # Install Go-based tools
+          go install github.com/projectdiscovery/nuclei/v3/cmd/nuclei@latest
+          go install github.com/projectdiscovery/subfinder/v2/cmd/subfinder@latest
+          go install github.com/projectdiscovery/httpx/cmd/httpx@latest
+          go install github.com/projectdiscovery/naabu/v2/cmd/naabu@latest
+          go install github.com/tomnomnom/gf@latest
+          go install github.com/lc/gau/v2/cmd/gau@latest
+          go install github.com/ffuf/ffuf@latest
+          go install github.com/projectdiscovery/katana/cmd/katana@latest
+
+          # Install system packages
+          sudo apt-get update
+          sudo apt-get install -y sqlmap nmap dnsutils curl wget
+
+          # Install Python-based tools
+          pip install ghauri
+
+          # Add Go bin to PATH
+          echo "$HOME/go/bin" >> $GITHUB_PATH
+
+      - name: Check tool availability
+        run: |
+          echo "## 🔧 External Tool Status Check" > tool-status.md
+          echo "" >> tool-status.md
+          echo "| Tool | Status | Version | Path |" >> tool-status.md
+          echo "|------|--------|---------|------|" >> tool-status.md
+
+          # Function to check tool
+          check_tool() {
+            local tool=$1
+            local version_flag=$2
+            if command -v "$tool" &> /dev/null; then
+              local version=$(timeout 10 $tool $version_flag 2>/dev/null | head -1 | tr -d '\n' || echo "Unknown")
+              local path=$(which "$tool")
+              echo "| $tool | ✅ Available | $version | $path |" >> tool-status.md
+            else
+              echo "| $tool | ❌ Not Found | - | - |" >> tool-status.md
+            fi
+          }
+
+          # Check all tools
+          check_tool "nuclei" "-version"
+          check_tool "subfinder" "-version"
+          check_tool "httpx" "-version"
+          check_tool "naabu" "-version"
+          check_tool "gf" "-list"
+          check_tool "gau" "-version"
+          check_tool "ffuf" "-V"
+          check_tool "katana" "-version"
+          check_tool "sqlmap" "--version"
+          check_tool "ghauri" "--version"
+          check_tool "nmap" "--version"
+          check_tool "dig" "-v"
+          check_tool "curl" "--version"
+          check_tool "wget" "--version"
+
+          echo "" >> tool-status.md
+          echo "### ReconCLI Module Status" >> tool-status.md
+          echo "" >> tool-status.md
+
+          # Test ReconCLI modules
+          python -m reconcli vulnsqlicli --check-tools >> tool-status.md 2>&1 || echo "❌ vulnsqlicli check failed" >> tool-status.md
+
+          echo "" >> tool-status.md
+          echo "Generated on: $(date)" >> tool-status.md
+
+          # Display results
+          cat tool-status.md
+
+      - name: Upload tool status report
+        uses: actions/upload-artifact@v3
+        with:
+          name: tool-status-report
+          path: tool-status.md
+
+      - name: Comment PR with tool status
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const fs = require('fs');
+            const toolStatus = fs.readFileSync('tool-status.md', 'utf8');
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: toolStatus
+            });
+
+  performance-test:
+    name: "⚡ Performance Test"
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest pytest-benchmark memory-profiler
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          pip install -e .
+
+      - name: Run performance tests
+        run: |
+          # Create simple performance test
+          cat > test_performance.py << 'EOF'
+          import time
+          import psutil
+          import os
+          from reconcli.vulnsqlicli import check_tool_availability, detect_injection_points
+
+          def test_tool_availability_performance():
+              start_time = time.time()
+              start_memory = psutil.Process().memory_info().rss / 1024 / 1024  # MB
+              
+              tools = check_tool_availability()
+              
+              end_time = time.time()
+              end_memory = psutil.Process().memory_info().rss / 1024 / 1024  # MB
+              
+              print(f"Tool availability check took {end_time - start_time:.2f} seconds")
+              print(f"Memory usage: {end_memory - start_memory:.2f} MB")
+              
+              assert end_time - start_time < 30, "Tool availability check too slow"
+              assert end_memory - start_memory < 100, "Memory usage too high"
+
+          def test_injection_detection_performance():
+              start_time = time.time()
+              
+              test_urls = [
+                  "http://example.com/page.php?id=1",
+                  "http://example.com/search.php?q=test&category=1",
+                  "http://example.com/product.php?id=123&color=red"
+              ]
+              
+              for url in test_urls:
+                  points = detect_injection_points(url)
+                  print(f"Found {len(points)} injection points for {url}")
+              
+              end_time = time.time()
+              print(f"Injection detection took {end_time - start_time:.2f} seconds")
+              
+              assert end_time - start_time < 10, "Injection detection too slow"
+
+          if __name__ == "__main__":
+              test_tool_availability_performance()
+              test_injection_detection_performance()
+          EOF
+
+          python test_performance.py
+
+      - name: Run memory profiling
+        run: |
+          python -m memory_profiler test_performance.py > memory-profile.txt 2>&1 || true
+          cat memory-profile.txt
+
+      - name: Upload performance reports
+        uses: actions/upload-artifact@v3
+        with:
+          name: performance-reports
+          path: |
+            memory-profile.txt
+
+  health-check:
+    name: "🩺 Health Check"
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          pip install -e .
+
+      - name: Health check
+        run: |
+          echo "## 🩺 ReconCLI Health Check" > health-check.md
+          echo "" >> health-check.md
+          echo "### System Information" >> health-check.md
+          echo "- OS: $(uname -a)" >> health-check.md
+          echo "- Python: $(python --version)" >> health-check.md
+          echo "- pip: $(pip --version)" >> health-check.md
+          echo "" >> health-check.md
+
+          echo "### Module Import Tests" >> health-check.md
+          python -c "import reconcli.main; print('✅ reconcli.main')" >> health-check.md 2>&1 || echo "❌ reconcli.main" >> health-check.md
+          python -c "import reconcli.vulnsqlicli; print('✅ reconcli.vulnsqlicli')" >> health-check.md 2>&1 || echo "❌ reconcli.vulnsqlicli" >> health-check.md
+          python -c "import reconcli.dnscli; print('✅ reconcli.dnscli')" >> health-check.md 2>&1 || echo "❌ reconcli.dnscli" >> health-check.md
+          python -c "import reconcli.urlcli; print('✅ reconcli.urlcli')" >> health-check.md 2>&1 || echo "❌ reconcli.urlcli" >> health-check.md
+          python -c "import reconcli.vhostcli; print('✅ reconcli.vhostcli')" >> health-check.md 2>&1 || echo "❌ reconcli.vhostcli" >> health-check.md
+
+          echo "" >> health-check.md
+          echo "### CLI Command Tests" >> health-check.md
+          python -m reconcli --help > /dev/null && echo "✅ Main CLI help" >> health-check.md || echo "❌ Main CLI help" >> health-check.md
+          python -m reconcli vulnsqlicli --help > /dev/null && echo "✅ VulnSQLiCLI help" >> health-check.md || echo "❌ VulnSQLiCLI help" >> health-check.md
+
+          echo "" >> health-check.md
+          echo "Generated on: $(date)" >> health-check.md
+
+          cat health-check.md
+
+      - name: Upload health check report
+        uses: actions/upload-artifact@v3
+        with:
+          name: health-check-report
+          path: health-check.md

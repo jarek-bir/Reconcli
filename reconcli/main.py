@@ -20,6 +20,8 @@ from reconcli.portcli import portcli
 from reconcli.cnamecli import cnamecli  # CNAME Record Analysis and Takeover Detection
 from reconcli.vulncli import vulncli
 from reconcli.dirbcli import dirbcli
+from reconcli.apicli import main as api_cli
+from reconcli.vulnsqlicli import main as vulnsql_cli
 
 
 @click.group()
@@ -112,6 +114,14 @@ vulncli.short_help = "Scan URLs using GF, Dalfox, Jaeles, and Nuclei with filter
 # Directory Bruteforcing
 cli.add_command(dirbcli, name="dirbcli")
 dirbcli.short_help = "Directory bruteforcing and enumeration"
+
+# API Security Testing
+cli.add_command(api_cli, name="apicli")
+api_cli.short_help = "API security testing and vulnerability assessment"
+
+# SQL Injection Vulnerability Scanner
+cli.add_command(vulnsql_cli, name="vulnsqlicli")
+vulnsql_cli.short_help = "SQL injection vulnerability scanner using SQLMap and Ghauri"
 
 if __name__ == "__main__":
     cli()

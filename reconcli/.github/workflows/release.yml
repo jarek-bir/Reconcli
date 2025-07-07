@@ -1,0 +1,309 @@
+name: Release & Publish
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to release (e.g., 1.0.0)"
+        required: true
+        type: string
+
+jobs:
+  build:
+    name: "📦 Build Package"
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: Install build dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install build twine wheel setuptools
+
+      - name: Build package
+        run: |
+          python -m build
+
+      - name: Check package
+        run: |
+          python -m twine check dist/*
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: dist-packages
+          path: dist/
+
+      - name: List package contents
+        run: |
+          ls -la dist/
+          echo "## 📦 Package Contents" > package-info.md
+          echo "" >> package-info.md
+          echo "### Built Packages" >> package-info.md
+          for file in dist/*; do
+            echo "- $(basename "$file")" >> package-info.md
+          done
+          echo "" >> package-info.md
+          echo "### Package Information" >> package-info.md
+          echo "- Version: Built from source" >> package-info.md
+          echo "- Python: $(python --version)" >> package-info.md
+          cat package-info.md
+
+      - name: Upload package info
+        uses: actions/upload-artifact@v3
+        with:
+          name: package-info
+          path: package-info.md
+
+  test-install:
+    name: "🧪 Test Installation"
+    runs-on: ${{ matrix.os }}
+    needs: build
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python-version: ["3.8", "3.9", "3.10", "3.11"]
+
+    steps:
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: dist-packages
+          path: dist/
+
+      - name: Install from wheel
+        run: |
+          python -m pip install --upgrade pip
+          pip install dist/*.whl
+
+      - name: Test installation
+        run: |
+          python -c "import reconcli; print('✅ ReconCLI imported successfully')"
+          python -c "import reconcli.vulnsqlicli; print('✅ VulnSQLiCLI imported successfully')"
+          python -c "import reconcli.main; print('✅ Main module imported successfully')"
+
+      - name: Test CLI commands
+        run: |
+          python -m reconcli --help
+          python -m reconcli vulnsqlicli --help
+
+      - name: Run basic functionality test
+        run: |
+          python -c "from reconcli.vulnsqlicli import check_tool_availability; tools = check_tool_availability(); print('Tool availability check:', len(tools), 'tools checked')"
+          python -c "from reconcli.vulnsqlicli import detect_injection_points; points = detect_injection_points('http://example.com/test.php?id=1'); print('Injection point detection:', len(points), 'points found')"
+          echo "✅ Basic functionality test passed"
+
+  publish-pypi:
+    name: "🚀 Publish to PyPI"
+    runs-on: ubuntu-latest
+    needs: [build, test-install]
+    if: github.event_name == 'release' && github.event.action == 'published'
+    environment:
+      name: pypi
+      url: https://pypi.org/p/reconcli
+
+    steps:
+      - name: Download build artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: dist-packages
+          path: dist/
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          user: __token__
+          password: ${{ secrets.PYPI_API_TOKEN }}
+          verbose: true
+
+      - name: Verify publication
+        run: |
+          sleep 60  # Wait for PyPI to propagate
+          pip install reconcli --upgrade
+          python -c "import reconcli; print('✅ Successfully installed from PyPI')"
+
+  publish-docker:
+    name: "🐳 Publish Docker Image"
+    runs-on: ubuntu-latest
+    needs: [build, test-install]
+    if: github.event_name == 'release' && github.event.action == 'published'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: |
+            jarekbir/reconcli
+            ghcr.io/${{ github.repository }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+            type=sha
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          platforms: linux/amd64,linux/arm64
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Test Docker image
+        run: |
+          docker run --rm jarekbir/reconcli:latest --help
+          docker run --rm jarekbir/reconcli:latest vulnsqlicli --help
+
+  create-release-notes:
+    name: "📝 Create Release Notes"
+    runs-on: ubuntu-latest
+    needs: [publish-pypi, publish-docker]
+    if: github.event_name == 'release' && github.event.action == 'published'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Generate release notes
+        run: |
+          echo "## 🚀 ReconCLI Release ${{ github.event.release.tag_name }}" > release-notes.md
+          echo "" >> release-notes.md
+          echo "### 🎯 What's New" >> release-notes.md
+          echo "" >> release-notes.md
+          echo "- 🛡️ **VulnSQLiCLI**: Advanced SQL injection vulnerability scanner" >> release-notes.md
+          echo "- 🔍 **Multi-Tool Support**: SQLMap, Ghauri, and GF integration" >> release-notes.md
+          echo "- 📊 **Enhanced Reporting**: JSON, YAML, and Markdown reports" >> release-notes.md
+          echo "- 🔔 **Notifications**: Slack and Discord webhook integration" >> release-notes.md
+          echo "- ⚡ **Performance**: Improved scanning speed and accuracy" >> release-notes.md
+          echo "" >> release-notes.md
+          echo "### 📦 Installation" >> release-notes.md
+          echo "" >> release-notes.md
+          echo "```bash" >> release-notes.md
+          echo "# From PyPI" >> release-notes.md
+          echo "pip install reconcli" >> release-notes.md
+          echo "" >> release-notes.md
+          echo "# From Docker" >> release-notes.md
+          echo "docker pull jarekbir/reconcli:${{ github.event.release.tag_name }}" >> release-notes.md
+          echo "" >> release-notes.md
+          echo "# From GitHub" >> release-notes.md
+          echo "git clone https://github.com/jarek-bir/Reconcli.git" >> release-notes.md
+          echo "cd Reconcli" >> release-notes.md
+          echo "pip install -e ." >> release-notes.md
+          echo "```" >> release-notes.md
+          echo "" >> release-notes.md
+          echo "### 🔧 Usage Examples" >> release-notes.md
+          echo "" >> release-notes.md
+          echo "```bash" >> release-notes.md
+          echo "# SQL injection testing" >> release-notes.md
+          echo "reconcli vulnsqlicli --url \"http://example.com/page.php?id=1\" --sqlmap --level 3" >> release-notes.md
+          echo "" >> release-notes.md
+          echo "# Batch testing with all tools" >> release-notes.md
+          echo "reconcli vulnsqlicli --urls-file urls.txt --tool all --json-report" >> release-notes.md
+          echo "" >> release-notes.md
+          echo "# Directory brute forcing" >> release-notes.md
+          echo "reconcli dirbcli --url https://example.com --tech-detect" >> release-notes.md
+          echo "" >> release-notes.md
+          echo "# Virtual host discovery" >> release-notes.md
+          echo "reconcli vhostcli --domain example.com --ip 1.2.3.4" >> release-notes.md
+          echo "```" >> release-notes.md
+          echo "" >> release-notes.md
+          echo "### 🛠️ Technical Details" >> release-notes.md
+          echo "" >> release-notes.md
+          echo "- **Python**: 3.8+ support" >> release-notes.md
+          echo "- **Platforms**: Linux, macOS, Windows" >> release-notes.md
+          echo "- **Docker**: Multi-architecture support (amd64, arm64)" >> release-notes.md
+          echo "- **Dependencies**: Minimal external dependencies" >> release-notes.md
+          echo "" >> release-notes.md
+          echo "### 🤝 Contributing" >> release-notes.md
+          echo "" >> release-notes.md
+          echo "We welcome contributions! Please check out our [Contributing Guide](https://github.com/jarek-bir/Reconcli/blob/main/CONTRIBUTING.md)." >> release-notes.md
+          echo "" >> release-notes.md
+          echo "### 📞 Support" >> release-notes.md
+          echo "" >> release-notes.md
+          echo "- **Issues**: [GitHub Issues](https://github.com/jarek-bir/Reconcli/issues)" >> release-notes.md
+          echo "- **Discussions**: [GitHub Discussions](https://github.com/jarek-bir/Reconcli/discussions)" >> release-notes.md
+          echo "- **Security**: [Security Policy](https://github.com/jarek-bir/Reconcli/security/policy)" >> release-notes.md
+          echo "" >> release-notes.md
+          echo "---" >> release-notes.md
+          echo "" >> release-notes.md
+          echo "**Full Changelog**: https://github.com/jarek-bir/Reconcli/compare/${{ github.event.release.tag_name }}...HEAD" >> release-notes.md
+
+          cat release-notes.md
+
+      - name: Update release with notes
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const fs = require('fs');
+            const releaseNotes = fs.readFileSync('release-notes.md', 'utf8');
+
+            await github.rest.repos.updateRelease({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              release_id: context.payload.release.id,
+              body: releaseNotes
+            });
+
+  notify:
+    name: "📢 Notify Release"
+    runs-on: ubuntu-latest
+    needs: [publish-pypi, publish-docker, create-release-notes]
+    if: always()
+
+    steps:
+      - name: Notify success
+        if: needs.publish-pypi.result == 'success' && needs.publish-docker.result == 'success'
+        run: |
+          curl -H "Content-Type: application/json" \
+               -d '{
+                 "content": "🎉 **ReconCLI ${{ github.event.release.tag_name }} Released!**\n\n✅ Published to PyPI\n✅ Docker images available\n✅ Release notes updated\n\n🔗 [View Release](https://github.com/jarek-bir/Reconcli/releases/tag/${{ github.event.release.tag_name }})"
+               }' \
+               "${{ secrets.DISCORD_WEBHOOK_URL || 'https://httpbin.org/post' }}"
+
+      - name: Notify failure
+        if: needs.publish-pypi.result == 'failure' || needs.publish-docker.result == 'failure'
+        run: |
+          curl -H "Content-Type: application/json" \
+               -d '{
+                 "content": "❌ **ReconCLI ${{ github.event.release.tag_name }} Release Failed!**\n\nSome components failed to publish. Check the [workflow run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) for details."
+               }' \
+               "${{ secrets.DISCORD_WEBHOOK_URL || 'https://httpbin.org/post' }}"
