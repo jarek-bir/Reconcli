@@ -51,10 +51,18 @@ wyniki/
 *.bak
 *.bak*
 
-# Security reports
+# Security tools and reports (local development only)
+security_reports/
+security_backup/
 bandit-report.json
-safety-report.json
-trivy-results.sarif
+bandit-report.txt
+vulnerability-report.json
+vulnerability-report.txt
+security_test.sh
+security_autofix.sh
+.bandit
+SECURITY_IMPROVEMENTS.md
+.github/workflows/security.yml
 
 # Logs
 *.log
