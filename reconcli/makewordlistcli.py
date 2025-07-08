@@ -13,6 +13,8 @@ import time
 import random
 from collections import Counter
 from difflib import SequenceMatcher
+import pickle
+import threading
 
 # Enhanced patterns for advanced wordlist generation
 PATTERN_TEMPLATES = {
@@ -336,6 +338,348 @@ PROFILES = {
         "loan",
         "investment",
     ],
+}
+
+# Word boost profiles for enhanced generation
+WORD_BOOST_PROFILES = {
+    "admin": {
+        "words": [
+            "admin",
+            "administrator",
+            "root",
+            "superuser",
+            "manager",
+            "owner",
+            "master",
+            "chief",
+        ],
+        "patterns": [
+            "{word}admin",
+            "admin{word}",
+            "{word}_admin",
+            "admin_{word}",
+            "{word}-admin",
+            "admin-{word}",
+        ],
+        "multiplier": 3,
+    },
+    "auth": {
+        "words": [
+            "auth",
+            "login",
+            "signin",
+            "logon",
+            "access",
+            "credential",
+            "password",
+            "pass",
+            "pwd",
+        ],
+        "patterns": [
+            "{word}auth",
+            "auth{word}",
+            "{word}_auth",
+            "auth_{word}",
+            "{word}login",
+            "login{word}",
+        ],
+        "multiplier": 2,
+    },
+    "panel": {
+        "words": [
+            "panel",
+            "dashboard",
+            "control",
+            "console",
+            "interface",
+            "ui",
+            "gui",
+            "menu",
+        ],
+        "patterns": [
+            "{word}panel",
+            "panel{word}",
+            "{word}_panel",
+            "panel_{word}",
+            "{word}dash",
+            "dash{word}",
+        ],
+        "multiplier": 2,
+    },
+    "qa": {
+        "words": [
+            "qa",
+            "test",
+            "testing",
+            "debug",
+            "dev",
+            "development",
+            "staging",
+            "beta",
+            "alpha",
+        ],
+        "patterns": [
+            "{word}qa",
+            "qa{word}",
+            "{word}_test",
+            "test_{word}",
+            "{word}dev",
+            "dev{word}",
+        ],
+        "multiplier": 2,
+    },
+    "api": {
+        "words": [
+            "api",
+            "rest",
+            "graphql",
+            "endpoint",
+            "service",
+            "webservice",
+            "ws",
+            "json",
+            "xml",
+        ],
+        "patterns": [
+            "{word}api",
+            "api{word}",
+            "{word}_api",
+            "api_{word}",
+            "{word}/api",
+            "api/{word}",
+        ],
+        "multiplier": 2,
+    },
+}
+
+
+# Resume state management
+class ResumeState:
+    def __init__(self, output_prefix):
+        self.output_prefix = output_prefix
+        self.state_file = f"{output_prefix}_resume.json"
+        self.state = {
+            "completed_sources": [],
+            "current_step": 0,
+            "total_steps": 0,
+            "collected_words": [],
+            "checkpoint_time": None,
+            "parameters": {},
+        }
+
+    def save_state(self):
+        """Save current generation state to file"""
+        self.state["checkpoint_time"] = time.time()
+        with open(self.state_file, "w") as f:
+            json.dump(self.state, f, indent=2)
+
+    def load_state(self):
+        """Load resume state from file"""
+        if os.path.exists(self.state_file):
+            with open(self.state_file, "r") as f:
+                self.state = json.load(f)
+            return True
+        return False
+
+    def is_source_completed(self, source_name):
+        """Check if a source has already been processed"""
+        return source_name in self.state["completed_sources"]
+
+    def mark_source_completed(self, source_name, words_count):
+        """Mark a source as completed"""
+        self.state["completed_sources"].append(
+            {"name": source_name, "words_count": words_count, "timestamp": time.time()}
+        )
+
+    def add_words(self, words):
+        """Add words to the collected set"""
+        self.state["collected_words"].extend(words)
+
+    def cleanup(self):
+        """Remove resume state file after successful completion"""
+        if os.path.exists(self.state_file):
+            os.remove(self.state_file)
+
+
+# Markov chain word generator
+class MarkovWordGenerator:
+    def __init__(self, chain_length=2):
+        self.chain_length = chain_length
+        self.chain = {}
+        self.trained = False
+
+    def train_from_wordlist(self, wordlist_path):
+        """Train Markov model from existing wordlist (like rockyou.txt)"""
+        try:
+            with open(wordlist_path, "r", encoding="utf-8", errors="ignore") as f:
+                words = [line.strip() for line in f if line.strip()]
+
+            click.secho(
+                f"[+] Training Markov model on {len(words)} words...", fg="cyan"
+            )
+
+            for word in words[:100000]:  # Limit for performance
+                if len(word) >= self.chain_length:
+                    for i in range(len(word) - self.chain_length + 1):
+                        key = word[i : i + self.chain_length]
+                        next_char = (
+                            word[i + self.chain_length]
+                            if i + self.chain_length < len(word)
+                            else None
+                        )
+
+                        if key not in self.chain:
+                            self.chain[key] = []
+                        self.chain[key].append(next_char)
+
+            self.trained = True
+            click.secho(
+                f"[✓] Markov model trained with {len(self.chain)} patterns", fg="green"
+            )
+            return True
+
+        except Exception as e:
+            click.secho(f"[!] Error training Markov model: {e}", fg="red")
+            return False
+
+    def generate_words(self, count=1000, min_length=4, max_length=15):
+        """Generate words using trained Markov model"""
+        if not self.trained:
+            return []
+
+        generated = set()
+        attempts = 0
+        max_attempts = count * 10
+
+        while len(generated) < count and attempts < max_attempts:
+            attempts += 1
+
+            # Pick random starting sequence
+            start_key = random.choice(list(self.chain.keys()))
+            word = start_key
+
+            # Generate word character by character
+            current_key = start_key
+            while len(word) < max_length:
+                if current_key in self.chain and self.chain[current_key]:
+                    next_char = random.choice(self.chain[current_key])
+                    if next_char is None:  # End of word
+                        break
+                    word += next_char
+                    current_key = word[-self.chain_length :]
+                else:
+                    break
+
+            if min_length <= len(word) <= max_length and word.isalnum():
+                generated.add(word)
+
+        return list(generated)
+
+
+def apply_word_boost(words, profile_name, base_words):
+    """Apply word boost profile to enhance specific word types"""
+    if profile_name not in WORD_BOOST_PROFILES:
+        return words
+
+    profile = WORD_BOOST_PROFILES[profile_name]
+    boosted_words = set(words)
+
+    # Add profile-specific words
+    boosted_words.update(profile["words"])
+
+    # Apply patterns with base words
+    for base_word in base_words[:50]:  # Limit to prevent explosion
+        for pattern in profile["patterns"]:
+            try:
+                generated = pattern.format(word=base_word)
+                boosted_words.add(generated)
+            except:
+                continue
+
+    # Apply patterns with profile words
+    for profile_word in profile["words"]:
+        for base_word in base_words[:20]:
+            boosted_words.add(f"{profile_word}{base_word}")
+            boosted_words.add(f"{base_word}{profile_word}")
+            boosted_words.add(f"{profile_word}_{base_word}")
+            boosted_words.add(f"{base_word}_{profile_word}")
+
+    # Multiply important words based on profile multiplier
+    multiplied_words = list(boosted_words)
+    for word in profile["words"]:
+        for _ in range(profile["multiplier"] - 1):
+            # Add variations
+            multiplied_words.extend(
+                [
+                    word.upper(),
+                    word.capitalize(),
+                    word + "123",
+                    word + "!",
+                    word + "2024",
+                    word + "2025",
+                ]
+            )
+
+    return list(set(multiplied_words))
+
+
+def combine_wordlists(list1_path, list2_path, combination_method="merge"):
+    """Combine two wordlists using various methods"""
+    try:
+        # Load both wordlists
+        with open(list1_path, "r", encoding="utf-8", errors="ignore") as f:
+            words1 = set(line.strip() for line in f if line.strip())
+
+        with open(list2_path, "r", encoding="utf-8", errors="ignore") as f:
+            words2 = set(line.strip() for line in f if line.strip())
+
+        if combination_method == "merge":
+            # Simple merge (union)
+            return list(words1.union(words2))
+
+        elif combination_method == "intersect":
+            # Common words only
+            return list(words1.intersection(words2))
+
+        elif combination_method == "combine":
+            # Cartesian product (like pydictor -C)
+            combined = set()
+            for w1 in list(words1)[:100]:  # Limit to prevent explosion
+                for w2 in list(words2)[:100]:
+                    combined.add(w1 + w2)
+                    combined.add(w2 + w1)
+                    combined.add(w1 + "_" + w2)
+                    combined.add(w2 + "_" + w1)
+                    combined.add(w1 + "-" + w2)
+                    combined.add(w2 + "-" + w1)
+            return list(combined)
+
+        elif combination_method == "permute":
+            # All permutations of words from both lists
+            all_words = list(words1.union(words2))
+            permuted = set()
+            for r in range(2, 4):  # 2-3 word combinations
+                for combo in itertools.permutations(all_words[:50], r):
+                    permuted.add("".join(combo))
+                    permuted.add("_".join(combo))
+                    permuted.add("-".join(combo))
+            return list(permuted)
+
+        else:
+            # Default to merge
+            return list(words1.union(words2))
+
+    except Exception as e:
+        click.secho(f"[!] Error combining wordlists: {e}", fg="red")
+        return []
+
+
+# Resume state for large wordlist generation
+RESUME_STATE = {
+    "checkpoint_file": None,
+    "current_stage": None,
+    "processed_combinations": 0,
+    "total_combinations": 0,
 }
 
 
@@ -786,6 +1130,261 @@ def entropy_based_scoring(wordlist):
     return [word for word, score in scored_words]
 
 
+def word_boost_generator(base_words, boost_profile, multiplier=None):
+    """Boost specific word types based on profile"""
+    if boost_profile not in WORD_BOOST_PROFILES:
+        return []
+
+    profile = WORD_BOOST_PROFILES[boost_profile]
+    boost_multiplier = multiplier or profile.get("multiplier", 2)
+    boosted_words = set()
+
+    # Add profile-specific words
+    profile_words = profile.get("words", [])
+    for word in profile_words:
+        boosted_words.add(word)
+
+        # Add with base words
+        for base_word in base_words[:20]:  # Limit combinations
+            boosted_words.add(f"{word}{base_word}")
+            boosted_words.add(f"{base_word}{word}")
+            boosted_words.add(f"{word}_{base_word}")
+            boosted_words.add(f"{base_word}_{word}")
+
+    # Add suffixes and prefixes
+    suffixes = profile.get("suffixes", [])
+    prefixes = profile.get("prefixes", [])
+
+    for base_word in base_words + profile_words:
+        for suffix in suffixes:
+            boosted_words.add(f"{base_word}{suffix}")
+            boosted_words.add(f"{base_word}_{suffix}")
+        for prefix in prefixes:
+            boosted_words.add(f"{prefix}{base_word}")
+            boosted_words.add(f"{prefix}_{base_word}")
+
+    # Multiply generation based on profile importance
+    result = list(boosted_words)
+    for _ in range(boost_multiplier - 1):
+        for word in list(boosted_words):
+            # Add numbered variations
+            for num in ["1", "2", "01", "02", "123"]:
+                result.append(f"{word}{num}")
+                result.append(f"{num}{word}")
+
+    return result
+
+
+def combine_wordlists(list1_path, list2_path, combination_method="merge"):
+    """Combine two wordlists using various methods"""
+    try:
+        # Load both wordlists
+        with open(list1_path, "r", encoding="utf-8", errors="ignore") as f:
+            words1 = set(line.strip() for line in f if line.strip())
+
+        with open(list2_path, "r", encoding="utf-8", errors="ignore") as f:
+            words2 = set(line.strip() for line in f if line.strip())
+
+        if combination_method == "merge":
+            # Simple merge (union)
+            return list(words1.union(words2))
+
+        elif combination_method == "intersect":
+            # Common words only
+            return list(words1.intersection(words2))
+
+        elif combination_method == "combine":
+            # Cartesian product (like pydictor -C)
+            combined = set()
+            for w1 in list(words1)[:100]:  # Limit to prevent explosion
+                for w2 in list(words2)[:100]:
+                    combined.add(w1 + w2)
+                    combined.add(w2 + w1)
+                    combined.add(w1 + "_" + w2)
+                    combined.add(w2 + "_" + w1)
+                    combined.add(w1 + "-" + w2)
+                    combined.add(w2 + "-" + w1)
+            return list(combined)
+
+        elif combination_method == "permute":
+            # All permutations of words from both lists
+            all_words = list(words1.union(words2))
+            permuted = set()
+            for r in range(2, 4):  # 2-3 word combinations
+                for combo in itertools.permutations(all_words[:50], r):
+                    permuted.add("".join(combo))
+                    permuted.add("_".join(combo))
+                    permuted.add("-".join(combo))
+            return list(permuted)
+
+        else:
+            # Default to merge
+            return list(words1.union(words2))
+
+    except Exception as e:
+        click.secho(f"[!] Error combining wordlists: {e}", fg="red")
+        return []
+
+
+def build_markov_model(training_wordlist, ngram_size=2):
+    """Build Markov chain model from training wordlist"""
+    global MARKOV_NGRAMS
+
+    for word in training_wordlist:
+        # Add start/end markers
+        padded_word = f"^{word}$"
+
+        for i in range(len(padded_word) - ngram_size + 1):
+            ngram = padded_word[i : i + ngram_size]
+            next_char = (
+                padded_word[i + ngram_size]
+                if i + ngram_size < len(padded_word)
+                else None
+            )
+
+            if ngram not in MARKOV_NGRAMS:
+                MARKOV_NGRAMS[ngram] = {}
+
+            if next_char:
+                if next_char not in MARKOV_NGRAMS[ngram]:
+                    MARKOV_NGRAMS[ngram][next_char] = 0
+                MARKOV_NGRAMS[ngram][next_char] += 1
+
+
+def generate_markov_words(count=1000, min_length=4, max_length=16):
+    """Generate words using Markov chain model"""
+    if not MARKOV_NGRAMS:
+        return []
+
+    generated = set()
+    attempts = 0
+    max_attempts = count * 10
+
+    while len(generated) < count and attempts < max_attempts:
+        attempts += 1
+
+        # Start with beginning marker
+        current = "^"
+        word = ""
+
+        while len(word) < max_length:
+            # Find possible next characters
+            possible_ngrams = [
+                ngram
+                for ngram in MARKOV_NGRAMS.keys()
+                if ngram.startswith(current[-1:])
+            ]
+
+            if not possible_ngrams:
+                break
+
+            # Choose most likely ngram
+            best_ngram = max(
+                possible_ngrams, key=lambda x: sum(MARKOV_NGRAMS[x].values())
+            )
+
+            if not MARKOV_NGRAMS[best_ngram]:
+                break
+
+            # Choose next character based on frequency
+            next_chars = list(MARKOV_NGRAMS[best_ngram].keys())
+            weights = list(MARKOV_NGRAMS[best_ngram].values())
+
+            if not next_chars:
+                break
+
+            # Simple weighted choice (take most frequent)
+            next_char = max(zip(next_chars, weights), key=lambda x: x[1])[0]
+
+            if next_char == "$":  # End marker
+                break
+
+            word += next_char
+            current = best_ngram[1:] + next_char
+
+        # Add word if valid length
+        if min_length <= len(word) <= max_length and word.isalnum():
+            generated.add(word)
+
+    return list(generated)
+
+
+def save_resume_state(output_prefix, stage, processed, total, current_words):
+    """Save current generation state for resume capability"""
+    checkpoint_file = f"{output_prefix}_checkpoint.json"
+
+    state = {
+        "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
+        "stage": stage,
+        "processed_combinations": processed,
+        "total_combinations": total,
+        "current_words_count": len(current_words),
+        "current_words_sample": list(current_words)[:100],  # Save sample
+    }
+
+    try:
+        with open(checkpoint_file, "w") as f:
+            json.dump(state, f, indent=2)
+        return checkpoint_file
+    except Exception as e:
+        click.secho(f"[!] Failed to save checkpoint: {e}", fg="red")
+        return None
+
+
+def load_resume_state(checkpoint_file):
+    """Load previous generation state"""
+    try:
+        with open(checkpoint_file, "r") as f:
+            state = json.load(f)
+        return state
+    except Exception as e:
+        click.secho(f"[!] Failed to load checkpoint: {e}", fg="red")
+        return None
+
+
+def incremental_crunch_generator(
+    min_len, max_len, charset="abcdefghijklmnopqrstuvwxyz0123456789", resume_from=None
+):
+    """Generate crunch-style combinations with resume capability"""
+    import itertools
+
+    generated = set()
+    start_point = 0
+
+    if resume_from:
+        # Load resume state
+        state = load_resume_state(resume_from)
+        if state:
+            start_point = state.get("processed_combinations", 0)
+            click.secho(f"[+] Resuming from combination {start_point}", fg="yellow")
+
+    current_count = 0
+
+    for length in range(min_len, max_len + 1):
+        for combination in itertools.product(charset, repeat=length):
+            current_count += 1
+
+            # Skip to resume point
+            if current_count <= start_point:
+                continue
+
+            word = "".join(combination)
+            generated.add(word)
+
+            # Checkpoint every 10000 combinations
+            if current_count % 10000 == 0:
+                click.secho(f"[*] Generated {current_count} combinations...", fg="blue")
+
+            # Limit to prevent memory issues
+            if len(generated) >= 50000:
+                break
+
+        if len(generated) >= 50000:
+            break
+
+    return list(generated)
+
+
 @click.command(name="makewordlist")
 @click.option("--name", help="Target person's name")
 @click.option("--surname", help="Target person's surname")
@@ -887,6 +1486,26 @@ def entropy_based_scoring(wordlist):
     help="Remove similar words (0.0-1.0 threshold)",
 )
 @click.option("--advanced", is_flag=True, help="Enable ALL advanced features")
+@click.option("--resume-from", type=str, help="Resume from previous generation state")
+@click.option(
+    "--word-boost",
+    type=click.Choice(["admin", "auth", "panel", "qa", "api"]),
+    help="Boost specific word categories",
+)
+@click.option("--combine-with", type=str, help="Combine with another wordlist file")
+@click.option(
+    "--combine-method",
+    type=click.Choice(["merge", "intersect", "combine", "permute"]),
+    default="merge",
+    help="Wordlist combination method",
+)
+@click.option(
+    "--markovify", type=str, help="Generate words using Markov model from training file"
+)
+@click.option(
+    "--markov-count", default=1000, help="Number of words to generate with Markov model"
+)
+@click.option("--markov-length", default=2, help="Markov chain length (1-4)")
 def makewordlist(
     name,
     surname,
@@ -927,11 +1546,63 @@ def makewordlist(
     entropy_sort,
     similarity_filter,
     advanced,
+    resume_from,
+    word_boost,
+    combine_with,
+    combine_method,
+    markovify,
+    markov_count,
+    markov_length,
 ):
     """🎯 Generate custom wordlists using inputs + advanced techniques"""
     base_words = list(filter(None, [name, surname, birth, city, company]))
     final = set()
     stats = {"sources": [], "total_words": 0, "filtered_words": 0}
+
+    # Initialize resume state manager
+    resume_state = (
+        ResumeState(output_prefix) if output_prefix else ResumeState("wordlist")
+    )
+
+    # Handle resume functionality
+    if resume_from:
+        if resume_state.load_state():
+            click.secho(f"[+] 📁 Resuming from checkpoint: {resume_from}", fg="green")
+            final.update(resume_state.state["collected_words"])
+            click.secho(
+                f"[+] 📊 Loaded {len(final)} words from previous session", fg="cyan"
+            )
+        else:
+            click.secho(f"[!] 📁 Resume file not found: {resume_from}", fg="yellow")
+
+    # Handle wordlist combination first if specified
+    if combine_with:
+        if os.path.exists(combine_with):
+            temp_list_path = (
+                f"{output_prefix}_temp.txt" if output_prefix else "temp_wordlist.txt"
+            )
+
+            # Create temporary list with current base words
+            with open(temp_list_path, "w") as f:
+                for word in base_words:
+                    f.write(f"{word}\n")
+
+            combined_words = combine_wordlists(
+                temp_list_path, combine_with, combine_method
+            )
+            final.update(combined_words)
+
+            click.secho(
+                f"[+] 🔗 Combined {len(combined_words)} words using '{combine_method}' method",
+                fg="green",
+            )
+            stats["sources"].append(f"Combined wordlist ({combine_method})")
+
+            # Cleanup temp file
+            if os.path.exists(temp_list_path):
+                os.remove(temp_list_path)
+        else:
+            click.secho(f"[!] 🔗 Combine file not found: {combine_with}", fg="red")
 
     click.secho("[*] 🎯 Starting advanced wordlist generation...", fg="cyan")
 
@@ -1202,6 +1873,45 @@ def makewordlist(
         if verbose:
             click.secho(f"[+] File combinations: {len(file_combos)} words", fg="green")
 
+    # Markov Chain Generation
+    if markovify and os.path.exists(markovify):
+        click.secho(
+            f"[+] 🎲 Generating words with Markov model from: {markovify}", fg="green"
+        )
+        markov_gen = MarkovWordGenerator(chain_length=markov_length)
+        if markov_gen.train_from_wordlist(markovify):
+            markov_words = markov_gen.generate_words(
+                count=markov_count, min_length=min_length, max_length=max_length
+            )
+            final.update(markov_words)
+            stats["sources"].append(f"Markov generation: {len(markov_words)} words")
+            if verbose:
+                click.secho(
+                    f"[+] Markov generated: {len(markov_words)} words", fg="green"
+                )
+
+            # Save resume state after Markov generation
+            resume_state.mark_source_completed("markov_generation", len(markov_words))
+            resume_state.add_words(markov_words)
+            resume_state.save_state()
+    elif markovify:
+        click.secho(f"[!] 🎲 Markov training file not found: {markovify}", fg="red")
+
+    # Word Boost Application
+    if word_boost:
+        click.secho(f"[+] 🚀 Applying word boost profile: {word_boost}", fg="green")
+        boosted_words = apply_word_boost(list(final), word_boost, base_words)
+        boost_added = len(boosted_words) - len(final)
+        final.update(boosted_words)
+        stats["sources"].append(f"Word boost ({word_boost}): +{boost_added} words")
+        if verbose:
+            click.secho(f"[+] Word boost added: {boost_added} words", fg="green")
+
+        # Save resume state after word boost
+        resume_state.mark_source_completed(f"word_boost_{word_boost}", boost_added)
+        resume_state.add_words(boosted_words)
+        resume_state.save_state()
+
     # Smart filtering
     click.secho("[+] 🧹 Filtering and cleaning wordlist...", fg="cyan")
     stats["total_words"] = len(final)
@@ -1340,6 +2050,12 @@ def makewordlist(
     click.secho(f"\n🎉 Wordlist generation complete!", fg="green", bold=True)
     click.secho(f"📊 Final wordlist: {len(sorted_final)} words", fg="cyan")
     click.secho(f"📁 Files saved with prefix: {output_prefix}", fg="cyan")
+
+    # Clean up resume state after successful completion
+    if not resume_from:  # Only cleanup if this wasn't a resumed session
+        resume_state.cleanup()
+        if verbose:
+            click.secho("[+] 🧹 Resume state cleaned up", fg="green")
 
     if verbose:
         click.secho(f"\n📈 Generation Summary:", fg="cyan")

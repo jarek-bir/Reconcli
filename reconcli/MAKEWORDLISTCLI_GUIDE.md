@@ -1,8 +1,30 @@
 # 🎯 MakeWordListCLI - Advanced Wordlist Generator
 
+## 🚀 NEW Advanced Features (2025)
+
+### 📁 Resume Functionality
+- `--resume-from <file>`: Resume interrupted wordlist generation
+- Automatic checkpoints for large operations
+
+### 🚀 Word Boost Profiles  
+- `--word-boost <profile>`: Enhance specific categories (admin, auth, panel, qa, api)
+- Specialized patterns and multiplied variations
+
+### 🔗 Wordlist Combination
+- `--combine-with <file>`: Merge with existing wordlists
+- `--combine-method`: merge, intersect, combine, permute
+
+### 🎲 Markov Chain Generation
+- `--markovify <training_file>`: AI-powered word generation
+- Train on existing wordlists (rockyou.txt, custom lists)
+
+📖 **See `ADVANCED_FEATURES_GUIDE.md` for detailed documentation**
+
+---
+
 ## 🌟 Enhanced Features
 
-### ✨ **What's New:**
+### ✨ **Core Features:**
 - **🧬 Word Mutations**: Leet speak, variations, and permutations
 - **🌐 Deep Web Crawling**: Extract words from multiple pages
 - **📅 Date Variations**: Current and custom date formats
