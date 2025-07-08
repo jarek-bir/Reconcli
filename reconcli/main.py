@@ -25,6 +25,7 @@ from reconcli.vulnsqlicli import main as vulnsql_cli
 from reconcli.makewordlistcli import (
     makewordlist,
 )  # ✅ Importing the makewordlist command
+from reconcli.permutcli import permutcli  # Importing the permutcli command
 
 
 @click.group()
@@ -131,6 +132,10 @@ cli.add_command(makewordlist, name="makewordlist")
 makewordlist.short_help = (
     "🎯 Advanced wordlist generator with intelligence and mutations"
 )
+
+# Permutation-based Wordlist Generation
+cli.add_command(permutcli, name="permutcli")
+permutcli.short_help = "Generate permutation-based wordlists"
 
 if __name__ == "__main__":
     cli()
