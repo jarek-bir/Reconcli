@@ -136,7 +136,7 @@ def detect_injection_points(url, timeout=5):
 
     # Test for form parameters (POST)
     try:
-        response = requests.get(url, timeout=timeout, verify=False)
+        response = requests.get(url, timeout=timeout, verify=True)
         if response.status_code == 200:
             # Look for forms
             form_pattern = r'<form[^>]*action=["\']([^"\']*)["\'][^>]*>'
@@ -234,7 +234,7 @@ def test_basic_sql_injection(url, timeout=5):
                     )
 
                     start_time = time.time()
-                    response = requests.get(test_url, timeout=timeout, verify=False)
+                    response = requests.get(test_url, timeout=timeout, verify=True)
                     response_time = time.time() - start_time
 
                     # Check for SQL error patterns
@@ -1586,7 +1586,9 @@ def create_resume_state(output_dir, urls, options):
     resume_dir.mkdir(parents=True, exist_ok=True)
 
     state = {
-        "scan_id": hashlib.md5(str(datetime.now()).encode()).hexdigest()[:8],
+        "scan_id": hashlib.md5(
+            str(datetime.now()).encode(), usedforsecurity=False
+        ).hexdigest()[:8],
         "created_at": datetime.now().isoformat(),
         "total_urls": len(urls),
         "processed_urls": [],

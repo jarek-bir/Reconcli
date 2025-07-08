@@ -898,7 +898,7 @@ def enhanced_url_discovery(
                         f"{protocol}://{domain}/favicon.ico", timeout=timeout
                     )
                     if resp.status_code == 200:
-                        h = hashlib.md5(resp.content).hexdigest()
+                        h = hashlib.md5(resp.content, usedforsecurity=False).hexdigest()
                         favicon_file = os.path.join(output_dir, "favicon_hashes.txt")
                         with open(favicon_file, "a") as f:
                             f.write(f"{domain} {h} {protocol}\n")

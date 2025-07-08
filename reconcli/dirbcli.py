@@ -31,7 +31,7 @@ def send_notification(webhook_url, message, service="slack"):
 def check_url_accessibility(url, timeout=5):
     """Check if target URL is accessible."""
     try:
-        response = requests.get(url, timeout=timeout, verify=False)
+        response = requests.get(url, timeout=timeout, verify=True)
         return {
             "accessible": True,
             "status_code": response.status_code,
@@ -54,7 +54,7 @@ def detect_web_technology(url, timeout=3):
     """Detect web technology stack for smart wordlist selection."""
     try:
         headers = {"User-Agent": "DirBCLI/1.0 ReconCLI Directory Scanner"}
-        response = requests.get(url, headers=headers, timeout=timeout, verify=False)
+        response = requests.get(url, headers=headers, timeout=timeout, verify=True)
 
         tech_indicators = {
             "php": [".php", "x-powered-by: php", "set-cookie: phpsessid"],
@@ -184,30 +184,38 @@ def parse_tool_output(tool, output_file, target_url=None):
                         # Wfuzz specific parsing: (id, status, length, payload)
                         payload = match[3]
                         if target_url:
-                            base_url = target_url.rstrip('/')
+                            base_url = target_url.rstrip("/")
                             full_url = f"{base_url}/{payload}"
                         else:
                             full_url = payload
-                        findings.append({
-                            "url": full_url,
-                            "status": int(match[1]) if match[1].isdigit() else 200,
-                            "length": int(match[2]) if match[2].isdigit() else 0,
-                            "words": 0,
-                            "lines": 0,
-                            "response_time": 0,
-                            "tool": "wfuzz",
-                        })
-                    elif tool == "dirhunt" and isinstance(match, tuple) and len(match) >= 2:
+                        findings.append(
+                            {
+                                "url": full_url,
+                                "status": int(match[1]) if match[1].isdigit() else 200,
+                                "length": int(match[2]) if match[2].isdigit() else 0,
+                                "words": 0,
+                                "lines": 0,
+                                "response_time": 0,
+                                "tool": "wfuzz",
+                            }
+                        )
+                    elif (
+                        tool == "dirhunt"
+                        and isinstance(match, tuple)
+                        and len(match) >= 2
+                    ):
                         # Dirhunt specific parsing: (status, url)
-                        findings.append({
-                            "url": match[1],
-                            "status": int(match[0]) if match[0].isdigit() else 200,
-                            "length": 0,
-                            "words": 0,
-                            "lines": 0,
-                            "response_time": 0,
-                            "tool": "dirhunt",
-                        })
+                        findings.append(
+                            {
+                                "url": match[1],
+                                "status": int(match[0]) if match[0].isdigit() else 200,
+                                "length": 0,
+                                "words": 0,
+                                "lines": 0,
+                                "response_time": 0,
+                                "tool": "dirhunt",
+                            }
+                        )
                     elif isinstance(match, tuple):
                         if len(match) >= 2:
                             findings.append(
@@ -245,216 +253,235 @@ def smart_filter_responses(findings, similarity_threshold=0.95):
     """Apply intelligent filtering to remove false positives and duplicates."""
     if not findings:
         return findings
-    
+
     filtered_findings = []
     response_hashes = set()
-    
+
     for finding in findings:
         # Calculate content hash for duplicate detection
         content_key = f"{finding.get('status', 0)}_{finding.get('length', 0)}_{finding.get('words', 0)}"
-        content_hash = hashlib.md5(content_key.encode()).hexdigest()
-        
+        content_hash = hashlib.md5(
+            content_key.encode(), usedforsecurity=False
+        ).hexdigest()
+
         # Skip obvious duplicates
         if content_hash in response_hashes:
             continue
-            
+
         response_hashes.add(content_hash)
-        
+
         # Filter common false positives
         if is_false_positive(finding):
             continue
-            
+
         # Check for similar responses
         if not is_similar_to_existing(finding, filtered_findings, similarity_threshold):
             filtered_findings.append(finding)
-    
+
     return filtered_findings
 
 
 def is_false_positive(finding):
     """Detect common false positive patterns."""
-    url = finding.get('url', '').lower()
-    status = finding.get('status', 0)
-    length = finding.get('length', 0)
-    
+    url = finding.get("url", "").lower()
+    status = finding.get("status", 0)
+    length = finding.get("length", 0)
+
     # Common false positive patterns
     false_positive_patterns = [
-        r'/\d+$',  # Numeric paths
-        r'/[a-f0-9]{32}$',  # MD5 hashes
-        r'/[a-f0-9]{40}$',  # SHA1 hashes
-        r'/tmp_\w+',  # Temporary files
-        r'/__\w+__',  # Double underscore patterns
+        r"/\d+$",  # Numeric paths
+        r"/[a-f0-9]{32}$",  # MD5 hashes
+        r"/[a-f0-9]{40}$",  # SHA1 hashes
+        r"/tmp_\w+",  # Temporary files  # nosec B108
+        r"/__\w+__",  # Double underscore patterns
     ]
-    
+
     for pattern in false_positive_patterns:
         if re.search(pattern, url):
             return True
-    
+
     # Filter by status codes and content length
     if status in [404, 500] and length < 100:
         return True
-        
+
     return False
 
 
 def is_similar_to_existing(finding, existing_findings, threshold=0.95):
     """Check if finding is similar to existing ones."""
     current_signature = create_response_signature(finding)
-    
+
     for existing in existing_findings:
         existing_signature = create_response_signature(existing)
         similarity = calculate_similarity(current_signature, existing_signature)
-        
+
         if similarity >= threshold:
             return True
-    
+
     return False
 
 
 def create_response_signature(finding):
     """Create a signature for response comparison."""
     return {
-        'status': finding.get('status', 0),
-        'length': finding.get('length', 0),
-        'words': finding.get('words', 0),
-        'lines': finding.get('lines', 0),
+        "status": finding.get("status", 0),
+        "length": finding.get("length", 0),
+        "words": finding.get("words", 0),
+        "lines": finding.get("lines", 0),
     }
 
 
 def calculate_similarity(sig1, sig2):
     """Calculate similarity between two response signatures."""
-    if sig1['status'] != sig2['status']:
+    if sig1["status"] != sig2["status"]:
         return 0.0
-    
+
     # Calculate similarity based on content metrics
-    length_diff = abs(sig1['length'] - sig2['length'])
-    word_diff = abs(sig1['words'] - sig2['words'])
-    line_diff = abs(sig1['lines'] - sig2['lines'])
-    
+    length_diff = abs(sig1["length"] - sig2["length"])
+    word_diff = abs(sig1["words"] - sig2["words"])
+    line_diff = abs(sig1["lines"] - sig2["lines"])
+
     # Normalize differences
-    max_length = max(sig1['length'], sig2['length'], 1)
-    max_words = max(sig1['words'], sig2['words'], 1)
-    max_lines = max(sig1['lines'], sig2['lines'], 1)
-    
+    max_length = max(sig1["length"], sig2["length"], 1)
+    max_words = max(sig1["words"], sig2["words"], 1)
+    max_lines = max(sig1["lines"], sig2["lines"], 1)
+
     length_similarity = 1.0 - (length_diff / max_length)
     word_similarity = 1.0 - (word_diff / max_words)
     line_similarity = 1.0 - (line_diff / max_lines)
-    
+
     # Weighted average
-    return (length_similarity * 0.5 + word_similarity * 0.3 + line_similarity * 0.2)
+    return length_similarity * 0.5 + word_similarity * 0.3 + line_similarity * 0.2
 
 
 def analyze_response_patterns(findings):
     """Analyze response patterns for anomaly detection."""
     if not findings:
         return {}
-    
+
     analysis = {
-        'status_distribution': {},
-        'length_distribution': {},
-        'anomalies': [],
-        'patterns': []
+        "status_distribution": {},
+        "length_distribution": {},
+        "anomalies": [],
+        "patterns": [],
     }
-    
+
     # Analyze status code distribution
     for finding in findings:
-        status = finding.get('status', 0)
-        analysis['status_distribution'][status] = analysis['status_distribution'].get(status, 0) + 1
-    
+        status = finding.get("status", 0)
+        analysis["status_distribution"][status] = (
+            analysis["status_distribution"].get(status, 0) + 1
+        )
+
     # Analyze content length distribution
-    lengths = [f.get('length', 0) for f in findings]
+    lengths = [f.get("length", 0) for f in findings]
     if lengths:
         avg_length = sum(lengths) / len(lengths)
-        analysis['average_length'] = avg_length
-        
+        analysis["average_length"] = avg_length
+
         # Find anomalies (responses significantly different from average)
         for finding in findings:
-            length = finding.get('length', 0)
+            length = finding.get("length", 0)
             if abs(length - avg_length) > (avg_length * 0.5):  # 50% deviation
-                analysis['anomalies'].append({
-                    'url': finding.get('url', ''),
-                    'reason': 'unusual_length',
-                    'length': length,
-                    'average': avg_length
-                })
-    
+                analysis["anomalies"].append(
+                    {
+                        "url": finding.get("url", ""),
+                        "reason": "unusual_length",
+                        "length": length,
+                        "average": avg_length,
+                    }
+                )
+
     return analysis
 
 
 def detect_honeypots_and_waf(findings, target_url):
     """Detect honeypots and WAF responses."""
     detection_results = {
-        'honeypot_indicators': [],
-        'waf_indicators': [],
-        'suspicious_patterns': []
+        "honeypot_indicators": [],
+        "waf_indicators": [],
+        "suspicious_patterns": [],
     }
-    
+
     # Common honeypot patterns
     honeypot_patterns = [
-        r'honeypot',
-        r'canary',
-        r'trap',
-        r'decoy',
-        r'fake',
+        r"honeypot",
+        r"canary",
+        r"trap",
+        r"decoy",
+        r"fake",
     ]
-    
+
     # WAF response patterns
     waf_patterns = [
-        r'blocked',
-        r'denied',
-        r'forbidden',
-        r'security',
-        r'firewall',
-        r'protection',
+        r"blocked",
+        r"denied",
+        r"forbidden",
+        r"security",
+        r"firewall",
+        r"protection",
     ]
-    
+
     for finding in findings:
-        url = finding.get('url', '').lower()
-        
+        url = finding.get("url", "").lower()
+
         # Check for honeypot indicators
         for pattern in honeypot_patterns:
             if re.search(pattern, url):
-                detection_results['honeypot_indicators'].append({
-                    'url': finding.get('url', ''),
-                    'pattern': pattern,
-                    'confidence': 0.8
-                })
-        
+                detection_results["honeypot_indicators"].append(
+                    {
+                        "url": finding.get("url", ""),
+                        "pattern": pattern,
+                        "confidence": 0.8,
+                    }
+                )
+
         # Check for WAF indicators
         for pattern in waf_patterns:
             if re.search(pattern, url):
-                detection_results['waf_indicators'].append({
-                    'url': finding.get('url', ''),
-                    'pattern': pattern,
-                    'confidence': 0.7
-                })
-    
+                detection_results["waf_indicators"].append(
+                    {
+                        "url": finding.get("url", ""),
+                        "pattern": pattern,
+                        "confidence": 0.7,
+                    }
+                )
+
     return detection_results
 
 
 def generate_backup_wordlist(base_wordlist, detected_technologies):
     """Generate backup file variations for discovered paths."""
-    backup_extensions = ['.bak', '.backup', '.old', '.orig', '.save', '.tmp', '.swp', '~']
-    backup_prefixes = ['backup_', 'old_', 'orig_', 'copy_']
-    
+    backup_extensions = [
+        ".bak",
+        ".backup",
+        ".old",
+        ".orig",
+        ".save",
+        ".tmp",
+        ".swp",
+        "~",
+    ]
+    backup_prefixes = ["backup_", "old_", "orig_", "copy_"]
+
     backup_words = []
-    
+
     try:
-        with open(base_wordlist, 'r') as f:
+        with open(base_wordlist, "r") as f:
             original_words = [line.strip() for line in f.readlines()]
-        
+
         for word in original_words[:1000]:  # Limit to first 1000 words
             # Add backup extensions
             for ext in backup_extensions:
                 backup_words.append(word + ext)
-            
+
             # Add backup prefixes
             for prefix in backup_prefixes:
                 backup_words.append(prefix + word)
-    
+
     except Exception:
         pass
-    
+
     return backup_words
 
 
@@ -462,15 +489,17 @@ def adaptive_threading_controller(findings, initial_threads=10, max_threads=50):
     """Dynamically adjust threading based on server response."""
     if not findings:
         return initial_threads
-    
+
     # Calculate average response time
-    response_times = [f.get('response_time', 0) for f in findings if f.get('response_time', 0) > 0]
-    
+    response_times = [
+        f.get("response_time", 0) for f in findings if f.get("response_time", 0) > 0
+    ]
+
     if not response_times:
         return initial_threads
-    
+
     avg_response_time = sum(response_times) / len(response_times)
-    
+
     # Adjust threads based on response time
     if avg_response_time < 0.5:  # Fast responses
         return min(max_threads, initial_threads * 2)
@@ -485,49 +514,76 @@ def adaptive_threading_controller(findings, initial_threads=10, max_threads=50):
 def discover_parameters(findings, target_url, timeout=5):
     """Discover parameters for found endpoints."""
     parameter_discoveries = []
-    
+
     # Common parameter names to test
     common_params = [
-        'id', 'user', 'admin', 'debug', 'test', 'action', 'cmd', 'exec',
-        'page', 'file', 'path', 'dir', 'url', 'redirect', 'next', 'return',
-        'search', 'q', 'query', 'keyword', 'filter', 'sort', 'order',
-        'limit', 'offset', 'page', 'per_page', 'count', 'max', 'min'
+        "id",
+        "user",
+        "admin",
+        "debug",
+        "test",
+        "action",
+        "cmd",
+        "exec",
+        "page",
+        "file",
+        "path",
+        "dir",
+        "url",
+        "redirect",
+        "next",
+        "return",
+        "search",
+        "q",
+        "query",
+        "keyword",
+        "filter",
+        "sort",
+        "order",
+        "limit",
+        "offset",
+        "page",
+        "per_page",
+        "count",
+        "max",
+        "min",
     ]
-    
+
     for finding in findings:
-        url = finding.get('url', '')
-        status = finding.get('status', 0)
-        
+        url = finding.get("url", "")
+        status = finding.get("status", 0)
+
         # Only test successful responses
         if status not in [200, 201, 202, 301, 302, 303, 307, 308]:
             continue
-        
+
         discovered_params = []
-        
+
         for param in common_params:
             try:
                 # Test parameter with different values
                 test_url = f"{url}?{param}=1"
-                response = requests.get(test_url, timeout=timeout, verify=False)
-                
-                if response.status_code != finding.get('status', 0) or \
-                   abs(len(response.content) - finding.get('length', 0)) > 100:
-                    discovered_params.append({
-                        'parameter': param,
-                        'test_url': test_url,
-                        'response_status': response.status_code,
-                        'response_length': len(response.content),
-                        'confidence': 0.6
-                    })
+                response = requests.get(test_url, timeout=timeout, verify=True)
+
+                if (
+                    response.status_code != finding.get("status", 0)
+                    or abs(len(response.content) - finding.get("length", 0)) > 100
+                ):
+                    discovered_params.append(
+                        {
+                            "parameter": param,
+                            "test_url": test_url,
+                            "response_status": response.status_code,
+                            "response_length": len(response.content),
+                            "confidence": 0.6,
+                        }
+                    )
             except:
                 continue
-        
+
         if discovered_params:
-            parameter_discoveries.append({
-                'url': url,
-                'parameters': discovered_params
-            })
-    
+            parameter_discoveries.append({"url": url, "parameters": discovered_params})
+
     return parameter_discoveries
 
 
@@ -1053,11 +1109,24 @@ def get_user_agents(user_agent_option, user_agent_file, builtin_ua, random_ua):
 @click.command()
 @click.option("--url", required=True, help="Target URL (e.g., http://example.com)")
 @click.option(
-    "--wordlist", type=click.Path(exists=True), help="Path to wordlist (optional for dirhunt)"
+    "--wordlist",
+    type=click.Path(exists=True),
+    help="Path to wordlist (optional for dirhunt)",
 )
 @click.option(
     "--tool",
-    type=click.Choice(["ffuf", "feroxbuster", "gobuster", "dirsearch", "dirb", "wfuzz", "dirmap", "dirhunt"]),
+    type=click.Choice(
+        [
+            "ffuf",
+            "feroxbuster",
+            "gobuster",
+            "dirsearch",
+            "dirb",
+            "wfuzz",
+            "dirmap",
+            "dirhunt",
+        ]
+    ),
     default="ffuf",
     help="Directory brute-forcing tool to use",
 )
@@ -1131,7 +1200,10 @@ def get_user_agents(user_agent_option, user_agent_file, builtin_ua, random_ua):
     "--response-analysis", is_flag=True, help="Enable deep response content analysis"
 )
 @click.option(
-    "--similarity-threshold", type=float, default=0.95, help="Similarity threshold for duplicate detection (0.0-1.0)"
+    "--similarity-threshold",
+    type=float,
+    default=0.95,
+    help="Similarity threshold for duplicate detection (0.0-1.0)",
 )
 @click.option(
     "--pattern-analysis", is_flag=True, help="Enable pattern-based response analysis"
@@ -1140,13 +1212,19 @@ def get_user_agents(user_agent_option, user_agent_file, builtin_ua, random_ua):
     "--honeypot-detection", is_flag=True, help="Enable honeypot and WAF detection"
 )
 @click.option(
-    "--adaptive-threading", is_flag=True, help="Enable adaptive threading based on server response"
+    "--adaptive-threading",
+    is_flag=True,
+    help="Enable adaptive threading based on server response",
 )
 @click.option(
-    "--backup-detection", is_flag=True, help="Enable backup file detection (.bak, .old, ~)"
+    "--backup-detection",
+    is_flag=True,
+    help="Enable backup file detection (.bak, .old, ~)",
 )
 @click.option(
-    "--parameter-discovery", is_flag=True, help="Enable parameter discovery for found endpoints"
+    "--parameter-discovery",
+    is_flag=True,
+    help="Enable parameter discovery for found endpoints",
 )
 def dirbcli(
     url,
@@ -1245,13 +1323,13 @@ def dirbcli(
     dirbcli --url https://example.com --wordlist common.txt --tool dirb --builtin-ua --random-ua
     dirbcli --url https://example.com --wordlist wordlist.txt --tool wfuzz --json-report
     dirbcli --url https://example.com --tool dirhunt --tech-detect --smart-filter  # Intelligent discovery
-    
+
     # Smart analysis and filtering
     dirbcli --url https://example.com --wordlist wordlist.txt --smart-filter --response-analysis
     dirbcli --url https://example.com --wordlist wordlist.txt --pattern-analysis --honeypot-detection
     dirbcli --url https://example.com --wordlist wordlist.txt --adaptive-threading --backup-detection
     dirbcli --url https://example.com --wordlist wordlist.txt --parameter-discovery --similarity-threshold 0.9
-    
+
     # Combined advanced features
     dirbcli --url https://example.com --wordlist wordlist.txt --tool ffuf --smart-filter --response-analysis --honeypot-detection --backup-detection --parameter-discovery --builtin-ua --random-ua --json-report --markdown-report
     """
@@ -1380,7 +1458,7 @@ def dirbcli(
     if tool != "dirhunt" and not wordlist:
         click.echo(f"❌ [ERROR] Wordlist is required for {tool}")
         return
-    
+
     if wordlist:
         try:
             with open(wordlist, "r") as f:
@@ -1394,11 +1472,13 @@ def dirbcli(
         stats["wordlist_size"] = 0
         if verbose:
             click.echo("📝 [WORDLIST] Using intelligent discovery (no wordlist needed)")
-    
+
     # Special handling for dirhunt: it can work without wordlist
     if tool == "dirhunt" and not wordlist:
         if verbose:
-            click.echo("🧠 [DIRHUNT] Running in intelligent discovery mode without wordlist")
+            click.echo(
+                "🧠 [DIRHUNT] Running in intelligent discovery mode without wordlist"
+            )
 
     # Prepare User-Agent
     user_agents = get_user_agents(user_agent, user_agent_file, builtin_ua, random_ua)
@@ -1757,11 +1837,16 @@ def dirbcli(
         output_file = output_path / "wfuzz.txt"
         wfuzz_cmd = [
             "wfuzz",
-            "-w", wordlist,
-            "-u", f"{url}/FUZZ",
-            "-t", str(threads),
-            "--hc", "404",  # Hide 404s by default
-            "-f", f"{output_file},raw"
+            "-w",
+            wordlist,
+            "-u",
+            f"{url}/FUZZ",
+            "-t",
+            str(threads),
+            "--hc",
+            "404",  # Hide 404s by default
+            "-f",
+            f"{output_file},raw",
         ]
 
         # Add proxy
@@ -1786,16 +1871,22 @@ def dirbcli(
 
         # Add extensions (create separate wordlist with extensions)
         if include_ext:
-            ext_list = include_ext.split(',')
+            ext_list = include_ext.split(",")
             # Modify URL to include extension fuzzing
             wfuzz_cmd = [
                 "wfuzz",
-                "-w", wordlist,
-                "-z", f"list,{'-'.join(['.' + ext.strip() for ext in ext_list])}",
-                "-u", f"{url}/FUZZFUZ2Z",
-                "-t", str(threads),
-                "--hc", "404",
-                "-f", f"{output_file},raw"
+                "-w",
+                wordlist,
+                "-z",
+                f"list,{'-'.join(['.' + ext.strip() for ext in ext_list])}",
+                "-u",
+                f"{url}/FUZZFUZ2Z",
+                "-t",
+                str(threads),
+                "--hc",
+                "404",
+                "-f",
+                f"{output_file},raw",
             ]
             # Re-add other options
             if proxy:
@@ -1847,7 +1938,7 @@ def dirbcli(
         output_file = output_path / "dirmap.txt"
         # Create a temporary configuration for dirmap
         dirmap_config = output_path / "dirmap_temp.conf"
-        
+
         # Create a minimal config file for dirmap
         config_content = f"""[RecursiveScan]
 conf.recursive_scan = {"1" if recursive else "0"}
@@ -1894,15 +1985,17 @@ conf.debug = 0
 [CheckUpdate]
 conf.update = 0
 """
-        
+
         # Write temporary config file
         with open(dirmap_config, "w") as f:
             f.write(config_content)
-        
+
         # Note: dirmap needs to be run from its own directory with proper setup
         # For now, we'll create a basic command that should work if dirmap is properly installed
         dirmap_cmd = [
-            "python3", "-c", f'''
+            "python3",
+            "-c",
+            f"""
 import sys
 import os
 import subprocess
@@ -1923,7 +2016,7 @@ import time
 def scan_path(path):
     try:
         test_url = url.rstrip("/") + "/" + path.strip()
-        response = requests.get(test_url, timeout={timeout}, verify=False, allow_redirects=False)
+        response = requests.get(test_url, timeout={timeout}, verify=True, allow_redirects=False)
         if response.status_code in [200, 301, 302, 403, 500]:
             return f"{{response.status_code}} {{len(response.content)}} {{test_url}}"
     except:
@@ -1952,15 +2045,17 @@ with open(output_file, "w") as f:
         f.write(result + "\\n")
 
 print(f"Dirmap-like scan completed. Found {{len(results)}} results.")
-'''
+""",
         ]
 
         if verbose:
             click.echo(f"🔧 [DIRMAP] Running dirmap-compatible scan...")
-            click.echo(f"🔧 [DIRMAP] Note: Using simplified implementation due to dirmap complexity")
+            click.echo(
+                f"🔧 [DIRMAP] Note: Using simplified implementation due to dirmap complexity"
+            )
 
         result = subprocess.run(dirmap_cmd, capture_output=True, text=True)
-        
+
         # Clean up temporary config
         try:
             dirmap_config.unlink()
@@ -1969,7 +2064,9 @@ print(f"Dirmap-like scan completed. Found {{len(results)}} results.")
 
         if result.returncode != 0 and verbose:
             click.echo(f"⚠️ [DIRMAP] Warning: {result.stderr}")
-            click.echo(f"⚠️ [DIRMAP] Note: Install dirmap from https://github.com/H4ckForJob/dirmap for full functionality")
+            click.echo(
+                f"⚠️ [DIRMAP] Note: Install dirmap from https://github.com/H4ckForJob/dirmap for full functionality"
+            )
 
     elif tool == "dirhunt":
         output_file = output_path / "dirhunt.txt"
@@ -2024,13 +2121,19 @@ print(f"Dirmap-like scan completed. Found {{len(results)}} results.")
         if tech_info.get("technologies"):
             interesting_files = []
             if "wordpress" in tech_info["technologies"]:
-                interesting_files.extend(["wp-config.php", "wp-admin", ".htaccess", "wp-content"])
+                interesting_files.extend(
+                    ["wp-config.php", "wp-admin", ".htaccess", "wp-content"]
+                )
             if "php" in tech_info["technologies"]:
-                interesting_files.extend(["config.php", "database.php", "settings.php", "phpinfo.php"])
+                interesting_files.extend(
+                    ["config.php", "database.php", "settings.php", "phpinfo.php"]
+                )
             if "apache" in tech_info["technologies"]:
                 interesting_files.extend([".htaccess", ".htpasswd", "httpd.conf"])
             if "nginx" in tech_info["technologies"]:
-                interesting_files.extend(["nginx.conf", "sites-available", "sites-enabled"])
+                interesting_files.extend(
+                    ["nginx.conf", "sites-available", "sites-enabled"]
+                )
             if interesting_files:
                 dirhunt_cmd += ["--interesting-files", ",".join(interesting_files)]
 
@@ -2066,8 +2169,12 @@ print(f"Dirmap-like scan completed. Found {{len(results)}} results.")
 
         if verbose:
             click.echo(f"🔧 [DIRHUNT] Command: {' '.join(dirhunt_cmd)}")
-            click.echo("🧠 [DIRHUNT] Using intelligent directory discovery without brute force")
-            click.echo("🔍 [DIRHUNT] Analyzing robots.txt, wayback machine, and page structure")
+            click.echo(
+                "🧠 [DIRHUNT] Using intelligent directory discovery without brute force"
+            )
+            click.echo(
+                "🔍 [DIRHUNT] Analyzing robots.txt, wayback machine, and page structure"
+            )
 
         result = subprocess.run(dirhunt_cmd, capture_output=True, text=True)
 
@@ -2075,13 +2182,17 @@ print(f"Dirmap-like scan completed. Found {{len(results)}} results.")
             if verbose:
                 click.echo(f"⚠️ [DIRHUNT] Warning: {result.stderr}")
                 click.echo(f"💡 [DIRHUNT] Install with: pip install dirhunt")
-            
+
             # Fallback: create a simple intelligent scanner
             if verbose:
-                click.echo("🔄 [DIRHUNT] Falling back to built-in intelligent scanner...")
-            
+                click.echo(
+                    "🔄 [DIRHUNT] Falling back to built-in intelligent scanner..."
+                )
+
             fallback_cmd = [
-                "python3", "-c", f'''
+                "python3",
+                "-c",
+                f'''
 import requests
 import re
 from urllib.parse import urljoin, urlparse
@@ -2149,44 +2260,57 @@ def intelligent_scan(base_url):
 print("Starting intelligent directory discovery...")
 urls = intelligent_scan("{url}")
 print(f"Found {{len(urls)}} potential directories")
-'''
+''',
             ]
-            
-            fallback_result = subprocess.run(fallback_cmd, capture_output=True, text=True)
-            
+
+            fallback_result = subprocess.run(
+                fallback_cmd, capture_output=True, text=True
+            )
+
             # Write fallback results to output file
             with open(output_file, "w") as f:
                 f.write(fallback_result.stdout)
 
         # Check if dirhunt created a JSON output file and convert it
-        json_output_file = output_file.with_suffix('.json')
+        json_output_file = output_file.with_suffix(".json")
         if json_output_file.exists():
             try:
                 import json
-                with open(json_output_file, 'r') as f:
+
+                with open(json_output_file, "r") as f:
                     dirhunt_data = json.load(f)
-                
+
                 # Convert JSON to simple text format for our parser
-                with open(output_file, 'w') as f:
+                with open(output_file, "w") as f:
                     # Process main results
-                    if 'processed' in dirhunt_data:
-                        for url_data in dirhunt_data['processed'].values():
-                            if isinstance(url_data, dict) and 'response' in url_data:
-                                status = url_data['response'].get('status_code', 200)
-                                url_addr = url_data.get('url', {}).get('address', {}).get('address', '')
+                    if "processed" in dirhunt_data:
+                        for url_data in dirhunt_data["processed"].values():
+                            if isinstance(url_data, dict) and "response" in url_data:
+                                status = url_data["response"].get("status_code", 200)
+                                url_addr = (
+                                    url_data.get("url", {})
+                                    .get("address", {})
+                                    .get("address", "")
+                                )
                                 if url_addr:
                                     f.write(f"[{status}] {url_addr}\\n")
-                    
+
                     # Process index_of results
-                    if 'index_of_processors' in dirhunt_data:
-                        for proc_data in dirhunt_data['index_of_processors']:
-                            if isinstance(proc_data, dict) and 'crawler_url' in proc_data:
-                                crawler_url = proc_data['crawler_url']
-                                if 'url' in crawler_url and 'address' in crawler_url['url']:
-                                    status = proc_data.get('status_code', 200)
-                                    url_addr = crawler_url['url']['address']['address']
+                    if "index_of_processors" in dirhunt_data:
+                        for proc_data in dirhunt_data["index_of_processors"]:
+                            if (
+                                isinstance(proc_data, dict)
+                                and "crawler_url" in proc_data
+                            ):
+                                crawler_url = proc_data["crawler_url"]
+                                if (
+                                    "url" in crawler_url
+                                    and "address" in crawler_url["url"]
+                                ):
+                                    status = proc_data.get("status_code", 200)
+                                    url_addr = crawler_url["url"]["address"]["address"]
                                     f.write(f"[{status}] {url_addr}\\n")
-                
+
                 if verbose:
                     click.echo("✅ [DIRHUNT] Converted JSON output to text format")
             except Exception as e:
@@ -2211,7 +2335,7 @@ print(f"Found {{len(urls)}} potential directories")
 
         findings = parse_tool_output(tool, output_file, url)
         initial_count = len(findings)
-        
+
         if verbose:
             click.echo(f"📊 [PARSE] Found {initial_count} initial results")
 
@@ -2222,7 +2346,9 @@ print(f"Found {{len(urls)}} potential directories")
             findings = smart_filter_responses(findings, similarity_threshold)
             filtered_count = len(findings)
             if verbose:
-                click.echo(f"🧠 [SMART-FILTER] Filtered out {initial_count - filtered_count} false positives/duplicates")
+                click.echo(
+                    f"🧠 [SMART-FILTER] Filtered out {initial_count - filtered_count} false positives/duplicates"
+                )
 
         # Apply response pattern analysis if enabled
         if response_analysis and findings:
@@ -2231,7 +2357,9 @@ print(f"Found {{len(urls)}} potential directories")
             pattern_analysis = analyze_response_patterns(findings)
             stats["pattern_analysis"] = pattern_analysis
             if verbose and pattern_analysis.get("anomalies"):
-                click.echo(f"� [ANALYSIS] Found {len(pattern_analysis['anomalies'])} anomalies")
+                click.echo(
+                    f"� [ANALYSIS] Found {len(pattern_analysis['anomalies'])} anomalies"
+                )
 
         # Apply honeypot and WAF detection if enabled
         if honeypot_detection and findings:
@@ -2243,24 +2371,34 @@ print(f"Found {{len(urls)}} potential directories")
                 honeypot_count = len(security_analysis.get("honeypot_indicators", []))
                 waf_count = len(security_analysis.get("waf_indicators", []))
                 if honeypot_count > 0:
-                    click.echo(f"🕵️ [SECURITY] Found {honeypot_count} potential honeypot indicators")
+                    click.echo(
+                        f"🕵️ [SECURITY] Found {honeypot_count} potential honeypot indicators"
+                    )
                 if waf_count > 0:
-                    click.echo(f"🕵️ [SECURITY] Found {waf_count} potential WAF responses")
+                    click.echo(
+                        f"🕵️ [SECURITY] Found {waf_count} potential WAF responses"
+                    )
 
         # Apply adaptive threading if enabled
         if adaptive_threading and findings:
             optimal_threads = adaptive_threading_controller(findings, threads)
             if verbose and optimal_threads != threads:
-                click.echo(f"⚡ [ADAPTIVE] Recommended threads: {optimal_threads} (used: {threads})")
+                click.echo(
+                    f"⚡ [ADAPTIVE] Recommended threads: {optimal_threads} (used: {threads})"
+                )
             stats["recommended_threads"] = optimal_threads
 
         # Backup file detection if enabled
         if backup_detection and findings:
             if verbose:
                 click.echo("💾 [BACKUP] Generating backup file wordlist...")
-            backup_words = generate_backup_wordlist(wordlist, tech_info.get("technologies", []))
+            backup_words = generate_backup_wordlist(
+                wordlist, tech_info.get("technologies", [])
+            )
             if backup_words and verbose:
-                click.echo(f"💾 [BACKUP] Generated {len(backup_words)} backup variations")
+                click.echo(
+                    f"💾 [BACKUP] Generated {len(backup_words)} backup variations"
+                )
             stats["backup_words_generated"] = len(backup_words) if backup_words else 0
 
         # Parameter discovery if enabled
@@ -2270,8 +2408,12 @@ print(f"Found {{len(urls)}} potential directories")
             param_discoveries = discover_parameters(findings, url, timeout)
             stats["parameter_discoveries"] = param_discoveries
             if verbose and param_discoveries:
-                total_params = sum(len(d.get("parameters", [])) for d in param_discoveries)
-                click.echo(f"🔧 [PARAMS] Found {total_params} potential parameters across {len(param_discoveries)} endpoints")
+                total_params = sum(
+                    len(d.get("parameters", [])) for d in param_discoveries
+                )
+                click.echo(
+                    f"🔧 [PARAMS] Found {total_params} potential parameters across {len(param_discoveries)} endpoints"
+                )
 
         stats["findings_count"] = len(findings)
     else:

@@ -2,6 +2,7 @@
 import os
 import json
 import subprocess
+import shlex
 import click
 import requests
 import socket
@@ -172,7 +173,7 @@ def subdocli(
 
         start_time = time.time()
         try:
-            result = subprocess.check_output(
+            result = subprocess.check_output(  # nosec B602
                 cmd, shell=True, stderr=subprocess.DEVNULL, text=True, timeout=timeout
             )
             lines = [line.strip() for line in result.splitlines() if line.strip()]
@@ -343,7 +344,7 @@ def probe_http_services(targets, timeout, threads, verbose):
             try:
                 url = f"{scheme}://{subdomain}"
                 response = requests.get(
-                    url, timeout=timeout, allow_redirects=True, verify=False
+                    url, timeout=timeout, allow_redirects=True, verify=True
                 )
 
                 result[scheme]["accessible"] = True

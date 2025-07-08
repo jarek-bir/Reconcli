@@ -37,7 +37,7 @@ def send_notification(webhook_url, message, service="slack"):
 def check_api_accessibility(url, timeout=5):
     """Check if API endpoint is accessible."""
     try:
-        response = requests.get(url, timeout=timeout, verify=False)
+        response = requests.get(url, timeout=timeout, verify=True)
         return {
             "accessible": True,
             "status_code": response.status_code,
@@ -64,7 +64,7 @@ def detect_api_technology(url, timeout=3):
     """Detect API technology stack and framework."""
     try:
         headers = {"User-Agent": "APICLI/1.0 ReconCLI API Scanner"}
-        response = requests.get(url, headers=headers, timeout=timeout, verify=False)
+        response = requests.get(url, headers=headers, timeout=timeout, verify=True)
 
         api_indicators = {
             "rest": [
@@ -202,7 +202,7 @@ def discover_api_endpoints(base_url, common_paths=None, timeout=3):
     def check_endpoint(path):
         try:
             url = urljoin(base_url, path)
-            response = requests.get(url, timeout=timeout, verify=False)
+            response = requests.get(url, timeout=timeout, verify=True)
             return {
                 "url": url,
                 "path": path,
@@ -249,7 +249,7 @@ def test_http_methods(url, timeout=3):
 
     for method in methods:
         try:
-            response = requests.request(method, url, timeout=timeout, verify=False)
+            response = requests.request(method, url, timeout=timeout, verify=True)
             results[method] = {
                 "status_code": response.status_code,
                 "allowed": response.status_code not in [404, 405],
@@ -300,7 +300,7 @@ def test_authentication_bypass(url, timeout=3):
 
     for headers in bypass_headers:
         try:
-            response = requests.get(url, headers=headers, timeout=timeout, verify=False)
+            response = requests.get(url, headers=headers, timeout=timeout, verify=True)
             test_name = f"Header: {list(headers.keys())[0]}"
             bypass_tests.append(
                 {
@@ -343,7 +343,7 @@ def test_parameter_pollution(url, timeout=3):
     for params in test_params:
         try:
             # Test with parameter pollution
-            response = requests.get(url, params=params, timeout=timeout, verify=False)
+            response = requests.get(url, params=params, timeout=timeout, verify=True)
             pollution_tests.append(
                 {
                     "params": params,
@@ -375,7 +375,7 @@ def test_rate_limiting(url, requests_count=10, timeout=3):
     for i in range(requests_count):
         try:
             start_time = time.time()
-            response = requests.get(url, timeout=timeout, verify=False)
+            response = requests.get(url, timeout=timeout, verify=True)
             end_time = time.time()
 
             rate_limit_results.append(
@@ -438,7 +438,7 @@ def test_cors_configuration(url, timeout=3):
 
             # Test preflight request
             response = requests.options(
-                url, headers=headers, timeout=timeout, verify=False
+                url, headers=headers, timeout=timeout, verify=True
             )
 
             cors_tests.append(
@@ -535,7 +535,7 @@ def test_injection_vulnerabilities(url, timeout=3):
                 parsed_url = urlparse(url)
                 test_url = f"{url}?test={quote(payload)}"
 
-                response = requests.get(test_url, timeout=timeout, verify=False)
+                response = requests.get(test_url, timeout=timeout, verify=True)
 
                 # Check for error patterns that might indicate vulnerability
                 error_patterns = [

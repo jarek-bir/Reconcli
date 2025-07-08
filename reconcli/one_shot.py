@@ -1,5 +1,7 @@
 import os
 import sys
+import subprocess
+import shlex
 import click
 
 
@@ -30,7 +32,7 @@ def cli(domain, output_dir, resolvers, wordlist, proxy, flow, resume, only_dns):
 
     print("[ONE-SHOT] Running DNS module...")
     print(f"[ONE-SHOT] Command: {dns_cmd}")
-    os.system(dns_cmd)
+    subprocess.run(shlex.split(dns_cmd), check=True)
 
     if only_dns:
         return
@@ -56,7 +58,7 @@ def cli(domain, output_dir, resolvers, wordlist, proxy, flow, resume, only_dns):
         print(f"[ONE-SHOT] Could not find {ips_file}, skipping IPS module.")
         sys.exit(1)
     ips_cmd = f"reconcli ipscli --input {ips_file} --scan rustscan --output-dir {output_dir}/ipscan --verbose"
-    os.system(ips_cmd)
+    subprocess.run(shlex.split(ips_cmd), check=True)
 
     # URL Discovery
     print("[ONE-SHOT] Running URL module...")
@@ -69,7 +71,7 @@ def cli(domain, output_dir, resolvers, wordlist, proxy, flow, resume, only_dns):
     )
     if proxy:
         url_cmd += f" --proxy {proxy}"
-    os.system(url_cmd)
+    subprocess.run(shlex.split(url_cmd), check=True)
 
     # Vulnerability Scanning
     print("[ONE-SHOT] Running VULN module...")
@@ -80,7 +82,7 @@ def cli(domain, output_dir, resolvers, wordlist, proxy, flow, resume, only_dns):
     vuln_cmd = (
         f"reconcli vulncli --input {urls_json} --output-dir {output_dir}/vulnscan"
     )
-    os.system(vuln_cmd)
+    subprocess.run(shlex.split(vuln_cmd), check=True)
 
     print("[ONE-SHOT] Recon complete. All results in:", output_dir)
 

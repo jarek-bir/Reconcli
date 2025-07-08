@@ -38,7 +38,7 @@ def detect_technology(url, custom_headers=None, timeout=30):
                 key, value = header.split(":", 1)
                 headers[key.strip()] = value.strip()
 
-        response = requests.get(url, headers=headers, timeout=timeout, verify=False)
+        response = requests.get(url, headers=headers, timeout=timeout, verify=True)
 
         tech_stack = []
 
