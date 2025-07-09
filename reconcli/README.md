@@ -12,6 +12,21 @@ A comprehensive, modular reconnaissance toolkit designed for security profession
 
 🔗 **GitHub Repository**: [https://github.com/jarek-bir/Reconcli](https://github.com/jarek-bir/Reconcli)
 
+## 👥 Authors
+
+**Jarek + AI + Copilot = cyber-squad z przyszłości** 🚀🤖
+
+*A collaborative project combining human expertise, artificial intelligence, and GitHub Copilot to create cutting-edge cybersecurity tools.*
+
+## 👥 Authors
+
+**🚀 Cyber-Squad z Przyszłości**
+- **Jarek** 🧑‍💻 - Lead Developer & Security Researcher
+- **AI Assistant** 🤖 - Code Architecture & Advanced Features  
+- **GitHub Copilot** ⚡ - Code Generation & Optimization
+
+*Collaboration between human expertise and AI innovation to create cutting-edge security tools.*
+
 ## 🚀 Quick Start
 
 ```bash
@@ -445,6 +460,222 @@ reconcli tldr -d enterprise --categories all --threads 100 \
   --save-json --save-markdown --verbose
 ```
 
+### 🔄 Advanced Permutation Generation (`permutcli`)
+- **16 Specialized Tools**: Internal engine, gotator, goaltdns, dnstwist, dnsgen, urlcrazy, shuffledns, dmut, s3scanner, alterx, kr (kitrunner), sublist3r, amass, subfinder, assetfinder, findomain
+- **Multi-Type Permutations**: Subdomains, paths, buckets, parameters, and API endpoints
+- **Advanced S3 Bucket Generator**: 300+ permutation patterns with AWS URL formats, custom suffixes, and deduplication
+- **TLD Injection Mode**: Focus on TLD variations with custom lists and exclusions
+- **Smart Case Mutations**: Automatic case-based variations (Dev, DEV, dev) for keywords and targets
+- **Advanced CLI Options**: Prefix/suffix-only modes, keyword exclusions, result filtering, chunked output
+- **DNS Resolver Updates**: Automatic download of latest resolver lists from Trickest and public sources
+- **Professional Output**: JSON/TXT formats with chunking, filtering, and comprehensive result management
+
+#### 🎯 Multi-Engine Permutation Support
+
+**DNS Tools:**
+- **dnstwist**: Domain variation and typosquatting detection
+- **dnsgen**: Advanced subdomain generation with custom wordlists
+- **shuffledns**: High-performance DNS bruteforcing with resolver rotation
+- **dmut**: Comprehensive mutation-based subdomain discovery
+- **alterx**: Fast and flexible subdomain permutation
+- **sublist3r, amass, subfinder, assetfinder, findomain**: Passive enumeration integration
+
+**URL & Path Tools:**
+- **urlcrazy**: URL typosquatting and permutation analysis
+- **gotator**: Advanced subdomain permutation with depth control
+- **goaltdns**: ALT-DNS style permutation generation
+
+**Cloud & API Tools:**
+- **s3scanner**: S3 bucket discovery with advanced naming patterns
+- **kr (kitrunner)**: API endpoint discovery and testing
+
+**Internal Engine:**
+- **Advanced Built-in Generator**: Custom patterns, TLD support, case mutations
+
+#### 🪣 Advanced S3 Bucket Permutation Engine
+
+**Comprehensive Pattern Generation:**
+- **300+ Unique Patterns**: Brand combinations, suffix variations, year integration
+- **AWS URL Formats**: Complete S3 URL patterns (`.s3.amazonaws.com`, regional endpoints)
+- **Multi-Style Separators**: Dashes, dots, underscores for maximum coverage
+- **Business Patterns**: Company structures, departments, environments
+- **Cloud Provider Variations**: AWS, GCP, Azure specific naming conventions
+- **Perfect Deduplication**: Ordered set approach preserving generation quality
+
+```bash
+# Basic S3 bucket permutation
+reconcli permutcli --input brands.txt --output s3_buckets.txt --tool s3scanner \
+  --permutation-type buckets --verbose
+
+# Advanced S3 bucket generation with custom keywords
+reconcli permutcli --input companies.txt --output advanced_buckets.txt \
+  --tool s3scanner --keywords "dev,staging,prod,backup,logs,cdn" \
+  --inject-suffix "-backup,-cdn,-api" --year 2025 --verbose
+
+# S3 bucket discovery with chunked output
+reconcli permutcli --input targets.txt --output s3_discovery.txt \
+  --tool s3scanner --chunk 1000 --max-results 5000 --uniq --verbose
+```
+
+#### 🌐 TLD Injection Mode
+
+**Advanced TLD Management:**
+- **2,672+ TLD Support**: Complete TLD coverage with custom list support
+- **www Prefix Integration**: Automatic www prefix generation
+- **Custom Suffix/Prefix Injection**: Advanced pattern injection before TLDs
+- **TLD Exclusions**: Filter out unwanted TLDs (gov, edu, mil)
+- **Dry-run Mode**: Preview generation counts without execution
+
+```bash
+# Basic TLD injection mode
+reconcli permutcli --input brands.txt --output tld_variants.txt \
+  --mode tldinject --verbose
+
+# Advanced TLD injection with custom lists and filtering
+reconcli permutcli --input companies.txt --output tld_advanced.txt \
+  --mode tldinject --tld-list custom_tlds.txt \
+  --inject-suffix "-cdn,-backup" --exclude-tlds "gov,edu,mil" \
+  --www-prefix --dry-run --verbose
+
+# TLD injection with chunked output
+reconcli permutcli --input targets.txt --output tld_chunked.txt \
+  --mode tldinject --chunk 500 --max-results 2000 --verbose
+```
+
+#### 🔤 Advanced Mutation & Filtering Options
+
+**Case Mutations:**
+- **Automatic Case Variations**: Generate Dev, DEV, dev, Development variants
+- **Smart Detection**: Only apply to alphabetic keywords and targets
+- **Deduplication**: Automatic removal of case-based duplicates
+
+**Advanced Filtering:**
+- **Keyword Exclusions**: Remove unwanted keywords from generation
+- **Pattern Filtering**: Keep only matching patterns with regex support
+- **Result Exclusions**: Remove specific patterns from final output
+- **Prefix/Suffix Only**: Generate only prefix or suffix-based permutations
+
+**Output Management:**
+- **Chunked Output**: Split large results into manageable files
+- **Format Options**: JSON and TXT output with comprehensive metadata
+- **Result Limits**: Control maximum output size for performance
+- **Duplicate Removal**: Advanced deduplication across all tools
+
+```bash
+# Case mutation with filtering
+reconcli permutcli --input targets.txt --output mutations.txt \
+  --tool internal --mutate-case --exclude-keywords "test,old,backup" \
+  --filter "api,admin,dev" --verbose
+
+# Prefix-only subdomain generation
+reconcli permutcli --input domains.txt --output prefix_subs.txt \
+  --tool internal --permutation-type subdomains --prefix-only \
+  --keywords "api,admin,dev,staging" --verbose
+
+# Advanced filtering with chunked output
+reconcli permutcli --input companies.txt --output filtered_results.txt \
+  --tool gotator --exclude "temp,old,test" --max-results 10000 \
+  --chunk 1000 --uniq --verbose
+```
+
+#### 🛠️ Tool-Specific Advanced Options
+
+**Internal Engine:**
+- **Custom Patterns**: Load pattern templates from files
+- **TLD Integration**: Include common TLD variations
+- **Advanced Mode**: Complex pattern generation with numbers and separators
+- **Prefix/Suffix Control**: Granular control over permutation direction
+
+**External Tools:**
+- **Threading Control**: Configurable concurrency for supported tools
+- **Timeout Management**: Per-tool timeout configuration
+- **Depth Control**: Permutation depth for tools like gotator
+- **Resolution Options**: DNS resolution for enumeration tools
+
+**S3Scanner Integration:**
+- **Cloud Provider Selection**: AWS, GCP, Azure, or all providers
+- **Custom Suffixes**: Business-specific suffix patterns
+- **Year Integration**: Current year and custom year support
+- **Advanced Patterns**: 10+ categories of bucket naming conventions
+
+```bash
+# Internal engine with advanced patterns
+reconcli permutcli --input targets.txt --output internal_advanced.txt \
+  --tool internal --advanced --include-tlds --numbers \
+  --patterns custom_patterns.txt --verbose
+
+# Gotator with depth control
+reconcli permutcli --input subdomains.txt --output gotator_deep.txt \
+  --tool gotator --depth 3 --threads 20 --timeout 120 --verbose
+
+# DMut with custom threading
+reconcli permutcli --input domains.txt --output dmut_results.txt \
+  --tool dmut --threads 50 --keywords "dev,api,admin" --verbose
+
+# Multi-tool S3 discovery workflow
+reconcli permutcli --input brands.txt --output s3_comprehensive.txt \
+  --tool s3scanner --cloud-provider all --advanced \
+  --keywords "backup,logs,assets,cdn,data" --max-results 20000 \
+  --chunk 2000 --format json --verbose
+```
+
+#### 🔧 DNS Resolver Management
+
+**Automatic Resolver Updates:**
+- **Trickest Integration**: Download latest public resolver lists
+- **Custom Resolver Support**: Use organization-specific DNS servers
+- **Multi-Source Updates**: Aggregate from multiple resolver sources
+- **Performance Optimization**: Ensure optimal DNS resolution for tools
+
+```bash
+# Update DNS resolvers for shuffledns and other tools
+reconcli permutcli --update-resolvers --verbose
+
+# Use updated resolvers in permutation generation
+reconcli permutcli --input targets.txt --output shuffled_results.txt \
+  --tool shuffledns --threads 100 --resolve --verbose
+```
+
+#### 🎯 Professional Workflow Examples
+
+```bash
+# Comprehensive subdomain discovery workflow
+reconcli permutcli --input target_domains.txt --output comprehensive_subs.txt \
+  --tool internal --advanced --mutate-case --include-tlds \
+  --keywords "api,admin,dev,staging,prod,test,demo" \
+  --exclude-keywords "old,legacy" --max-results 50000 \
+  --chunk 5000 --format json --verbose
+
+# S3 bucket hunting for bug bounty
+reconcli permutcli --input company_names.txt --output s3_hunt.txt \
+  --tool s3scanner --permutation-type buckets \
+  --keywords "backup,logs,assets,data,cdn,static" \
+  --inject-suffix "-backup,-logs,-data" --cloud-provider aws \
+  --max-results 10000 --uniq --verbose
+
+# API endpoint discovery workflow
+reconcli permutcli --input api_targets.txt --output api_endpoints.txt \
+  --tool kr --permutation-type api --api-endpoints \
+  --keywords "v1,v2,api,rest,graphql" --timeout 180 --verbose
+
+# TLD variation discovery for typosquatting research
+reconcli permutcli --input brand_list.txt --output tld_research.txt \
+  --mode tldinject --inject-suffix "-shop,-store,-online" \
+  --exclude-tlds "gov,edu,mil" --chunk 1000 --dry-run --verbose
+
+# Path permutation for web application testing
+reconcli permutcli --input base_paths.txt --output path_permutations.txt \
+  --tool internal --permutation-type paths \
+  --keywords "admin,api,backup,config,test" \
+  --advanced --max-results 25000 --verbose
+
+# Multi-engine DNS discovery campaign
+reconcli permutcli --input root_domains.txt --output dns_campaign.txt \
+  --tool shuffledns --keywords "api,admin,dev,staging,prod" \
+  --threads 200 --resolve --max-results 100000 \
+  --chunk 10000 --format json --verbose
+```
+
 ### 🌐 Additional Core Modules
 - **Cloud Detection & S3 Enumeration** (`cloudcli`): Comprehensive cloud provider detection and S3 bucket enumeration
 - **CNAME Analysis** (`cnamecli`): Advanced CNAME resolution, direct A/AAAA analysis, subdomain takeover detection with Discord/Slack notifications
@@ -544,6 +775,7 @@ reconcli --help
 reconcli/
 ├── __init__.py
 ├── main.py                 # Main CLI entry point
+├── permutcli.py           # Advanced permutation generation (NEW)
 ├── cloudcli.py            # Cloud provider detection & S3 enumeration (NEW)
 ├── subdocli.py            # Enhanced subdomain enumeration (NEW)
 ├── urlcli.py              # URL discovery and analysis (ENHANCED)
@@ -1077,6 +1309,18 @@ This project is licensed under the MIT License - see the [LICENSE](https://githu
 
 ### Latest Changes (v3.0.0)
 
+- ✅ **NEW: permutcli.py** - Advanced permutation generation platform
+  - **🔄 16 Specialized Tools**: Internal, gotator, goaltdns, dnstwist, dnsgen, urlcrazy, shuffledns, dmut, s3scanner, alterx, kr, sublist3r, amass, subfinder, assetfinder, findomain
+  - **🎯 Multi-Type Permutations**: Subdomains, paths, buckets, parameters, and API endpoints with specialized engines
+  - **🪣 Advanced S3 Bucket Generator**: 300+ permutation patterns with AWS URL formats, business naming conventions, and perfect deduplication
+  - **🌐 TLD Injection Mode**: 2,672+ TLD support with custom lists, exclusions, and www prefix integration
+  - **🔤 Smart Case Mutations**: Automatic case-based variations (Dev, DEV, dev) for enhanced discovery coverage
+  - **🎛️ Advanced CLI Options**: Prefix/suffix-only modes, keyword exclusions, pattern filtering, chunked output, dry-run mode
+  - **📡 DNS Resolver Management**: Automatic download of latest resolver lists from Trickest and public sources
+  - **📊 Professional Output**: JSON/TXT formats with chunking, filtering, deduplication, and comprehensive result management
+  - **⚡ High Performance**: Multi-threaded processing with configurable timeouts and robust error handling
+  - **🔄 Enterprise Features**: Resume support, progress tracking, and batch processing for large-scale campaigns
+
 - ✅ **NEW: vulncli.py** - Advanced AI-powered vulnerability scanning platform
   - **🤖 AI-Powered Intelligence**: Smart Nuclei template selection and false positive reduction
   - **⚡ Multi-Engine Support**: Nuclei and Jaeles scanners with unified interface  
@@ -1235,6 +1479,33 @@ This project is licensed under the MIT License - see the [LICENSE](https://githu
 - **Security**: Please report security issues privately
 
 ### 🌟 Show Your Support
+- ⭐ Star this repository if you find it helpful
+- 🍴 Fork it to contribute
+- 📢 Share with the community
+
+## 👥 Authors & Contributors
+
+### 🚀 Cyber-Squad z Przyszłości
+
+**The ReconCLI project is brought to you by:**
+
+- **Jarek** 🧑‍💻 - Lead Developer & Security Researcher
+- **AI Assistant** 🤖 - Advanced Algorithm Development & Code Architecture
+- **GitHub Copilot** ⚡ - Intelligent Code Completion & Optimization
+
+*A collaborative effort combining human expertise, artificial intelligence, and cutting-edge development tools to create next-generation cybersecurity reconnaissance tools.*
+
+### 🌟 Special Thanks
+
+- Open source security community for inspiration and feedback
+- Contributors and testers who help improve the toolkit
+- Security researchers who provide valuable insights
+
+---
+
+**Made with ❤️ by the Cyber-Squad z Przyszłości**
+
+*"Where human creativity meets artificial intelligence to secure the digital frontier"* 🚀🔐
 If ReconCLI helps you in your security research or bug bounty hunting, consider:
 - ⭐ Starring the repository on GitHub
 - 🐛 Reporting bugs and suggesting features

@@ -12,14 +12,14 @@ from pathlib import Path
 @click.option(
     "--input",
     "-i",
-    required=True,
+    required=False,
     type=click.Path(exists=True),
     help="Input file (e.g. subdomains, words)",
 )
 @click.option(
     "--output",
     "-o",
-    required=True,
+    required=False,
     type=click.Path(),
     help="Output file with generated permutations",
 )
@@ -52,7 +52,16 @@ from pathlib import Path
 @click.option(
     "--keywords", type=str, help="Comma-separated keywords (e.g. dev,test,stage)"
 )
-@click.option("--brand", type=str, help="Optional brand name (e.g. tesla)")
+@click.option(
+    "--brand",
+    type=str,
+    help="Brand name(s) - single brand or comma-separated list (e.g. tesla or tesla,zoom,slack)",
+)
+@click.option(
+    "--brand-from-file",
+    type=click.Path(exists=True),
+    help="Load brand names from file (one per line)",
+)
 @click.option(
     "--year",
     type=str,
@@ -123,25 +132,67 @@ from pathlib import Path
     "--years", type=str, help="Comma-separated years to include (default: current year)"
 )
 @click.option(
-    "--mode", 
+    "--mode",
     type=click.Choice(["full", "tldinject"], case_sensitive=False),
     default="full",
-    help="Generation mode: full (all permutations) or tldinject (TLD variations only)"
+    help="Generation mode: full (all permutations) or tldinject (TLD variations only)",
 )
 @click.option(
-    "--tld-list", 
+    "--tld-list",
     type=click.Path(exists=True),
-    help="Custom TLD list file (instead of hardcoded TLDs)"
+    help="Custom TLD list file (instead of hardcoded TLDs)",
 )
 @click.option(
-    "--www-prefix", 
+    "--www-prefix",
     is_flag=True,
-    help="Generate only www. + TLD variations (for tldinject mode)"
+    help="Generate only www. + TLD variations (for tldinject mode)",
 )
 @click.option(
-    "--dry-run", 
+    "--dry-run",
     is_flag=True,
-    help="Show only the number of permutations without generating them"
+    help="Show only the number of permutations without generating them",
+)
+@click.option(
+    "--mutate-case", is_flag=True, help="Add case-based variations (Dev, DEV, dev)"
+)
+@click.option(
+    "--exclude-keywords",
+    type=str,
+    help="Comma-separated keywords to exclude from generation",
+)
+@click.option(
+    "--filter", type=str, help="Comma-separated patterns to keep only matching results"
+)
+@click.option("--chunk", type=int, help="Split output into chunks of N lines each")
+@click.option(
+    "--prefix-only",
+    is_flag=True,
+    help="Generate only prefix-based permutations (keyword.domain)",
+)
+@click.option(
+    "--suffix-only",
+    is_flag=True,
+    help="Generate only suffix-based permutations (domain.keyword)",
+)
+@click.option(
+    "--inject-suffix",
+    type=str,
+    help="Comma-separated suffixes to append before TLDs (e.g. -cdn,-edge,-backup)",
+)
+@click.option(
+    "--inject-prefix",
+    type=str,
+    help="Comma-separated prefixes to prepend to domains (e.g. dev-,staging-,test-)",
+)
+@click.option(
+    "--exclude-tlds",
+    type=str,
+    help="Comma-separated TLDs to exclude from generation (e.g. gov,edu,mil)",
+)
+@click.option(
+    "--update-resolvers",
+    is_flag=True,
+    help="Download/update DNS resolver lists for tools like shuffledns",
 )
 def permutcli(
     input,
@@ -149,6 +200,7 @@ def permutcli(
     tool,
     keywords,
     brand,
+    brand_from_file,
     year,
     uniq,
     domain,
@@ -175,6 +227,16 @@ def permutcli(
     tld_list,
     www_prefix,
     dry_run,
+    mutate_case,
+    exclude_keywords,
+    filter,
+    chunk,
+    prefix_only,
+    suffix_only,
+    inject_suffix,
+    inject_prefix,
+    exclude_tlds,
+    update_resolvers,
 ):
     """🔄 Generate permutations of subdomains, paths, buckets, or parameters using various advanced tools.
 
@@ -185,6 +247,26 @@ def permutcli(
     - APIs: kr (kitrunner)
     - Internal: advanced built-in generator
     """
+
+    # Handle --update-resolvers first
+    if update_resolvers:
+        update_dns_resolvers(verbose)
+        return
+
+    # Check required parameters if not updating resolvers
+    if not input:
+        click.secho(
+            "[!] ❌ Error: --input/-i is required (unless using --update-resolvers)",
+            fg="red",
+        )
+        return
+
+    if not output:
+        click.secho(
+            "[!] ❌ Error: --output/-o is required (unless using --update-resolvers)",
+            fg="red",
+        )
+        return
 
     if silent:
         verbose = False
@@ -210,8 +292,37 @@ def permutcli(
     keyword_list = []
     if keywords:
         keyword_list.extend([k.strip() for k in keywords.split(",")])
+
+    # Handle brand options - support both single/multi brands and file input
     if brand:
-        keyword_list.append(brand)
+        # Support comma-separated brands in --brand option
+        brand_names = [b.strip() for b in brand.split(",")]
+        keyword_list.extend(brand_names)
+        if verbose and not silent:
+            click.secho(
+                f"[+] 🏷️  Added brands from --brand: {', '.join(brand_names)}",
+                fg="green",
+            )
+
+    if brand_from_file:
+        # Load brands from file
+        try:
+            with open(brand_from_file, "r", encoding="utf-8", errors="ignore") as f:
+                brand_names_from_file = [line.strip() for line in f if line.strip()]
+            keyword_list.extend(brand_names_from_file)
+            if verbose and not silent:
+                click.secho(
+                    f"[+] 📁 Loaded {len(brand_names_from_file)} brands from file: {brand_from_file}",
+                    fg="green",
+                )
+                click.secho(
+                    f"[+] 🏷️  Brands: {', '.join(brand_names_from_file[:5])}{'...' if len(brand_names_from_file) > 5 else ''}",
+                    fg="blue",
+                )
+        except Exception as e:
+            click.secho(f"[!] ❌ Error reading brand file: {e}", fg="red")
+            return
+
     if year:
         keyword_list.append(year)
 
@@ -229,6 +340,50 @@ def permutcli(
         number_variations = ["01", "02", "03", "1", "2", "3", "123", "2024", "2025"]
         keyword_list.extend(number_variations)
 
+    # Apply exclude-keywords filter
+    if exclude_keywords:
+        exclude_list = [k.strip().lower() for k in exclude_keywords.split(",")]
+        keyword_list = [k for k in keyword_list if k.lower() not in exclude_list]
+        if verbose and not silent:
+            click.secho(
+                f"[+] 🚫 Excluded keywords: {', '.join(exclude_list)}", fg="yellow"
+            )
+
+    # Apply case mutations if requested
+    if mutate_case:
+        # Apply case mutations to keywords
+        original_keywords = keyword_list.copy()
+        for keyword in original_keywords:
+            if keyword.isalpha():  # Only for alphabetic keywords
+                keyword_list.extend(
+                    [
+                        keyword.lower(),
+                        keyword.upper(),
+                        keyword.capitalize(),
+                        keyword.title(),
+                    ]
+                )
+        # Remove duplicates after case mutations
+        keyword_list = list(set(keyword_list))
+
+        # Apply case mutations to base items too
+        original_base_items = base_items.copy()
+        for item in original_base_items:
+            if item.isalpha():  # Only for alphabetic items
+                base_items.extend(
+                    [
+                        item.lower(),
+                        item.upper(),
+                        item.capitalize(),
+                        item.title(),
+                    ]
+                )
+        # Remove duplicates after case mutations
+        base_items = list(set(base_items))
+
+        if verbose and not silent:
+            click.secho(f"[+] 🔤 Added case variations", fg="cyan")
+
     if verbose and not silent and keyword_list:
         click.secho(
             f"[+] 🔑 Keywords: {', '.join(keyword_list[:10])}{'...' if len(keyword_list) > 10 else ''}",
@@ -240,13 +395,22 @@ def permutcli(
         if verbose and not silent:
             click.secho("[*] 🎯 TLD injection mode enabled", fg="cyan")
         results = run_tld_inject_mode(
-            base_items, tld_list, www_prefix, dry_run, verbose
+            base_items,
+            tld_list,
+            www_prefix,
+            inject_suffix,
+            inject_prefix,
+            exclude_tlds,
+            dry_run,
+            verbose,
         )
-        
+
         if dry_run:
-            click.secho(f"[*] 📊 Would generate {len(results)} TLD permutations", fg="blue")
+            click.secho(
+                f"[*] 📊 Would generate {len(results)} TLD permutations", fg="blue"
+            )
             return
-        
+
         # Process and save results for TLD mode
         if uniq and results:
             original_count = len(results)
@@ -256,14 +420,48 @@ def permutcli(
                     f"[+] 🔍 Removed {original_count - len(results)} duplicates",
                     fg="yellow",
                 )
-        
+
         if max_results and len(results) > max_results:
             results = results[:max_results]
             if verbose and not silent:
                 click.secho(f"[+] 🔢 Limited to {max_results} results", fg="yellow")
-        
+
+        # Handle chunking for TLD mode if requested
+        if chunk and results:
+            if verbose and not silent:
+                click.secho(f"[+] 📦 Splitting into chunks of {chunk} lines", fg="cyan")
+
+            total_chunks = (len(results) + chunk - 1) // chunk  # Ceiling division
+            base_output = output.rsplit(".", 1)
+            if len(base_output) == 2:
+                base_name, extension = base_output
+            else:
+                base_name, extension = output, "txt"
+
+            for i in range(total_chunks):
+                start_idx = i * chunk
+                end_idx = min((i + 1) * chunk, len(results))
+                chunk_results = results[start_idx:end_idx]
+
+                chunk_filename = f"{base_name}_chunk_{i+1:03d}.{extension}"
+                save_results(chunk_results, chunk_filename, format, verbose)
+
+                if verbose and not silent:
+                    click.secho(
+                        f"[+] 📁 Chunk {i+1}/{total_chunks}: {chunk_filename}",
+                        fg="green",
+                    )
+
+            if not silent:
+                click.secho(
+                    f"\n[✓] 🎉 Generated {len(results)} TLD permutations in {total_chunks} chunks",
+                    fg="green",
+                    bold=True,
+                )
+            return
+
         save_results(results, output, format, verbose)
-        
+
         if not silent:
             click.secho(
                 f"\n[✓] 🎉 Generated {len(results)} TLD permutations",
@@ -286,6 +484,8 @@ def permutcli(
                 patterns,
                 tld_list,
                 www_prefix,
+                prefix_only,
+                suffix_only,
             )
         elif tool == "dnstwist":
             results = run_dnstwist(base_items, domain, verbose, timeout)
@@ -329,7 +529,10 @@ def permutcli(
 
         # Handle dry-run mode
         if dry_run:
-            click.secho(f"[*] 📊 Would generate {len(results)} permutations using {tool}", fg="blue")
+            click.secho(
+                f"[*] 📊 Would generate {len(results)} permutations using {tool}",
+                fg="blue",
+            )
             return
 
         # Process results
@@ -363,6 +566,55 @@ def permutcli(
                     f"[+] 🔍 Removed {original_count - len(results)} duplicates",
                     fg="yellow",
                 )
+
+        # Apply filter if provided (keep only matching patterns)
+        if filter and results:
+            filter_patterns = [p.strip().lower() for p in filter.split(",")]
+            original_count = len(results)
+            results = [
+                r
+                for r in results
+                if any(pattern in r.lower() for pattern in filter_patterns)
+            ]
+            if verbose and not silent:
+                click.secho(
+                    f"[+] 🔍 Filter kept {len(results)}/{original_count} results",
+                    fg="cyan",
+                )
+
+        # Handle chunking if requested
+        if chunk and results:
+            if verbose and not silent:
+                click.secho(f"[+] 📦 Splitting into chunks of {chunk} lines", fg="cyan")
+
+            total_chunks = (len(results) + chunk - 1) // chunk  # Ceiling division
+            base_output = output.rsplit(".", 1)
+            if len(base_output) == 2:
+                base_name, extension = base_output
+            else:
+                base_name, extension = output, "txt"
+
+            for i in range(total_chunks):
+                start_idx = i * chunk
+                end_idx = min((i + 1) * chunk, len(results))
+                chunk_results = results[start_idx:end_idx]
+
+                chunk_filename = f"{base_name}_chunk_{i+1:03d}.{extension}"
+                save_results(chunk_results, chunk_filename, format, verbose)
+
+                if verbose and not silent:
+                    click.secho(
+                        f"[+] 📁 Chunk {i+1}/{total_chunks}: {chunk_filename}",
+                        fg="green",
+                    )
+
+            if not silent:
+                click.secho(
+                    f"\n[✓] 🎉 Generated {len(results)} permutations in {total_chunks} chunks using {tool}",
+                    fg="green",
+                    bold=True,
+                )
+            return
 
         # Save output
         save_results(results, output, format, verbose)
@@ -492,6 +744,8 @@ def run_internal_permutator(
     patterns,
     tld_list_file=None,
     www_prefix=False,
+    prefix_only=False,
+    suffix_only=False,
 ):
     """Enhanced internal permutation generator"""
     if verbose:
@@ -516,38 +770,92 @@ def run_internal_permutator(
     for base in base_items:
         for word in keyword_list:
             if permutation_type == "subdomains":
-                results.extend(
-                    [
-                        f"{word}.{base}",
-                        f"{base}.{word}",
-                        f"{word}-{base}",
-                        f"{base}-{word}",
-                        f"{base}{word}",
-                        f"{word}{base}",
-                    ]
-                )
+                if prefix_only:
+                    # Only prefix patterns (word.base)
+                    results.extend(
+                        [
+                            f"{word}.{base}",
+                            f"{word}-{base}",
+                            f"{word}{base}",
+                        ]
+                    )
+                elif suffix_only:
+                    # Only suffix patterns (base.word)
+                    results.extend(
+                        [
+                            f"{base}.{word}",
+                            f"{base}-{word}",
+                            f"{base}{word}",
+                        ]
+                    )
+                else:
+                    # All patterns (default)
+                    results.extend(
+                        [
+                            f"{word}.{base}",
+                            f"{base}.{word}",
+                            f"{word}-{base}",
+                            f"{base}-{word}",
+                            f"{base}{word}",
+                            f"{word}{base}",
+                        ]
+                    )
             elif permutation_type == "paths":
-                results.extend(
-                    [
-                        f"/{word}/{base}",
-                        f"/{base}/{word}",
-                        f"/{word}-{base}",
-                        f"/{base}-{word}",
-                        f"/{word}_{base}",
-                        f"/{base}_{word}",
-                    ]
-                )
+                if prefix_only:
+                    results.extend(
+                        [
+                            f"/{word}/{base}",
+                            f"/{word}-{base}",
+                            f"/{word}_{base}",
+                        ]
+                    )
+                elif suffix_only:
+                    results.extend(
+                        [
+                            f"/{base}/{word}",
+                            f"/{base}-{word}",
+                            f"/{base}_{word}",
+                        ]
+                    )
+                else:
+                    results.extend(
+                        [
+                            f"/{word}/{base}",
+                            f"/{base}/{word}",
+                            f"/{word}-{base}",
+                            f"/{base}-{word}",
+                            f"/{word}_{base}",
+                            f"/{base}_{word}",
+                        ]
+                    )
             elif permutation_type == "buckets":
-                results.extend(
-                    [
-                        f"{word}-{base}",
-                        f"{base}-{word}",
-                        f"{word}.{base}",
-                        f"{base}.{word}",
-                        f"{word}_{base}",
-                        f"{base}_{word}",
-                    ]
-                )
+                if prefix_only:
+                    results.extend(
+                        [
+                            f"{word}-{base}",
+                            f"{word}.{base}",
+                            f"{word}_{base}",
+                        ]
+                    )
+                elif suffix_only:
+                    results.extend(
+                        [
+                            f"{base}-{word}",
+                            f"{base}.{word}",
+                            f"{base}_{word}",
+                        ]
+                    )
+                else:
+                    results.extend(
+                        [
+                            f"{word}-{base}",
+                            f"{base}-{word}",
+                            f"{word}.{base}",
+                            f"{base}.{word}",
+                            f"{word}_{base}",
+                            f"{base}_{word}",
+                        ]
+                    )
             elif permutation_type == "api":
                 results.extend(
                     [
@@ -566,15 +874,24 @@ def run_internal_permutator(
         if tld_list_file:
             try:
                 with open(tld_list_file, "r") as f:
-                    common_tlds = [line.strip() for line in f if line.strip() and not line.startswith("#")]
+                    common_tlds = [
+                        line.strip()
+                        for line in f
+                        if line.strip() and not line.startswith("#")
+                    ]
                 if verbose:
-                    click.secho(f"[+] 📜 Loaded {len(common_tlds)} custom TLDs for internal generator", fg="green")
+                    click.secho(
+                        f"[+] 📜 Loaded {len(common_tlds)} custom TLDs for internal generator",
+                        fg="green",
+                    )
             except Exception as e:
-                click.secho(f"[!] ⚠️  Error loading TLD list: {e}, using defaults", fg="yellow")
+                click.secho(
+                    f"[!] ⚠️  Error loading TLD list: {e}, using defaults", fg="yellow"
+                )
                 common_tlds = ["com", "net", "org", "io", "co", "dev", "app", "cloud"]
         else:
             common_tlds = ["com", "net", "org", "io", "co", "dev", "app", "cloud"]
-        
+
         for base in base_items[:20]:  # Limit to prevent explosion
             for tld in common_tlds:
                 if permutation_type == "subdomains":
@@ -818,31 +1135,48 @@ def run_dmut(base_items, keyword_list, threads, verbose, timeout):
 
         with tempfile.NamedTemporaryFile(
             mode="w", delete=False, suffix=".txt"
-        ) as tmp_output:
-            tmp_output_path = tmp_output.name
+        ) as tmp_generated:
+            tmp_generated_path = tmp_generated.name
 
         # dmut expects -d for dictionary and -w for workers (number)
         # Use first domain from base_items as target
         target_domain = base_items[0] if base_items else "example.com"
-        
-        cmd = ["dmut", "-u", target_domain, "-d", tmp_words_path, "-w", str(threads), "-o", tmp_output_path]
+
+        # Add DNS servers to avoid DNS server list issues
+        cmd = [
+            "dmut",
+            "-u",
+            target_domain,
+            "-d",
+            tmp_words_path,
+            "-w",
+            str(threads),
+            "-l",
+            "8.8.8.8,1.1.1.1,208.67.222.222",  # Add reliable DNS servers
+            "--save-gen",
+            "--save-to",
+            tmp_generated_path,
+        ]
+
         if verbose:
             click.secho(f"[*] 🔧 Command: {' '.join(cmd)}", fg="blue")
 
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
-        if result.returncode == 0 and os.path.exists(tmp_output_path):
-            with open(tmp_output_path, "r") as f:
+        if result.returncode == 0 and os.path.exists(tmp_generated_path):
+            with open(tmp_generated_path, "r") as f:
                 results = [line.strip() for line in f if line.strip()]
             if verbose:
                 click.secho(
                     f"[+] 🎯 dmut generated {len(results)} mutations", fg="green"
                 )
         else:
-            click.secho(f"[!] ❌ dmut error: {result.stderr}", fg="red")
+            if verbose:
+                click.secho(f"[!] ⚠️  dmut stderr: {result.stderr}", fg="yellow")
+                click.secho(f"[!] ⚠️  dmut stdout: {result.stdout}", fg="yellow")
 
         os.unlink(tmp_words_path)
-        if os.path.exists(tmp_output_path):
-            os.unlink(tmp_output_path)
+        if os.path.exists(tmp_generated_path):
+            os.unlink(tmp_generated_path)
     except subprocess.TimeoutExpired:
         click.secho("[!] ⏱️  dmut timeout", fg="yellow")
     except FileNotFoundError:
@@ -854,15 +1188,28 @@ def run_dmut(base_items, keyword_list, threads, verbose, timeout):
 
 
 def run_s3scanner(base_items, keyword_list, cloud_provider, verbose, timeout):
-    """Run S3Scanner for bucket enumeration"""
+    """Run S3Scanner for bucket enumeration with advanced permutations"""
     if verbose:
         click.secho("[*] ☁️  Running S3Scanner...", fg="cyan")
 
     results = []
 
-    # Generate bucket names
+    # Generate comprehensive bucket names using our advanced function
     bucket_names = []
+    current_year = str(datetime.now().year)
+
     for base in base_items:
+        # Use our advanced bucket permutation generator
+        bucket_perms = generate_bucket_permutations(
+            brand=base,
+            keywords=keyword_list,
+            suffixes=["-cdn", "-backup", "-static", "-assets", "-data", "-logs"],
+            year=current_year,
+            verbose=verbose,
+        )
+        bucket_names.extend(bucket_perms)
+
+        # Also add simple combinations for backwards compatibility
         for keyword in keyword_list:
             bucket_names.extend(
                 [
@@ -875,6 +1222,9 @@ def run_s3scanner(base_items, keyword_list, cloud_provider, verbose, timeout):
                 ]
             )
 
+    # Remove duplicates
+    bucket_names = list(set(bucket_names))
+
     try:
         with tempfile.NamedTemporaryFile(
             mode="w", delete=False, suffix=".txt"
@@ -882,9 +1232,9 @@ def run_s3scanner(base_items, keyword_list, cloud_provider, verbose, timeout):
             tmp_buckets.write("\n".join(bucket_names))
             tmp_buckets_path = tmp_buckets.name
 
-        cmd = ["s3scanner", "scan", "-bucket-file", tmp_buckets_path]
+        cmd = ["s3scanner", "-bucket-file", tmp_buckets_path]
         if cloud_provider != "all":
-            cmd.extend(["--provider", cloud_provider])
+            cmd.extend(["-provider", cloud_provider])
 
         if verbose:
             click.secho(f"[*] 🔧 Command: {' '.join(cmd)}", fg="blue")
@@ -1421,31 +1771,108 @@ def save_results(results, output, format_type, verbose):
         click.secho(f"[!] ❌ Error saving results: {e}", fg="red")
 
 
-def run_tld_inject_mode(base_items, tld_list_file, www_prefix, dry_run, verbose):
+def run_tld_inject_mode(
+    base_items,
+    tld_list_file,
+    www_prefix,
+    inject_suffix,
+    inject_prefix,
+    exclude_tlds,
+    dry_run,
+    verbose,
+):
     """Run TLD injection mode - generate only TLD variations"""
     if verbose:
         click.secho("[*] 🌐 Running TLD injection mode...", fg="cyan")
-    
+
     results = []
-    
+
     # Load custom TLD list if provided
     if tld_list_file:
         try:
             with open(tld_list_file, "r") as f:
-                tlds = [line.strip() for line in f if line.strip() and not line.startswith("#")]
+                tlds = [
+                    line.strip()
+                    for line in f
+                    if line.strip() and not line.startswith("#")
+                ]
             if verbose:
                 click.secho(f"[+] 📜 Loaded {len(tlds)} custom TLDs", fg="green")
         except Exception as e:
-            click.secho(f"[!] ⚠️  Error loading TLD list: {e}, using defaults", fg="yellow")
-            tlds = ["com", "net", "org", "io", "co", "dev", "app", "cloud", "xyz", "online"]
+            click.secho(
+                f"[!] ⚠️  Error loading TLD list: {e}, using defaults", fg="yellow"
+            )
+            tlds = [
+                "com",
+                "net",
+                "org",
+                "io",
+                "co",
+                "dev",
+                "app",
+                "cloud",
+                "xyz",
+                "online",
+            ]
     else:
         # Extended default TLD list
         tlds = [
-            "com", "net", "org", "io", "co", "dev", "app", "cloud", "xyz", "online",
-            "tech", "pro", "biz", "info", "site", "store", "shop", "blog", "news",
-            "global", "digital", "ai", "ml", "data", "security", "host", "domains"
+            "com",
+            "net",
+            "org",
+            "io",
+            "co",
+            "dev",
+            "app",
+            "cloud",
+            "xyz",
+            "online",
+            "tech",
+            "pro",
+            "biz",
+            "info",
+            "site",
+            "store",
+            "shop",
+            "blog",
+            "news",
+            "global",
+            "digital",
+            "ai",
+            "ml",
+            "data",
+            "security",
+            "host",
+            "domains",
         ]
-    
+
+    # Apply TLD exclusions if specified
+    if exclude_tlds:
+        exclude_list = [
+            tld.strip().lower() for tld in exclude_tlds.split(",") if tld.strip()
+        ]
+        original_count = len(tlds)
+        tlds = [tld for tld in tlds if tld.lower() not in exclude_list]
+        if verbose:
+            click.secho(
+                f"[+] 🚫 Excluded {original_count - len(tlds)} TLDs: {', '.join(exclude_list)}",
+                fg="yellow",
+            )
+
+    # Parse inject_suffix if provided
+    suffixes = []
+    if inject_suffix:
+        suffixes = [s.strip() for s in inject_suffix.split(",") if s.strip()]
+        if verbose:
+            click.secho(f"[+] 🏷️  Using suffixes: {', '.join(suffixes)}", fg="green")
+
+    # Parse inject_prefix if provided
+    prefixes = []
+    if inject_prefix:
+        prefixes = [p.strip() for p in inject_prefix.split(",") if p.strip()]
+        if verbose:
+            click.secho(f"[+] 🏷️  Using prefixes: {', '.join(prefixes)}", fg="green")
+
     # Generate TLD variations
     for base in base_items:
         # Remove existing TLD if present
@@ -1453,22 +1880,388 @@ def run_tld_inject_mode(base_items, tld_list_file, www_prefix, dry_run, verbose)
             domain_base = base.split(".")[0]
         else:
             domain_base = base
-        
+
         for tld in tlds:
-            if www_prefix:
-                # Generate only www. variations
-                results.append(f"www.{domain_base}.{tld}")
+            # Create all combinations of prefixes and suffixes
+            if prefixes or suffixes:
+                # Generate with prefixes and/or suffixes
+                prefix_list = prefixes if prefixes else [""]
+                suffix_list = suffixes if suffixes else [""]
+
+                for prefix in prefix_list:
+                    for suffix in suffix_list:
+                        domain_with_modifications = f"{prefix}{domain_base}{suffix}"
+
+                        if www_prefix:
+                            # Generate only www. variations
+                            results.append(f"www.{domain_with_modifications}.{tld}")
+                        else:
+                            # Generate both plain and www variations
+                            results.extend(
+                                [
+                                    f"{domain_with_modifications}.{tld}",
+                                    f"www.{domain_with_modifications}.{tld}",
+                                ]
+                            )
+
+                # Also generate without any prefixes/suffixes (original behavior)
+                if www_prefix:
+                    results.append(f"www.{domain_base}.{tld}")
+                else:
+                    results.extend([f"{domain_base}.{tld}", f"www.{domain_base}.{tld}"])
             else:
-                # Generate both plain and www variations
-                results.extend([
-                    f"{domain_base}.{tld}",
-                    f"www.{domain_base}.{tld}"
-                ])
-    
+                # Original behavior when no prefixes/suffixes specified
+                if www_prefix:
+                    # Generate only www. variations
+                    results.append(f"www.{domain_base}.{tld}")
+                else:
+                    # Generate both plain and www variations
+                    results.extend([f"{domain_base}.{tld}", f"www.{domain_base}.{tld}"])
+
     if verbose and not dry_run:
         click.secho(f"[+] 🎯 Generated {len(results)} TLD variations", fg="green")
-    
+
     return results
+
+
+def update_dns_resolvers(verbose=False):
+    """Download and update DNS resolver lists for tools like shuffledns"""
+    if verbose:
+        click.secho("[*] 🔄 Updating DNS resolver lists...", fg="cyan")
+
+    resolvers_dir = Path(__file__).parent / "wordlists"
+    resolvers_dir.mkdir(exist_ok=True)
+
+    # List of resolver sources
+    resolver_sources = [
+        {
+            "name": "trickest-resolvers.txt",
+            "url": "https://raw.githubusercontent.com/trickest/resolvers/main/resolvers.txt",
+            "description": "Trickest public resolvers",
+        },
+        {
+            "name": "fresh-resolvers.txt",
+            "url": "https://raw.githubusercontent.com/janmasarik/resolvers/master/resolvers.txt",
+            "description": "Fresh public resolvers",
+        },
+        {
+            "name": "bass-resolvers.txt",
+            "url": "https://raw.githubusercontent.com/bass-cloud/resolvers/main/resolvers.txt",
+            "description": "Bass cloud resolvers",
+        },
+    ]
+
+    success_count = 0
+
+    for source in resolver_sources:
+        try:
+            if verbose:
+                click.secho(f"[*] 📥 Downloading {source['description']}...", fg="blue")
+
+            import urllib.request
+
+            output_path = resolvers_dir / source["name"]
+
+            urllib.request.urlretrieve(source["url"], output_path)
+
+            # Count lines in the file
+            with open(output_path, "r") as f:
+                line_count = sum(1 for line in f if line.strip())
+
+            if verbose:
+                click.secho(
+                    f"[+] ✅ {source['name']}: {line_count} resolvers", fg="green"
+                )
+            success_count += 1
+
+        except Exception as e:
+            if verbose:
+                click.secho(
+                    f"[!] ❌ Failed to download {source['name']}: {e}", fg="red"
+                )
+            continue
+
+    # Create/update main resolvers file
+    main_resolvers_path = resolvers_dir / "resolvers-trickest.txt"
+    if (resolvers_dir / "trickest-resolvers.txt").exists():
+        import shutil
+
+        shutil.copy(resolvers_dir / "trickest-resolvers.txt", main_resolvers_path)
+        if verbose:
+            click.secho(
+                f"[+] 🔗 Updated main resolver file: {main_resolvers_path}", fg="green"
+            )
+
+    if success_count > 0:
+        click.secho(
+            f"[✓] 🎉 Successfully updated {success_count} resolver lists",
+            fg="green",
+            bold=True,
+        )
+        click.secho(f"[✓] 📁 Files saved to: {resolvers_dir}", fg="green")
+    else:
+        click.secho("[!] ❌ Failed to update any resolver lists", fg="red")
+
+
+def generate_bucket_permutations(
+    brand, keywords=None, suffixes=None, year=None, verbose=False
+):
+    """
+    Generate comprehensive S3 bucket permutations for reconnaissance.
+
+    Args:
+        brand (str): Target brand/company name (e.g., "tesla")
+        keywords (list): Optional keywords (e.g., ["dev", "test", "staging"])
+        suffixes (list): Optional suffixes (e.g., ["-cdn", "-backup", "-static"])
+        year (str): Optional year (e.g., "2025")
+        verbose (bool): Enable verbose output
+
+    Returns:
+        list: Unique bucket permutations
+    """
+    if verbose:
+        click.secho("[*] 🪣 Generating S3 bucket permutations...", fg="cyan")
+
+    results = []
+
+    # Normalize inputs
+    brand = brand.lower().strip()
+    keywords = keywords or []
+    suffixes = suffixes or []
+
+    # Common bucket suffixes if none provided
+    if not suffixes:
+        suffixes = [
+            "-cdn",
+            "-backup",
+            "-static",
+            "-assets",
+            "-data",
+            "-logs",
+            "-media",
+            "-files",
+            "-downloads",
+            "-uploads",
+            "-images",
+            "-docs",
+            "-storage",
+            "-archive",
+            "-cache",
+            "-temp",
+        ]
+
+    # Common keywords if none provided
+    if not keywords:
+        keywords = [
+            "dev",
+            "test",
+            "staging",
+            "prod",
+            "production",
+            "demo",
+            "beta",
+            "alpha",
+            "qa",
+            "uat",
+            "internal",
+            "external",
+            "public",
+            "private",
+            "secure",
+            "admin",
+            "api",
+            "www",
+        ]
+
+    # 1. Basic brand variations
+    results.extend(
+        [
+            brand,
+            f"{brand}s",  # plural
+            f"the{brand}",
+            f"{brand}co",
+            f"{brand}corp",
+            f"{brand}inc",
+        ]
+    )
+
+    # 2. Brand + year combinations
+    if year:
+        results.extend(
+            [
+                f"{brand}{year}",
+                f"{brand}-{year}",
+                f"{brand}_{year}",
+                f"{year}-{brand}",
+                f"{year}{brand}",
+            ]
+        )
+
+    # 3. Brand + keyword combinations
+    for keyword in keywords:
+        results.extend(
+            [
+                f"{brand}-{keyword}",
+                f"{keyword}-{brand}",
+                f"{brand}_{keyword}",
+                f"{keyword}_{brand}",
+                f"{brand}{keyword}",
+                f"{keyword}{brand}",
+                f"{brand}.{keyword}",
+                f"{keyword}.{brand}",
+            ]
+        )
+
+        # With year included
+        if year:
+            results.extend(
+                [
+                    f"{brand}-{keyword}-{year}",
+                    f"{keyword}-{brand}-{year}",
+                    f"{brand}-{year}-{keyword}",
+                    f"{year}-{brand}-{keyword}",
+                    f"{brand}{keyword}{year}",
+                    f"{keyword}{brand}{year}",
+                ]
+            )
+
+    # 4. Brand + suffix combinations
+    for suffix in suffixes:
+        # Remove leading dash from suffix for some variations
+        clean_suffix = suffix.lstrip("-")
+
+        results.extend(
+            [
+                f"{brand}{suffix}",
+                f"{brand}-{clean_suffix}",
+                f"{brand}_{clean_suffix}",
+                f"{brand}.{clean_suffix}",
+                f"{clean_suffix}-{brand}",
+                f"{clean_suffix}.{brand}",
+            ]
+        )
+
+        # With year
+        if year:
+            results.extend(
+                [
+                    f"{brand}{suffix}{year}",
+                    f"{brand}{suffix}-{year}",
+                    f"{brand}-{year}{suffix}",
+                    f"{year}-{brand}{suffix}",
+                ]
+            )
+
+    # 5. AWS-specific patterns
+    aws_patterns = [
+        f"{brand}.s3.amazonaws.com",
+        f"{brand}-s3.amazonaws.com",
+        f"s3.amazonaws.com/{brand}",
+        f"s3-{brand}.amazonaws.com",
+        f"{brand}.s3-website-us-east-1.amazonaws.com",
+        f"{brand}.s3-website.us-east-1.amazonaws.com",
+        f"{brand}.s3.us-east-1.amazonaws.com",
+        f"{brand}.s3.us-west-2.amazonaws.com",
+        f"{brand}.s3.eu-west-1.amazonaws.com",
+        f"{brand}-bucket.s3.amazonaws.com",
+    ]
+    results.extend(aws_patterns)
+
+    # 6. Cloud provider variations
+    cloud_patterns = [
+        f"{brand}-aws",
+        f"{brand}-gcp",
+        f"{brand}-azure",
+        f"{brand}-s3",
+        f"{brand}-bucket",
+        f"{brand}-storage",
+        f"aws-{brand}",
+        f"gcp-{brand}",
+        f"azure-{brand}",
+        f"s3-{brand}",
+        f"bucket-{brand}",
+        f"storage-{brand}",
+    ]
+    results.extend(cloud_patterns)
+
+    # 7. Common business patterns
+    business_patterns = [
+        f"{brand}-website",
+        f"{brand}-web",
+        f"{brand}-app",
+        f"{brand}-api",
+        f"{brand}-content",
+        f"{brand}-resources",
+        f"assets.{brand}",
+        f"downloads.{brand}",
+        f"files.{brand}",
+        f"media.{brand}",
+        f"static.{brand}",
+        f"cdn.{brand}",
+        f"backup.{brand}",
+        f"logs.{brand}",
+        f"data.{brand}",
+    ]
+    results.extend(business_patterns)
+
+    # 8. Regional and environment combinations
+    regions = ["us", "eu", "asia", "global", "east", "west", "north", "south"]
+    environments = ["dev", "test", "stage", "prod", "qa"]
+
+    for region in regions:
+        results.extend([f"{brand}-{region}", f"{region}-{brand}", f"{brand}.{region}"])
+
+    for env in environments:
+        results.extend(
+            [
+                f"{env}-{brand}",
+                f"{brand}-{env}",
+                f"{env}.{brand}.com",
+                f"{brand}-{env}-bucket",
+            ]
+        )
+
+    # 9. Numbered variations
+    for i in range(1, 6):  # 1-5
+        results.extend([f"{brand}{i}", f"{brand}-{i}", f"{brand}0{i}", f"{brand}-0{i}"])
+
+    # 10. Special character variations
+    special_variations = [
+        brand.replace("-", ""),
+        brand.replace("_", ""),
+        brand.replace(".", ""),
+        brand.replace("-", "_"),
+        brand.replace("_", "-"),
+        brand.replace(" ", "-"),
+        brand.replace(" ", "_"),
+        brand.replace(" ", ""),
+    ]
+    results.extend(special_variations)
+
+    # Remove duplicates while preserving order
+    seen = set()
+    unique_results = []
+    for item in results:
+        if item and item not in seen:
+            seen.add(item)
+            unique_results.append(item)
+
+    # Filter out very short or invalid bucket names
+    filtered_results = [
+        bucket
+        for bucket in unique_results
+        if len(bucket) >= 3
+        and len(bucket) <= 63
+        and bucket.replace("-", "").replace("_", "").replace(".", "").isalnum()
+    ]
+
+    if verbose:
+        click.secho(
+            f"[+] 🎯 Generated {len(filtered_results)} unique bucket permutations",
+            fg="green",
+        )
+
+    return filtered_results
 
 
 if __name__ == "__main__":

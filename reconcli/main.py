@@ -40,7 +40,7 @@ def cli():
 
 
 # DNS Resolution and Analysis
-cli.add_command(dns_cli, name="dns")
+cli.add_command(dns_cli, name="dnscli")
 dns_cli.short_help = "Enhanced DNS resolution and subdomain enumeration"
 
 # URL Discovery and Analysis
