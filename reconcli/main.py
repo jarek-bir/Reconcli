@@ -26,6 +26,7 @@ from reconcli.makewordlistcli import (
     makewordlist,
 )  # ✅ Importing the makewordlist command
 from reconcli.permutcli import permutcli  # Importing the permutcli command
+from reconcli.tagger import cli as tagger_cli
 
 
 @click.group()
@@ -136,6 +137,10 @@ makewordlist.short_help = (
 # Permutation-based Wordlist Generation
 cli.add_command(permutcli, name="permutcli")
 permutcli.short_help = "Generate permutation-based wordlists"
+
+# Domain Tagging and Classification
+cli.add_command(tagger_cli, name="tagger")
+tagger_cli.short_help = "🏷️ Advanced subdomain tagging and classification"
 
 if __name__ == "__main__":
     cli()

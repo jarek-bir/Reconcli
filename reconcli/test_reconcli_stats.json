@@ -1,0 +1,153 @@
+{
+  "total_domains": 16,
+  "tag_distribution": {
+    "admin": 1,
+    "external": 7,
+    "api": 1,
+    "backup": 1,
+    "internal": 9,
+    "ci-cd": 2,
+    "cloud-azure": 1,
+    "cdn": 1,
+    "database": 2,
+    "development": 3,
+    "monitoring": 2,
+    "mail": 1,
+    "security": 1,
+    "web-frontend": 1
+  },
+  "risk_distribution": {
+    "low": 8,
+    "medium": 8,
+    "high": 0
+  },
+  "cloud_providers": {
+    "azure": 1
+  },
+  "top_tags": [
+    [
+      "internal",
+      9
+    ],
+    [
+      "external",
+      7
+    ],
+    [
+      "development",
+      3
+    ],
+    [
+      "ci-cd",
+      2
+    ],
+    [
+      "database",
+      2
+    ],
+    [
+      "monitoring",
+      2
+    ],
+    [
+      "admin",
+      1
+    ],
+    [
+      "api",
+      1
+    ],
+    [
+      "backup",
+      1
+    ],
+    [
+      "cloud-azure",
+      1
+    ]
+  ],
+  "most_risky": [
+    {
+      "domain": "backup.example.com",
+      "risk_score": 6,
+      "tags": [
+        "backup",
+        "internal"
+      ]
+    },
+    {
+      "domain": "db.example.com",
+      "risk_score": 6,
+      "tags": [
+        "database",
+        "internal"
+      ]
+    },
+    {
+      "domain": "dev.example.com",
+      "risk_score": 6,
+      "tags": [
+        "development",
+        "internal"
+      ]
+    },
+    {
+      "domain": "elasticsearch.example.com",
+      "risk_score": 6,
+      "tags": [
+        "database",
+        "internal"
+      ]
+    },
+    {
+      "domain": "staging.example.com",
+      "risk_score": 6,
+      "tags": [
+        "development",
+        "internal"
+      ]
+    },
+    {
+      "domain": "test.example.com",
+      "risk_score": 6,
+      "tags": [
+        "development",
+        "internal"
+      ]
+    },
+    {
+      "domain": "admin.example.com",
+      "risk_score": 5,
+      "tags": [
+        "admin",
+        "external"
+      ]
+    },
+    {
+      "domain": "jenkins.example.com",
+      "risk_score": 5,
+      "tags": [
+        "ci-cd",
+        "internal"
+      ]
+    },
+    {
+      "domain": "cdn.example.com",
+      "risk_score": 3,
+      "tags": [
+        "external",
+        "ci-cd",
+        "cloud-azure",
+        "cdn"
+      ]
+    },
+    {
+      "domain": "grafana.example.com",
+      "risk_score": 3,
+      "tags": [
+        "monitoring",
+        "internal"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,52 @@
+{
+  "corporate_vpn": {
+    "patterns": ["vpn", "connect", "remote", "access"],
+    "tag": "vpn-access",
+    "confidence": 0.85
+  },
+  "jenkins_ci": {
+    "patterns": ["jenkins", "ci\\.", "build", "bamboo", "teamcity"],
+    "tag": "ci-cd",
+    "confidence": 0.9
+  },
+  "kubernetes": {
+    "patterns": ["k8s", "kubernetes", "kube", "rancher"],
+    "tag": "container-orchestration",
+    "confidence": 0.9
+  },
+  "docker_registry": {
+    "patterns": ["registry", "docker", "harbor", "quay"],
+    "tag": "container-registry",
+    "confidence": 0.85
+  },
+  "elasticsearch": {
+    "patterns": ["elastic", "kibana", "logstash", "es\\.", "search"],
+    "tag": "search-engine",
+    "confidence": 0.8
+  },
+  "redis_cache": {
+    "patterns": ["redis", "cache", "memcache", "memcached"],
+    "tag": "caching",
+    "confidence": 0.85
+  },
+  "message_queue": {
+    "patterns": ["rabbit", "kafka", "queue", "mq", "activemq"],
+    "tag": "message-queue",
+    "confidence": 0.8
+  },
+  "load_testing": {
+    "patterns": ["load", "performance", "stress", "jmeter"],
+    "tag": "load-testing",
+    "confidence": 0.75
+  },
+  "pentest_tools": {
+    "patterns": ["burp", "zap", "nessus", "pentest", "vulnerability"],
+    "tag": "security-testing",
+    "confidence": 0.9
+  },
+  "aws_services": {
+    "patterns": ["s3", "ec2", "rds", "elb", "cloudfront", "lambda"],
+    "tag": "aws-service",
+    "confidence": 0.95
+  }
+}

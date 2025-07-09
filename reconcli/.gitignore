@@ -48,6 +48,15 @@ test_nuclei_urls.txt
 test_nuclei_cves/
 resume.cfg
 wyniki/
+
+# Temporary test files
+*_perms.txt
+*_urlcrazy.txt
+*_buckets.txt
+*_results.txt
+/tmp/test_*.txt
+gitleaks_*.json
+security_*.sh
 *.bak
 *.bak*
 
