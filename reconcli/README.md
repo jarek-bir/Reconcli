@@ -105,17 +105,17 @@ reconcli vhostcli --domain example.com --ip 1.2.3.4 --wordlist wordlist.txt \
 
 ```bash
 # Basic VHOST check
-reconcli vhostcheck --ip 192.168.1.100 --domain example.com --vhost admin
+reconcli vhostcheckcli --ip 192.168.1.100 --domain example.com --vhost admin
 
 # Multiple IPs from file with progress tracking
-reconcli vhostcheck --input ips.txt --domain example.com --vhost admin --verbose
+reconcli vhostcheckcli --input ips.txt --domain example.com --vhost admin --verbose
 
 # HTTPS with proxy and verbose output
-reconcli vhostcheck --ip 192.168.1.100:8443 --domain example.com --vhost api \
+reconcli vhostcheckcli --ip 192.168.1.100:8443 --domain example.com --vhost api \
   --https --proxy http://127.0.0.1:8080 --verbose
 
 # Batch processing with results saving
-reconcli vhostcheck --input target_ips.txt --domain example.com --vhost store \
+reconcli vhostcheckcli --input target_ips.txt --domain example.com --vhost store \
   --save-output --output-format json --verbose
 ```
 
@@ -300,17 +300,54 @@ reconcli urlcli --domain example.com --flow flows/url_katana_advanced.yaml
 
 ```bash
 # Sort URLs from file
-reconcli urlsorter --input urls.txt --verbose
+reconcli urlsortcli --input urls.txt --verbose
 
 # Process URLs from stdin with advanced patterns
-cat urls.txt | reconcli urlsorter --stdin --advanced-patterns \
+cat urls.txt | reconcli urlsortcli --stdin --advanced-patterns \
   --remove-duplicates --markdown --verbose
 
 # Resume interrupted processing
-reconcli urlsorter --input large_urls.txt --resume --verbose
+reconcli urlsortcli --input large_urls.txt --resume --verbose
 ```
 
-### 🔍 WHOIS Intelligence (`whoisfreakscli`)
+### 🕷️ **Advanced Web Crawler Suite (`crawlercli`)**
+
+- **Multi-Engine Support**: Waymore, GoSpider, XnLinkFinder, Crawley, Crawlergo integration
+- **Intelligent Profiles**: Quick, Comprehensive, Stealth, Aggressive crawling modes
+- **Parallel Execution**: Concurrent tool execution with thread management
+- **Smart Filtering**: Extension-based filtering and subdomain inclusion controls
+- **Data Extraction**: API endpoints, emails, phone numbers, social media, sensitive files
+- **Professional Sessions**: Session management with resume capability and progress tracking
+- **Advanced Features**: JavaScript execution, form extraction, Wayback Machine integration
+- **Output Formats**: TXT, JSON, CSV, XML with comprehensive summary reports
+- **Enterprise Features**: Proxy support, custom headers, cookies, notifications
+
+```bash
+# Quick domain crawl
+reconcli crawlercli --domain example.com --profile quick
+
+# Comprehensive crawl with API focus
+reconcli crawlercli --domain target.com --profile comprehensive \
+  --api-endpoints --forms --parallel --max-pages 1000
+
+# Stealth crawl with proxy
+reconcli crawlercli --domain target.com --profile stealth \
+  --proxy http://127.0.0.1:8080 --delay 2.0
+
+# Multi-domain crawl from file
+reconcli crawlercli --input domains.txt --profile aggressive \
+  --parallel --threads 20 --screenshot
+
+# Advanced extraction with notifications
+reconcli crawlercli --domain example.com --emails --phone-numbers \
+  --sensitive-files --social-media --notifications "https://hooks.slack.com/..." \
+  --output-format json --verbose
+
+# Dry-run mode for testing
+reconcli crawlercli --domain example.com --dry-run --verbose
+```
+
+### 🔍 WHOIS Intelligence (`whoisfreaks`)
 - **WhoisFreaks API Integration**: Professional WHOIS data retrieval
 - **Risk Assessment**: Domain risk scoring and analysis
 - **Expiry Monitoring**: Domain expiration tracking
@@ -340,10 +377,10 @@ reconcli whoisfreakscli --input domains.txt --risk-assessment \
 
 ```bash
 # Basic takeover scan
-reconcli takeover --input subdomains.txt
+reconcli takeovercli --input subdomains.txt
 
 # With resume and notifications
-reconcli takeover --input subdomains.txt --resume \
+reconcli takeovercli --input subdomains.txt --resume \
   --slack-webhook "https://hooks.slack.com/..." \
   --json --markdown --verbose
 ```
@@ -361,7 +398,42 @@ reconcli jscli --input js_urls.txt --threads 10 \
   --save-raw --json --markdown --verbose
 ```
 
-### 🛡️ Advanced Vulnerability Scanning (`vulncli`)
+### � **Advanced Reconnaissance Pipeline (`oneshot`)**
+
+- **Comprehensive Pipeline**: Automated end-to-end reconnaissance workflows
+- **Multiple Profiles**: Quick, Standard, Deep, Stealth, and Custom reconnaissance modes
+- **AI Integration**: OpenAI, Anthropic, and Google AI for intelligent analysis and recommendations
+- **Parallel Execution**: Concurrent tool execution with advanced resource management
+- **Session Management**: Resume functionality with persistent state and progress tracking
+- **Professional Reporting**: Executive summaries, technical reports, and AI-generated insights
+- **Enterprise Features**: Notifications, resource monitoring, error handling, and detailed statistics
+- **Flexible Output**: JSON, Markdown, and AI-enhanced reporting formats
+
+```bash
+# Quick reconnaissance scan
+reconcli oneshotcli --domain example.com --profile quick
+
+# Deep reconnaissance with AI analysis
+reconcli oneshotcli --domain target.com --profile deep \
+  --ai-provider openai --ai-analysis --parallel
+
+# Stealth reconnaissance with custom settings
+reconcli oneshotcli --domain target.com --profile stealth \
+  --proxy http://127.0.0.1:8080 --delay 2.0 --threads 5
+
+# Enterprise reconnaissance with notifications
+reconcli oneshotcli --domain example.com --profile standard \
+  --notifications "https://hooks.slack.com/..." \
+  --resource-monitoring --ai-provider anthropic
+
+# Resume interrupted reconnaissance
+reconcli oneshotcli --domain target.com --resume --verbose
+
+# Dry-run mode for pipeline testing
+reconcli oneshotcli --domain example.com --dry-run --verbose
+```
+
+### �🛡️ Advanced Vulnerability Scanning (`vulncli`)
 - **🤖 AI-Powered Analysis**: Intelligent template selection and false positive reduction
 - **⚡ Multiple Engines**: Nuclei and Jaeles scanner integration with unified interface
 - **🔍 Smart Pattern Matching**: Custom GF patterns for targeted vulnerability discovery
@@ -548,6 +620,14 @@ reconcli --help
 - **Gospider**: `go install github.com/jaeles-project/gospider@latest`
 - **Waybackurls**: `go install github.com/tomnomnom/waybackurls@latest`
 
+#### For Web Crawling (`crawlercli`)
+- **Waymore**: `pip install waymore`
+- **GoSpider**: `go install github.com/jaeles-project/gospider@latest`
+- **XnLinkFinder**: `git clone https://github.com/xnl-h4ck3r/xnLinkFinder.git && cd xnLinkFinder && pip install -r requirements.txt`
+- **Crawley**: `go install github.com/s0rg/crawley/cmd/crawley@latest`
+- **Crawlergo**: Download from [GitHub releases](https://github.com/Qianlitp/crawlergo/releases)
+- **Chrome/Chromium**: Required for Crawlergo JavaScript execution
+
 #### For Virtual Host Discovery (`vhostcli`)
 - **FFuf**: `go install github.com/ffuf/ffuf/v2@latest`
 - **HTTPx**: `go install -v github.com/projectdiscovery/httpx/cmd/httpx@latest`
@@ -567,7 +647,7 @@ reconcli --help
 
 ### API Keys
 
-#### WhoisFreaks API (for `whoisfreakscli`)
+#### WhoisFreaks API (for `whoisfreaks`)
 1. Register at [WhoisFreaks](https://whoisfreaks.com/)
 2. Get your API key from the dashboard
 3. Set environment variable: `export WHOISFREAKS_API_KEY="your_api_key"`
@@ -650,16 +730,16 @@ Most modules support resume functionality for long-running scans:
 
 ```bash
 # Start a scan
-reconcli takeover --input large_subdomain_list.txt --resume
+reconcli takeovercli --input large_subdomain_list.txt --resume
 
 # If interrupted, resume with same command
-reconcli takeover --input large_subdomain_list.txt --resume
+reconcli takeovercli --input large_subdomain_list.txt --resume
 
 # Check resume status
-reconcli takeover --show-resume
+reconcli takeovercli --show-resume
 
 # Clear resume state
-reconcli takeover --clear-resume
+reconcli takeovercli --clear-resume
 ```
 
 ### Proxy Configuration
@@ -675,13 +755,13 @@ Generate professional reports in multiple formats:
 
 ```bash
 # JSON output
-reconcli takeover --input subdomains.txt --json
+reconcli takeovercli --input subdomains.txt --json
 
 # Markdown output
-reconcli takeover --input subdomains.txt --markdown
+reconcli takeovercli --input subdomains.txt --markdown
 
 # Both formats
-reconcli takeover --input subdomains.txt --json --markdown
+reconcli takeovercli --input subdomains.txt --json --markdown
 ```
 
 ## Examples
@@ -857,7 +937,7 @@ reconcli urlcli --domain target.com --flow flows/url_katana_advanced.yaml
 ### Smart URL Processing
 ```bash
 # Process and categorize large URL lists
-reconcli urlsorter \
+reconcli urlsortcli \
   --input massive_urls.txt \
   --advanced-patterns \
   --remove-duplicates \
@@ -867,7 +947,7 @@ reconcli urlsorter \
   --verbose
 
 # Real-time URL processing from stdin
-cat urls.txt | reconcli urlsorter --stdin --advanced-patterns --verbose
+cat urls.txt | reconcli urlsortcli --stdin --advanced-patterns --verbose
 ```
 
 ### WHOIS Intelligence Gathering
@@ -935,26 +1015,26 @@ reconcli cloudcli --clear-resume
 
 ```bash
 # Basic TLD reconnaissance with popular and country TLDs
-reconcli tldr -d example --categories popular,country --verbose
+reconcli tldrcli -d example --categories popular,country --verbose
 
 # Advanced comprehensive TLD scan across all 2,672+ TLDs
-reconcli tldr -d mycompany --categories all --http-check \
+reconcli tldrcli -d mycompany --categories all --http-check \
   --filter-active --save-json --verbose
 
 # Cryptocurrency and blockchain focused reconnaissance
-reconcli tldr -d cryptobrand --categories crypto_blockchain,emerging_tech \
+reconcli tldrcli -d cryptobrand --categories crypto_blockchain,emerging_tech \
   --http-check --filter-active --save-markdown
 
 # Security research with typosquatting and specialized TLDs
-reconcli tldr -d target --categories specialized,geographic \
+reconcli tldrcli -d target --categories specialized,geographic \
   --exclude-wildcards --whois-check --verbose
 
 # Custom TLD list with industry-specific focus
-reconcli tldr -d brand --categories business,industry_specific \
+reconcli tldrcli -d brand --categories business,industry_specific \
   --http-check --filter-active --slack-webhook "https://hooks.slack.com/..."
 
 # Maximum coverage scan for comprehensive domain discovery
-reconcli tldr -d enterprise --categories all --threads 100 \
+reconcli tldrcli -d enterprise --categories all --threads 100 \
   --http-check --whois-check --exclude-wildcards \
   --save-json --save-markdown --verbose
 ```

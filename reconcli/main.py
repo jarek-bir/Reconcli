@@ -28,6 +28,7 @@ from reconcli.makewordlistcli import (
 from reconcli.permutcli import permutcli  # Importing the permutcli command
 from reconcli.tagger import cli as tagger_cli
 from reconcli.aicli import aicli  # Importing the aicli command
+from reconcli.crawlercli import crawlercli
 
 
 @click.group()
@@ -54,11 +55,11 @@ cli.add_command(vhost_cli, name="vhostcli")
 vhost_cli.short_help = "Virtual host discovery and enumeration"
 
 # Virtual Host Check
-cli.add_command(vhostcheckcli, name="vhostcheck")
+cli.add_command(vhostcheckcli, name="vhostcheckcli")
 vhostcheckcli.short_help = "Advanced virtual host discovery and validation"
 
 # URL Sorting and Organization
-cli.add_command(urlsort_cli, name="urlsort")
+cli.add_command(urlsort_cli, name="urlsortcli")
 urlsort_cli.short_help = "Advanced URL sorting and categorization"
 
 # JavaScript Analysis
@@ -74,7 +75,7 @@ cli.add_command(ipscli, name="ipscli")
 ipscli.short_help = "IP address analysis and geolocation"
 
 # OneShot Reconnaissance
-cli.add_command(one_shot_cli, name="oneshot")
+cli.add_command(one_shot_cli, name="oneshotcli")
 one_shot_cli.short_help = "Quick oneshot reconnaissance scans"
 
 # DNS Zone Walking
@@ -82,11 +83,11 @@ cli.add_command(zonewalk_cli, name="zonewalkcli")
 zonewalk_cli.short_help = "DNS zone walking and enumeration"
 
 # Subdomain Takeover Detection
-cli.add_command(takeovercli, name="takeover")
+cli.add_command(takeovercli, name="takeovercli")
 takeovercli.short_help = "Subdomain takeover vulnerability detection"
 
 # WHOIS Analysis
-cli.add_command(whoisfreaks_cli, name="whoisfreaks")
+cli.add_command(whoisfreaks_cli, name="whoisfreakscli")
 whoisfreaks_cli.short_help = "Advanced WHOIS data analysis and enrichment"
 
 # Subdomain Enumeration
@@ -94,7 +95,7 @@ cli.add_command(subdocli, name="subdocli")
 subdocli.short_help = "Comprehensive subdomain enumeration using multiple sources"
 
 # TLD Reconnaissance
-cli.add_command(tldr_cli, name="tldr")
+cli.add_command(tldr_cli, name="tldrcli")
 tldr_cli.short_help = "Alternative TLD reconnaissance and domain discovery"
 
 # TLD Reconnaissance (Optimized)
@@ -130,7 +131,7 @@ cli.add_command(vulnsql_cli, name="vulnsqlicli")
 vulnsql_cli.short_help = "SQL injection vulnerability scanner using SQLMap and Ghauri"
 
 # Wordlist Generation
-cli.add_command(makewordlist, name="makewordlist")
+cli.add_command(makewordlist, name="makewordlistcli")
 makewordlist.short_help = (
     "🎯 Advanced wordlist generator with intelligence and mutations"
 )
@@ -140,12 +141,18 @@ cli.add_command(permutcli, name="permutcli")
 permutcli.short_help = "Generate permutation-based wordlists"
 
 # Domain Tagging and Classification
-cli.add_command(tagger_cli, name="tagger")
+cli.add_command(tagger_cli, name="taggercli")
 tagger_cli.short_help = "🏷️ Advanced subdomain tagging and classification"
 
 # AI-Powered Reconnaissance
 cli.add_command(aicli, name="aicli")
 aicli.short_help = "AI-powered reconnaissance and analysis tools"
+
+# Web Crawler Suite
+cli.add_command(crawlercli, name="crawlercli")
+crawlercli.short_help = (
+    "🕷️ Advanced web crawler with multiple engines and data extraction"
+)
 
 if __name__ == "__main__":
     cli()
