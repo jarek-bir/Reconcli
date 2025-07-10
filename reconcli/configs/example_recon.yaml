@@ -1,0 +1,34 @@
+# ReconCLI OneShot Configuration Example
+# This file demonstrates custom configuration options for the oneshot pipeline
+
+# Custom profile configuration
+profiles:
+  enterprise:
+    dns_args: "--wordlist-size xlarge --all-tools --brute --timeout 600"
+    ip_args: "--scan nmap --enrich --aggressive --timeout 300"
+    url_args: "--comprehensive --katana --js-crawl --depth 10 --timeout 1200"
+    vuln_args: "--comprehensive --all-templates --detailed"
+    modules: ["dns", "ips", "url", "vuln", "cloud", "ai"]
+
+  stealth-plus:
+    dns_args: "--passive-only --timeout 120"
+    ip_args: "--scan simple --stealth --timeout 60"
+    url_args: "--passive-only --timeout 180"
+    vuln_args: "--stealth --minimal"
+    modules: ["dns", "ips", "url"]
+
+# Default execution settings
+max_workers: 8
+timeout: 10800 # 3 hours
+notifications: "https://hooks.slack.com/services/YOUR/WEBHOOK/URL"
+
+# Module-specific settings
+exclude: []
+include_cloud: true
+include_permut: true
+ai_analysis: true
+
+# Advanced settings
+retry_failed: true
+no_cleanup: false
+verbose: true

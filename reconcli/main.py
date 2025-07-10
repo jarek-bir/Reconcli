@@ -73,9 +73,9 @@ httpcli.short_help = "HTTP client for web application testing"
 cli.add_command(ipscli, name="ipscli")
 ipscli.short_help = "IP address analysis and geolocation"
 
-# One-Shot Reconnaissance
+# OneShot Reconnaissance
 cli.add_command(one_shot_cli, name="oneshot")
-one_shot_cli.short_help = "Quick one-shot reconnaissance scans"
+one_shot_cli.short_help = "Quick oneshot reconnaissance scans"
 
 # DNS Zone Walking
 cli.add_command(zonewalk_cli, name="zonewalkcli")
