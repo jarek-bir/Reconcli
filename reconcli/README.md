@@ -37,9 +37,40 @@ pip install -e .
 
 # Verify installation
 reconcli --help
+
+# Configure AI providers for advanced features (optional)
+export OPENAI_API_KEY='your-openai-api-key'
+export ANTHROPIC_API_KEY='your-anthropic-api-key'  
+export GOOGLE_API_KEY='your-google-api-key'
+
+# Test AI-powered features
+reconcli aicli --prompt "Hello, AI assistant!" --persona trainer
 ```
 
 ## ✨ Features
+
+### 🧠 **AI-Powered Reconnaissance Assistant (`aicli`)**
+- **🎭 Multi-Persona AI System**: RedTeam, BugBounty, Pentester, Trainer, OSINT personas
+- **🔬 Advanced Payload Mutation Engine**: XSS, SQLi, SSRF mutations with WAF bypasses  
+- **🎯 AI-Powered Vulnerability Scanner**: Comprehensive security assessment with ReconCLI integration
+- **⚔️ Multi-Stage Attack Flows**: SSRF→XSS→LFI chains with MITRE ATT&CK mapping
+- **📊 Professional Reports**: Executive summaries, compliance mapping, remediation guidance
+- **💬 Interactive Chat Mode**: Persistent sessions, advanced prompt templates
+- **🔗 ReconCLI Integration**: Enhanced context from DNScli, HTTPcli, URLcli outputs
+
+```bash
+# AI-powered vulnerability scanning with ReconCLI integration
+reconcli aicli --vuln-scan urlcli_output.json --scan-type comprehensive --persona pentester --integration
+
+# Advanced payload mutations for WAF bypass
+reconcli aicli --payload xss --context html --mutate --mutations 20 --persona bugbounty
+
+# Multi-stage attack flow generation
+reconcli aicli --attack-flow ssrf,xss,lfi --technique gopher --persona redteam
+
+# Interactive AI assistance for reconnaissance
+reconcli aicli --interactive --persona trainer --save-chat learning_session
+```
 
 ### 🎯 Virtual Host Discovery (`vhostcli`)
 - **Engines**: FFuf and HTTPx support
@@ -379,310 +410,109 @@ reconcli vulncli --input large_targets.txt --resume \
   --verbose --output-format json
 ```
 
-### ☁️ Cloud Provider Detection & S3 Enumeration (`cloudcli`)
-- **60+ Cloud Providers**: Comprehensive detection including AWS, Azure, Google Cloud, Cloudflare, DigitalOcean, and many more
-- **Multi-Source Detection**: ASN, CNAME, PTR, HTTP headers, SSL certificates analysis
-- **S3 Bucket Enumeration**: 73+ bucket naming patterns with multi-region support
-- **Batch Processing**: Process multiple domains from file with progress tracking
-- **Resume Support**: Continue interrupted scans with `--resume`, `--clear-resume`, `--show-resume`
-- **Rate Limiting**: Configurable threading and timeout controls
-- **Professional Reports**: JSON, TXT, and CSV output formats
-- **Intermediate Saves**: Progress saved every 10 domains for large batch scans
-- **Interruption Handling**: Graceful Ctrl+C handling with resume capability
-- **Detailed Analytics**: Comprehensive cloud provider identification with confidence scoring
+### 🔥 **Advanced WAF Bypass Examples**
 
 ```bash
-# Single domain cloud detection
-reconcli cloudcli --domain example.com --verbose
+# Modern SPA XSS with advanced obfuscation
+reconcli aicli --payload xss --context "react,vue,angular" --mutate --mutations 30 \
+  --technique "unicode,dom-events,template-injection" --persona redteam
 
-# Batch cloud detection with resume support
-reconcli cloudcli --domains-file domains.txt --resume --verbose
+# SQL injection with WAF evasion for cloud databases
+reconcli aicli --payload sqli --context "aws-rds,azure-sql,gcp-sql" --mutate --mutations 25 \
+  --technique "encoding,comment-variants,union-bypass" --persona bugbounty
 
-# Cloud detection with S3 enumeration
-reconcli cloudcli --domain example.com --s3-enum --s3-regions --verbose
-
-# Batch processing with S3 enumeration and custom threading
-reconcli cloudcli --domains-file domains.txt --s3-enum --s3-threads 20 \
-  --resume --output-format json --verbose
-
-# Resume management
-reconcli cloudcli --show-resume          # Show previous scan status
-reconcli cloudcli --clear-resume         # Clear all resume states
-reconcli cloudcli --domains-file domains.txt --resume  # Continue scan
+# SSRF for cloud metadata extraction
+reconcli aicli --payload ssrf --context "aws,gcp,azure,kubernetes" --mutate --mutations 20 \
+  --technique "gopher,metadata,ipv6,dns-rebinding" --persona pentester
 ```
 
-### 🌍 TLD Reconnaissance (`tldr`)
-- **Massive TLD Coverage**: Systematically check domains across **2,672+ TLD variations**
-- **9 Comprehensive Categories**: Popular, country, new generic, business, crypto/blockchain, emerging tech, geographic, industry-specific, and specialized TLDs
-- **DNS & HTTP Probing**: Full resolution and HTTP/HTTPS status verification with detailed analytics
-- **Custom TLD Lists**: Support for custom TLD files and flexible category selection
-- **Wildcard Detection**: Automatic detection and filtering of wildcard domains
-- **Active Filtering**: Focus on active/responsive domains only
-- **WHOIS Integration**: Basic domain availability checking with typosquatting detection
-- **Professional Reports**: JSON and Markdown output with detailed statistics and categorization
-- **Typosquatting Research**: Built-in variations and common typos for security research
-- **Cryptocurrency Focus**: Specialized blockchain, DeFi, and crypto-related TLD categories
-
-**🎯 TLD Category Breakdown**:
-- **Popular** (81): Classic TLDs like .com, .net, .org, plus trending ones (.app, .dev, .tech)
-- **Country** (253): Complete list of country-code TLDs from all regions
-- **New Generic** (582): Modern gTLDs covering technology, business, lifestyle, and entertainment
-- **Business** (423): Corporate structures, professional services, and industry-specific domains
-- **Crypto/Blockchain** (106): Cryptocurrency, DeFi, NFT, and blockchain-focused TLDs
-- **Emerging Tech** (107): AI, machine learning, IoT, quantum computing, and futuristic domains
-- **Geographic** (351): Major cities, regions, states, and geographic features worldwide
-- **Industry Specific** (559): Automotive, real estate, healthcare, legal, financial, and more
-- **Specialized** (210): Adult content, suspicious/alternative, typosquatting variations for security research
+#### 🎯 **Real-World Attack Chains**
 
 ```bash
-# Basic TLD reconnaissance with popular and country TLDs
-reconcli tldr -d example --categories popular,country --verbose
+# E-commerce platform exploitation chain
+reconcli aicli --attack-flow "ssrf,xss,sqli" --target-type "ecommerce" \
+  --technique "payment-bypass" --persona redteam
 
-# Advanced comprehensive TLD scan across all 2,672+ TLDs
-reconcli tldr -d mycompany --categories all --http-check \
-  --filter-active --save-json --verbose
+# SaaS application privilege escalation
+reconcli aicli --attack-flow "idor,xss,csrf" --target-type "saas" \
+  --technique "tenant-isolation-bypass" --persona pentester
 
-# Cryptocurrency and blockchain focused reconnaissance
-reconcli tldr -d cryptobrand --categories crypto_blockchain,emerging_tech \
-  --http-check --filter-active --save-markdown
-
-# Security research with typosquatting and specialized TLDs
-reconcli tldr -d target --categories specialized,geographic \
-  --exclude-wildcards --whois-check --verbose
-
-# Custom TLD list with industry-specific focus
-reconcli tldr -d brand --categories business,industry_specific \
-  --http-check --filter-active --slack-webhook "https://hooks.slack.com/..."
-
-# Maximum coverage scan for comprehensive domain discovery
-reconcli tldr -d enterprise --categories all --threads 100 \
-  --http-check --whois-check --exclude-wildcards \
-  --save-json --save-markdown --verbose
+# API gateway exploitation
+reconcli aicli --attack-flow "ssrf,jwt-abuse,graphql-injection" --target-type "api-gateway" \
+  --technique "microservices-lateral-movement" --persona bugbounty
 ```
 
-### 🔄 Advanced Permutation Generation (`permutcli`)
-- **16 Specialized Tools**: Internal engine, gotator, goaltdns, dnstwist, dnsgen, urlcrazy, shuffledns, dmut, s3scanner, alterx, kr (kitrunner), sublist3r, amass, subfinder, assetfinder, findomain
-- **Multi-Type Permutations**: Subdomains, paths, buckets, parameters, and API endpoints
-- **Advanced S3 Bucket Generator**: 300+ permutation patterns with AWS URL formats, custom suffixes, and deduplication
-- **TLD Injection Mode**: Focus on TLD variations with custom lists and exclusions
-- **Smart Case Mutations**: Automatic case-based variations (Dev, DEV, dev) for keywords and targets
-- **Advanced CLI Options**: Prefix/suffix-only modes, keyword exclusions, result filtering, chunked output
-- **DNS Resolver Updates**: Automatic download of latest resolver lists from Trickest and public sources
-- **Professional Output**: JSON/TXT formats with chunking, filtering, and comprehensive result management
-
-#### 🎯 Multi-Engine Permutation Support
-
-**DNS Tools:**
-- **dnstwist**: Domain variation and typosquatting detection
-- **dnsgen**: Advanced subdomain generation with custom wordlists
-- **shuffledns**: High-performance DNS bruteforcing with resolver rotation
-- **dmut**: Comprehensive mutation-based subdomain discovery
-- **alterx**: Fast and flexible subdomain permutation
-- **sublist3r, amass, subfinder, assetfinder, findomain**: Passive enumeration integration
-
-**URL & Path Tools:**
-- **urlcrazy**: URL typosquatting and permutation analysis
-- **gotator**: Advanced subdomain permutation with depth control
-- **goaltdns**: ALT-DNS style permutation generation
-
-**Cloud & API Tools:**
-- **s3scanner**: S3 bucket discovery with advanced naming patterns
-- **kr (kitrunner)**: API endpoint discovery and testing
-
-**Internal Engine:**
-- **Advanced Built-in Generator**: Custom patterns, TLD support, case mutations
-
-#### 🪣 Advanced S3 Bucket Permutation Engine
-
-**Comprehensive Pattern Generation:**
-- **300+ Unique Patterns**: Brand combinations, suffix variations, year integration
-- **AWS URL Formats**: Complete S3 URL patterns (`.s3.amazonaws.com`, regional endpoints)
-- **Multi-Style Separators**: Dashes, dots, underscores for maximum coverage
-- **Business Patterns**: Company structures, departments, environments
-- **Cloud Provider Variations**: AWS, GCP, Azure specific naming conventions
-- **Perfect Deduplication**: Ordered set approach preserving generation quality
+#### 🧠 **AI-Powered Research Assistance**
 
 ```bash
-# Basic S3 bucket permutation
-reconcli permutcli --input brands.txt --output s3_buckets.txt --tool s3scanner \
-  --permutation-type buckets --verbose
+# Zero-day research for emerging technologies
+reconcli aicli --research-query "Web3 smart contract vulnerabilities" --depth "comprehensive" \
+  --persona researcher --save-chat "web3-research-2025"
 
-# Advanced S3 bucket generation with custom keywords
-reconcli permutcli --input companies.txt --output advanced_buckets.txt \
-  --tool s3scanner --keywords "dev,staging,prod,backup,logs,cdn" \
-  --inject-suffix "-backup,-cdn,-api" --year 2025 --verbose
+# Threat modeling for fintech applications
+reconcli aicli --threat-model "payment-processor" --compliance "pci-dss" \
+  --attack-vectors "api,mobile,web" --persona architect
 
-# S3 bucket discovery with chunked output
-reconcli permutcli --input targets.txt --output s3_discovery.txt \
-  --tool s3scanner --chunk 1000 --max-results 5000 --uniq --verbose
+# Advanced persistent threat simulation
+reconcli aicli --apt-simulation --target-industry "healthcare" \
+  --attack-duration "long-term" --persona redteam
 ```
 
-#### 🌐 TLD Injection Mode
-
-**Advanced TLD Management:**
-- **2,672+ TLD Support**: Complete TLD coverage with custom list support
-- **www Prefix Integration**: Automatic www prefix generation
-- **Custom Suffix/Prefix Injection**: Advanced pattern injection before TLDs
-- **TLD Exclusions**: Filter out unwanted TLDs (gov, edu, mil)
-- **Dry-run Mode**: Preview generation counts without execution
+#### 🏭 **Industry-Specific Security Testing**
 
 ```bash
-# Basic TLD injection mode
-reconcli permutcli --input brands.txt --output tld_variants.txt \
-  --mode tldinject --verbose
+# Healthcare HIPAA compliance testing
+reconcli aicli --industry-scan "healthcare" --compliance "hipaa" \
+  --focus "patient-data,medical-devices" --persona healthcare-security
 
-# Advanced TLD injection with custom lists and filtering
-reconcli permutcli --input companies.txt --output tld_advanced.txt \
-  --mode tldinject --tld-list custom_tlds.txt \
-  --inject-suffix "-cdn,-backup" --exclude-tlds "gov,edu,mil" \
-  --www-prefix --dry-run --verbose
+# Financial services PCI DSS assessment
+reconcli aicli --industry-scan "fintech" --compliance "pci-dss" \
+  --focus "payment-processing,card-data" --persona financial-security
 
-# TLD injection with chunked output
-reconcli permutcli --input targets.txt --output tld_chunked.txt \
-  --mode tldinject --chunk 500 --max-results 2000 --verbose
+# Government security assessment
+reconcli aicli --industry-scan "government" --compliance "fisma" \
+  --classification "confidential" --persona government-security
+
+# Critical infrastructure testing
+reconcli aicli --industry-scan "critical-infrastructure" --focus "scada,ics" \
+  --threat-model "nation-state" --persona ot-security
 ```
 
-#### 🔤 Advanced Mutation & Filtering Options
-
-**Case Mutations:**
-- **Automatic Case Variations**: Generate Dev, DEV, dev, Development variants
-- **Smart Detection**: Only apply to alphabetic keywords and targets
-- **Deduplication**: Automatic removal of case-based duplicates
-
-**Advanced Filtering:**
-- **Keyword Exclusions**: Remove unwanted keywords from generation
-- **Pattern Filtering**: Keep only matching patterns with regex support
-- **Result Exclusions**: Remove specific patterns from final output
-- **Prefix/Suffix Only**: Generate only prefix or suffix-based permutations
-
-**Output Management:**
-- **Chunked Output**: Split large results into manageable files
-- **Format Options**: JSON and TXT output with comprehensive metadata
-- **Result Limits**: Control maximum output size for performance
-- **Duplicate Removal**: Advanced deduplication across all tools
+#### 🌐 **Cloud-Native Security Testing**
 
 ```bash
-# Case mutation with filtering
-reconcli permutcli --input targets.txt --output mutations.txt \
-  --tool internal --mutate-case --exclude-keywords "test,old,backup" \
-  --filter "api,admin,dev" --verbose
+# Kubernetes security assessment
+reconcli aicli --cloud-native-scan "kubernetes" --components "api-server,etcd,kubelet" \
+  --compliance "cis-benchmark" --persona cloud-security
 
-# Prefix-only subdomain generation
-reconcli permutcli --input domains.txt --output prefix_subs.txt \
-  --tool internal --permutation-type subdomains --prefix-only \
-  --keywords "api,admin,dev,staging" --verbose
+# Serverless security testing
+reconcli aicli --serverless-scan "aws-lambda,azure-functions" \
+  --focus "function-isolation,secrets-management" --persona cloud-security
 
-# Advanced filtering with chunked output
-reconcli permutcli --input companies.txt --output filtered_results.txt \
-  --tool gotator --exclude "temp,old,test" --max-results 10000 \
-  --chunk 1000 --uniq --verbose
+# Container security assessment
+reconcli aicli --container-scan "docker,podman" --focus "escape,privilege-escalation" \
+  --persona container-security
+
+# Multi-cloud security posture
+reconcli aicli --multi-cloud-scan "aws,azure,gcp" --compliance "cis,nist" \
+  --assessment-type "comprehensive" --persona cloud-architect
 ```
 
-#### 🛠️ Tool-Specific Advanced Options
-
-**Internal Engine:**
-- **Custom Patterns**: Load pattern templates from files
-- **TLD Integration**: Include common TLD variations
-- **Advanced Mode**: Complex pattern generation with numbers and separators
-- **Prefix/Suffix Control**: Granular control over permutation direction
-
-**External Tools:**
-- **Threading Control**: Configurable concurrency for supported tools
-- **Timeout Management**: Per-tool timeout configuration
-- **Depth Control**: Permutation depth for tools like gotator
-- **Resolution Options**: DNS resolution for enumeration tools
-
-**S3Scanner Integration:**
-- **Cloud Provider Selection**: AWS, GCP, Azure, or all providers
-- **Custom Suffixes**: Business-specific suffix patterns
-- **Year Integration**: Current year and custom year support
-- **Advanced Patterns**: 10+ categories of bucket naming conventions
+#### 🔬 **Advanced Research and Development**
 
 ```bash
-# Internal engine with advanced patterns
-reconcli permutcli --input targets.txt --output internal_advanced.txt \
-  --tool internal --advanced --include-tlds --numbers \
-  --patterns custom_patterns.txt --verbose
+# AI/ML security research
+reconcli aicli --ai-security-research --model-types "llm,computer-vision" \
+  --attacks "adversarial,poisoning,extraction" --persona ai-researcher
 
-# Gotator with depth control
-reconcli permutcli --input subdomains.txt --output gotator_deep.txt \
-  --tool gotator --depth 3 --threads 20 --timeout 120 --verbose
+# Web3 security research
+reconcli aicli --web3-research --protocols "ethereum,polygon,solana" \
+  --focus "smart-contracts,defi,nft" --persona web3-security
 
-# DMut with custom threading
-reconcli permutcli --input domains.txt --output dmut_results.txt \
-  --tool dmut --threads 50 --keywords "dev,api,admin" --verbose
-
-# Multi-tool S3 discovery workflow
-reconcli permutcli --input brands.txt --output s3_comprehensive.txt \
-  --tool s3scanner --cloud-provider all --advanced \
-  --keywords "backup,logs,assets,cdn,data" --max-results 20000 \
-  --chunk 2000 --format json --verbose
+# IoT security assessment
+reconcli aicli --iot-security --protocols "mqtt,coap,zigbee" \
+  --focus "firmware,communication,device-management" --persona iot-security
 ```
-
-#### 🔧 DNS Resolver Management
-
-**Automatic Resolver Updates:**
-- **Trickest Integration**: Download latest public resolver lists
-- **Custom Resolver Support**: Use organization-specific DNS servers
-- **Multi-Source Updates**: Aggregate from multiple resolver sources
-- **Performance Optimization**: Ensure optimal DNS resolution for tools
-
-```bash
-# Update DNS resolvers for shuffledns and other tools
-reconcli permutcli --update-resolvers --verbose
-
-# Use updated resolvers in permutation generation
-reconcli permutcli --input targets.txt --output shuffled_results.txt \
-  --tool shuffledns --threads 100 --resolve --verbose
-```
-
-#### 🎯 Professional Workflow Examples
-
-```bash
-# Comprehensive subdomain discovery workflow
-reconcli permutcli --input target_domains.txt --output comprehensive_subs.txt \
-  --tool internal --advanced --mutate-case --include-tlds \
-  --keywords "api,admin,dev,staging,prod,test,demo" \
-  --exclude-keywords "old,legacy" --max-results 50000 \
-  --chunk 5000 --format json --verbose
-
-# S3 bucket hunting for bug bounty
-reconcli permutcli --input company_names.txt --output s3_hunt.txt \
-  --tool s3scanner --permutation-type buckets \
-  --keywords "backup,logs,assets,data,cdn,static" \
-  --inject-suffix "-backup,-logs,-data" --cloud-provider aws \
-  --max-results 10000 --uniq --verbose
-
-# API endpoint discovery workflow
-reconcli permutcli --input api_targets.txt --output api_endpoints.txt \
-  --tool kr --permutation-type api --api-endpoints \
-  --keywords "v1,v2,api,rest,graphql" --timeout 180 --verbose
-
-# TLD variation discovery for typosquatting research
-reconcli permutcli --input brand_list.txt --output tld_research.txt \
-  --mode tldinject --inject-suffix "-shop,-store,-online" \
-  --exclude-tlds "gov,edu,mil" --chunk 1000 --dry-run --verbose
-
-# Path permutation for web application testing
-reconcli permutcli --input base_paths.txt --output path_permutations.txt \
-  --tool internal --permutation-type paths \
-  --keywords "admin,api,backup,config,test" \
-  --advanced --max-results 25000 --verbose
-
-# Multi-engine DNS discovery campaign
-reconcli permutcli --input root_domains.txt --output dns_campaign.txt \
-  --tool shuffledns --keywords "api,admin,dev,staging,prod" \
-  --threads 200 --resolve --max-results 100000 \
-  --chunk 10000 --format json --verbose
-```
-
-### 🌐 Additional Core Modules
-- **Cloud Detection & S3 Enumeration** (`cloudcli`): Comprehensive cloud provider detection and S3 bucket enumeration
-- **CNAME Analysis** (`cnamecli`): Advanced CNAME resolution, direct A/AAAA analysis, subdomain takeover detection with Discord/Slack notifications
-- **DNS Enumeration** (`dnscli`): Comprehensive DNS discovery and analysis
-- **HTTP Analysis** (`httpcli`): Web application assessment and fingerprinting
-- **IP Analysis** (`ipscli`): Network reconnaissance and IP intelligence
-- **Zone Walking** (`zonewalkcli`): DNS zone transfer testing and enumeration
 
 ## Installation
 
@@ -1020,7 +850,7 @@ reconcli urlcli \
   --gau-timeout 120 \
   --verbose
 
-# Using predefined flow configuration
+# Using flow configuration
 reconcli urlcli --domain target.com --flow flows/url_katana_advanced.yaml
 ```
 
@@ -1080,443 +910,299 @@ reconcli cloudcli --show-resume
 reconcli cloudcli --clear-resume
 ```
 
-### Complete VHOST Discovery Workflow
+### 🌍 TLD Reconnaissance (`tldr`)
+- **Massive TLD Coverage**: Systematically check domains across **2,672+ TLD variations**
+- **9 Comprehensive Categories**: Popular, country, new generic, business, crypto/blockchain, emerging tech, geographic, industry-specific, and specialized TLDs
+- **DNS & HTTP Probing**: Full resolution and HTTP/HTTPS status verification with detailed analytics
+- **Custom TLD Lists**: Support for custom TLD files and flexible category selection
+- **Wildcard Detection**: Automatic detection and filtering of wildcard domains
+- **Active Filtering**: Focus on active/responsive domains only
+- **WHOIS Integration**: Basic domain availability checking with typosquatting detection
+- **Professional Reports**: JSON and Markdown output with detailed statistics and categorization
+- **Typosquatting Research**: Built-in variations and common typos for security research
+- **Cryptocurrency Focus**: Specialized blockchain, DeFi, and crypto-related TLD categories
+
+**🎯 TLD Category Breakdown**:
+- **Popular** (81): Classic TLDs like .com, .net, .org, plus trending ones (.app, .dev, .tech)
+- **Country** (253): Complete list of country-code TLDs from all regions
+- **New Generic** (582): Modern gTLDs covering technology, business, lifestyle, and entertainment
+- **Business** (423): Corporate structures, professional services, and industry-specific domains
+- **Crypto/Blockchain** (106): Cryptocurrency, DeFi, NFT, and blockchain-focused TLDs
+- **Emerging Tech** (107): AI, machine learning, IoT, quantum computing, and futuristic domains
+- **Geographic** (351): Major cities, regions, states, and geographic features worldwide
+- **Industry Specific** (559): Automotive, real estate, healthcare, legal, financial, and more
+- **Specialized** (210): Adult content, suspicious/alternative, typosquatting variations for security research
+
 ```bash
-# Discover virtual hosts with notifications
-reconcli vhostcli \
-  --domain target.com \
-  --ip-list ip_ranges.txt \
-  --wordlist vhost_wordlist.txt \
-  --engine ffuf \
-  --proxy http://127.0.0.1:8080 \
-  --slack-webhook "https://hooks.slack.com/services/..." \
-  --output-dir vhost_results \
-  --verbose
+# Basic TLD reconnaissance with popular and country TLDs
+reconcli tldr -d example --categories popular,country --verbose
+
+# Advanced comprehensive TLD scan across all 2,672+ TLDs
+reconcli tldr -d mycompany --categories all --http-check \
+  --filter-active --save-json --verbose
+
+# Cryptocurrency and blockchain focused reconnaissance
+reconcli tldr -d cryptobrand --categories crypto_blockchain,emerging_tech \
+  --http-check --filter-active --save-markdown
+
+# Security research with typosquatting and specialized TLDs
+reconcli tldr -d target --categories specialized,geographic \
+  --exclude-wildcards --whois-check --verbose
+
+# Custom TLD list with industry-specific focus
+reconcli tldr -d brand --categories business,industry_specific \
+  --http-check --filter-active --slack-webhook "https://hooks.slack.com/..."
+
+# Maximum coverage scan for comprehensive domain discovery
+reconcli tldr -d enterprise --categories all --threads 100 \
+  --http-check --whois-check --exclude-wildcards \
+  --save-json --save-markdown --verbose
 ```
 
-### Comprehensive Takeover Assessment
+### 🔄 Advanced Permutation Generation (`permutcli`)
+- **16 Specialized Tools**: Internal engine, gotator, goaltdns, dnstwist, dnsgen, urlcrazy, shuffledns, dmut, s3scanner, alterx, kr (kitrunner), sublist3r, amass, subfinder, assetfinder, findomain
+- **Multi-Type Permutations**: Subdomains, paths, buckets, parameters, and API endpoints
+- **Advanced S3 Bucket Generator**: 300+ permutation patterns with AWS URL formats, custom suffixes, and deduplication
+- **TLD Injection Mode**: Focus on TLD variations with custom lists and exclusions
+- **Smart Case Mutations**: Automatic case-based variations (Dev, DEV, dev) for keywords and targets
+- **Advanced CLI Options**: Prefix/suffix-only modes, keyword exclusions, result filtering, chunked output
+- **DNS Resolver Updates**: Automatic download of latest resolver lists from Trickest and public sources
+- **Professional Output**: JSON/TXT formats with chunking, filtering, and comprehensive metadata
+
+#### 🎯 Multi-Engine Permutation Support
+
+**DNS Tools:**
+- **dnstwist**: Domain variation and typosquatting detection
+- **dnsgen**: Advanced subdomain generation with custom wordlists
+- **shuffledns**: High-performance DNS bruteforcing with resolver rotation
+- **dmut**: Comprehensive mutation-based subdomain discovery
+- **alterx**: Fast and flexible subdomain permutation
+- **sublist3r, amass, subfinder, assetfinder, findomain**: Passive enumeration integration
+
+**URL & Path Tools:**
+- **urlcrazy**: URL typosquatting and permutation analysis
+- **gotator**: Advanced subdomain permutation with depth control
+- **goaltdns**: ALT-DNS style permutation generation
+
+**Cloud & API Tools:**
+- **s3scanner**: S3 bucket discovery with advanced naming patterns
+- **kr (kitrunner)**: API endpoint discovery and testing
+
+**Internal Engine:**
+- **Advanced Built-in Generator**: Custom patterns, TLD support, case mutations
+
+#### 🪣 Advanced S3 Bucket Permutation Engine
+
+**Comprehensive Pattern Generation:**
+- **300+ Unique Patterns**: Brand combinations, suffix variations, year integration
+- **AWS URL Formats**: Complete S3 URL patterns (`.s3.amazonaws.com`, regional endpoints)
+- **Multi-Style Separators**: Dashes, dots, underscores for maximum coverage
+- **Business Patterns**: Company structures, departments, environments
+- **Cloud Provider Variations**: AWS, GCP, Azure specific naming conventions
+- **Perfect Deduplication**: Ordered set approach preserving generation quality
+
 ```bash
-# Run takeover detection with full reporting
-reconcli takeover \
-  --input discovered_subdomains.txt \
-  --tool subzy \
-  --output-dir takeover_results \
-  --json \
-  --markdown \
-  --slack-webhook "https://hooks.slack.com/services/..." \
-  --discord-webhook "https://discord.com/api/webhooks/..." \
-  --resume \
-  --verbose
+# Basic S3 bucket permutation
+reconcli permutcli --input brands.txt --output s3_buckets.txt --tool s3scanner \
+  --permutation-type buckets --verbose
+
+# Advanced S3 bucket generation with custom keywords
+reconcli permutcli --input companies.txt --output advanced_buckets.txt \
+  --tool s3scanner --keywords "dev,staging,prod,backup,logs,cdn" --verbose
+
+# S3 bucket discovery with chunked output
+reconcli permutcli --input targets.txt --output s3_discovery.txt \
+  --tool s3scanner --chunk 1000 --max-results 5000 --uniq --verbose
 ```
 
-### 🔗 CNAME Analysis and Subdomain Takeover Detection
+#### 🌐 TLD Injection Mode
+
+**Advanced TLD Management:**
+- **2,672+ TLD Support**: Complete TLD coverage with custom list support
+- **www Prefix Integration**: Automatic www prefix generation
+- **Custom Suffix/Prefix Injection**: Advanced pattern injection before TLDs
+- **TLD Exclusions**: Filter out unwanted TLDs (gov, edu, mil)
+- **Dry-run Mode**: Preview generation counts without execution
+
 ```bash
-# Basic CNAME analysis with provider identification
-reconcli cnamecli \
-  --domains subdomains.txt \
-  --provider-tags \
-  --verbose
+# Basic TLD injection mode
+reconcli permutcli --input brands.txt --output tld_variants.txt \
+  --mode tldinject --verbose
 
-# Include direct A/AAAA record analysis (not just CNAMEs)
-reconcli cnamecli \
-  --domains targets.txt \
-  --include-direct \
-  --provider-tags \
-  --json \
-  --verbose
+# Advanced TLD injection with custom lists and filtering
+reconcli permutcli --input companies.txt --output tld_advanced.txt \
+  --mode tldinject --tld-list custom_tlds.txt \
+  --inject-suffix "-cdn,-backup" --exclude-tlds "gov,edu,mil" \
+  --www-prefix --dry-run --verbose
 
-# Full vulnerability scan with takeover detection
-reconcli cnamecli \
-  --domains targets.txt \
-  --check \
-  --takeover-check \
-  --provider-tags \
-  --json \
-  --markdown \
-  --verbose
-
-# Full scan with direct records and Discord notifications
-reconcli cnamecli \
-  --domains targets.txt \
-  --include-direct \
-  --takeover-check \
-  --notify "https://discord.com/api/webhooks/..." \
-  --json \
-  --verbose
-
-# Slack notifications for critical findings
-reconcli cnamecli \
-  --domains targets.txt \
-  --takeover-check \
-  --notify "https://hooks.slack.com/services/..." \
-  --markdown \
-  --verbose
-
-# Filter only potential takeover candidates
-reconcli cnamecli \
-  --domains large_list.txt \
-  --takeover-check \
-  --status-filter potential_takeover \
-  --json \
-  --verbose
-
-# Filter dead domains (don't resolve at all)
-reconcli cnamecli \
-  --domains subdomains.txt \
-  --check \
-  --status-filter dead \
-  --markdown \
-  --verbose
-
-# High-performance concurrent scan with notifications
-reconcli cnamecli \
-  --domains large_list.txt \
-  --include-direct \
-  --takeover-check \
-  --threads 20 \
-  --notify "https://discord.com/api/webhooks/..." \
-  --json \
-  --output-dir cname_results \
-  --verbose
-
-# Resume interrupted vulnerability scan
-reconcli cnamecli \
-  --domains targets.txt \
-  --takeover-check \
-  --resume \
-  --verbose
-
-# Check resume status and clear state
-reconcli cnamecli --show-resume
-reconcli cnamecli --clear-resume
+# TLD injection with chunked output
+reconcli permutcli --input targets.txt --output tld_chunked.txt \
+  --mode tldinject --chunk 500 --max-results 2000 --verbose
 ```
 
-**🔧 Key Features:**
-- **Advanced CNAME Resolution**: Resolves CNAME chains and identifies service providers
-- **Direct A/AAAA Analysis**: Optional analysis of direct IP records with `--include-direct`
-- **Provider Detection**: Identifies 25+ cloud/CDN providers (AWS, Azure, Cloudflare, etc.)
-- **IP-based Provider Detection**: Detects cloud providers from IP addresses
-- **Subdomain Takeover Detection**: Tests for actual vulnerability patterns
-- **Real-time Notifications**: Discord/Slack webhooks for critical findings
-- **Concurrent Processing**: Multi-threaded analysis for performance
-- **Resume Support**: Continue interrupted scans
-- **Rich Reporting**: JSON and Markdown outputs with detailed statistics
+#### 🔤 Advanced Mutation & Filtering Options
 
-**Status Types:**
-- `no_cname`: Domain has no CNAME record (direct A/AAAA)
-- `resolves_ok`: CNAME exists and resolves properly
-- `not_resolving`: CNAME exists but doesn't resolve 
-- `potential_takeover`: CNAME points to vulnerable service and doesn't resolve
-- `dead`: Domain doesn't resolve at all (no DNS records)
-- `error`: Analysis failed due to technical issues
+**Case Mutations:**
+- **Automatic Case Variations**: Generate Dev, DEV, dev, Development variants
+- **Smart Detection**: Only apply to alphabetic keywords and targets
+- **Deduplication**: Automatic removal of case-based duplicates
 
-**🚀 Quick Reference:**
+**Advanced Filtering:**
+- **Keyword Exclusions**: Remove unwanted keywords from generation
+- **Pattern Filtering**: Keep only matching patterns with regex support
+- **Result Exclusions**: Remove specific patterns from final output
+- **Prefix/Suffix Only**: Generate only prefix or suffix-based permutations
 
-| Option | Purpose | Example |
-|--------|---------|---------|
-| `--include-direct` | Analyze A/AAAA records | `--include-direct` |
-| `--notify` | Discord/Slack notifications | `--notify "https://discord.com/api/webhooks/..."` |
-| `--takeover-check` | Test for vulnerabilities | `--takeover-check` |
-| `--status-filter` | Filter by status | `--status-filter potential_takeover` |
-| `--threads` | Concurrent processing | `--threads 20` |
-| `--resume` | Continue interrupted scan | `--resume` |
+**Output Management:**
+- **Chunked Output**: Split large results into manageable files
+- **Format Options**: JSON and TXT output with comprehensive metadata
+- **Result Limits**: Control maximum output size for performance
+- **Duplicate Removal**: Advanced deduplication across all tools
 
-**🎯 Supported Providers:** AWS S3, Heroku, GitHub Pages, Azure, Netlify, Shopify, WordPress.com, Cloudflare, Fastly, and 15+ more
+```bash
+# Case mutation with filtering
+reconcli permutcli --input targets.txt --output mutations.txt \
+  --tool internal --mutate-case --exclude-keywords "test,old,backup" \
+  --filter "api,admin,dev" --verbose
 
-## 📊 Project Stats
+# Prefix-only subdomain generation
+reconcli permutcli --input domains.txt --output prefix_subs.txt \
+  --tool internal --permutation-type subdomains --prefix-only \
+  --keywords "api,admin,dev,staging" --verbose
 
-![GitHub repo size](https://img.shields.io/github/repo-size/jarek-bir/Reconcli)
-![GitHub code size in bytes](https://img.shields.io/github/languages/code-size/jarek-bir/Reconcli)
-![Lines of code](https://img.shields.io/tokei/lines/github/jarek-bir/Reconcli)
-
-## 🛡️ Security & Bug Bounty
-
-ReconCLI is designed with bug bounty hunters and security researchers in mind:
-
-- **Professional Output**: Clean JSON/Markdown reports for documentation
-- **Stealth Mode**: Proxy support and configurable timeouts
-- **Resume Capability**: Continue long-running scans without losing progress
-- **Notification Integration**: Real-time alerts for critical findings
-- **Modular Design**: Use only the modules you need
-
-## 🚀 Roadmap
-
-### 🛡️ Vulnerability Scanning (vulncli)
-- [ ] **AI-Powered Dashboard**: Web-based interface for vulnerability management and analytics
-- [ ] **Orchestration Pipelines**: YAML-based vulnerability assessment workflows with conditional logic
-- [ ] **Enhanced ML Detection**: Advanced false positive reduction with custom model training
-- [ ] **Risk Scoring Engine**: Context-aware vulnerability prioritization with business impact analysis
-- [ ] **Integration Hub**: Direct integration with JIRA, ServiceNow, and vulnerability management platforms
-- [ ] **Custom Template Builder**: AI-assisted Nuclei template generation from vulnerability descriptions
-- [ ] **Continuous Monitoring**: Automated scheduled scans with trend analysis and alerting
-
-### 🚀 Platform Enhancements
-- [ ] Enhanced cloud provider detection with machine learning classification
-- [ ] Extended S3 enumeration with security assessment capabilities
-- [ ] Notification system integration for cloudcli with email and Slack support
-- [ ] DNS zone walking improvements
-- [ ] Enhanced JavaScript analysis with modern frameworks
-- [ ] Web application fingerprinting module
-- [ ] API endpoint discovery automation
-- [ ] Integration with popular bug bounty platforms
-- [ ] Docker containerization
-- [ ] Web-based dashboard interface
-
-## 📚 Additional Resources
-
-- **Documentation**: [GitHub Wiki](https://github.com/jarek-bir/Reconcli/wiki)
-- **Examples**: [Usage Examples](https://github.com/jarek-bir/Reconcli/tree/main/examples)
-- **Changelog**: [Release Notes](https://github.com/jarek-bir/Reconcli/releases)
-- **Security Policy**: [Security.md](https://github.com/jarek-bir/Reconcli/blob/main/SECURITY.md)
-
-## Contributing
-
-We welcome contributions to ReconCLI! Here's how you can help:
-
-### 🐛 Reporting Issues
-- Use the [GitHub issue tracker](https://github.com/jarek-bir/Reconcli/issues)
-- Provide detailed information about the bug
-- Include steps to reproduce the issue
-
-### 🔧 Development Process
-1. Fork the repository on GitHub
-2. Create a feature branch: `git checkout -b feature/your-feature-name`
-3. Make your changes with proper commit messages
-4. Add tests if applicable
-5. Run the existing tests to ensure nothing breaks
-6. Submit a pull request with a clear description
-
-### 📦 Repository Structure
-```
-reconcli/
-├── main.py              # Main CLI entry point
-├── vhostcli.py         # Virtual host discovery
-├── takeovercli.py      # Subdomain takeover detection  
-├── jscli.py            # JavaScript analysis
-├── urlcli.py           # URL processing and discovery
-├── utils/              # Shared utilities
-│   ├── notifications.py # Slack/Discord notifications
-│   ├── resume.py       # Resume functionality
-│   └── loaders.py      # Data loading utilities
-└── flows/              # YAML configuration templates
+# Advanced filtering with chunked output
+reconcli permutcli --input companies.txt --output filtered_results.txt \
+  --tool gotator --exclude "temp,old,test" --max-results 10000 \
+  --chunk 1000 --uniq --verbose
 ```
 
-## 📄 License
+#### 🛠️ Tool-Specific Advanced Options
 
-This project is licensed under the MIT License - see the [LICENSE](https://github.com/jarek-bir/Reconcli/blob/main/LICENSE) file for details.
+**Internal Engine:**
+- **Custom Patterns**: Load pattern templates from files
+- **TLD Integration**: Include common TLD variations
+- **Advanced Mode**: Complex pattern generation with numbers and separators
+- **Prefix/Suffix Control**: Granular control over permutation direction
 
-## 📈 Changelog
+**External Tools:**
+- **Threading Control**: Configurable concurrency for supported tools
+- **Timeout Management**: Per-tool timeout configuration
+- **Depth Control**: Permutation depth for tools like gotator
+- **Resolution Options**: DNS resolution for enumeration tools
 
-### Latest Changes (v3.0.0)
+**S3Scanner Integration:**
+- **Cloud Provider Selection**: AWS, GCP, Azure, or all providers
+- **Custom Suffixes**: Business-specific suffix patterns
+- **Year Integration**: Current year and custom year support
+- **Advanced Patterns**: 10+ categories of bucket naming conventions
 
-- ✅ **NEW: permutcli.py** - Advanced permutation generation platform
-  - **🔄 16 Specialized Tools**: Internal, gotator, goaltdns, dnstwist, dnsgen, urlcrazy, shuffledns, dmut, s3scanner, alterx, kr, sublist3r, amass, subfinder, assetfinder, findomain
-  - **🎯 Multi-Type Permutations**: Subdomains, paths, buckets, parameters, and API endpoints with specialized engines
-  - **🪣 Advanced S3 Bucket Generator**: 300+ permutation patterns with AWS URL formats, business naming conventions, and perfect deduplication
-  - **🌐 TLD Injection Mode**: 2,672+ TLD support with custom lists, exclusions, and www prefix integration
-  - **🔤 Smart Case Mutations**: Automatic case-based variations (Dev, DEV, dev) for enhanced discovery coverage
-  - **🎛️ Advanced CLI Options**: Prefix/suffix-only modes, keyword exclusions, pattern filtering, chunked output, dry-run mode
-  - **📡 DNS Resolver Management**: Automatic download of latest resolver lists from Trickest and public sources
-  - **📊 Professional Output**: JSON/TXT formats with chunking, filtering, deduplication, and comprehensive result management
-  - **⚡ High Performance**: Multi-threaded processing with configurable timeouts and robust error handling
-  - **🔄 Enterprise Features**: Resume support, progress tracking, and batch processing for large-scale campaigns
+```bash
+# Internal engine with advanced patterns
+reconcli permutcli --input targets.txt --output internal_advanced.txt \
+  --tool internal --advanced --mutate-case --include-tlds \
+  --keywords "api,admin,dev,staging,prod,test,demo" \
+  --exclude-keywords "old,legacy" --max-results 50000 \
+  --chunk 5000 --format json --verbose
 
-- ✅ **NEW: vulncli.py** - Advanced AI-powered vulnerability scanning platform
-  - **🤖 AI-Powered Intelligence**: Smart Nuclei template selection and false positive reduction
-  - **⚡ Multi-Engine Support**: Nuclei and Jaeles scanners with unified interface  
-  - **🔍 Smart Pattern Matching**: Custom GF patterns for targeted vulnerability discovery
-  - **📊 Advanced Risk Assessment**: AI-powered confidence scoring and OWASP Top 10 mapping
-  - **🎯 Intelligent Filtering**: Template selection by severity, tags, and technology stacks
-  - **📈 Executive Reporting**: AI-generated summaries for technical and management audiences
-  - **🔄 Enterprise Resume Support**: State management for large-scale vulnerability assessments
-  - **⚙️ High-Performance Scanning**: Concurrent processing with rate limiting and progress tracking
-  - **🔔 Real-time Notifications**: Slack/Discord integration for critical vulnerability findings
-  - **📋 Professional Reporting**: Multi-format output (JSON, Markdown, CSV, XML) with detailed metrics
-  - **📋 Roadmap**: Dashboard interface, orchestration pipelines, and ML-enhanced detection planned
+# Gotator with depth control
+reconcli permutcli --input subdomains.txt --output gotator_deep.txt \
+  --tool gotator --depth 3 --threads 20 --timeout 120 --verbose
 
-- ✅ **NEW: portcli.py** - Advanced port scanning and service enumeration
-  - **Multi-Scanner Support**: naabu, rustscan, and nmap with unified interface
-  - **Smart Target Handling**: Single IPs, CIDR ranges, and batch processing from files
-  - **Resume Functionality**: Continue interrupted scans with built-in state management
-  - **🏷️ Comprehensive Tagging System**: 60+ intelligent service tags across 13 categories
-    - **Service Categories**: web, database, remote, mail, dns, ftp, monitoring, cloud, mgmt, voip, game, iot, messaging
-    - **Environment Detection**: prod, dev, staging based on port patterns and service analysis
-    - **Protocol Tags**: tcp, udp, ssl, http, https, encrypted for security assessment
-    - **Technology Stacks**: jenkins, k8s-api, docker, prometheus, grafana, elk-stack, redis, postgres, mysql
-    - **Cloud Providers**: aws, gcp, azure, digitalocean, cloudflare with automatic detection
-  - **🔍 Advanced Service Recognition**: Automatic detection of 20+ technology stacks
-    - **CI/CD Platforms**: Jenkins, GitLab, GitHub Enterprise, TeamCity, Bamboo
-    - **Container Orchestration**: Kubernetes API, Docker services, container registries
-    - **Monitoring Stack**: ELK (Elasticsearch, Logstash, Kibana), Prometheus+Grafana, Nagios
-    - **Database Systems**: Redis, PostgreSQL, MySQL, MongoDB with cluster detection
-    - **Version Control**: Git services, SVN, automated code repository identification
-  - **☁️ Cloud & CDN Intelligence**: 
-    - ASN-based cloud provider detection for AWS, GCP, Azure, DigitalOcean
-    - CDN IP range identification and filtering (Cloudflare, AWS CloudFront, etc.)
-    - Cloud service endpoint recognition and tagging
-  - **🎯 Advanced Filtering System**:
-    - `--filter-tags`: Include only specific service categories (e.g., prod,web,database)
-    - `--exclude-tags`: Exclude noise like dev environments or CDN services
-    - `--filter-services`: Target specific technologies (e.g., jenkins,k8s-api,elk-stack)
-    - `--web-only`: Focus on web application ports for bug bounty hunting
-  - **📊 Professional Reporting**:
-    - **JSON Output**: Structured data with tags, detected services, cloud info, and statistics
-    - **Enhanced Markdown**: Rich reports with service recognition, tag distribution, and visual formatting
-    - **Statistical Analysis**: Port distribution by tags, success rates, and scanning performance metrics
-  - **⚡ Performance & Reliability**:
-    - Concurrent scanning with configurable threading and timeouts
-    - Progress tracking for large batch scans with ETA calculations
-    - Robust error handling with automatic retries and detailed logging
-    - Resume capability for interrupted scans preserving state and progress
+# DMut with custom threading
+reconcli permutcli --input domains.txt --output dmut_results.txt \
+  --tool dmut --threads 50 --keywords "dev,api,admin" --verbose
 
-- ✅ **NEW: ipscli.py** - Advanced IP intelligence and reconnaissance module
-  - **Multi-Source Enrichment**: ipinfo.io integration with geolocation, ASN, and organization data
-  - **🏷️ Intelligent IP Tagging System**: Comprehensive classification with 20+ tag categories
-    - **Geographic Tags**: country-based classification and region tagging
-    - **Infrastructure Tags**: cloud, cdn, hosting, isp, government, education detection
-    - **Service Tags**: web-server, mail-server, database, api, vpn automatic identification
-    - **Security Tags**: honeypot detection heuristics and privacy service identification
-  - **☁️ Cloud & CDN Intelligence**: 
-    - Multi-provider cloud detection (AWS, GCP, Azure, DigitalOcean) via IP ranges and ASN
-    - CDN identification and filtering (Cloudflare, AWS CloudFront, etc.)
-    - Cloud service endpoint recognition with provider-specific tagging
-  - **🔍 Advanced Discovery Integration**:
-    - **Uncover Integration**: Automated ASN detection with multi-engine support (Shodan, Censys, FOFA)
-    - **CIDR Expansion**: Safe expansion of network ranges with size limits
-    - **Multi-Format Input**: Support for subdomain resolution output and raw IP lists
-  - **🎯 Advanced Filtering & Analysis**:
-    - `--filter-country`: Geographic filtering by country codes
-    - `--filter-cloud`: Cloud provider filtering (aws,gcp,azure,digitalocean)
-    - `--filter-asn`: ASN pattern matching and organization filtering
-    - `--filter-tags`/`--exclude-tags`: Tag-based inclusion/exclusion filtering
-    - `--honeypot`: Enhanced honeypot detection with behavioral analysis
-  - **🔌 Integrated Port Scanning**:
-    - Multi-scanner support (rustscan, nmap, masscan, simple socket-based)
-    - Service detection and port-based tagging integration
-    - Custom port lists and focused scanning capabilities
-  - **📊 Professional Intelligence Reporting**:
-    - **Comprehensive Markdown Reports**: Geographic distribution, cloud analysis, service statistics
-    - **Structured JSON Output**: Complete enrichment data with tags, cloud info, and scan results
-    - **Statistical Analysis**: ASN distribution, country analysis, tag frequency, and security insights
-  - **⚡ Enterprise-Grade Features**:
-    - Resume functionality for large-scale IP analysis campaigns
-    - Concurrent processing with configurable threading and timeouts
-    - Proxy support for corporate environments and operational security
-    - Error handling with detailed logging and batch processing reliability
+# Multi-tool S3 discovery workflow
+reconcli permutcli --input brands.txt --output s3_comprehensive.txt \
+  --tool s3scanner --cloud-provider all --advanced \
+  --keywords "backup,logs,assets,cdn,data" --max-results 20000 \
+  --chunk 2000 --format json --verbose
+```
 
-- ✅ **NEW: vhostcheckcli.py** - Advanced virtual host discovery and validation
-  - Individual VHOST testing with comprehensive response analysis
-  - **Batch Processing**: Multiple IPs from file with progress tracking and statistics
-  - Technology detection for Nginx, Apache, IIS, WordPress, Drupal, and more
-  - Multiple output formats (JSON, CSV, TXT) with detailed results and batch formats
-  - Proxy support for testing through tools like Burp Suite
-  - SSL/TLS options with insecure certificate handling
-  - Comprehensive error handling for timeouts and connection issues
-  - Success rate calculation and summary reporting for batch operations
+#### 🔌 DNS Resolver Management
 
-- ✅ **NEW: cloudcli.py** - Comprehensive cloud provider detection and S3 bucket enumeration
-  - 60+ cloud providers detection (AWS, Azure, Google Cloud, Cloudflare, DigitalOcean, etc.)
-  - Multi-source detection: ASN, CNAME, PTR, HTTP headers, SSL certificates
-  - S3 bucket enumeration with 73+ naming patterns and multi-region support
-  - Batch processing with resume functionality for large domain lists
-  - Rate limiting and threading controls for optimal performance
-  - Professional reporting in JSON, TXT, and CSV formats
+**Automatic Resolver Updates:**
+- **Trickest Integration**: Download latest public resolver lists
+- **Custom Resolver Support**: Use organization-specific DNS servers
+- **Multi-Source Updates**: Aggregate from multiple resolver sources
+- **Performance Optimization**: Ensure optimal DNS resolution for tools
 
-- ✅ **NEW: cnamecli.py** - Advanced CNAME analysis and subdomain takeover detection
-  - **Advanced CNAME Resolution**: Multi-threaded CNAME chain analysis with 25+ provider detection
-  - **Direct A/AAAA Analysis**: Optional direct IP record analysis with `--include-direct` flag
-  - **Cloud Provider Detection**: IP-based provider identification (AWS, Azure, GCP, Cloudflare, etc.)
-  - **Subdomain Takeover Detection**: Real vulnerability testing with 20+ service patterns
-  - **Real-time Notifications**: Discord/Slack webhook integration for critical findings
-  - **Professional Reporting**: Rich JSON/Markdown reports with emoji indicators and statistics
-  - **Resume Support**: Continue interrupted scans with state management
-  - **Concurrent Processing**: High-performance multi-threaded analysis (configurable threads)
-  - **Advanced Filtering**: Status-based filtering and risk-level categorization
+```bash
+# Update DNS resolvers for shuffledns and other tools
+reconcli permutcli --update-resolvers --verbose
 
-- ✅ **Enhanced resume system** - Advanced scan management
-  - `--resume` - Continue interrupted scans seamlessly
-  - `--clear-resume` - Clear all previous resume states
-  - `--show-resume` - Display status of previous scans
-  - Intermediate saves every 10 domains for large batch operations
-  - Graceful interruption handling with Ctrl+C support
+# Use updated resolvers in permutation generation
+reconcli permutcli --input targets.txt --output shuffled_results.txt \
+  --tool shuffledns --threads 100 --resolve --verbose
+```
 
-- ✅ **NEW: subdocli.py** - Enhanced subdomain enumeration with 11 integrated tools
-  - Passive tools: Subfinder, Findomain, Assetfinder, Amass, Chaos, RapidDNS, crt.sh, BufferOver
-  - Active tools: Gobuster, FFuf, DNSRecon
-  - Multi-threaded DNS resolution and HTTP/HTTPS service probing
-  - Advanced statistics and comprehensive reporting
+#### 🎯 Professional Workflow Examples
 
-- ✅ **NEW: whoisfreakscli.py** - Professional WHOIS intelligence gathering
-  - WhoisFreaks API integration with bulk domain processing
-  - Risk assessment and domain expiration monitoring
-  - Professional reporting with threat intelligence insights
+```bash
+# Comprehensive subdomain discovery workflow
+reconcli permutcli --input target_domains.txt --output comprehensive_subs.txt \
+  --tool internal --advanced --mutate-case --include-tlds \
+  --keywords "api,admin,dev,staging,prod,test,demo" \
+  --exclude-keywords "old,legacy" --max-results 50000 \
+  --chunk 5000 --format json --verbose
 
-- ✅ **NEW: urlsorter.py** - Advanced URL processing and categorization
-  - Smart pattern recognition for technology stacks and sensitive files
-  - Multiple input sources (files, stdin) with resume support
-  - Advanced filtering and deduplication capabilities
+# S3 bucket hunting for bug bounty
+reconcli permutcli --input company_names.txt --output s3_hunt.txt \
+  --tool s3scanner --permutation-type buckets \
+  --keywords "backup,logs,assets,data,cdn,static" \
+  --inject-suffix "-backup,-logs,-data" --cloud-provider aws \
+  --max-results 10000 --uniq --verbose
 
-- ✅ **ENHANCED: urlcli.py** - Comprehensive URL discovery and analysis
-  - Advanced Katana integration (depth, JS crawling, headless mode, tech detection)
-  - Configurable timeouts for all external tools (GAU, Katana, Gospider, Waybackurls)
-  - YAML flow support with predefined configuration templates
-  - Enhanced error handling and professional reporting
+# API endpoint discovery workflow
+reconcli permutcli --input api_targets.txt --output api_endpoints.txt \
+  --tool kr --permutation-type api --api-endpoints \
+  --keywords "v1,v2,api,rest,graphql" --timeout 180 --verbose
 
-- ✅ **Enhanced vhostcli.py** with robust resume, error handling, and notifications
-- ✅ **Comprehensive notification system** supporting Slack and Discord webhooks
-- ✅ **Improved takeovercli.py** with resume system and enhanced error handling
-- ✅ **Fixed jscli.py** import paths for package compatibility
-- ✅ **Added utils/notifications.py** with full-featured notification support
-- ✅ **Professional documentation** with comprehensive usage examples
-- ✅ **YAML flow configurations** for urlcli with predefined templates
-- ✅ **MIT License** and enhanced README with all new features
+# TLD variation discovery for typosquatting research
+reconcli permutcli --input brand_list.txt --output tld_research.txt \
+  --mode tldinject --inject-suffix "-shop,-store,-online" \
+  --exclude-tlds "gov,edu,mil" --chunk 1000 --dry-run --verbose
 
-## 🆘 Support & Community
+# Path permutation for web application testing
+reconcli permutcli --input base_paths.txt --output path_permutations.txt \
+  --tool internal --permutation-type paths \
+  --keywords "admin,api,backup,config,test" \
+  --advanced --max-results 25000 --verbose
 
-### 💬 Getting Help
-- **Issues**: [GitHub Issues](https://github.com/jarek-bir/Reconcli/issues)
-- **Discussions**
-- **Security**: Please report security issues privately
+# Multi-engine DNS discovery campaign
+reconcli permutcli --input root_domains.txt --output dns_campaign.txt \
+  --tool shuffledns --keywords "api,admin,dev,staging,prod" \
+  --threads 200 --resolve --max-results 100000 \
+  --chunk 10000 --format json --verbose
+```
 
-### 🌟 Show Your Support
-- ⭐ Star this repository if you find it helpful
-- 🍴 Fork it to contribute
-- 📢 Share with the community
+#### 🔄 **Automated Security Workflows**
 
-## 👥 Authors & Contributors
+```bash
+# Continuous bug bounty automation
+reconcli aicli --continuous-hunting --platforms "hackerone,bugcrowd" \
+  --target-categories "fintech,saas,ecommerce" --persona bugbounty
 
-### 🚀 Cyber-Squad z Przyszłości
+# Red team campaign automation
+reconcli aicli --red-team-automation --duration "2-weeks" \
+  --techniques "phishing,lateral-movement,persistence" --persona redteam
 
-**The ReconCLI project is brought to you by:**
+# Compliance testing automation
+reconcli aicli --compliance-automation --frameworks "owasp,pci-dss,gdpr" \
+  --reporting "executive,technical" --persona auditor
+```
 
-- **Jarek** 🧑‍💻 - Lead Developer & Security Researcher
-- **AI Assistant** 🤖 - Advanced Algorithm Development & Code Architecture
-- **GitHub Copilot** ⚡ - Intelligent Code Completion & Optimization
+#### 🎓 **Educational and Training Examples**
 
-*A collaborative effort combining human expertise, artificial intelligence, and cutting-edge development tools to create next-generation cybersecurity reconnaissance tools.*
+```bash
+# Interactive security training
+reconcli aicli --training-mode "hands-on" --topic "web-application-security" \
+  --difficulty "intermediate" --persona trainer
 
-### 🌟 Special Thanks
+# Capture-the-flag assistance
+reconcli aicli --ctf-assistance --category "web,crypto,pwn" \
+  --hint-level "minimal" --persona trainer
 
-- Open source security community for inspiration and feedback
-- Contributors and testers who help improve the toolkit
-- Security researchers who provide valuable insights
-
----
-
-**Made with ❤️ by the Cyber-Squad z Przyszłości**
-
-*"Where human creativity meets artificial intelligence to secure the digital frontier"* 🚀🔐
-If ReconCLI helps you in your security research or bug bounty hunting, consider:
-- ⭐ Starring the repository on GitHub
-- 🐛 Reporting bugs and suggesting features
-- 🔧 Contributing code improvements
-- 📖 Improving documentation
-
-### 🏆 Contributors
-Special thanks to all contributors who help make ReconCLI better!
-
----
-
-**Made with ❤️ for the security community**
-
-🔗 **Repository**: [https://github.com/jarek-bir/Reconcli](https://github.com/jarek-bir/Reconcli)
+# Security certification preparation
+reconcli aicli --cert-prep "oscp,cissp,ceh" --study-plan --practice-labs --persona trainer
+```

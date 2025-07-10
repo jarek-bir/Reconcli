@@ -27,6 +27,7 @@ from reconcli.makewordlistcli import (
 )  # ✅ Importing the makewordlist command
 from reconcli.permutcli import permutcli  # Importing the permutcli command
 from reconcli.tagger import cli as tagger_cli
+from reconcli.aicli import aicli  # Importing the aicli command
 
 
 @click.group()
@@ -141,6 +142,10 @@ permutcli.short_help = "Generate permutation-based wordlists"
 # Domain Tagging and Classification
 cli.add_command(tagger_cli, name="tagger")
 tagger_cli.short_help = "🏷️ Advanced subdomain tagging and classification"
+
+# AI-Powered Reconnaissance
+cli.add_command(aicli, name="aicli")
+aicli.short_help = "AI-powered reconnaissance and analysis tools"
 
 if __name__ == "__main__":
     cli()
