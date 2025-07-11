@@ -1361,4 +1361,4 @@ reconcli aicli --ctf-assistance --category "web,crypto,pwn" \
 
 # Security certification preparation
 reconcli aicli --cert-prep "oscp,cissp,ceh" --study-plan --practice-labs --persona trainer
-```
+```# Test GPG commit
