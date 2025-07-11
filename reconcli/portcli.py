@@ -532,6 +532,16 @@ def write_markdown(results, path):
 @click.option(
     "--verbose", is_flag=True, help="Enable verbose output with command details"
 )
+@click.option(
+    "--store-db",
+    is_flag=True,
+    help="Store results in ReconCLI database for persistent storage and analysis",
+)
+@click.option(
+    "--target-domain",
+    help="Primary target domain for database storage (auto-detected if not provided)",
+)
+@click.option("--program", help="Bug bounty program name for database classification")
 def portcli(
     ip,
     cidr,
@@ -556,6 +566,9 @@ def portcli(
     markdown,
     silent,
     verbose,
+    store_db,
+    target_domain,
+    program,
 ):
     """
     Advanced Port Scanning and Service Enumeration
@@ -860,7 +873,75 @@ def portcli(
         if not silent:
             click.echo(f"📝 Markdown report saved to: {md_path}")
 
-    if not silent:
-        click.echo(f"✅ Port scan completed!")
+    # Database storage
+    if store_db:
+        try:
+            from reconcli.db.operations import store_target, store_port_scan
 
-    return filtered_results
+            # Auto-detect target domain if not provided
+            if not target_domain and filtered_results:
+                # Try to extract domain from first result's IP or use IP directly
+                first_result = filtered_results[0]
+                target_ip = first_result.get("ip")
+                if target_ip:
+                    target_domain = target_ip
+
+            if target_domain:
+                # Ensure target exists in database
+                target_id = store_target(target_domain, program=program)
+
+                # Convert results to database format
+                port_scan_data = []
+                for result in filtered_results:
+                    ip = result.get("ip")
+                    # Use port_details if available, otherwise fall back to open_ports
+                    port_details = result.get("port_details", [])
+                    if not port_details and result.get("open_ports"):
+                        # Convert simple port list to detailed format
+                        for port in result.get("open_ports", []):
+                            port_details.append({"port": port, "service": "unknown"})
+
+                    for port_info in port_details:
+                        port_entry = {
+                            "ip": ip,
+                            "port": port_info.get("port"),
+                            "protocol": port_info.get("protocol", "tcp"),
+                            "status": port_info.get("status", "open"),
+                            "service": port_info.get("service"),
+                            "version": port_info.get("version"),
+                            "banner": port_info.get("banner"),
+                            "response_time": port_info.get("response_time"),
+                        }
+                        port_scan_data.append(port_entry)
+
+                # Store port scans in database
+                if port_scan_data:
+                    stored_ids = store_port_scan(target_domain, port_scan_data, scanner)
+                    if not silent:
+                        click.echo(
+                            f"🗄️ Stored {len(stored_ids)} port scan results in database for {target_domain}"
+                        )
+                        if program:
+                            click.echo(f"   Program: {program}")
+                        click.echo(f"   Scanner: {scanner}")
+                else:
+                    if not silent:
+                        click.echo(f"⚠️ No port scan results to store in database")
+            else:
+                if not silent:
+                    click.echo(
+                        f"⚠️ Could not determine target domain for database storage"
+                    )
+
+        except ImportError:
+            if not silent:
+                click.echo(
+                    f"⚠️ Database module not available. Install with: pip install sqlalchemy>=2.0.0"
+                )
+        except Exception as e:
+            if not silent:
+                click.echo(f"❌ Error storing to database: {e}")
+
+
+if __name__ == "__main__":
+    portcli()

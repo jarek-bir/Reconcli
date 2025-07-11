@@ -572,7 +572,7 @@ def ai_generate_executive_summary(stats, scan_results, tech_stack=None):
     "--live-stats", is_flag=True, help="Show live statistics during scanning."
 )
 @click.option(
-    "--custom-headers", help="Custom headers for HTTP requests (key:value,key2:value2)."
+    "--custom-headers", help="Custom headers for HTTP requests (key:value,key2:value)."
 )
 @click.option("--timeout", type=int, default=30, help="HTTP timeout for requests.")
 @click.option(
@@ -626,6 +626,16 @@ def ai_generate_executive_summary(stats, scan_results, tech_stack=None):
     default=0.6,
     help="Minimum confidence threshold for AI findings (0.0-1.0).",
 )
+@click.option(
+    "--store-db",
+    is_flag=True,
+    help="Store results in ReconCLI database for persistent storage and analysis",
+)
+@click.option(
+    "--target-domain",
+    help="Primary target domain for database storage (auto-detected if not provided)",
+)
+@click.option("--program", help="Bug bounty program name for database classification")
 def vulncli(
     input_file,
     output_dir,
@@ -673,6 +683,9 @@ def vulncli(
     ai_smart_templates,
     ai_executive_summary,
     ai_confidence_threshold,
+    store_db,
+    target_domain,
+    program,
 ):
     """🎯 Advanced vulnerability scanning with GF, Dalfox, Jaeles, and Nuclei
 
@@ -1483,8 +1496,91 @@ def vulncli(
     else:
         click.echo(f"\n[✓] Scan complete! Results in: {output_dir}")
 
+    # Database storage
+    if store_db:
+        try:
+            from reconcli.db.operations import store_target, store_vulnerability
+            from urllib.parse import urlparse
 
-vulncli.short_help = "🎯 AI-enhanced vulnerability scanning with GF + Dalfox/Jaeles/Nuclei + smart analysis"
+            # Auto-detect target domain from input file if not provided
+            if not target_domain and input_file:
+                try:
+                    with open(input_file, "r") as f:
+                        first_url = f.readline().strip()
+                        if first_url:
+                            parsed = urlparse(first_url)
+                            target_domain = parsed.netloc
+                except:
+                    pass
+
+            if target_domain:
+                # Ensure target exists in database
+                target_id = store_target(target_domain, program=program)
+
+                # Store vulnerability summary data
+                stored_count = 0
+
+                # Store summary for each tool that found vulnerabilities
+                if scan_results.get("dalfox", {}).get("findings", 0) > 0:
+                    vuln_data = {
+                        "title": "Dalfox XSS Scan Results",
+                        "description": f"Dalfox found {scan_results['dalfox']['findings']} potential XSS vulnerabilities",
+                        "severity": "high",
+                        "vuln_type": "xss",
+                        "evidence": f"Dalfox scan identified {scan_results['dalfox']['findings']} findings",
+                    }
+                    store_vulnerability(target_domain, vuln_data, "dalfox")
+                    stored_count += 1
+
+                if scan_results.get("jaeles", {}).get("findings", 0) > 0:
+                    vuln_data = {
+                        "title": "Jaeles Security Scan Results",
+                        "description": f"Jaeles found {scan_results['jaeles']['findings']} potential security issues",
+                        "severity": "medium",
+                        "vuln_type": "security-misc",
+                        "evidence": f"Jaeles scan identified {scan_results['jaeles']['findings']} findings",
+                    }
+                    store_vulnerability(target_domain, vuln_data, "jaeles")
+                    stored_count += 1
+
+                if scan_results.get("nuclei", {}).get("findings", 0) > 0:
+                    vuln_data = {
+                        "title": "Nuclei Vulnerability Scan Results",
+                        "description": f"Nuclei found {scan_results['nuclei']['findings']} potential vulnerabilities",
+                        "severity": "medium",
+                        "vuln_type": "security-misc",
+                        "evidence": f"Nuclei scan identified {scan_results['nuclei']['findings']} findings",
+                    }
+                    store_vulnerability(target_domain, vuln_data, "nuclei")
+                    stored_count += 1
+
+                if stored_count > 0:
+                    if verbose:
+                        click.echo(
+                            f"🗄️ Stored {stored_count} vulnerability summaries in database for {target_domain}"
+                        )
+                        if program:
+                            click.echo(f"   Program: {program}")
+                        click.echo(
+                            f"   Total findings: {stats['vulnerabilities_found']}"
+                        )
+                else:
+                    if verbose:
+                        click.echo(f"⚠️ No vulnerabilities to store in database")
+            else:
+                if verbose:
+                    click.echo(
+                        f"⚠️ Could not determine target domain for database storage"
+                    )
+
+        except ImportError:
+            if verbose:
+                click.echo(
+                    f"⚠️ Database module not available. Install with: pip install sqlalchemy>=2.0.0"
+                )
+        except Exception as e:
+            if verbose:
+                click.echo(f"❌ Error storing to database: {e}")
 
 
 if __name__ == "__main__":

@@ -33,6 +33,242 @@ except ImportError:
             os.remove(path)
 
 
+def resolve_subdomains(subdomains, threads=50, verbose=False):
+    """Resolve a list of subdomains to IP addresses with concurrent processing."""
+    results = []
+
+    def resolve_single_subdomain(subdomain):
+        """Resolve a single subdomain to IP address."""
+        try:
+            socket.setdefaulttimeout(5)  # 5 second timeout
+            ip = socket.gethostbyname(subdomain.strip())
+
+            # Try to get PTR record
+            ptr = ""
+            try:
+                ptr = socket.gethostbyaddr(ip)[0]
+            except:
+                ptr = ""
+
+            return {
+                "subdomain": subdomain.strip(),
+                "ip": ip,
+                "ptr": ptr,
+                "resolved": True,
+                "status": "resolved",
+            }
+        except (socket.gaierror, socket.timeout, Exception):
+            return {
+                "subdomain": subdomain.strip(),
+                "ip": None,
+                "ptr": "",
+                "resolved": False,
+                "status": "failed",
+            }
+
+    # Use ThreadPoolExecutor for concurrent resolution
+    with concurrent.futures.ThreadPoolExecutor(max_workers=threads) as executor:
+        # Submit all resolution tasks
+        future_to_subdomain = {
+            executor.submit(resolve_single_subdomain, subdomain): subdomain
+            for subdomain in subdomains
+        }
+
+        # Collect results as they complete
+        completed = 0
+        for future in concurrent.futures.as_completed(future_to_subdomain):
+            result = future.result()
+            results.append(result)
+            completed += 1
+
+            if verbose and completed % 100 == 0:
+                click.echo(
+                    f"   🔍 Resolved {completed}/{len(subdomains)} subdomains..."
+                )
+
+    if verbose:
+        resolved_count = sum(1 for r in results if r["resolved"])
+        click.echo(
+            f"   ✅ Successfully resolved {resolved_count}/{len(subdomains)} subdomains"
+        )
+
+    return results
+
+
+def probe_http_services(targets, timeout=10, threads=50, verbose=False):
+    """Probe HTTP/HTTPS services on resolved subdomains."""
+    results = []
+
+    def probe_single_target(target):
+        """Probe HTTP/HTTPS on a single target."""
+        subdomain = target.get("subdomain", "")
+        if not subdomain:
+            return None
+
+        result = {
+            "subdomain": subdomain,
+            "http": False,
+            "https": False,
+            "http_status": None,
+            "https_status": None,
+            "http_title": "",
+            "https_title": "",
+        }
+
+        # Test HTTP
+        try:
+            response = requests.get(
+                f"http://{subdomain}",
+                timeout=timeout,
+                verify=False,
+                allow_redirects=True,
+            )
+            result["http"] = True
+            result["http_status"] = response.status_code
+            # Extract title
+            if "<title>" in response.text.lower():
+                title_start = response.text.lower().find("<title>") + 7
+                title_end = response.text.lower().find("</title>", title_start)
+                if title_end > title_start:
+                    result["http_title"] = response.text[title_start:title_end].strip()[
+                        :100
+                    ]
+        except:
+            pass
+
+        # Test HTTPS
+        try:
+            response = requests.get(
+                f"https://{subdomain}",
+                timeout=timeout,
+                verify=False,
+                allow_redirects=True,
+            )
+            result["https"] = True
+            result["https_status"] = response.status_code
+            # Extract title
+            if "<title>" in response.text.lower():
+                title_start = response.text.lower().find("<title>") + 7
+                title_end = response.text.lower().find("</title>", title_start)
+                if title_end > title_start:
+                    result["https_title"] = response.text[
+                        title_start:title_end
+                    ].strip()[:100]
+        except:
+            pass
+
+        return result
+
+    # Use ThreadPoolExecutor for concurrent probing
+    with concurrent.futures.ThreadPoolExecutor(max_workers=threads) as executor:
+        # Submit all probing tasks
+        future_to_target = {
+            executor.submit(probe_single_target, target): target for target in targets
+        }
+
+        # Collect results as they complete
+        completed = 0
+        for future in concurrent.futures.as_completed(future_to_target):
+            result = future.result()
+            if result:
+                results.append(result)
+            completed += 1
+
+            if verbose and completed % 50 == 0:
+                click.echo(f"   🌐 Probed {completed}/{len(targets)} targets...")
+
+    if verbose:
+        http_count = sum(1 for r in results if r["http"])
+        https_count = sum(1 for r in results if r["https"])
+        click.echo(f"   ✅ Found {http_count} HTTP and {https_count} HTTPS services")
+
+    return results
+
+
+def generate_enhanced_markdown_report(
+    output_dir, domain, comprehensive_data, verbose=False
+):
+    """Generate enhanced Markdown report with scan results."""
+    report_path = os.path.join(output_dir, "subdomain_report.md")
+
+    with open(report_path, "w") as f:
+        f.write(f"# Subdomain Enumeration Report for {domain}\n\n")
+        f.write(f"**Scan Time:** {comprehensive_data.get('scan_time', 'Unknown')}\n")
+        f.write(
+            f"**Total Subdomains Found:** {comprehensive_data.get('total_subdomains', 0)}\n\n"
+        )
+
+        # Tool statistics
+        if comprehensive_data.get("tool_stats"):
+            f.write("## Tool Statistics\n\n")
+            for tool, stats in comprehensive_data["tool_stats"].items():
+                f.write(f"- **{tool}**: {stats.get('count', 0)} subdomains\n")
+            f.write("\n")
+
+        # Resolved subdomains
+        if comprehensive_data.get("resolved"):
+            f.write("## Resolved Subdomains\n\n")
+            resolved_subs = [r for r in comprehensive_data["resolved"] if r["resolved"]]
+            f.write(f"Successfully resolved {len(resolved_subs)} subdomains:\n\n")
+            for result in resolved_subs[:20]:  # Limit to first 20
+                f.write(f"- `{result['subdomain']}` → `{result['ip']}`\n")
+            if len(resolved_subs) > 20:
+                f.write(f"- ... and {len(resolved_subs) - 20} more\n")
+            f.write("\n")
+
+        # HTTP services
+        if comprehensive_data.get("http_services"):
+            f.write("## HTTP Services\n\n")
+            http_services = [
+                h
+                for h in comprehensive_data["http_services"]
+                if h["http"] or h["https"]
+            ]
+            f.write(f"Found {len(http_services)} active HTTP/HTTPS services:\n\n")
+            for service in http_services[:20]:  # Limit to first 20
+                protocols = []
+                if service["http"]:
+                    protocols.append(f"HTTP({service['http_status']})")
+                if service["https"]:
+                    protocols.append(f"HTTPS({service['https_status']})")
+                f.write(f"- `{service['subdomain']}` → {', '.join(protocols)}\n")
+            if len(http_services) > 20:
+                f.write(f"- ... and {len(http_services) - 20} more\n")
+
+    if verbose:
+        click.echo(f"   📝 Enhanced Markdown report saved: {report_path}")
+
+
+def display_scan_statistics(comprehensive_data, tool_stats):
+    """Display scan statistics summary."""
+    click.echo("\n" + "=" * 60)
+    click.echo("📊 SCAN STATISTICS SUMMARY")
+    click.echo("=" * 60)
+
+    total_subs = comprehensive_data.get("total_subdomains", 0)
+    click.echo(f"🎯 Total Unique Subdomains: {total_subs}")
+
+    if tool_stats:
+        click.echo("\n🔧 Tool Breakdown:")
+        for tool, count in tool_stats.items():
+            # Handle both int and dict formats
+            if isinstance(count, dict):
+                count = count.get("count", 0)
+            percentage = (count / max(total_subs, 1)) * 100
+            click.echo(f"   • {tool}: {count} ({percentage:.1f}%)")
+
+    if comprehensive_data.get("resolved"):
+        resolved_count = sum(1 for r in comprehensive_data["resolved"] if r["resolved"])
+        click.echo(f"🔍 Resolved Subdomains: {resolved_count}")
+
+    if comprehensive_data.get("http_services"):
+        http_count = sum(1 for h in comprehensive_data["http_services"] if h["http"])
+        https_count = sum(1 for h in comprehensive_data["http_services"] if h["https"])
+        click.echo(f"🌐 Active Services: {http_count} HTTP, {https_count} HTTPS")
+
+    click.echo("=" * 60 + "\n")
+
+
 @click.command()
 @click.option(
     "--domain", "-d", required=True, help="Target domain for subdomain enumeration"
@@ -60,6 +296,16 @@ except ImportError:
 @click.option("--resume", is_flag=True, help="Resume previous scan")
 @click.option("--clear-resume", is_flag=True, help="Clear previous resume state")
 @click.option("--show-stats", is_flag=True, help="Show detailed statistics")
+@click.option(
+    "--store-db",
+    is_flag=True,
+    help="Store results in ReconCLI database for persistent storage and analysis",
+)
+@click.option(
+    "--target-domain",
+    help="Primary target domain for database storage (uses --domain if not provided)",
+)
+@click.option("--program", help="Bug bounty program name for database classification")
 def subdocli(
     domain,
     output_dir,
@@ -75,6 +321,9 @@ def subdocli(
     resume,
     clear_resume,
     show_stats,
+    store_db,
+    target_domain,
+    program,
 ):
     """Enhanced subdomain enumeration using multiple tools with resolution and HTTP probing"""
 
@@ -284,212 +533,70 @@ def subdocli(
         click.echo(f"[+] ✅ Subdomain enumeration completed!")
         click.echo(f"[+] 📁 Results saved to: {outpath}/")
 
-
-def resolve_subdomains(subdomains, threads, verbose):
-    """Resolve subdomains to IP addresses using multithreading"""
-    resolved = []
-
-    def resolve_single(subdomain):
+    # Database storage
+    if store_db:
         try:
-            ip = socket.gethostbyname(subdomain)
-            return {"subdomain": subdomain, "ip": ip, "resolved": True}
-        except socket.gaierror:
-            return {"subdomain": subdomain, "ip": None, "resolved": False}
-        except Exception as e:
-            return {
-                "subdomain": subdomain,
-                "ip": None,
-                "resolved": False,
-                "error": str(e),
-            }
+            from reconcli.db.operations import store_target, store_subdomains
 
-    with concurrent.futures.ThreadPoolExecutor(max_workers=threads) as executor:
-        future_to_subdomain = {
-            executor.submit(resolve_single, sub): sub for sub in subdomains
-        }
+            # Use provided target_domain or fall back to domain
+            final_target_domain = target_domain or domain
 
-        for i, future in enumerate(
-            concurrent.futures.as_completed(future_to_subdomain), 1
-        ):
-            result = future.result()
-            resolved.append(result)
+            if final_target_domain:
+                # Ensure target exists in database
+                target_id = store_target(final_target_domain, program=program)
 
-            if verbose and i % 100 == 0:
-                click.echo(f"[+] 📊 Resolved {i}/{len(subdomains)} subdomains")
+                # Prepare subdomain data for database storage
+                subdomain_data = []
 
-    # Filter successful resolutions
-    successful = [r for r in resolved if r["resolved"]]
-    if verbose:
-        click.echo(
-            f"[+] ✅ Successfully resolved {len(successful)}/{len(subdomains)} subdomains"
-        )
+                # If we have resolved subdomains, use those with IP info
+                if comprehensive_data.get("resolved"):
+                    for result in comprehensive_data["resolved"]:
+                        if result["resolved"]:  # Only store successfully resolved
+                            entry = {
+                                "subdomain": result["subdomain"],
+                                "ip": result["ip"],
+                            }
+                            subdomain_data.append(entry)
+                else:
+                    # Fall back to basic subdomain list
+                    for subdomain in all_subs:
+                        entry = {"subdomain": subdomain, "ip": None}
+                        subdomain_data.append(entry)
 
-    return resolved
+                # Store subdomains in database
+                if subdomain_data:
+                    stored_ids = store_subdomains(
+                        final_target_domain, subdomain_data, "subdocli"
+                    )
+                    if verbose:
+                        click.echo(
+                            f"🗄️ Stored {len(stored_ids)} subdomains in database for {final_target_domain}"
+                        )
+                        if program:
+                            click.echo(f"   Program: {program}")
+                        tools_used = comprehensive_data.get("scan_summary", {}).get(
+                            "tools_used", []
+                        )
+                        if tools_used:
+                            click.echo(f"   Tools: {', '.join(tools_used)}")
+                else:
+                    if verbose:
+                        click.echo(f"⚠️ No subdomains to store in database")
+            else:
+                if verbose:
+                    click.echo(
+                        f"⚠️ Could not determine target domain for database storage"
+                    )
 
-
-def probe_http_services(targets, timeout, threads, verbose):
-    """Probe HTTP/HTTPS services on subdomains"""
-    results = []
-
-    def probe_single(target):
-        subdomain = target["subdomain"]
-        result = {
-            "subdomain": subdomain,
-            "http": {"accessible": False, "status": None, "title": None},
-            "https": {"accessible": False, "status": None, "title": None},
-        }
-
-        # Test both HTTP and HTTPS
-        for scheme in ["http", "https"]:
-            try:
-                url = f"{scheme}://{subdomain}"
-                response = requests.get(
-                    url, timeout=timeout, allow_redirects=True, verify=True
+        except ImportError:
+            if verbose:
+                click.echo(
+                    f"⚠️ Database module not available. Install with: pip install sqlalchemy>=2.0.0"
                 )
-
-                result[scheme]["accessible"] = True
-                result[scheme]["status"] = response.status_code
-                result[scheme]["url"] = url
-                result[scheme]["final_url"] = response.url
-
-                # Extract title
-                if "text/html" in response.headers.get("content-type", ""):
-                    try:
-                        title_start = response.text.find("<title>")
-                        title_end = response.text.find("</title>")
-                        if title_start != -1 and title_end != -1:
-                            title = response.text[title_start + 7 : title_end].strip()
-                            result[scheme]["title"] = title[:100]  # Limit title length
-                    except:
-                        pass
-
-            except requests.exceptions.Timeout:
-                result[scheme]["error"] = "timeout"
-            except requests.exceptions.ConnectionError:
-                result[scheme]["error"] = "connection_error"
-            except Exception as e:
-                result[scheme]["error"] = str(e)[:100]
-
-        return result
-
-    with concurrent.futures.ThreadPoolExecutor(max_workers=threads) as executor:
-        future_to_target = {
-            executor.submit(probe_single, target): target for target in targets
-        }
-
-        for i, future in enumerate(
-            concurrent.futures.as_completed(future_to_target), 1
-        ):
-            result = future.result()
-            results.append(result)
-
-            if verbose and i % 50 == 0:
-                click.echo(f"[+] 🌐 Probed {i}/{len(targets)} services")
-
-    # Count accessible services
-    accessible = [
-        r for r in results if r["http"]["accessible"] or r["https"]["accessible"]
-    ]
-    if verbose:
-        click.echo(f"[+] ✅ Found {len(accessible)} accessible HTTP/HTTPS services")
-
-    return results
+        except Exception as e:
+            if verbose:
+                click.echo(f"❌ Error storing to database: {e}")
 
 
-def generate_enhanced_markdown_report(outpath, domain, data, verbose):
-    """Generate enhanced markdown report with statistics"""
-    md_path = os.path.join(outpath, "enhanced_report.md")
-
-    with open(md_path, "w") as f:
-        f.write(f"# Subdomain Enumeration Report: {domain}\n\n")
-        f.write(f"**Scan Date:** {data['scan_time']}\n")
-        f.write(f"**Total Subdomains:** {data['total_subdomains']}\n\n")
-
-        # Tool statistics
-        f.write("## Tool Performance\n\n")
-        f.write("| Tool | Subdomains Found |\n")
-        f.write("|------|------------------|\n")
-        for tool, count in sorted(
-            data["tool_stats"].items(), key=lambda x: x[1], reverse=True
-        ):
-            f.write(f"| {tool} | {count} |\n")
-        f.write("\n")
-
-        # DNS Resolution results
-        if data["resolved"]:
-            resolved_count = len([r for r in data["resolved"] if r["resolved"]])
-            f.write(f"## DNS Resolution\n\n")
-            f.write(
-                f"**Successfully Resolved:** {resolved_count}/{len(data['resolved'])}\n\n"
-            )
-
-            f.write("### Resolved Subdomains\n\n")
-            for result in sorted(data["resolved"], key=lambda x: x["subdomain"]):
-                if result["resolved"]:
-                    f.write(f"- `{result['subdomain']}` → `{result['ip']}`\n")
-            f.write("\n")
-
-        # HTTP Services
-        if data["http_services"]:
-            http_accessible = [
-                r for r in data["http_services"] if r["http"]["accessible"]
-            ]
-            https_accessible = [
-                r for r in data["http_services"] if r["https"]["accessible"]
-            ]
-
-            f.write(f"## HTTP Services\n\n")
-            f.write(f"**HTTP Accessible:** {len(http_accessible)}\n")
-            f.write(f"**HTTPS Accessible:** {len(https_accessible)}\n\n")
-
-            f.write("### Accessible Services\n\n")
-            for result in sorted(data["http_services"], key=lambda x: x["subdomain"]):
-                subdomain = result["subdomain"]
-                if result["http"]["accessible"] or result["https"]["accessible"]:
-                    f.write(f"#### {subdomain}\n\n")
-
-                    if result["http"]["accessible"]:
-                        status = result["http"]["status"]
-                        title = result["http"].get("title", "N/A")
-                        f.write(f"- **HTTP:** Status {status}, Title: {title}\n")
-
-                    if result["https"]["accessible"]:
-                        status = result["https"]["status"]
-                        title = result["https"].get("title", "N/A")
-                        f.write(f"- **HTTPS:** Status {status}, Title: {title}\n")
-
-                    f.write("\n")
-
-        # All subdomains list
-        f.write("## All Discovered Subdomains\n\n")
-        for subdomain in sorted(data["subdomains"]):
-            f.write(f"- {subdomain}\n")
-
-    if verbose:
-        click.echo(f"[+] 📄 Enhanced markdown report saved to {md_path}")
-
-
-def display_scan_statistics(data, tool_stats):
-    """Display comprehensive scan statistics"""
-    click.echo(f"\n[+] 📊 Scan Statistics:")
-    click.echo(f"   Domain: {data['domain']}")
-    click.echo(f"   Total Subdomains: {data['total_subdomains']}")
-    click.echo(f"   Tools Used: {len(data['scan_summary']['tools_used'])}")
-
-    click.echo(f"\n[+] 🛠️  Tool Performance:")
-    for tool, count in sorted(tool_stats.items(), key=lambda x: x[1], reverse=True):
-        click.echo(f"   {tool:12} → {count:4} subdomains")
-
-    if data["resolved"]:
-        resolved_count = len([r for r in data["resolved"] if r["resolved"]])
-        click.echo(f"\n[+] 🔍 DNS Resolution:")
-        click.echo(f"   Resolved: {resolved_count}/{len(data['resolved'])}")
-
-    if data["http_services"]:
-        http_count = len([r for r in data["http_services"] if r["http"]["accessible"]])
-        https_count = len(
-            [r for r in data["http_services"] if r["https"]["accessible"]]
-        )
-        click.echo(f"\n[+] 🌐 HTTP Services:")
-        click.echo(f"   HTTP accessible: {http_count}")
-        click.echo(f"   HTTPS accessible: {https_count}")
+if __name__ == "__main__":
+    subdocli()

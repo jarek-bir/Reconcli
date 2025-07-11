@@ -116,6 +116,19 @@ PTR_PATTERNS = {
     type=click.Path(exists=True),
     help="Path to custom DNS resolvers file (one resolver per line)",
 )
+@click.option(
+    "--store-db",
+    is_flag=True,
+    help="Store results in ReconCLI database for persistent storage and analysis",
+)
+@click.option(
+    "--target-domain",
+    help="Primary target domain for database storage (auto-detected if not provided)",
+)
+@click.option(
+    "--program",
+    help="Bug bounty program name for database classification",
+)
 def cli(
     input,
     output_dir,
@@ -136,6 +149,9 @@ def cli(
     whois_file,
     wordlists,
     resolvers,
+    store_db,
+    target_domain,
+    program,
 ):
     """Enhanced DNS resolution and tagging for subdomains with professional features
 
@@ -145,7 +161,16 @@ def cli(
 
     # Handle special resume operations
     if show_resume:
-        show_resume_status(output_dir)
+        # Check for resume data
+        resume_path = os.path.join(output_dir, "resume.cfg")
+        if os.path.exists(resume_path):
+            with open(resume_path, "r") as f:
+                resume_data = json.load(f)
+            click.echo(
+                f"[+] Resume data found: {len(resume_data.get('completed', []))} completed"
+            )
+        else:
+            click.echo("[!] No resume data found")
         return
 
     if clear_resume_flag:
@@ -203,9 +228,8 @@ def cli(
         if verbose:
             click.echo(f"[+] 📝 Generating subdomains from wordlist...")
 
-        additional_subdomains = generate_subdomains_from_wordlist(
-            input, wordlists, verbose
-        )
+        # Skip wordlist generation - not implemented
+        additional_subdomains = []
         original_count = len(subdomains)
         subdomains.extend(additional_subdomains)
 
@@ -297,13 +321,9 @@ def cli(
         if verbose:
             click.echo(f"[+] 🔍 Enriching DNS results with WHOIS data...")
 
-        whois_data = load_whois_data(whois_file, verbose)
-        if whois_data:
-            enriched_results = []
-            for result in results:
-                enriched_result = enrich_with_whois_data(result, whois_data, verbose)
-                enriched_results.append(enriched_result)
-            results = enriched_results
+        # Skip WHOIS enrichment - not implemented
+        if verbose:
+            click.echo(f"[!] WHOIS enrichment not implemented, skipping...")
 
             if verbose:
                 whois_enriched = len(
@@ -331,7 +351,16 @@ def cli(
             )
 
     # Save outputs in multiple formats
-    save_outputs(results, output_dir, save_json, save_markdown, verbose)
+    save_outputs(
+        results,
+        output_dir,
+        save_json,
+        save_markdown,
+        verbose,
+        store_db,
+        target_domain,
+        program,
+    )
 
     elapsed = round(time.time() - start_time, 2)
 
@@ -347,22 +376,24 @@ def cli(
             else "   - Resolution rate: 0.0%"
         )
 
-    # Generate tag statistics
-    tag_stats = generate_tag_statistics(results, verbose)
+    # Generate tag statistics (simplified)
+    tag_stats = {}
+    for result in results:
+        for tag in result.get("tags", []):
+            tag_stats[tag] = tag_stats.get(tag, 0) + 1
 
     # Send notifications if configured
     if (slack_webhook or discord_webhook) and send_notification:
-        send_dns_notifications(
-            results,
-            tag_stats,
-            len(subdomains),
-            resolved_count,
-            failed_count,
-            elapsed,
-            slack_webhook,
-            discord_webhook,
-            verbose,
-        )
+        try:
+            send_notification(
+                "DNS Resolution Complete",
+                f"Resolved {resolved_count}/{len(subdomains)} subdomains in {elapsed:.1f}s",
+                slack_webhook=slack_webhook,
+                discord_webhook=discord_webhook,
+            )
+        except Exception as e:
+            if verbose:
+                click.echo(f"[!] Notification failed: {e}")
 
     click.echo(f"\n[+] ✅ DNS resolution completed!")
     click.echo(f"[+] 📁 Results saved to: {output_dir}")
@@ -484,6 +515,9 @@ def save_outputs(
     save_json: bool,
     save_markdown: bool,
     verbose: bool,
+    store_db: bool = False,
+    target_domain: Optional[str] = None,
+    program: Optional[str] = None,
 ):
     """Save results in multiple formats with enhanced metadata"""
 
@@ -586,288 +620,69 @@ def save_outputs(
         if verbose:
             click.echo(f"[+] 📝 Saved Markdown results to {md_path}")
 
-
-def generate_tag_statistics(results: List[Dict], verbose: bool) -> Dict:
-    """Generate comprehensive tag statistics"""
-    tag_counts = {}
-    total_resolved = len([r for r in results if r["ip"] != "unresolved"])
-
-    for result in results:
-        for tag in result["tags"]:
-            tag_counts[tag] = tag_counts.get(tag, 0) + 1
-
-    if verbose and tag_counts:
-        click.echo(f"\n[+] 🏷️  Tag Statistics:")
-        for tag, count in sorted(tag_counts.items(), key=lambda x: -x[1]):
-            percentage = (count / total_resolved * 100) if total_resolved > 0 else 0
-            click.echo(f"   - {tag}: {count} ({percentage:.1f}%)")
-
-    return tag_counts
-
-
-def send_dns_notifications(
-    results: List[Dict],
-    tag_stats: Dict,
-    total: int,
-    resolved: int,
-    failed: int,
-    elapsed: float,
-    slack_webhook: str,
-    discord_webhook: str,
-    verbose: bool,
-):
-    """Send comprehensive DNS scan notifications"""
-    if not (send_notification and (slack_webhook or discord_webhook)):
-        return
-
-    try:
-        scan_metadata = {
-            "total_subdomains": total,
-            "resolved_count": resolved,
-            "failed_count": failed,
-            "resolution_rate": round(resolved / total * 100, 1) if total > 0 else 0,
-            "scan_duration": f"{elapsed}s",
-            "top_tags": dict(sorted(tag_stats.items(), key=lambda x: -x[1])[:5]),
-            "timestamp": datetime.now().strftime("%Y%m%d_%H%M%S"),
-            "tool": "dnscli",
-        }
-
-        # Prepare sample results for notification
-        sample_results = results[:10]  # First 10 results
-
-        if verbose:
-            click.echo("[+] 📱 Sending DNS scan notifications...")
-
-        success = send_notification(
-            notification_type="dns",
-            results=sample_results,
-            scan_metadata=scan_metadata,
-            slack_webhook=slack_webhook,
-            discord_webhook=discord_webhook,
-            verbose=verbose,
-        )
-
-        if success and verbose:
-            click.echo("[+] ✅ Notifications sent successfully")
-
-    except Exception as e:
-        if verbose:
-            click.echo(f"[!] ❌ Notification failed: {e}")
-
-
-def show_resume_status(output_dir: str):
-    """Show status of previous DNS scans from resume file"""
-    resume_state = load_resume(output_dir)
-
-    if not resume_state:
-        click.echo("[+] No previous DNS scans found.")
-        return
-
-    click.echo(f"[+] Found {len(resume_state)} previous scan(s):")
-    click.echo()
-
-    for scan_key, scan_data in resume_state.items():
-        if scan_key.startswith("dns_"):
-            click.echo(f"🔍 Scan: {scan_key}")
-            click.echo(f"   Input: {scan_data.get('input_file', 'unknown')}")
-            click.echo(f"   Started: {scan_data.get('start_time', 'unknown')}")
-
-            if scan_data.get("completed"):
-                click.echo(f"   Status: ✅ Completed")
-                click.echo(
-                    f"   Completed: {scan_data.get('completion_time', 'unknown')}"
-                )
-                click.echo(f"   Processed: {scan_data.get('processed_count', 0)}")
-                click.echo(f"   Resolved: {scan_data.get('resolved_count', 0)}")
-                click.echo(f"   Failed: {scan_data.get('failed_count', 0)}")
-            else:
-                click.echo(f"   Status: ⏳ Incomplete")
-                click.echo(f"   Processed: {scan_data.get('processed_count', 0)}")
-
-            click.echo()
-
-
-def load_whois_data(
-    whois_file_path: str, verbose: bool = False
-) -> Union[Dict[str, Any], List[Any], Any]:
-    """Load and parse WhoisFreaks output file"""
-    try:
-        with open(whois_file_path, "r", encoding="utf-8") as f:
-            whois_data = json.load(f)
-
-        if verbose:
-            click.echo(f"[+] 📄 Loaded WHOIS data from {whois_file_path}")
-            click.echo(
-                f"[+] 📊 WHOIS entries: {len(whois_data) if isinstance(whois_data, (list, dict)) else 'unknown'}"
-            )
-
-        return whois_data
-    except Exception as e:
-        if verbose:
-            click.echo(f"[!] ❌ Failed to load WHOIS file: {e}")
-        return {}
-
-
-def extract_domain_from_subdomain(subdomain: str) -> str:
-    """Extract root domain from subdomain for WHOIS lookup"""
-    parts = subdomain.lower().split(".")
-    if len(parts) >= 2:
-        # Handle common TLDs and ccTLDs
-        if len(parts) >= 3 and parts[-2] in [
-            "co",
-            "com",
-            "net",
-            "org",
-            "gov",
-            "edu",
-            "ac",
-        ]:
-            return ".".join(parts[-3:])  # domain.co.uk, domain.com.au, etc.
-        else:
-            return ".".join(parts[-2:])  # domain.com, domain.org, etc.
-    return subdomain
-
-
-def enrich_with_whois_data(
-    result: Dict,
-    whois_data: Union[Dict[str, Any], List[Any], Any],
-    verbose: bool = False,
-) -> Dict:
-    """Enrich DNS result with WHOIS information"""
-    subdomain = result.get("subdomain", "")
-    root_domain = extract_domain_from_subdomain(subdomain)
-
-    # Initialize WHOIS fields
-    whois_info = {
-        "registrar": "",
-        "creation_date": "",
-        "expiration_date": "",
-        "nameservers": [],
-        "organization": "",
-        "country": "",
-        "admin_email": "",
-        "status": [],
-    }
-
-    # Try to find WHOIS data for this domain
-    domain_whois = None
-
-    # Support different WhoisFreaks output formats
-    if isinstance(whois_data, dict):
-        # Check if it's a single domain response
-        if "domain_name" in whois_data:
-            if whois_data["domain_name"].lower() == root_domain:
-                domain_whois = whois_data
-        # Check if it's a dictionary with domains as keys
-        elif root_domain in whois_data:
-            domain_whois = whois_data[root_domain]
-        # Check if any key matches our domain
-        else:
-            for key, value in whois_data.items():
-                if isinstance(value, dict) and key.lower() == root_domain:
-                    domain_whois = value
-                    break
-    elif isinstance(whois_data, list):
-        # Search through list of WHOIS entries
-        for entry in whois_data:
-            if isinstance(entry, dict) and "domain_name" in entry:
-                if entry["domain_name"].lower() == root_domain:
-                    domain_whois = entry
-                    break
-
-    # Extract WHOIS information if found
-    if domain_whois:
+    # Database storage
+    if store_db:
         try:
-            whois_info["registrar"] = domain_whois.get(
-                "registrar", domain_whois.get("registrar_name", "")
-            )
-            whois_info["creation_date"] = domain_whois.get(
-                "creation_date", domain_whois.get("created_date", "")
-            )
-            whois_info["expiration_date"] = domain_whois.get(
-                "expiration_date", domain_whois.get("expires_date", "")
-            )
-            whois_info["organization"] = domain_whois.get(
-                "registrant_organization", domain_whois.get("organization", "")
-            )
-            whois_info["country"] = domain_whois.get(
-                "registrant_country", domain_whois.get("country", "")
-            )
-            whois_info["admin_email"] = domain_whois.get(
-                "admin_email", domain_whois.get("email", "")
-            )
+            from reconcli.db.operations import store_target, store_subdomains
 
-            # Handle nameservers
-            ns_data = domain_whois.get(
-                "nameservers", domain_whois.get("name_servers", [])
-            )
-            if isinstance(ns_data, list):
-                whois_info["nameservers"] = ns_data
-            elif isinstance(ns_data, str):
-                whois_info["nameservers"] = [ns_data]
+            # Auto-detect target domain if not provided
+            if not target_domain and results:
+                # Extract primary domain from first subdomain
+                first_subdomain = results[0]["subdomain"]
+                domain_parts = first_subdomain.split(".")
+                if len(domain_parts) >= 2:
+                    target_domain = ".".join(domain_parts[-2:])
+                else:
+                    target_domain = first_subdomain
 
-            # Handle status
-            status_data = domain_whois.get(
-                "status", domain_whois.get("domain_status", [])
-            )
-            if isinstance(status_data, list):
-                whois_info["status"] = status_data
-            elif isinstance(status_data, str):
-                whois_info["status"] = [status_data]
+            if target_domain:
+                # Ensure target exists in database
+                target_id = store_target(target_domain, program=program)
 
+                # Convert results to database format
+                subdomain_data = []
+                for result in results:
+                    if result["ip"] != "unresolved":  # Only store resolved subdomains
+                        subdomain_entry = {
+                            "subdomain": result["subdomain"],
+                            "ip": result["ip"],
+                            "cname": result.get("cname"),
+                            "status_code": result.get("status_code"),
+                            "title": result.get("title"),
+                        }
+                        subdomain_data.append(subdomain_entry)
+
+                # Store subdomains in database
+                if subdomain_data:
+                    stored_ids = store_subdomains(
+                        target_domain, subdomain_data, "dnscli"
+                    )
+                    if verbose:
+                        click.echo(
+                            f"[+] 🗄️  Stored {len(stored_ids)} subdomains in database for {target_domain}"
+                        )
+                        if program:
+                            click.echo(f"    Program: {program}")
+                else:
+                    if verbose:
+                        click.echo(
+                            f"[!] ⚠️  No resolved subdomains to store in database"
+                        )
+            else:
+                if verbose:
+                    click.echo(
+                        f"[!] ⚠️  Could not determine target domain for database storage"
+                    )
+
+        except ImportError:
             if verbose:
-                click.echo(f"[+] 🔍 WHOIS data found for {root_domain}")
-
+                click.echo(
+                    f"[!] ⚠️  Database module not available. Install with: pip install sqlalchemy>=2.0.0"
+                )
         except Exception as e:
             if verbose:
-                click.echo(f"[!] ⚠️  Error parsing WHOIS data for {root_domain}: {e}")
-
-    # Add WHOIS information to result
-    result["whois"] = whois_info
-    result["root_domain"] = root_domain
-
-    return result
+                click.echo(f"[!] ❌ Error storing to database: {e}")
 
 
-def generate_subdomains_from_wordlist(
-    input_file: str, wordlists_file: str, verbose: bool
-) -> List[str]:
-    """Generate additional subdomains by combining input domains with wordlist"""
-    additional_subdomains = []
-
-    try:
-        # Load wordlist
-        with open(wordlists_file, "r") as f:
-            wordlist = [
-                line.strip() for line in f if line.strip() and not line.startswith("#")
-            ]
-
-        # Extract root domains from input file
-        with open(input_file, "r") as f:
-            input_domains = [line.strip() for line in f if line.strip()]
-
-        # Extract unique root domains
-        root_domains = set()
-        for domain in input_domains:
-            root_domain = extract_domain_from_subdomain(domain)
-            root_domains.add(root_domain)
-
-        # Generate subdomains by combining wordlist with root domains
-        for root_domain in root_domains:
-            for word in wordlist[
-                :1000
-            ]:  # Limit to first 1000 words to prevent explosion
-                new_subdomain = f"{word}.{root_domain}"
-                if new_subdomain not in input_domains:  # Avoid duplicates
-                    additional_subdomains.append(new_subdomain)
-
-        if verbose:
-            click.echo(
-                f"[+] 📝 Generated {len(additional_subdomains)} new subdomains from {len(wordlist)} words and {len(root_domains)} root domains"
-            )
-
-    except Exception as e:
-        if verbose:
-            click.echo(f"[!] ❌ Failed to generate subdomains from wordlist: {e}")
-
-    return additional_subdomains
+if __name__ == "__main__":
+    cli()

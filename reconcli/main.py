@@ -32,6 +32,14 @@ from reconcli.crawlercli import crawlercli
 from reconcli.mdreport import cli as mdreport_cli  # Advanced Markdown Report Generator
 from reconcli.wafdetectcli import wafdetectcli  # Importing the wafdetectcli command
 
+# Database management (optional)
+try:
+    from reconcli.dbcli import dbcli
+
+    DATABASE_AVAILABLE = True
+except ImportError:
+    DATABASE_AVAILABLE = False
+
 
 @click.group()
 def cli():
@@ -169,6 +177,15 @@ mdreport_cli.short_help = (
 # WAF Detection
 cli.add_command(wafdetectcli, name="wafdetectcli")
 wafdetectcli.short_help = "🛡️ Advanced WAF detection, testing and bypass analysis"
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# 🗄️ DATABASE MANAGEMENT
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# Database Management (Optional)
+if DATABASE_AVAILABLE:
+    cli.add_command(dbcli, name="dbcli")
+    dbcli.short_help = "🗄️ Database management for reconnaissance data storage"
 
 if __name__ == "__main__":
     cli()
