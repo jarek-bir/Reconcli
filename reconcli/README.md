@@ -482,7 +482,74 @@ reconcli vulncli --input large_targets.txt --resume \
   --verbose --output-format json
 ```
 
-### 🔥 **Advanced WAF Bypass Examples**
+### �️ **WAF Detection & Bypass Testing (`wafdetectcli`)**
+- **🔍 Multi-Tool Detection**: wafw00f, WhatWaf, GoTestWAF, and Nmap integration
+- **🧪 Advanced Payload Testing**: 25+ WAF signatures with 5 payload categories (XSS, SQLi, LFI, RCE, Generic)
+- **📊 Interactive HTML Reports**: Modern CSS Grid layouts with JavaScript filtering and collapsible sections
+- **🎯 Comprehensive Analysis**: Header analysis, security fingerprinting, and risk assessment
+- **⚡ Multi-Target Support**: Bulk scanning with resume functionality and progress tracking
+- **🎨 Professional UI**: Executive summary dashboard with color-coded risk levels and tool result cards
+- **🔧 Enterprise Features**: Proxy support, custom timeouts, notification integration, and detailed statistics
+
+#### 🛡️ WAF Detection Methods
+- **Signature-based**: 25+ enterprise WAF signatures (Cloudflare, Akamai, AWS WAF, F5, Imperva, etc.)
+- **Payload-based**: Custom bypass testing with advanced evasion techniques
+- **Header analysis**: Deep HTTP header inspection for security indicators
+- **Network-level**: Nmap scripts for firewall detection
+- **Tool integration**: GoTestWAF for comprehensive bypass score analysis
+
+#### 🎯 Advanced CLI Options
+```bash
+# Basic WAF detection with all tools
+reconcli wafdetectcli -t example.com --all-tools --output-html
+
+# Advanced bypass testing with payload mutations
+reconcli wafdetectcli -t target.com --test-bypass --max-payloads 5 \
+  --header-analysis --output-html --verbose
+
+# Multi-target scanning with custom settings
+reconcli wafdetectcli -i targets.txt --use-gotestwaf --use-nmap \
+  --timeout 30 --output-json --output-markdown
+
+# Enterprise analysis with notifications
+reconcli wafdetectcli -t example.com --all-tools --test-bypass \
+  --header-analysis --output-html --proxy http://127.0.0.1:8080 \
+  --verbose --timeout 20
+
+# Resume interrupted WAF analysis
+reconcli wafdetectcli -i large_targets.txt --resume --all-tools \
+  --test-bypass --max-payloads 3 --output-html --verbose
+```
+
+#### 📊 Interactive HTML Reports
+- **Executive Dashboard**: Summary statistics with detection rates and risk metrics
+- **Tool Result Cards**: Visual representation of each detection method's findings
+- **Payload Testing Tables**: Detailed bypass attempt results with success indicators
+- **Filtering & Search**: Real-time filtering by target, WAF type, or tool results
+- **Risk Assessment**: Color-coded risk levels based on bypass success rates
+- **Responsive Design**: Mobile-friendly interface with collapsible sections
+
+### 📝 **Enhanced Markdown Reports (`mdreport`)**
+- **🎨 Emoji Control**: `--emoji-off` flag for professional, emoji-free reports
+- **🏢 Enterprise Templates**: Clean formatting suitable for corporate environments
+- **📋 Multiple Formats**: Support for executive summaries and technical documentation
+- **🔧 Template Customization**: Flexible report generation with configurable sections
+- **📊 Data Integration**: Seamless integration with all ReconCLI modules
+
+```bash
+# Generate professional reports without emojis
+reconcli mdreport --input scan_results.json --emoji-off --template executive
+
+# Corporate-friendly vulnerability reports
+reconcli mdreport --input vuln_scan.json --emoji-off --format corporate \
+  --sections "summary,findings,recommendations"
+
+# Clean technical documentation
+reconcli mdreport --input recon_data.json --emoji-off --style technical \
+  --exclude-metadata --professional-formatting
+```
+
+### �🔥 **Advanced WAF Bypass Examples**
 
 ```bash
 # Modern SPA XSS with advanced obfuscation
@@ -645,6 +712,13 @@ reconcli --help
 - **Subjack**: `go install github.com/haccer/subjack@latest`
 - **Tko-subs**: `go install github.com/anshumanbh/tko-subs@latest`
 
+#### For WAF Detection & Bypass Testing (`wafdetectcli`)
+- **wafw00f**: `pip install wafw00f`
+- **WhatWaf**: `pip install whatwaf`
+- **GoTestWAF**: Download from [GitHub releases](https://github.com/wallarm/gotestwaf/releases)
+- **Nmap**: Install from [nmap.org](https://nmap.org/download.html) (for WAF detection scripts)
+- **httpx**: `go install -v github.com/projectdiscovery/httpx/cmd/httpx@latest`
+
 ### API Keys
 
 #### WhoisFreaks API (for `whoisfreaks`)
@@ -701,6 +775,8 @@ reconcli/
 ├── vhostcheckcli.py       # Advanced VHOST discovery and validation
 ├── portcli.py             # Port scanning and service enumeration
 ├── cnamecli.py            # CNAME analysis and subdomain takeover detection (NEW)
+├── wafdetectcli.py        # WAF detection & bypass testing (NEW)
+├── mdreport.py            # Enhanced markdown reporting with emoji control (ENHANCED)
 ├── utils/
 │   ├── __init__.py
 │   ├── cloud_detect.py    # Cloud provider detection engine (NEW)
