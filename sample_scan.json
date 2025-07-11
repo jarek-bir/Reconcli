@@ -1,1 +1,0 @@
-{"vulnerability_tests": {"xss_basic": {"description": "XSS detection"}, "sqli_critical": {"description": "SQL injection"}, "csrf_medium": {"description": "CSRF protection"}}, "total_findings": 3}

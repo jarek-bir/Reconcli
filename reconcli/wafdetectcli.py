@@ -382,7 +382,7 @@ def wafdetectcli(
                                         )
                                         waf_names.append(waf_name)
                                     elif "is behind" in line:
-                                        # Pattern: "is behind CacheWall (Varnish) WAF"
+                                        # Pattern: "is behind CacheWall (Varnish) WAF" or "is behind Kona SiteDefender (Akamai) WAF"
                                         parts = line.split("is behind")[-1].strip()
                                         waf_name = parts.split("WAF")[0].strip()
                                         if " and/or " in waf_name:
