@@ -173,6 +173,56 @@ def save_outputs(domain, tagged, output_dir, save_markdown, save_json):
 @click.option("--slack-webhook", help="Slack webhook URL for notifications")
 @click.option("--discord-webhook", help="Discord webhook URL for notifications")
 @click.option(
+    "--use-cariddi",
+    is_flag=True,
+    help="Use Cariddi for advanced web crawling and endpoint discovery",
+)
+@click.option(
+    "--cariddi-depth",
+    default=2,
+    help="Cariddi crawling depth (default: 2)",
+)
+@click.option(
+    "--cariddi-concurrency",
+    default=20,
+    help="Cariddi concurrency level (default: 20)",
+)
+@click.option(
+    "--cariddi-delay",
+    default=0,
+    help="Cariddi delay between requests in milliseconds (default: 0)",
+)
+@click.option(
+    "--cariddi-timeout",
+    default=10,
+    help="Cariddi timeout per request in seconds (default: 10)",
+)
+@click.option(
+    "--cariddi-secrets",
+    is_flag=True,
+    help="Enable Cariddi secrets hunting in discovered content",
+)
+@click.option(
+    "--cariddi-endpoints",
+    is_flag=True,
+    help="Enable Cariddi endpoint discovery mode",
+)
+@click.option(
+    "--cariddi-extensions",
+    default="",
+    help="Cariddi file extensions to crawl (comma-separated, e.g., js,php,asp)",
+)
+@click.option(
+    "--cariddi-ignore-extensions",
+    default="",
+    help="Cariddi file extensions to ignore (comma-separated, e.g., png,jpg,gif)",
+)
+@click.option(
+    "--cariddi-plain",
+    is_flag=True,
+    help="Use Cariddi plain output format (no colors/formatting)",
+)
+@click.option(
     "--threads", default=5, help="Number of concurrent threads for processing"
 )
 def main(
@@ -215,7 +265,34 @@ def main(
     slack_webhook,
     discord_webhook,
     threads,
+    use_cariddi,
+    cariddi_depth,
+    cariddi_concurrency,
+    cariddi_delay,
+    cariddi_timeout,
+    cariddi_secrets,
+    cariddi_endpoints,
+    cariddi_extensions,
+    cariddi_ignore_extensions,
+    cariddi_plain,
 ):
+    """Enhanced URL discovery and crawling for reconnaissance with professional features
+
+    Supports multiple URL discovery tools including wayback, gau, katana, gospider, sitemap parsing, and Cariddi.
+    Can extract JavaScript URLs, perform content analysis, and tag URLs for categorization.
+
+    NEW: Cariddi Integration for Advanced Web Crawling
+    • Use --use-cariddi to enable Cariddi-powered web crawling and endpoint discovery
+    • Cariddi provides fast crawling with built-in endpoint discovery and secrets hunting
+    • Supports custom extensions filtering, concurrency control, and timeout management
+    • Can combine Cariddi results with traditional URL discovery tools
+
+    Examples:
+    • Basic Cariddi crawling: --use-cariddi --cariddi-depth 2 --cariddi-secrets
+    • Endpoint discovery mode: --use-cariddi --cariddi-endpoints --cariddi-extensions js,php
+    • Secrets hunting: --use-cariddi --cariddi-secrets --cariddi-depth 3
+    • Combined tools: --wayback --katana --use-cariddi --cariddi-endpoints
+    """
     global all_urls_global
 
     # Handle special resume operations
@@ -298,6 +375,16 @@ def main(
                 "sitemap": sitemap,
                 "extract_js": extract_js,
                 "js_scan": js_scan,
+                "use_cariddi": use_cariddi,
+                "cariddi_depth": cariddi_depth,
+                "cariddi_concurrency": cariddi_concurrency,
+                "cariddi_delay": cariddi_delay,
+                "cariddi_timeout": cariddi_timeout,
+                "cariddi_secrets": cariddi_secrets,
+                "cariddi_endpoints": cariddi_endpoints,
+                "cariddi_extensions": cariddi_extensions,
+                "cariddi_ignore_extensions": cariddi_ignore_extensions,
+                "cariddi_plain": cariddi_plain,
             },
         }
         save_resume_state(output_dir, resume_state)
@@ -325,12 +412,33 @@ def main(
         save_markdown = config.get("save_markdown", save_markdown)
         tag_only = config.get("tag_only", tag_only)
         dedupe = config.get("dedupe", dedupe)
+        # Cariddi configuration from flow
+        use_cariddi = config.get("use_cariddi", use_cariddi)
+        cariddi_depth = config.get("cariddi_depth", cariddi_depth)
+        cariddi_concurrency = config.get("cariddi_concurrency", cariddi_concurrency)
+        cariddi_delay = config.get("cariddi_delay", cariddi_delay)
+        cariddi_timeout = config.get("cariddi_timeout", cariddi_timeout)
+        cariddi_secrets = config.get("cariddi_secrets", cariddi_secrets)
+        cariddi_endpoints = config.get("cariddi_endpoints", cariddi_endpoints)
+        cariddi_extensions = config.get("cariddi_extensions", cariddi_extensions)
+        cariddi_ignore_extensions = config.get(
+            "cariddi_ignore_extensions", cariddi_ignore_extensions
+        )
+        cariddi_plain = config.get("cariddi_plain", cariddi_plain)
         # Override timeout if specified in flow
         timeout = config.get("timeout", timeout)
 
     if verbose:
         click.echo(f"[+] 🚀 Starting URL discovery scan")
         click.echo(f"[+] 📁 Output directory: {output_dir}")
+        if use_cariddi:
+            click.echo(f"[+] 🕷️  Using Cariddi for advanced web crawling")
+            click.echo(f"[+] 🎯 Cariddi depth: {cariddi_depth}")
+            click.echo(f"[+] 🧵 Cariddi concurrency: {cariddi_concurrency}")
+            if cariddi_secrets:
+                click.echo(f"[+] 🕵️‍♂️ Cariddi secrets hunting: enabled")
+            if cariddi_endpoints:
+                click.echo(f"[+] 📂 Cariddi endpoint discovery: enabled")
         click.echo(f"[+] ⏰ Timeout: {timeout}s")
         click.echo(f"[+] 🔄 Retries: {retries}")
         click.echo(f"[+] 🧵 Threads: {threads}")
@@ -398,6 +506,16 @@ def main(
                 timeout,
                 retries,
                 verbose,
+                use_cariddi,
+                cariddi_depth,
+                cariddi_concurrency,
+                cariddi_delay,
+                cariddi_timeout,
+                cariddi_secrets,
+                cariddi_endpoints,
+                cariddi_extensions,
+                cariddi_ignore_extensions,
+                cariddi_plain,
             )
 
             if errors:
@@ -554,6 +672,7 @@ def main(
                     ("katana", katana),
                     ("gospider", gospider),
                     ("sitemap", sitemap),
+                    ("cariddi", use_cariddi),
                 ]
                 if enabled
             ],
@@ -767,6 +886,16 @@ def enhanced_url_discovery(
     timeout,
     retries,
     verbose,
+    use_cariddi,
+    cariddi_depth,
+    cariddi_concurrency,
+    cariddi_delay,
+    cariddi_timeout,
+    cariddi_secrets,
+    cariddi_endpoints,
+    cariddi_extensions,
+    cariddi_ignore_extensions,
+    cariddi_plain,
 ):
     """Enhanced URL discovery with better error handling and progress tracking."""
     urls = set()
@@ -914,6 +1043,117 @@ def enhanced_url_discovery(
 
         except Exception as e:
             error = f"Favicon processing failed: {str(e)}"
+            errors.append(error)
+            if verbose:
+                click.echo(f"[!] ❌ {error}")
+
+    # Cariddi integration
+    if use_cariddi:
+        try:
+            if verbose:
+                click.echo(f"[+] 🕷️  Running Cariddi on {domain}")
+
+            # Prepare Cariddi command
+            cariddi_cmd = [
+                "cariddi",
+                "-md",
+                str(cariddi_depth),
+                "-c",
+                str(cariddi_concurrency),
+                "-d",
+                str(cariddi_delay),
+                "-t",
+                str(cariddi_timeout),
+            ]
+
+            # Only add -plain if we're not using secrets or endpoints
+            if not cariddi_secrets and not cariddi_endpoints:
+                cariddi_cmd.append("-plain")
+
+            if cariddi_secrets:
+                cariddi_cmd.append("-s")
+                if verbose:
+                    click.echo(f"[+] 🕵️‍♂️ Cariddi: Secrets hunting enabled")
+
+            if cariddi_endpoints:
+                cariddi_cmd.append("-e")
+                if verbose:
+                    click.echo(f"[+] 📂 Cariddi: Endpoint discovery mode enabled")
+
+            if cariddi_extensions:
+                # Cariddi uses -ext with integer levels (1=juicy to 7=not juicy)
+                cariddi_cmd.extend(["-ext", "2"])  # level 2 juicy extensions
+                if verbose:
+                    click.echo(f"[+] 📂 Cariddi: Hunting for juicy file extensions")
+
+            if cariddi_ignore_extensions:
+                cariddi_cmd.extend(["-ie", cariddi_ignore_extensions])
+                if verbose:
+                    click.echo(
+                        f"[+] 🚫 Cariddi: Ignored extensions: {cariddi_ignore_extensions}"
+                    )
+
+            # Run Cariddi with domain URL as input
+            target_urls = [f"http://{domain}", f"https://{domain}"]
+            cariddi_urls = []
+
+            for target_url in target_urls:
+                try:
+                    if verbose:
+                        click.echo(f"[+] 🔍 Cariddi crawling: {target_url}")
+
+                    import subprocess
+
+                    process = subprocess.run(
+                        cariddi_cmd,
+                        input=target_url + "\n",
+                        text=True,
+                        capture_output=True,
+                        timeout=cariddi_timeout
+                        * 5,  # Allow more time for complete crawl
+                    )
+
+                    if process.returncode == 0 and process.stdout:
+                        discovered_urls = [
+                            url.strip()
+                            for url in process.stdout.split("\n")
+                            if url.strip()
+                        ]
+                        cariddi_urls.extend(discovered_urls)
+                        if verbose and discovered_urls:
+                            click.echo(
+                                f"[+] ✅ Cariddi found {len(discovered_urls)} URLs from {target_url}"
+                            )
+                    else:
+                        if verbose:
+                            click.echo(
+                                f"[!] ⚠️  Cariddi returncode: {process.returncode}"
+                            )
+                            if process.stdout:
+                                click.echo(
+                                    f"[!] 📤 Cariddi stdout: {process.stdout[:200]}"
+                                )
+                            if process.stderr:
+                                click.echo(
+                                    f"[!] 📥 Cariddi stderr: {process.stderr[:200]}"
+                                )
+
+                except subprocess.TimeoutExpired:
+                    if verbose:
+                        click.echo(f"[!] ⏰ Cariddi timeout for {target_url}")
+                except Exception as e:
+                    if verbose:
+                        click.echo(f"[!] ❌ Cariddi error for {target_url}: {e}")
+
+            if cariddi_urls:
+                urls.update(cariddi_urls)
+                if verbose:
+                    click.echo(
+                        f"[+] 🎯 Cariddi total: {len(cariddi_urls)} URLs discovered"
+                    )
+
+        except Exception as e:
+            error = f"Cariddi integration failed: {str(e)}"
             errors.append(error)
             if verbose:
                 click.echo(f"[!] ❌ {error}")
@@ -1256,3 +1496,7 @@ def run_katana_with_json_output(
         return [], f"Katana timeout after {timeout}s"
     except Exception as e:
         return [], f"Katana enhanced run failed: {str(e)}"
+
+
+if __name__ == "__main__":
+    main()
