@@ -354,18 +354,54 @@ def wafdetectcli(
 
                 else:  # wafw00f
                     try:
-                        cmd = ["wafw00f", "-a", "-t", str(timeout), t]
+                        cmd = ["wafw00f", "-t", str(timeout), t]
                         result = subprocess.run(
                             cmd, capture_output=True, text=True, timeout=timeout
                         )
                         raw_output = result.stdout.strip()
-                        if "is behind a" in raw_output:
-                            waf_detected = True
-                            waf_name = (
-                                raw_output.split("is behind a")[-1]
-                                .strip()
-                                .split("\n")[0]
+
+                        # Debug: print raw output in verbose mode
+                        if verbose:
+                            console.print(
+                                f"[yellow]Debug wafw00f output:[/yellow]\n{raw_output}"
                             )
+
+                        # Check for different wafw00f detection patterns
+                        waf_names = []
+
+                        # Pattern 1: "is behind [WAF NAME] WAF"
+                        if "is behind" in raw_output and "WAF" in raw_output:
+                            waf_detected = True
+                            for line in raw_output.splitlines():
+                                if "is behind" in line and "WAF" in line:
+                                    if "is behind a" in line:
+                                        waf_name = (
+                                            line.split("is behind a")[-1]
+                                            .strip()
+                                            .split(".")[0]
+                                        )
+                                        waf_names.append(waf_name)
+                                    elif "is behind" in line:
+                                        # Pattern: "is behind CacheWall (Varnish) WAF"
+                                        parts = line.split("is behind")[-1].strip()
+                                        waf_name = parts.split("WAF")[0].strip()
+                                        if " and/or " in waf_name:
+                                            # Multiple WAFs: "CacheWall (Varnish) and/or Kona SiteDefender (Akamai)"
+                                            for name in waf_name.split(" and/or "):
+                                                waf_names.append(name.strip())
+                                        else:
+                                            waf_names.append(waf_name)
+                                    break
+
+                        # Pattern 2: "seems to be behind a WAF"
+                        if "seems to be behind a WAF" in raw_output:
+                            waf_detected = True
+                            if not waf_names:
+                                waf_names.append("Generic WAF")
+
+                        # Set final waf_name
+                        if waf_names:
+                            waf_name = ", ".join(waf_names)
                     except Exception as e:
                         raw_output = f"Wafw00f error: {e}"
 
