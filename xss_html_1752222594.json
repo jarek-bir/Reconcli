@@ -1,0 +1,33 @@
+{
+  "type": "xss",
+  "context": "html",
+  "technique": null,
+  "category_info": {
+    "description": "Cross-Site Scripting payloads",
+    "contexts": [
+      "html",
+      "javascript",
+      "attribute",
+      "url",
+      "css"
+    ],
+    "techniques": [
+      "reflection",
+      "dom",
+      "stored",
+      "blind"
+    ]
+  },
+  "generated_at": "2025-07-11T08:29:54.136840",
+  "payloads": "\n\ud83c\udfaf **Payload Generation: \n        Generate advanced XSS payloads with the following specifications:\n        \n        Payload Type: xss\n        Context: html\n        Technique: all\n        \n        Available contexts: html, javascript, attribute, url, css\n        Available techniques: reflection, dom, stored, blind\n        \n        Please provide:\n        1. Multiple payload variations\n        2. Context-specific adaptations\n        3. Bypass techniques for common WAFs\n        4. Explanation of each payload's mechanism\n        5. Testing methodology and validation steps\n        \n        Format as structured payload examples with clear explanations.\n        **\n\n**Context-Specific Payloads:**\n```\nBasic: <script>alert('XSS')</script>\nHTML: <img src=x onerror=alert(1)>\nJS: ';alert(1);//\nAttribute: \" onload=alert(1) \"\n```\n\n**Bypass Techniques:**\n- WAF evasion using encoding\n- Filter bypass with alternative vectors\n- Context-specific adaptations\n\n**Testing Methodology:**\n1. Test in safe environment first\n2. Validate payload effectiveness\n3. Document successful vectors\n4. Follow responsible disclosure\n\n**Note:** This is a mock response. Configure AI providers for advanced payloads.\n",
+  "mutations": {
+    "count": 3,
+    "technique": "xss",
+    "context": "html",
+    "variants": [
+      "<script>alert(1)</script>",
+      "%3Cscript%3Ealert%281%29%3C/script%3E",
+      "%253Cscript%253Ealert%25281%2529%253C/script%253E"
+    ]
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "config_version": "1.0",
+  "default_provider": "openai",
+  "verbose_logging": true,
+  "cache": {
+    "enabled": true,
+    "cache_dir": "",
+    "max_age_hours": 24,
+    "max_size_mb": 100,
+    "cleanup_interval_hours": 6
+  },
+  "parallel": {
+    "enabled": true,
+    "max_workers": 8,
+    "rate_limit_per_minute": 60,
+    "batch_size": 10
+  },
+  "waf": {
+    "profile": "auto",
+    "encoding_chains": 2,
+    "obfuscation_level": "medium"
+  },
+  "local_llm_enabled": false,
+  "local_llm_endpoint": "http://localhost:11434",
+  "local_llm_model": "llama2",
+  "performance_monitoring": true,
+  "payload_scoring": false,
+  "environment_adaptation": true,
+  "steganography_enabled": false
+}
