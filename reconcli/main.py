@@ -29,6 +29,8 @@ from reconcli.permutcli import permutcli  # Importing the permutcli command
 from reconcli.tagger import cli as tagger_cli
 from reconcli.aicli import aicli  # Importing the aicli command
 from reconcli.crawlercli import crawlercli
+from reconcli.mdreport import cli as mdreport_cli  # Advanced Markdown Report Generator
+from reconcli.wafdetectcli import wafdetectcli  # Importing the wafdetectcli command
 
 
 @click.group()
@@ -153,6 +155,20 @@ cli.add_command(crawlercli, name="crawlercli")
 crawlercli.short_help = (
     "🕷️ Advanced web crawler with multiple engines and data extraction"
 )
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# 📊 REPORTING AND DOCUMENTATION
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# Advanced Markdown Report Generator
+cli.add_command(mdreport_cli, name="mdreportcli")
+mdreport_cli.short_help = (
+    "📊 Advanced markdown reports with templates, stats & security analysis"
+)
+
+# WAF Detection
+cli.add_command(wafdetectcli, name="wafdetectcli")
+wafdetectcli.short_help = "🛡️ Advanced WAF detection, testing and bypass analysis"
 
 if __name__ == "__main__":
     cli()
