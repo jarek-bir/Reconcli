@@ -117,6 +117,33 @@ PTR_PATTERNS = {
     help="Path to custom DNS resolvers file (one resolver per line)",
 )
 @click.option(
+    "--use-scilla",
+    is_flag=True,
+    help="Use Scilla for advanced DNS reconnaissance and subdomain enumeration",
+)
+@click.option(
+    "--scilla-target",
+    help="Target domain for Scilla DNS enumeration (required when using --use-scilla)",
+)
+@click.option(
+    "--scilla-wordlist",
+    type=click.Path(exists=True),
+    help="Custom wordlist for Scilla subdomain enumeration",
+)
+@click.option(
+    "--scilla-ports",
+    help="Comma-separated ports for Scilla to scan (default: 80,443)",
+)
+@click.option(
+    "--scilla-dns-servers",
+    help="Comma-separated DNS servers for Scilla (e.g., 8.8.8.8,1.1.1.1)",
+)
+@click.option(
+    "--scilla-plain",
+    is_flag=True,
+    help="Use Scilla plain output format (no colors/formatting)",
+)
+@click.option(
     "--store-db",
     is_flag=True,
     help="Store results in ReconCLI database for persistent storage and analysis",
@@ -149,6 +176,12 @@ def cli(
     whois_file,
     wordlists,
     resolvers,
+    use_scilla,
+    scilla_target,
+    scilla_wordlist,
+    scilla_ports,
+    scilla_dns_servers,
+    scilla_plain,
     store_db,
     target_domain,
     program,
@@ -157,6 +190,18 @@ def cli(
 
     Supports custom DNS resolvers and wordlist-based subdomain bruteforcing.
     Can enrich results with WHOIS data from WhoisFreaks output.
+
+    NEW: Scilla Integration for Advanced DNS Reconnaissance
+    • Use --use-scilla to enable Scilla-powered subdomain enumeration
+    • Scilla provides fast DNS reconnaissance with built-in wordlists
+    • Supports custom wordlists, ports, and DNS servers
+    • Can combine Scilla results with traditional input files
+
+    Examples:
+    • Basic Scilla scan: --use-scilla --scilla-target example.com
+    • Custom wordlist: --use-scilla --scilla-target example.com --scilla-wordlist /path/to/wordlist.txt
+    • Custom ports: --use-scilla --scilla-target example.com --scilla-ports 80,443,8080
+    • Custom DNS: --use-scilla --scilla-target example.com --scilla-dns-servers 8.8.8.8,1.1.1.1
     """
 
     # Handle special resume operations
@@ -180,19 +225,29 @@ def cli(
         if not resume:
             return
 
-    # Require input for actual scanning
-    if not input:
-        click.echo("Error: --input is required for scanning operations.")
+    # Require input for actual scanning (unless using Scilla mode)
+    if not input and not use_scilla:
+        click.echo(
+            "Error: --input is required for scanning operations (or use --use-scilla for domain enumeration)."
+        )
         click.echo("Use --show-resume or --clear-resume for resume management.")
         return
 
-    if not os.path.exists(input):
+    # Validate Scilla requirements
+    if use_scilla and not scilla_target:
+        click.echo("Error: --scilla-target is required when using --use-scilla")
+        sys.exit(1)
+
+    if input and not os.path.exists(input):
         click.echo(f"Error: Input file '{input}' does not exist.")
         sys.exit(1)
 
     if verbose:
         click.echo(f"[+] 🚀 Starting DNS resolution scan")
         click.echo(f"[+] 📁 Output directory: {output_dir}")
+        if use_scilla:
+            click.echo(f"[+] 🔍 Using Scilla for DNS reconnaissance")
+            click.echo(f"[+] 🎯 Scilla target: {scilla_target}")
         click.echo(f"[+] 🧵 Threads: {threads}")
         click.echo(f"[+] ⏰ Timeout: {timeout}s")
         click.echo(f"[+] 🔄 Retries: {retries}")
@@ -200,6 +255,8 @@ def cli(
             click.echo(f"[+] 🌐 Custom resolvers: {resolvers}")
         if wordlists:
             click.echo(f"[+] 📝 Wordlist: {wordlists}")
+        if scilla_wordlist:
+            click.echo(f"[+] 📝 Scilla wordlist: {scilla_wordlist}")
 
     # Load custom DNS resolvers if provided
     custom_resolvers = []
@@ -220,8 +277,43 @@ def cli(
                 click.echo(f"[!] ❌ Failed to load resolvers file: {e}")
             custom_resolvers = []
 
-    with open(input) as f:
-        subdomains = [line.strip() for line in f if line.strip()]
+    # Load subdomains from input file or use Scilla for enumeration
+    subdomains = []
+    scilla_results = []
+
+    if use_scilla:
+        # Run Scilla for DNS reconnaissance
+        if verbose:
+            click.echo(
+                f"[+] 🔍 Running Scilla DNS reconnaissance on {scilla_target}..."
+            )
+
+        scilla_results, scilla_subdomains = run_scilla_enumeration(
+            scilla_target,
+            scilla_wordlist,
+            scilla_ports,
+            scilla_dns_servers,
+            scilla_plain,
+            output_dir,
+            verbose,
+        )
+        subdomains.extend(scilla_subdomains)
+
+        if verbose:
+            click.echo(f"[+] 🔍 Scilla found {len(scilla_subdomains)} subdomains")
+
+    if input:
+        with open(input) as f:
+            input_subdomains = [line.strip() for line in f if line.strip()]
+            subdomains.extend(input_subdomains)
+
+        if verbose:
+            click.echo(
+                f"[+] 📋 Loaded {len(input_subdomains)} subdomain(s) from {input}"
+            )
+
+    # Remove duplicates
+    subdomains = list(set(subdomains))
 
     # Generate additional subdomains from wordlist if provided
     if wordlists:
@@ -242,7 +334,8 @@ def cli(
             )
     else:
         if verbose:
-            click.echo(f"[+] 📋 Loaded {len(subdomains)} subdomain(s) from {input}")
+            total_count = len(subdomains)
+            click.echo(f"[+] 📋 Total subdomains to process: {total_count}")
 
     os.makedirs(output_dir, exist_ok=True)
 
@@ -360,6 +453,7 @@ def cli(
         store_db,
         target_domain,
         program,
+        scilla_results if use_scilla else None,
     )
 
     elapsed = round(time.time() - start_time, 2)
@@ -518,6 +612,7 @@ def save_outputs(
     store_db: bool = False,
     target_domain: Optional[str] = None,
     program: Optional[str] = None,
+    scilla_results: Optional[List[Dict]] = None,
 ):
     """Save results in multiple formats with enhanced metadata"""
 
@@ -559,9 +654,15 @@ def save_outputs(
                 "total_subdomains": len(results),
                 "resolved_count": len([r for r in results if r["ip"] != "unresolved"]),
                 "tool": "dnscli",
+                "scilla_enabled": scilla_results is not None,
             },
             "results": results,
         }
+
+        # Add Scilla-specific data if available
+        if scilla_results:
+            json_output["scilla_results"] = scilla_results
+            json_output["scan_metadata"]["scilla_subdomains"] = len(scilla_results)
 
         json_path = os.path.join(output_dir, "dns_results.json")
         with open(json_path, "w") as f:
@@ -569,6 +670,10 @@ def save_outputs(
 
         if verbose:
             click.echo(f"[+] 📄 Saved JSON results to {json_path}")
+            if scilla_results:
+                click.echo(
+                    f"[+] 🔍 Included {len(scilla_results)} Scilla-specific results"
+                )
 
     # Markdown output
     if save_markdown:
@@ -682,6 +787,147 @@ def save_outputs(
         except Exception as e:
             if verbose:
                 click.echo(f"[!] ❌ Error storing to database: {e}")
+
+
+def run_scilla_enumeration(
+    target: str,
+    wordlist: Optional[str] = None,
+    ports: Optional[str] = None,
+    dns_servers: Optional[str] = None,
+    plain_output: bool = False,
+    output_dir: str = "output_dnscli",
+    verbose: bool = False,
+) -> Tuple[List[Dict], List[str]]:
+    """Run Scilla for DNS reconnaissance and analysis
+
+    Returns:
+        Tuple of (detailed_results, subdomain_list)
+    """
+    import subprocess
+    import os
+    import re
+
+    results = []
+    subdomains = []
+
+    try:
+        # Build Scilla DNS command
+        cmd = ["scilla", "dns", "-target", target]
+
+        if plain_output:
+            cmd.append("-plain")
+
+        if verbose:
+            click.echo(f"[+] 🔍 Running: {' '.join(cmd)}")
+
+        # Run Scilla and capture stdout
+        process = subprocess.run(
+            cmd, capture_output=True, text=True, timeout=30  # 30 second timeout
+        )
+
+        if process.returncode == 0:
+            # Parse Scilla DNS output from stdout
+            stdout_lines = process.stdout.strip().split("\n")
+
+            dns_records = []
+            ip_addresses = []
+
+            for line in stdout_lines:
+                line = line.strip()
+                if (
+                    line
+                    and not line.startswith("=")
+                    and not line.startswith(">")
+                    and not line.startswith("target:")
+                ):
+                    # Skip banner lines
+                    if (
+                        "scilla" in line.lower()
+                        or "github.com" in line.lower()
+                        or "https://" in line.lower()
+                    ):
+                        continue
+                    if "scanning dns" in line.lower():
+                        continue
+
+                    dns_records.append(line)
+
+                    # Extract IP addresses
+                    if line.startswith("A: "):
+                        ip = line.replace("A: ", "").strip()
+                        if ip and "." in ip:  # IPv4
+                            ip_addresses.append(ip)
+
+            # Add the main domain with found IPs
+            if ip_addresses:
+                for ip in ip_addresses[:3]:  # Take first 3 IPs
+                    subdomains.append(target)
+                    results.append(
+                        {
+                            "subdomain": target,
+                            "ip": ip,
+                            "dns_record_type": "A",
+                            "source": "scilla-dns",
+                        }
+                    )
+            else:
+                # Add main domain without IP if no A records found
+                subdomains.append(target)
+                results.append(
+                    {
+                        "subdomain": target,
+                        "ip": "",
+                        "dns_record_type": "unknown",
+                        "source": "scilla-dns",
+                    }
+                )
+
+            # Save Scilla raw results
+            scilla_output_file = os.path.join(output_dir, "scilla_dns_records.txt")
+            os.makedirs(output_dir, exist_ok=True)
+            with open(scilla_output_file, "w") as f:
+                f.write("\n".join(dns_records))
+
+            if verbose:
+                click.echo(f"[+] 💾 Scilla DNS records saved to: {scilla_output_file}")
+                click.echo(f"[+] 🔍 Found {len(dns_records)} DNS records")
+                click.echo(f"[+] 🌐 Found {len(ip_addresses)} A records (IPs)")
+
+        else:
+            if verbose:
+                click.echo(
+                    f"[!] ❌ Scilla failed with return code: {process.returncode}"
+                )
+                if process.stderr:
+                    click.echo(f"[!] Scilla stderr: {process.stderr}")
+                if process.stdout:
+                    click.echo(f"[!] Scilla stdout: {process.stdout}")
+
+    except subprocess.TimeoutExpired:
+        if verbose:
+            click.echo(f"[!] ⏰ Scilla timed out after 30 seconds")
+    except FileNotFoundError:
+        if verbose:
+            click.echo(
+                f"[!] ❌ Scilla not found. Install with: go install -v github.com/edoardottt/scilla/cmd/scilla@latest"
+            )
+    except Exception as e:
+        if verbose:
+            click.echo(f"[!] ❌ Error running Scilla: {e}")
+
+    # Remove duplicates while preserving different IPs for same domain
+    unique_results = []
+    seen = set()
+    for result in results:
+        key = (result["subdomain"], result["ip"])
+        if key not in seen:
+            seen.add(key)
+            unique_results.append(result)
+
+    # Get unique subdomains
+    subdomains = list(set(subdomains))
+
+    return unique_results, subdomains
 
 
 if __name__ == "__main__":
