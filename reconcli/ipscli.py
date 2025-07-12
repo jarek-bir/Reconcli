@@ -953,6 +953,16 @@ def update_resume(output_dir):
 @click.option("--markdown", is_flag=True, help="Save results in Markdown report format")
 @click.option("--honeypot", is_flag=True, help="Enable honeypot detection heuristics")
 @click.option("--silent", is_flag=True, help="Suppress all output except errors")
+@click.option(
+    "--store-db",
+    is_flag=True,
+    help="Store results in ReconCLI database for persistent storage and analysis",
+)
+@click.option(
+    "--target-domain",
+    help="Primary target domain for database storage (auto-detected if not provided)",
+)
+@click.option("--program", help="Bug bounty program name for database classification")
 def ipscli(
     input,
     resolve_from,
@@ -985,6 +995,9 @@ def ipscli(
     markdown,
     honeypot,
     silent,
+    store_db,
+    target_domain,
+    program,
 ):
     """
     Advanced IP Analysis and Reconnaissance
@@ -1303,6 +1316,74 @@ def ipscli(
             vprint("[*] Generating markdown summary...")
             generate_markdown_summary(ip_list, output_dir, ports_data)
             update_resume(output_dir)
+
+            # Database storage
+            if store_db and ip_list:
+                try:
+                    from reconcli.db.operations import store_target, store_ip_scan
+
+                    # Auto-detect target domain if not provided
+                    if not target_domain and enriched_data:
+                        # Try to extract organization or ASN info for domain detection
+                        for ip_data in enriched_data.values():
+                            org = ip_data.get("organization", "")
+                            if org and "." in org:
+                                target_domain = org.lower()
+                                break
+
+                    if target_domain:
+                        # Ensure target exists in database
+                        target_id = store_target(target_domain, program=program)
+
+                        # Convert results to database format
+                        ip_scan_data = []
+                        for ip in ip_list:
+                            ip_entry = {
+                                "ip": ip.get("ip") if isinstance(ip, dict) else ip,
+                                "hostname": (
+                                    ip.get("hostname") if isinstance(ip, dict) else None
+                                ),
+                                "organization": enriched_data.get(
+                                    ip.get("ip") if isinstance(ip, dict) else ip, {}
+                                ).get("organization"),
+                                "country": enriched_data.get(
+                                    ip.get("ip") if isinstance(ip, dict) else ip, {}
+                                ).get("country"),
+                                "city": enriched_data.get(
+                                    ip.get("ip") if isinstance(ip, dict) else ip, {}
+                                ).get("city"),
+                                "asn": enriched_data.get(
+                                    ip.get("ip") if isinstance(ip, dict) else ip, {}
+                                ).get("asn"),
+                                "tags": (
+                                    ip.get("tags", []) if isinstance(ip, dict) else []
+                                ),
+                                "ports": ports_data.get(
+                                    ip.get("ip") if isinstance(ip, dict) else ip, []
+                                ),
+                                "scan_timestamp": datetime.now().isoformat(),
+                            }
+                            ip_scan_data.append(ip_entry)
+
+                        # Store IP scan in database
+                        stored_ids = store_ip_scan(target_domain, ip_scan_data)
+
+                        if not silent:
+                            vprint(
+                                f"[+] 💾 Stored {len(stored_ids)} IP scan results in database for target: {target_domain}"
+                            )
+                    else:
+                        if not silent:
+                            vprint(
+                                "[!] ⚠️  No target domain provided or detected for database storage"
+                            )
+
+                except ImportError:
+                    if not silent:
+                        vprint("[!] ⚠️  Database module not available")
+                except Exception as e:
+                    if not silent:
+                        vprint(f"[!] ❌ Database storage failed: {e}")
 
             if not silent:
                 vprint(f"[✓] Analysis completed! Results in: {output_dir}")

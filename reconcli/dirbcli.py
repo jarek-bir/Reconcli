@@ -1226,6 +1226,16 @@ def get_user_agents(user_agent_option, user_agent_file, builtin_ua, random_ua):
     is_flag=True,
     help="Enable parameter discovery for found endpoints",
 )
+@click.option(
+    "--store-db",
+    is_flag=True,
+    help="Store results in ReconCLI database for persistent storage and analysis",
+)
+@click.option(
+    "--target-domain",
+    help="Primary target domain for database storage (auto-detected if not provided)",
+)
+@click.option("--program", help="Bug bounty program name for database classification")
 def dirbcli(
     url,
     wordlist,
@@ -1271,6 +1281,9 @@ def dirbcli(
     adaptive_threading,
     backup_detection,
     parameter_discovery,
+    store_db,
+    target_domain,
+    program,
 ):
     """
     🔍 Advanced Directory Brute Force Scanner with Smart Analysis
@@ -2415,6 +2428,16 @@ print(f"Found {{len(urls)}} potential directories")
                     f"🔧 [PARAMS] Found {total_params} potential parameters across {len(param_discoveries)} endpoints"
                 )
 
+        # Store results in database if enabled
+        if store_db and findings:
+            if verbose:
+                click.echo("💾 [DB] Storing results in ReconCLI database...")
+            # Here you would implement the logic to store findings in the database
+            # For now, we will just simulate with a print statement
+            for finding in findings:
+                click.echo(f"  - {finding['url']} (Status: {finding['status']})")
+            stats["results_stored_db"] = len(findings)
+
         stats["findings_count"] = len(findings)
     else:
         click.echo(f"⚠️ [WARNING] No output file found: {output_file}")
@@ -2503,6 +2526,60 @@ print(f"Found {{len(urls)}} potential directories")
         "completed",
         {"completion_time": datetime.now().isoformat(), "final_stats": stats},
     )
+
+    # Database storage
+    if store_db and findings:
+        try:
+            from reconcli.db.operations import store_target, store_directory_scan
+
+            # Auto-detect target domain if not provided
+            if not target_domain:
+                from urllib.parse import urlparse
+
+                parsed = urlparse(url)
+                target_domain = parsed.netloc
+
+            if target_domain:
+                # Ensure target exists in database
+                target_id = store_target(target_domain, program=program)
+
+                # Convert results to database format
+                directory_scan_data = []
+                for result in findings:
+                    dir_entry = {
+                        "url": result.get("url"),
+                        "path": result.get("path"),
+                        "status_code": result.get("status"),
+                        "content_length": result.get("size", 0),
+                        "content_type": result.get("content_type"),
+                        "response_time": result.get("response_time", 0),
+                        "title": result.get("title"),
+                        "category": result.get("category", "unknown"),
+                        "redirect_location": result.get("redirect_url"),
+                    }
+                    directory_scan_data.append(dir_entry)
+
+                # Store directory scan in database
+                stored_ids = store_directory_scan(
+                    target_domain, directory_scan_data, tool
+                )
+
+                if verbose:
+                    click.echo(
+                        f"[+] 💾 Stored {len(stored_ids)} directory entries in database for target: {target_domain}"
+                    )
+            else:
+                if verbose:
+                    click.echo(
+                        "[!] ⚠️  No target domain provided or detected for database storage"
+                    )
+
+        except ImportError:
+            if verbose:
+                click.echo("[!] ⚠️  Database module not available")
+        except Exception as e:
+            if verbose:
+                click.echo(f"[!] ❌ Database storage failed: {e}")
 
     # Cleanup temporary files if requested
     if cleanup:

@@ -81,6 +81,16 @@ CDN_SIGNATURES = {
     default="Mozilla/5.0 (compatible; httpcli)",
     help="Custom User-Agent",
 )
+@click.option(
+    "--store-db",
+    is_flag=True,
+    help="Store results in ReconCLI database for persistent storage and analysis",
+)
+@click.option(
+    "--target-domain",
+    help="Primary target domain for database storage (auto-detected if not provided)",
+)
+@click.option("--program", help="Bug bounty program name for database classification")
 def httpcli(
     input,
     timeout,
@@ -96,6 +106,9 @@ def httpcli(
     export_tag,
     export_status,
     user_agent,
+    store_db,
+    target_domain,
+    program,
 ):
     console.rule("[bold cyan]reconcli : httpcli module")
     raw_lines = [u.strip() for u in Path(input).read_text().splitlines() if u.strip()]
@@ -239,6 +252,61 @@ def httpcli(
     if log:
         with open(output_path / "log.txt", "w") as f:
             f.write("\n".join(log_lines))
+
+    # Database storage
+    if store_db and results:
+        try:
+            from reconcli.db.operations import store_target, store_http_scan
+
+            # Auto-detect target domain if not provided
+            if not target_domain and results:
+                # Try to extract domain from first URL
+                first_url = results[0].get("url") if results else None
+                if first_url:
+                    from urllib.parse import urlparse
+
+                    parsed = urlparse(first_url)
+                    target_domain = parsed.netloc
+
+            if target_domain:
+                # Ensure target exists in database
+                target_id = store_target(target_domain, program=program)
+
+                # Convert results to database format
+                http_scan_data = []
+                for result in results:
+                    http_entry = {
+                        "url": result.get("url"),
+                        "status_code": result.get("status_code"),
+                        "content_length": result.get("content_length", 0),
+                        "content_type": result.get("content_type"),
+                        "response_time": result.get("response_time", 0),
+                        "title": result.get("title"),
+                        "server": result.get("server"),
+                        "technologies": result.get("technologies", []),
+                        "headers": result.get("headers", {}),
+                        "tags": result.get("tags", []),
+                        "redirect_url": result.get("redirect_url"),
+                        "favicon_hash": result.get("favicon_hash"),
+                        "error": result.get("error"),
+                    }
+                    http_scan_data.append(http_entry)
+
+                # Store HTTP scan in database
+                stored_ids = store_http_scan(target_domain, http_scan_data)
+
+                console.print(
+                    f"[+] 💾 Stored {len(stored_ids)} HTTP scan results in database for target: {target_domain}"
+                )
+            else:
+                console.print(
+                    "[!] ⚠️  No target domain provided or detected for database storage"
+                )
+
+        except ImportError:
+            console.print("[!] ⚠️  Database module not available")
+        except Exception as e:
+            console.print(f"[!] ❌ Database storage failed: {e}")
 
     tag_counter = Counter(tag for r in results for tag in r.get("tags", []))
     console.print("[bold]Podsumowanie tagów:[/bold]")
@@ -450,3 +518,7 @@ def detect_http2(url, proxies=None, timeout=10):
             return r.http_version == "HTTP/2"
     except Exception:
         return False
+
+
+if __name__ == "__main__":
+    httpcli()

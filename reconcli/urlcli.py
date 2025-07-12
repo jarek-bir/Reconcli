@@ -225,6 +225,16 @@ def save_outputs(domain, tagged, output_dir, save_markdown, save_json):
 @click.option(
     "--threads", default=5, help="Number of concurrent threads for processing"
 )
+@click.option(
+    "--store-db",
+    is_flag=True,
+    help="Store results in ReconCLI database for persistent storage and analysis",
+)
+@click.option(
+    "--target-domain",
+    help="Primary target domain for database storage (auto-detected if not provided)",
+)
+@click.option("--program", help="Bug bounty program name for database classification")
 def main(
     input,
     domain,
@@ -275,6 +285,9 @@ def main(
     cariddi_extensions,
     cariddi_ignore_extensions,
     cariddi_plain,
+    store_db,
+    target_domain,
+    program,
 ):
     """Enhanced URL discovery and crawling for reconnaissance with professional features
 
@@ -728,6 +741,73 @@ def main(
     if total_errors:
         click.echo(f"[!] ⚠️  {len(total_errors)} error(s) encountered during scan")
 
+    # Database storage
+    if store_db and all_tagged:
+        try:
+            from reconcli.db.operations import store_target, store_url_scan
+
+            # Auto-detect target domain if not provided
+            if not target_domain and all_tagged:
+                # Try to extract domain from first URL
+                first_url = all_tagged[0][0] if all_tagged else None
+                if first_url:
+                    from urllib.parse import urlparse
+
+                    parsed = urlparse(first_url)
+                    target_domain = parsed.netloc
+
+            if target_domain:
+                # Ensure target exists in database
+                target_id = store_target(target_domain, program=program)
+
+                # Convert URLs to database format
+                url_scan_data = []
+                for url, tags in all_tagged:
+                    url_entry = {
+                        "url": url,
+                        "tags": tags,
+                        "status_code": None,  # Could be enhanced to include HTTP status
+                        "content_type": None,
+                        "content_length": None,
+                        "response_time": None,
+                    }
+                    url_scan_data.append(url_entry)
+
+                # Store URLs in database
+                stored_ids = store_url_scan(
+                    target_domain,
+                    url_scan_data,
+                    tools_used=[
+                        tool
+                        for tool, enabled in [
+                            ("wayback", wayback),
+                            ("gau", gau),
+                            ("katana", katana),
+                            ("gospider", gospider),
+                            ("sitemap", sitemap),
+                            ("cariddi", use_cariddi),
+                        ]
+                        if enabled
+                    ],
+                )
+
+                if verbose:
+                    click.echo(
+                        f"[+] 💾 Stored {len(stored_ids)} URLs in database for target: {target_domain}"
+                    )
+            else:
+                if verbose:
+                    click.echo(
+                        "[!] ⚠️  No target domain provided or detected for database storage"
+                    )
+
+        except ImportError:
+            if verbose:
+                click.echo("[!] ⚠️  Database module not available")
+        except Exception as e:
+            if verbose:
+                click.echo(f"[!] ❌ Database storage failed: {e}")
+
     # Clean up temporary file if single domain was used
     if domain and input and input.startswith("/tmp"):
         try:
@@ -896,6 +976,9 @@ def enhanced_url_discovery(
     cariddi_extensions,
     cariddi_ignore_extensions,
     cariddi_plain,
+    store_db,
+    target_domain,
+    program,
 ):
     """Enhanced URL discovery with better error handling and progress tracking."""
     urls = set()

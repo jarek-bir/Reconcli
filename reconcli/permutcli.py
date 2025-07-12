@@ -194,6 +194,16 @@ from pathlib import Path
     is_flag=True,
     help="Download/update DNS resolver lists for tools like shuffledns",
 )
+@click.option(
+    "--store-db",
+    is_flag=True,
+    help="Store results in ReconCLI database for persistent storage and analysis",
+)
+@click.option(
+    "--target-domain",
+    help="Primary target domain for database storage (auto-detected if not provided)",
+)
+@click.option("--program", help="Bug bounty program name for database classification")
 def permutcli(
     input,
     output,
@@ -237,6 +247,9 @@ def permutcli(
     inject_prefix,
     exclude_tlds,
     update_resolvers,
+    store_db,
+    target_domain,
+    program,
 ):
     """🔄 Generate permutations of subdomains, paths, buckets, or parameters using various advanced tools.
 
@@ -618,6 +631,63 @@ def permutcli(
 
         # Save output
         save_results(results, output, format, verbose)
+
+        # Database storage
+        if store_db and results:
+            try:
+                from reconcli.db.operations import (
+                    store_target,
+                    store_subdomain_permutation,
+                )
+
+                # Auto-detect target domain if not provided
+                if not target_domain and results:
+                    # Try to extract domain from first result (assuming subdomains)
+                    first_result = results[0] if results else None
+                    if first_result and "." in first_result:
+                        parts = first_result.split(".")
+                        if len(parts) >= 2:
+                            target_domain = ".".join(parts[-2:])
+
+                if target_domain:
+                    # Ensure target exists in database
+                    target_id = store_target(target_domain, program=program)
+
+                    # Convert results to database format
+                    permutation_data = []
+                    for result in results:
+                        perm_entry = {
+                            "permutation": result,
+                            "permutation_type": permutation_type or "general",
+                            "tool_used": tool,
+                            "resolved": False,  # Could be enhanced to check resolution
+                            "timestamp": datetime.now().isoformat(),
+                        }
+                        permutation_data.append(perm_entry)
+
+                    # Store permutations in database
+                    stored_ids = store_subdomain_permutation(
+                        target_domain, permutation_data
+                    )
+
+                    if verbose and not silent:
+                        click.secho(
+                            f"[+] 💾 Stored {len(stored_ids)} permutations in database for target: {target_domain}",
+                            fg="cyan",
+                        )
+                else:
+                    if verbose and not silent:
+                        click.secho(
+                            "[!] ⚠️  No target domain provided or detected for database storage",
+                            fg="yellow",
+                        )
+
+            except ImportError:
+                if verbose and not silent:
+                    click.secho("[!] ⚠️  Database module not available", fg="yellow")
+            except Exception as e:
+                if verbose and not silent:
+                    click.secho(f"[!] ❌ Database storage failed: {e}", fg="red")
 
         # Summary
         if not silent:

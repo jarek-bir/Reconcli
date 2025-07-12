@@ -889,6 +889,16 @@ def send_notification(webhook_url, domain, cname, provider, details, verbose=Fal
     "--webhook-url",
     help="Discord or Slack webhook URL for notifications (deprecated, use --notify)",
 )
+@click.option(
+    "--store-db",
+    is_flag=True,
+    help="Store results in ReconCLI database for persistent storage and analysis",
+)
+@click.option(
+    "--target-domain",
+    help="Primary target domain for database storage (auto-detected if not provided)",
+)
+@click.option("--program", help="Bug bounty program name for database classification")
 def cnamecli(
     domains,
     check,
@@ -907,6 +917,9 @@ def cnamecli(
     timeout,
     verbose,
     webhook_url,
+    store_db,
+    target_domain,
+    program,
 ):
     """
     🔍 Advanced CNAME Analysis and Subdomain Takeover Detection
@@ -1175,6 +1188,63 @@ def cnamecli(
     }
     with open(resume_file, "w") as rf:
         json.dump(resume_data, rf, indent=2)
+
+    # Database storage
+    if store_db and results:
+        try:
+            from reconcli.db.operations import store_target, store_cname_scan
+
+            # Auto-detect target domain if not provided
+            if not target_domain and results:
+                # Try to extract domain from first result
+                first_domain = results[0].get("domain") if results else None
+                if first_domain:
+                    # Extract root domain from subdomain
+                    parts = first_domain.split(".")
+                    if len(parts) >= 2:
+                        target_domain = ".".join(parts[-2:])
+
+            if target_domain:
+                # Ensure target exists in database
+                target_id = store_target(target_domain, program=program)
+
+                # Convert results to database format
+                cname_scan_data = []
+                for result in results:
+                    cname_entry = {
+                        "domain": result.get("domain"),
+                        "cname": result.get("cname"),
+                        "status": result.get("status"),
+                        "provider_name": result.get("provider_name"),
+                        "provider_tags": result.get("provider_tags", []),
+                        "vulnerable": result.get("vulnerable", False),
+                        "vulnerability_details": result.get("vulnerability_details"),
+                        "resolved_ips": result.get("resolved_ips", []),
+                        "http_status": result.get("http_status"),
+                        "error": result.get("error"),
+                        "last_checked": datetime.utcnow().isoformat(),
+                    }
+                    cname_scan_data.append(cname_entry)
+
+                # Store CNAME scan in database
+                stored_ids = store_cname_scan(target_domain, cname_scan_data)
+
+                if verbose:
+                    click.echo(
+                        f"[+] 💾 Stored {len(stored_ids)} CNAME analysis results in database for target: {target_domain}"
+                    )
+            else:
+                if verbose:
+                    click.echo(
+                        "[!] ⚠️  No target domain provided or detected for database storage"
+                    )
+
+        except ImportError:
+            if verbose:
+                click.echo("[!] ⚠️  Database module not available")
+        except Exception as e:
+            if verbose:
+                click.echo(f"[!] ❌ Database storage failed: {e}")
 
     # Final summary
     click.echo(f"\n✅ CNAME Analysis Complete!")

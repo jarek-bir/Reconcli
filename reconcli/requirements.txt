@@ -6,6 +6,13 @@ aiohttp>=3.8.0
 asyncio-throttle>=1.0.0
 sqlalchemy>=2.0.0
 
+# DNS and HTTP analysis dependencies
+dnspython>=2.3.0
+mmh3>=4.0.0
+beautifulsoup4>=4.11.0
+rich>=13.0.0
+httpx>=0.28.0
+
 # Optional AI/ML dependencies (for vulncli AI features)
 # openai>=1.0.0  # Uncomment when AI features are implemented
 # anthropic>=0.8.0  # Uncomment when AI features are implemented
