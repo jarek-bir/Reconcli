@@ -32,9 +32,18 @@ from reconcli.crawlercli import crawlercli
 from reconcli.mdreport import cli as mdreport_cli  # Advanced Markdown Report Generator
 from reconcli.wafdetectcli import wafdetectcli  # Importing the wafdetectcli command
 from reconcli.openredirectcli import openredirectcli
+from reconcli.csvtkcli import csvtkcli  # CSV data analysis and manipulation with csvtk
 
 
-# Database management (optional)
+# Git Operations
+try:
+    from reconcli.gitcli import gitcli
+
+    GIT_AVAILABLE = True
+except ImportError:
+    GIT_AVAILABLE = False
+
+# Database Management (optional)
 try:
     from reconcli.dbcli import dbcli
 
@@ -152,6 +161,7 @@ makewordlist.short_help = (
 cli.add_command(permutcli, name="permutcli")
 permutcli.short_help = "Generate permutation-based wordlists"
 
+
 # Domain Tagging and Classification
 cli.add_command(tagger_cli, name="taggercli")
 tagger_cli.short_help = "🏷️ Advanced subdomain tagging and classification"
@@ -185,9 +195,20 @@ mdreport_cli.short_help = (
 cli.add_command(wafdetectcli, name="wafdetectcli")
 wafdetectcli.short_help = "🛡️ Advanced WAF detection, testing and bypass analysis"
 
+# CSV Data Analysis and Manipulation
+cli.add_command(csvtkcli, name="csvtkcli")
+csvtkcli.short_help = "📊 Advanced CSV data analysis and manipulation using csvtk"
+
 # ═══════════════════════════════════════════════════════════════════════════════
-# 🗄️ DATABASE MANAGEMENT
+# 🗄️ DATABASE AND VERSION CONTROL
 # ═══════════════════════════════════════════════════════════════════════════════
+
+# Git Operations and Version Control
+if GIT_AVAILABLE:
+    cli.add_command(gitcli, name="gitcli")
+    gitcli.short_help = (
+        "🔧 Git operations and repository management for reconnaissance data"
+    )
 
 # Database Management (Optional)
 if DATABASE_AVAILABLE:

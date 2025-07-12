@@ -446,3 +446,145 @@ def get_target_stats(domain: str) -> Dict[str, Any]:
                 severity.value: count for severity, count in vuln_breakdown
             },
         }
+
+
+def store_whois_findings(
+    target_domain: str,
+    finding_data: Dict[str, Any],
+) -> int:
+    """
+    Store WHOIS findings for a target domain
+
+    Args:
+        target_domain: Target domain name
+        finding_data: Dictionary containing WHOIS data with keys:
+            - domain: Domain name
+            - whois_data: Raw WHOIS response data
+            - timestamp: Discovery timestamp
+            - source: Source tool (e.g., 'whoisfreaks')
+            - risk_analysis: Optional risk analysis data
+
+    Returns:
+        WhoisFinding ID
+    """
+    from .models import WhoisFinding, Target
+    import json
+    from datetime import datetime as dt
+
+    db = get_db_manager()
+    with db.get_session() as session:
+        # Get target object
+        target = session.query(Target).filter_by(domain=target_domain).first()
+        if not target:
+            raise ValueError(f"Target domain {target_domain} not found")
+
+        # Extract WHOIS data
+        domain = finding_data.get("domain", "")
+        whois_data = finding_data.get("whois_data", {})
+        source = finding_data.get("source", "unknown")
+
+        # Parse dates
+        def parse_date(date_str):
+            if not date_str:
+                return None
+            try:
+                # Handle ISO format with timezone
+                if "T" in date_str:
+                    return dt.fromisoformat(date_str.replace("Z", "+00:00"))
+                # Handle simple date format
+                return dt.strptime(date_str, "%Y-%m-%d")
+            except:
+                return None
+
+        # Extract key WHOIS fields
+        registrar = (
+            whois_data.get("registrarName")
+            or whois_data.get("domain_registrar", {}).get("registrar_name")
+            or whois_data.get("registrar")
+        )
+
+        registrant_org = whois_data.get("registrantOrganization") or whois_data.get(
+            "registrant_organization"
+        )
+
+        admin_org = whois_data.get("adminOrganization") or whois_data.get(
+            "admin_organization"
+        )
+
+        # Extract dates
+        created_date = parse_date(
+            whois_data.get("createdDate")
+            or whois_data.get("create_date")
+            or whois_data.get("creation_date")
+        )
+
+        updated_date = parse_date(
+            whois_data.get("updatedDate") or whois_data.get("updated_date")
+        )
+
+        expires_date = parse_date(
+            whois_data.get("expiresDate")
+            or whois_data.get("expiry_date")
+            or whois_data.get("expires_date")
+        )
+
+        # Extract nameservers
+        nameservers = (
+            whois_data.get("nameservers") or whois_data.get("nameServers") or []
+        )
+        nameservers_json = json.dumps(nameservers) if nameservers else None
+
+        # Extract risk analysis if available
+        risk_analysis = finding_data.get("risk_analysis", {})
+        risk_level = risk_analysis.get("risk_level")
+        risk_score = risk_analysis.get("risk_score", 0)
+        risk_factors = risk_analysis.get("risk_factors", [])
+        risk_factors_json = json.dumps(risk_factors) if risk_factors else None
+
+        # Check if finding already exists
+        existing_finding = (
+            session.query(WhoisFinding)
+            .filter_by(target_id=target.id, domain=domain)
+            .first()
+        )
+
+        if existing_finding:
+            # Update existing finding
+            existing_finding.registrar = registrar
+            existing_finding.registrant_org = registrant_org
+            existing_finding.admin_org = admin_org
+            existing_finding.created_date = created_date
+            existing_finding.updated_date = updated_date
+            existing_finding.expires_date = expires_date
+            existing_finding.nameservers = nameservers_json
+            existing_finding.risk_level = risk_level
+            existing_finding.risk_score = risk_score
+            existing_finding.risk_factors = risk_factors_json
+            existing_finding.raw_whois_data = json.dumps(whois_data)
+            existing_finding.source = source
+            existing_finding.last_updated = dt.utcnow()
+
+            session.commit()
+            return existing_finding.id
+        else:
+            # Create new finding
+            finding = WhoisFinding(
+                target_id=target.id,
+                domain=domain,
+                registrar=registrar,
+                registrant_org=registrant_org,
+                admin_org=admin_org,
+                created_date=created_date,
+                updated_date=updated_date,
+                expires_date=expires_date,
+                nameservers=nameservers_json,
+                risk_level=risk_level,
+                risk_score=risk_score,
+                risk_factors=risk_factors_json,
+                raw_whois_data=json.dumps(whois_data),
+                source=source,
+            )
+
+            session.add(finding)
+            session.commit()
+            return finding.id

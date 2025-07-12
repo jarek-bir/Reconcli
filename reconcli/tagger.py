@@ -5,6 +5,7 @@ import socket
 import ipaddress
 import urllib.parse
 import os
+import subprocess
 from datetime import datetime
 
 
@@ -396,8 +397,225 @@ def generate_summary_stats(entries):
     return stats
 
 
-def export_to_format(entries, output_file, format_type="json"):
-    """Export entries to different formats"""
+def export_to_format(entries, output_file, format_type="json", csvtk_analysis=False):
+    """Export entries to different formats with optional csvtk analysis"""
+    if format_type == "json":
+        with open(output_file, "w") as f:
+            json.dump(entries, f, indent=2)
+
+    elif format_type == "csv":
+        import csv
+        import subprocess
+
+        with open(output_file, "w", newline="") as f:
+            if not entries:
+                return
+
+            fieldnames = ["domain", "ip", "tags", "risk_score"]
+            writer = csv.DictWriter(f, fieldnames=fieldnames)
+            writer.writeheader()
+
+            for entry in entries:
+                row = entry.copy()
+                row["tags"] = ",".join(entry.get("tags", []))
+                writer.writerow(row)
+
+        # Run csvtk analysis if requested
+        if csvtk_analysis:
+            run_csvtk_analysis(output_file)
+
+    elif format_type == "txt":
+        with open(output_file, "w") as f:
+            for entry in entries:
+                tags_str = ",".join(entry.get("tags", []))
+                risk = entry.get("risk_score", 0)
+                f.write(
+                    f"{entry['domain']} [{entry.get('ip', 'N/A')}] Tags: {tags_str} Risk: {risk}\n"
+                )
+
+    elif format_type == "markdown":
+        with open(output_file, "w") as f:
+            f.write("# Domain Tagging Report\n\n")
+            f.write(f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n")
+            f.write("| Domain | IP | Tags | Risk Score |\n")
+            f.write("|--------|----|----- |-----------|\n")
+
+            for entry in entries:
+                tags_str = ", ".join(entry.get("tags", []))
+                risk = entry.get("risk_score", 0)
+                ip = entry.get("ip", "N/A")
+                f.write(f"| {entry['domain']} | {ip} | {tags_str} | {risk} |\n")
+
+
+def run_csvtk_analysis(csv_file):
+    """Run comprehensive csvtk analysis on tagged domain data"""
+    try:
+        # Check if csvtk is available
+        subprocess.run(["csvtk", "--version"], capture_output=True, check=True)
+
+        print(f"\n📊 CSVTK Analysis for {csv_file}")
+        print("=" * 50)
+
+        # Basic statistics
+        print("\n📋 Basic Statistics:")
+        subprocess.run(["csvtk", "nrow", csv_file], check=True)
+        subprocess.run(["csvtk", "ncol", csv_file], check=True)
+
+        # Tag frequency analysis
+        print("\n🏷️ Tag Distribution:")
+        subprocess.run(["csvtk", "freq", "-f", "tags", csv_file], check=True)
+
+        # Risk score analysis
+        print("\n⚠️ Risk Score Analysis:")
+        subprocess.run(["csvtk", "freq", "-f", "risk_score", csv_file], check=True)
+
+        # High risk domains
+        print("\n🚨 High Risk Domains (Risk Score >= 7):")
+        subprocess.run(
+            [
+                "csvtk",
+                "grep",
+                "-f",
+                "risk_score",
+                "-r",
+                "-p",
+                "^[789]|10",
+                csv_file,
+                "|",
+                "csvtk",
+                "pretty",
+            ],
+            shell=True,
+            check=True,
+        )
+
+        # Domains with admin tags
+        print("\n🔑 Admin/Security Related Domains:")
+        subprocess.run(
+            [
+                "csvtk",
+                "grep",
+                "-f",
+                "tags",
+                "-i",
+                "-r",
+                "-p",
+                "admin|security|auth",
+                csv_file,
+                "|",
+                "csvtk",
+                "pretty",
+            ],
+            shell=True,
+            check=True,
+        )
+
+        # API endpoints
+        print("\n🔌 API Endpoints:")
+        subprocess.run(
+            [
+                "csvtk",
+                "grep",
+                "-f",
+                "tags",
+                "-i",
+                "-r",
+                "-p",
+                "api",
+                csv_file,
+                "|",
+                "csvtk",
+                "pretty",
+            ],
+            shell=True,
+            check=True,
+        )
+
+        # Development environments
+        print("\n🛠️ Development/Testing Environments:")
+        subprocess.run(
+            [
+                "csvtk",
+                "grep",
+                "-f",
+                "tags",
+                "-i",
+                "-r",
+                "-p",
+                "development",
+                csv_file,
+                "|",
+                "csvtk",
+                "pretty",
+            ],
+            shell=True,
+            check=True,
+        )
+
+    except subprocess.CalledProcessError:
+        print("⚠️ csvtk not found. Install from: https://github.com/shenwei356/csvtk")
+    except Exception as e:
+        print(f"⚠️ Analysis error: {e}")
+
+
+def generate_security_focused_report(entries, output_file):
+    """Generate a security-focused CSV report optimized for csvtk analysis"""
+    import csv
+
+    # Enhanced CSV with more security-relevant fields
+    with open(output_file, "w", newline="") as f:
+        fieldnames = [
+            "domain",
+            "ip",
+            "risk_score",
+            "is_admin",
+            "is_api",
+            "is_dev",
+            "is_database",
+            "is_internal",
+            "cloud_provider",
+            "all_tags",
+            "confidence",
+        ]
+        writer = csv.DictWriter(f, fieldnames=fieldnames)
+        writer.writeheader()
+
+        for entry in entries:
+            tags = entry.get("tags", [])
+            row = {
+                "domain": entry["domain"],
+                "ip": entry.get("ip", ""),
+                "risk_score": entry.get("risk_score", 0),
+                "is_admin": "yes" if "admin" in tags else "no",
+                "is_api": "yes" if "api" in tags else "no",
+                "is_dev": "yes" if "development" in tags else "no",
+                "is_database": "yes" if "database" in tags else "no",
+                "is_internal": "yes" if "internal" in tags else "no",
+                "cloud_provider": next(
+                    (
+                        tag.replace("cloud-", "")
+                        for tag in tags
+                        if tag.startswith("cloud-")
+                    ),
+                    "none",
+                ),
+                "all_tags": "|".join(tags),
+                "confidence": (
+                    max(entry.get("confidence_scores", {}).values())
+                    if entry.get("confidence_scores")
+                    else 0
+                ),
+            }
+            writer.writerow(row)
+
+    print(f"✅ Security-focused CSV saved: {output_file}")
+    print("🔍 Suggested csvtk analysis commands:")
+    print(f"   csvtk freq -f is_admin {output_file}")
+    print(f"   csvtk freq -f cloud_provider {output_file}")
+    print(f"   csvtk grep -f risk_score -r -p '^[8-9]|10' {output_file} | csvtk pretty")
+    print(
+        f"   csvtk sort -k risk_score:nr {output_file} | csvtk head -n 10 | csvtk pretty"
+    )
     if format_type == "json":
         with open(output_file, "w") as f:
             json.dump(entries, f, indent=2)

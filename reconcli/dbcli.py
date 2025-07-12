@@ -8,7 +8,10 @@ Provides basic operations like initialization, backup, and statistics.
 
 import click
 import json
+import subprocess
+import os
 from typing import Optional
+from pathlib import Path
 
 
 @click.group()
@@ -307,5 +310,284 @@ def recent(days: int):
         exit(1)
 
 
-if __name__ == "__main__":
-    dbcli()
+@dbcli.command()
+@click.option(
+    "--table",
+    "-t",
+    type=click.Choice(
+        [
+            "subdomains",
+            "targets",
+            "whois_findings",
+            "vulnerabilities",
+            "port_scans",
+            "scan_sessions",
+        ]
+    ),
+    help="Table to export",
+)
+@click.option(
+    "--output-dir", "-o", default="output/exports", help="Output directory for exports"
+)
+@click.option(
+    "--format",
+    "-f",
+    type=click.Choice(["csv", "json", "pretty"]),
+    default="csv",
+    help="Export format",
+)
+@click.option(
+    "--analysis", "-a", is_flag=True, help="Run csvtk analysis on exported data"
+)
+@click.option("--stats", is_flag=True, help="Show statistics with csvtk")
+@click.option("--filter", help="SQLite WHERE clause filter")
+@click.option(
+    "--join-targets", is_flag=True, help="Join with targets table for domain info"
+)
+@click.option("--verbose", "-v", is_flag=True, help="Verbose output")
+def export(table, output_dir, format, analysis, stats, filter, join_targets, verbose):
+    """Export database data with optional csvtk analysis"""
+    try:
+        from reconcli.db import get_db_manager
+
+        # Create output directory
+        Path(output_dir).mkdir(parents=True, exist_ok=True)
+
+        # Get database path
+        db = get_db_manager()
+        info = db.get_database_info()
+        db_path = info["database_path"]
+
+        if verbose:
+            click.echo(f"📂 Database: {db_path}")
+            click.echo(f"📁 Output directory: {output_dir}")
+
+        # Export data based on table selection
+        if table:
+            export_file = os.path.join(output_dir, f"{table}_export.csv")
+            _export_table(db_path, table, export_file, filter, join_targets, verbose)
+
+            if analysis:
+                _run_csvtk_analysis(export_file, verbose)
+            elif stats:
+                _run_csvtk_stats(export_file, verbose)
+        else:
+            # Export all tables
+            click.echo("📊 Exporting all tables...")
+            exported_files = []
+
+            tables = [
+                "subdomains",
+                "targets",
+                "whois_findings",
+                "vulnerabilities",
+                "port_scans",
+            ]
+            for tbl in tables:
+                export_file = os.path.join(output_dir, f"{tbl}_export.csv")
+                try:
+                    _export_table(
+                        db_path, tbl, export_file, filter, join_targets, verbose
+                    )
+                    exported_files.append(export_file)
+                except Exception as e:
+                    if verbose:
+                        click.echo(f"⚠️ Could not export {tbl}: {e}")
+
+            if analysis and exported_files:
+                for file in exported_files:
+                    click.echo(f"\n📈 Analysis for {os.path.basename(file)}:")
+                    _run_csvtk_analysis(file, verbose)
+
+    except ImportError as e:
+        click.echo(f"❌ Database module not available: {e}")
+        exit(1)
+    except Exception as e:
+        click.echo(f"❌ Error during export: {e}")
+        exit(1)
+
+
+def _export_table(db_path, table, output_file, filter_clause, join_targets, verbose):
+    """Export specific table to CSV"""
+    if join_targets and table == "subdomains":
+        query = """
+        SELECT s.subdomain, s.ip_address, s.discovery_method, s.discovered_date, 
+               s.status, s.http_status, s.http_title, t.domain
+        FROM subdomains s 
+        JOIN targets t ON s.target_id = t.id
+        """
+    elif join_targets and table == "whois_findings":
+        query = """
+        SELECT w.domain, w.registrar, w.creation_date, w.expiration_date, 
+               w.name_servers, w.status, t.domain as target_domain
+        FROM whois_findings w 
+        JOIN targets t ON w.target_id = t.id
+        """
+    else:
+        query = f"SELECT * FROM {table}"
+
+    if filter_clause:
+        query += f" WHERE {filter_clause}"
+
+    # Export using sqlite3 command
+    cmd = f'sqlite3 "{db_path}" -header -csv "{query}" > "{output_file}"'
+
+    if verbose:
+        click.echo(f"🔄 Exporting {table}...")
+
+    result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
+
+    if result.returncode == 0:
+        # Check if file has data
+        with open(output_file, "r") as f:
+            lines = f.readlines()
+            if len(lines) > 1:  # More than just header
+                click.echo(f"✅ Exported {len(lines)-1} records to {output_file}")
+            else:
+                click.echo(f"⚠️ No data found in {table}")
+    else:
+        raise Exception(f"Export failed: {result.stderr}")
+
+
+def _run_csvtk_analysis(csv_file, verbose):
+    """Run comprehensive csvtk analysis on exported data"""
+    if not _check_csvtk():
+        return
+
+    try:
+        # Basic stats
+        click.echo("📊 Basic Statistics:")
+        subprocess.run(["csvtk", "stats", csv_file], check=True)
+
+        # Pretty view (first 10 rows)
+        click.echo("\n📋 Sample Data:")
+        subprocess.run(
+            ["csvtk", "head", "-n", "10", csv_file, "|", "csvtk", "pretty"],
+            shell=True,
+            check=True,
+        )
+
+        # Column frequency analysis for key fields
+        result = subprocess.run(
+            ["csvtk", "headers", csv_file], capture_output=True, text=True, check=True
+        )
+        headers = result.stdout.strip().split("\n")
+
+        for header in headers:
+            if any(
+                keyword in header.lower()
+                for keyword in ["domain", "method", "status", "registrar"]
+            ):
+                click.echo(f"\n🔍 Frequency analysis for '{header}':")
+                subprocess.run(["csvtk", "freq", "-f", header, csv_file], check=True)
+
+    except subprocess.CalledProcessError as e:
+        if verbose:
+            click.echo(f"⚠️ Analysis error: {e}")
+    except Exception as e:
+        if verbose:
+            click.echo(f"⚠️ Unexpected error: {e}")
+
+
+def _run_csvtk_stats(csv_file, verbose):
+    """Run basic csvtk statistics"""
+    if not _check_csvtk():
+        return
+
+    try:
+        click.echo("📊 CSV Statistics:")
+        subprocess.run(["csvtk", "nrow", csv_file], check=True)
+        subprocess.run(["csvtk", "ncol", csv_file], check=True)
+        subprocess.run(["csvtk", "headers", csv_file], check=True)
+
+    except subprocess.CalledProcessError as e:
+        if verbose:
+            click.echo(f"⚠️ Stats error: {e}")
+
+
+def _check_csvtk():
+    """Check if csvtk is available"""
+    try:
+        subprocess.run(["csvtk", "--version"], capture_output=True, check=True)
+        return True
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        click.echo(
+            "⚠️ csvtk not found. Install it from: https://github.com/shenwei356/csvtk"
+        )
+        click.echo("   or run: conda install -c bioconda csvtk")
+        return False
+
+
+@dbcli.command()
+@click.argument("csv_file", type=click.Path(exists=True))
+@click.option(
+    "--analysis-type",
+    "-t",
+    type=click.Choice(["freq", "stats", "pretty", "grep", "summary"]),
+    default="summary",
+    help="Type of analysis to run",
+)
+@click.option("--field", "-f", help="Field name for frequency/grep analysis")
+@click.option("--pattern", "-p", help="Pattern for grep analysis")
+@click.option("--verbose", "-v", is_flag=True, help="Verbose output")
+def analyze(csv_file, analysis_type, field, pattern, verbose):
+    """Analyze CSV data using csvtk
+
+    Examples:
+    python -m reconcli.dbcli analyze subdomains.csv -t freq -f discovery_method
+    python -m reconcli.dbcli analyze subdomains.csv -t grep -f subdomain -p "api"
+    """
+    if not _check_csvtk():
+        return
+
+    try:
+        click.echo(f"🔍 Running {analysis_type} analysis on {csv_file}")
+
+        if analysis_type == "summary":
+            # Comprehensive summary
+            click.echo("📊 File Summary:")
+            subprocess.run(["csvtk", "nrow", csv_file], check=True)
+            subprocess.run(["csvtk", "ncol", csv_file], check=True)
+            subprocess.run(["csvtk", "headers", csv_file], check=True)
+
+            click.echo("\n📋 Sample Data:")
+            subprocess.run(
+                ["csvtk", "head", "-n", "5", csv_file, "|", "csvtk", "pretty"],
+                shell=True,
+                check=True,
+            )
+
+        elif analysis_type == "freq" and field:
+            subprocess.run(["csvtk", "freq", "-f", field, csv_file], check=True)
+
+        elif analysis_type == "grep" and field and pattern:
+            subprocess.run(
+                [
+                    "csvtk",
+                    "grep",
+                    "-f",
+                    field,
+                    "-p",
+                    pattern,
+                    csv_file,
+                    "|",
+                    "csvtk",
+                    "pretty",
+                ],
+                shell=True,
+                check=True,
+            )
+
+        elif analysis_type == "stats":
+            subprocess.run(["csvtk", "stats", csv_file], check=True)
+
+        elif analysis_type == "pretty":
+            subprocess.run(["csvtk", "pretty", csv_file], check=True)
+
+        else:
+            click.echo("❌ Invalid combination of parameters")
+
+    except subprocess.CalledProcessError as e:
+        click.echo(f"❌ Analysis failed: {e}")
+    except Exception as e:
+        click.echo(f"❌ Unexpected error: {e}")

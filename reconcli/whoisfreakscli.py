@@ -15,6 +15,13 @@ from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Tuple, Any
 from tqdm import tqdm
 
+# Database imports
+try:
+    from reconcli.db.operations import store_target, store_whois_findings
+except ImportError:
+    store_target = None
+    store_whois_findings = None
+
 # Import notifications
 try:
     from reconcli.utils.notifications import send_notification, NotificationManager
@@ -94,8 +101,11 @@ def cli():
 @click.option(
     "--input",
     type=click.Path(exists=True),
-    required=True,
     help="Path to file with domains",
+)
+@click.option(
+    "--domain",
+    help="Single domain to analyze (alternative to --input)",
 )
 @click.option(
     "--output-dir", default="output_whoisfreaks", help="Directory to save results"
@@ -120,8 +130,12 @@ def cli():
 @click.option("--discord-webhook", help="Discord webhook URL for notifications")
 @click.option("--risk-analysis", is_flag=True, help="Perform risk analysis on domains")
 @click.option("--expire-check", type=int, help="Flag domains expiring within N days")
+@click.option("--store-db", is_flag=True, help="Store results in ReconCLI database")
+@click.option("--target-domain", help="Primary target domain for database storage")
+@click.option("--program", help="Bug bounty program name for database classification")
 def lookup(
     input,
+    domain,
     output_dir,
     api_key,
     verbose,
@@ -136,6 +150,9 @@ def lookup(
     discord_webhook,
     risk_analysis,
     expire_check,
+    store_db,
+    target_domain,
+    program,
 ):
     """Perform bulk WHOIS lookups with advanced analysis"""
 
@@ -151,6 +168,15 @@ def lookup(
         if not resume:
             return
 
+    # Validate input options
+    if not input and not domain:
+        click.echo("❌ Error: Either --input or --domain must be specified")
+        sys.exit(1)
+
+    if input and domain:
+        click.echo("❌ Error: Cannot specify both --input and --domain")
+        sys.exit(1)
+
     # Get API key
     if not api_key:
         api_key = os.getenv("WHOISFREAKS_API_KEY")
@@ -161,16 +187,51 @@ def lookup(
         )
         sys.exit(1)
 
+    # Initialize database storage if enabled
+    if store_db:
+        if not target_domain:
+            click.echo("❌ Error: --store-db requires --target-domain to be specified")
+            sys.exit(1)
+        if not program:
+            click.echo("❌ Error: --store-db requires --program to be specified")
+            sys.exit(1)
+
+        if store_target is None:
+            click.echo(
+                "❌ Error: Database operations not available. Install database dependencies."
+            )
+            sys.exit(1)
+
+        # Store target info
+        try:
+            store_target(target_domain, program)
+            if verbose:
+                click.echo(
+                    f"[+] 🗄️ Target {target_domain} stored in database for program {program}"
+                )
+        except Exception as e:
+            click.echo(f"❌ Error storing target: {e}")
+            if verbose:
+                import traceback
+
+                traceback.print_exc()
+            sys.exit(1)
+
     # Load domains
-    with open(input) as f:
-        domains = [line.strip() for line in f if line.strip()]
+    if input:
+        with open(input) as f:
+            domains = [line.strip() for line in f if line.strip()]
+        input_source = input
+    else:
+        domains = [domain.strip()]
+        input_source = f"single domain: {domain}"
 
     if verbose:
         click.echo(f"[+] 🚀 Starting WhoisFreaks bulk lookup")
         click.echo(f"[+] 📁 Output directory: {output_dir}")
         click.echo(f"[+] 🧵 Threads: {threads}")
         click.echo(f"[+] ⏰ Delay: {delay}s")
-        click.echo(f"[+] 📋 Loaded {len(domains)} domain(s) from {input}")
+        click.echo(f"[+] 📋 Loaded {len(domains)} domain(s) from {input_source}")
 
     os.makedirs(output_dir, exist_ok=True)
 
@@ -195,7 +256,9 @@ def lookup(
     else:
         # Initialize new scan
         resume_state[scan_key] = {
-            "input_file": input,
+            "input_source": input_source,
+            "input_file": input if input else None,
+            "single_domain": domain if domain else None,
             "start_time": datetime.now().isoformat(),
             "completed": False,
             "processed_count": 0,
@@ -234,6 +297,44 @@ def lookup(
     current_scan["completion_time"] = datetime.now().isoformat()
 
     save_resume_state(output_dir, resume_state)
+
+    # Store results in database if enabled
+    if store_db and store_whois_findings and results:
+        if verbose:
+            click.echo(f"[+] 🗄️ Storing {len(results)} WHOIS results in database...")
+
+        try:
+            for result in results:
+                if result.get("status") == "success":
+                    # Extract useful WHOIS data for database
+                    whois_data = result.get("whois_data", {})
+                    finding_data = {
+                        "domain": result["domain"],
+                        "whois_data": whois_data,
+                        "timestamp": result.get("timestamp"),
+                        "source": "whoisfreaks",
+                    }
+
+                    # Add risk analysis if available
+                    if "risk_analysis" in result:
+                        finding_data["risk_analysis"] = result["risk_analysis"]
+
+                    store_whois_findings(target_domain, finding_data)
+
+            if verbose:
+                successful_results = [
+                    r for r in results if r.get("status") == "success"
+                ]
+                click.echo(
+                    f"[+] ✅ Stored {len(successful_results)} successful WHOIS results in database"
+                )
+
+        except Exception as e:
+            click.echo(f"❌ Error storing WHOIS results: {e}")
+            if verbose:
+                import traceback
+
+                traceback.print_exc()
 
     # Perform risk analysis if requested
     if risk_analysis:
@@ -1122,7 +1223,13 @@ def show_resume_status(output_dir: str, tool_prefix: str):
     for scan_key in matching_scans:
         scan_data = resume_state[scan_key]
         click.echo(f"🔍 Scan: {scan_key}")
-        click.echo(f"   Input: {scan_data.get('input_file', 'unknown')}")
+
+        # Display input source
+        if scan_data.get("single_domain"):
+            click.echo(f"   Input: Single domain - {scan_data.get('single_domain')}")
+        else:
+            click.echo(f"   Input: {scan_data.get('input_file', 'unknown')}")
+
         click.echo(f"   Started: {scan_data.get('start_time', 'unknown')}")
 
         if scan_data.get("completed"):

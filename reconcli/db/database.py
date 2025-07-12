@@ -80,7 +80,13 @@ class DatabaseManager:
         with self.get_session() as session:
             try:
                 # Get table counts
-                from .models import Target, Subdomain, PortScan, Vulnerability
+                from .models import (
+                    Target,
+                    Subdomain,
+                    PortScan,
+                    Vulnerability,
+                    WhoisFinding,
+                )
 
                 info = {
                     "database_path": str(self.db_path),
@@ -94,6 +100,7 @@ class DatabaseManager:
                         "subdomains": session.query(Subdomain).count(),
                         "port_scans": session.query(PortScan).count(),
                         "vulnerabilities": session.query(Vulnerability).count(),
+                        "whois_findings": session.query(WhoisFinding).count(),
                     },
                 }
                 return info

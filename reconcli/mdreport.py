@@ -47,6 +47,12 @@ from reconcli.utils.resume import (
 @click.option("--verbose", "-v", is_flag=True, help="Verbose output")
 @click.option("--export-json", help="Also export filtered data to JSON file")
 @click.option("--export-csv", help="Also export filtered data to CSV file")
+@click.option(
+    "--csvtk-analysis", is_flag=True, help="Run csvtk analysis on exported CSV"
+)
+@click.option(
+    "--csvtk-stats", is_flag=True, help="Show csvtk statistics for CSV exports"
+)
 @click.option("--auto-tags", is_flag=True, help="Auto-generate tags based on analysis")
 @click.option("--clear-resume", is_flag=True, help="Clear previous resume state")
 @click.option(

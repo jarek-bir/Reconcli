@@ -105,6 +105,7 @@ class Target(Base):
     subdomains = relationship("Subdomain", back_populates="target")
     port_scans = relationship("PortScan", back_populates="target")
     vulnerabilities = relationship("Vulnerability", back_populates="target")
+    whois_findings = relationship("WhoisFinding", back_populates="target")
 
     def __repr__(self):
         return f"<Target(domain='{self.domain}', program='{self.program}')>"
@@ -252,3 +253,47 @@ class ScanSession(Base):
 
     def __repr__(self):
         return f"<ScanSession(id='{self.session_id}', type='{self.scan_type}', status='{self.status}')>"
+
+
+class WhoisFinding(Base):
+    """
+    WHOIS intelligence findings for domains
+    """
+
+    __tablename__ = "whois_findings"
+
+    id = Column(Integer, primary_key=True)
+    target_id = Column(Integer, ForeignKey("targets.id"), nullable=False)
+
+    # Domain information
+    domain = Column(String(255), nullable=False, index=True)
+    registrar = Column(String(200), nullable=True)
+    registrant_org = Column(String(200), nullable=True)
+    admin_org = Column(String(200), nullable=True)
+
+    # Dates
+    created_date = Column(DateTime, nullable=True)
+    updated_date = Column(DateTime, nullable=True)
+    expires_date = Column(DateTime, nullable=True)
+
+    # Nameservers
+    nameservers = Column(Text, nullable=True)  # JSON array
+
+    # Risk analysis
+    risk_level = Column(String(20), nullable=True)  # HIGH, MEDIUM, LOW, NONE
+    risk_score = Column(Integer, default=0)
+    risk_factors = Column(Text, nullable=True)  # JSON array
+
+    # Raw WHOIS data
+    raw_whois_data = Column(Text, nullable=True)  # Full JSON response
+    source = Column(String(50), default="whoisfreaks")
+
+    # Metadata
+    discovered_date = Column(DateTime, default=datetime.utcnow)
+    last_updated = Column(DateTime, default=datetime.utcnow)
+
+    # Relationships
+    target = relationship("Target", back_populates="whois_findings")
+
+    def __repr__(self):
+        return f"<WhoisFinding(domain='{self.domain}', registrar='{self.registrar}', risk='{self.risk_level}')>"
