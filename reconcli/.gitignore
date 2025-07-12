@@ -127,5 +127,5 @@ reconcli/live_test_urls.txt
 reconcli/real_world_urls.txt
 reconcli/urls.txt
 reconcli/test_*.txt
-reconcli/tests/
+reconcli/tests/*
 TOMORROW_COMMANDS.md

@@ -1,37 +1,122 @@
-# Resume and state files
-resume.cfg
-*.cfg
-
-# Output directories
-output_*/
+# Python
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
-
-# Python package build files
-*.egg-info/
-build/
-dist/
+__pycache__
+*.so
 *.egg
+*.egg-info/
+dist/
+build/
+.eggs/
 
-# IDE files
+# Testing
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+coverage.xml
+*.cover
+.hypothesis/
+.cache
+
+# Virtual environments
+.venv
+env/
+venv/
+.env
+ENV/
+env.bak/
+venv.bak/
+
+# IDEs
 .vscode/
 .idea/
 *.swp
 *.swo
+*~
 
-# OS files
-.DS_Store
-Thumbs.db
+# ReconCLI specific
+output/
+*_output/
+results/
+test_vuln_urls.txt
+test_nuclei_urls.txt
+test_nuclei_cves/
+resume.cfg
+wyniki/
+
+# Temporary test files
+*_perms.txt
+*_urlcrazy.txt
+*_buckets.txt
+*_results.txt
+/tmp/test_*.txt
+gitleaks_*.json
+security_*.sh
+*.bak
+*.bak*
+
+# Security tools and reports (local development only)
+security_reports/
+security_backup/
+bandit-report.json
+bandit-report.txt
+vulnerability-report.json
+vulnerability-report.txt
+security_test.sh
+security_autofix.sh
+.bandit
+SECURITY_IMPROVEMENTS.md
+.github/workflows/security.yml
 
 # Logs
 *.log
+logs/
 
 # Temporary files
-*.tmp
-*.temp
-gitleaks_report.json
+.tmp/
+tmp/
+temp/
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Documentation
+docs/_build/
+docs/build/
+site/
+js_output/
+vhostcli_output/
+output_tldrcli/
+
+# Test files and outputs (add these patterns)
+test_*.txt
+test_*.py
+*_test.txt
+*_output.txt
+*_results.txt
+*_perms.txt
+*_buckets.txt
+gitleaks_*.json
+security_test.*
+test_domains.*
+test_brands.*
+
+# Generated documentation (keep guides but ignore temp docs)
+*_SUMMARY.md
+*_ROADMAP.md
+BRAND_FUNCTIONALITY_SUMMARY.md
+PERMUTCLI_ROADMAP.md
 
 # Test URLs and payloads (local only)
 reconcli/custom_payloads.txt
@@ -42,5 +127,5 @@ reconcli/live_test_urls.txt
 reconcli/real_world_urls.txt
 reconcli/urls.txt
 reconcli/test_*.txt
-reconcli/tests/
+reconcli/tests/*
 TOMORROW_COMMANDS.md
