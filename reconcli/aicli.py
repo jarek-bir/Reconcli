@@ -46,9 +46,12 @@ try:
 except ImportError:
     HAS_GEMINI = False
 
-from dotenv import load_dotenv
-
-load_dotenv()
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+    HAS_DOTENV = True
+except ImportError:
+    HAS_DOTENV = False
 
 
 @dataclass
@@ -551,8 +554,8 @@ class AIReconAssistant:
                         return result.get("response", "")
 
                 except Exception as e:
-                    if hasattr(self, "verbose_logging") and self.verbose_logging:
-                        print(f"Local LLM error: {e}")
+                    # Always log errors for debugging
+                    print(f"Local LLM error: {e}")
 
                 return None
 
@@ -2439,6 +2442,8 @@ Provide structured, phase-based reconnaissance plans with specific tools and tec
                             recon_data["technologies"] = tech_data
                 except:
                     pass
+        
+        return recon_data
 
     def generate_compliance_report(
         self,
@@ -2901,17 +2906,16 @@ Provide structured, phase-based reconnaissance plans with specific tools and tec
 
     def _generate_mitre_simulation_mapping(self) -> Dict:
         """Generate MITRE ATT&CK simulation mapping"""
-
         return {
             "initial_access": ["T1566.001", "T1190", "T1133"],
             "execution": ["T1059.001", "T1059.003", "T1053"],
-            "persistence": ["T1547.001", "T1136", "T1078"],
-            "privilege_escalation": ["T1068", "T1055", "T1134"],
+            "persistence": ["T1053.005", "T1136.001", "T1078"],
+            "privilege_escalation": ["T1068", "T1134", "T1055"],
             "defense_evasion": ["T1027", "T1070", "T1036"],
-            "credential_access": ["T1003", "T1110", "T1212"],
-            "discovery": ["T1083", "T1057", "T1018"],
-            "lateral_movement": ["T1021", "T1550", "T1210"],
-            "collection": ["T1005", "T1115", "T1113"],
+            "credential_access": ["T1003", "T1110", "T1555"],
+            "discovery": ["T1083", "T1018", "T1057"],
+            "lateral_movement": ["T1021", "T1550", "T1076"],
+            "collection": ["T1005", "T1039", "T1113"],
             "exfiltration": ["T1041", "T1020", "T1567"],
         }
 
@@ -5025,4 +5029,4 @@ class PayloadMutator:
 
 # === Optional standalone test ===
 if __name__ == "__main__":
-    aicli()
+    aicli.main(standalone_mode=False)

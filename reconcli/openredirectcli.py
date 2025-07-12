@@ -40,15 +40,15 @@ except ImportError:
 
 # DB integration (optional)
 try:
-    from reconcli.db.operations import store_target, store_openredirects
+    from reconcli.db.operations import store_target, store_vulnerability
 except ImportError:
     store_target = None
-    store_openredirects = None
+    store_vulnerability = None
 
 
 # AI utilities (optional)
 try:
-    from reconcli.aicli import AIAnalyzer
+    from reconcli.aicli import AIReconAssistant as AIAnalyzer
 except ImportError:
     AIAnalyzer = None
 
@@ -338,7 +338,7 @@ def generate_ai_payloads(target_url, ai_analyzer=None):
         Return only the payload URLs, one per line.
         """
 
-        response = ai_analyzer.analyze_vulnerability(prompt, context)
+        response = ai_analyzer.ask_ai(prompt, context="payload")
         if response and "payloads" in response:
             return response["payloads"][:10]  # Limit to 10 AI payloads
 
@@ -375,7 +375,7 @@ def ai_analyze_response(response_text, test_url, ai_analyzer=None):
         Return analysis as JSON with fields: redirect_found, method, confidence, location.
         """
 
-        response = ai_analyzer.analyze_vulnerability(prompt, context)
+        response = ai_analyzer.ask_ai(prompt, context="payload")
         return response if response else {}
     except Exception:
         return {}
@@ -415,7 +415,7 @@ def ai_assess_severity(
         Return severity: critical, high, medium, or low
         """
 
-        response = ai_analyzer.analyze_vulnerability(prompt, context)
+        response = ai_analyzer.ask_ai(prompt, context="payload")
         if response and "severity" in response:
             return response["severity"]
 
@@ -469,7 +469,7 @@ def ai_generate_report_insights(results, ai_analyzer=None):
         Return as structured analysis.
         """
 
-        response = ai_analyzer.analyze_vulnerability(prompt, context)
+        response = ai_analyzer.ask_ai(prompt, context="payload")
         return response if response else {}
     except Exception:
         return {}
@@ -952,9 +952,7 @@ def openredirectcli(
     if ai_mode:
         if AIAnalyzer:
             try:
-                ai_analyzer = AIAnalyzer(
-                    model=ai_model, confidence_threshold=ai_confidence
-                )
+                ai_analyzer = AIAnalyzer()
                 if verbose:
                     click.echo(f"🧠 AI mode enabled with model: {ai_model}")
             except Exception as e:
@@ -1648,7 +1646,7 @@ def openredirectcli(
         outputs_generated.append(nuclei_out)
 
     # Database storage
-    if store_db and store_target and store_openredirects:
+    if store_db and store_target and store_vulnerability:
         target = (
             target_domain
             or domain
@@ -1657,25 +1655,22 @@ def openredirectcli(
         if target:
             try:
                 tid = store_target(target, program=program)
-                entries = [
-                    {
+                for r in results:
+                    vuln_data = {
                         "url": r["original"],
-                        "payload": r.get("payload", ""),
-                        "test_url": r["test"],
-                        "location": r["location"],
-                        "status_code": r["status"],
+                        "type": "open_redirect",
                         "severity": r.get("severity", "medium"),
-                        "method": r.get("method", "unknown"),
-                        "external_redirect": r.get("redirect_outside", True),
-                        "vuln_type": "openredirect",
-                        "timestamp": r.get("timestamp", datetime.now().isoformat()),
+                        "title": f"Open Redirect - {r['test']}",
+                        "description": f"Open redirect vulnerability found. External redirect to: {r['location']}",
+                        "payload": r.get("payload", ""),
+                        "evidence": f"Status: {r['status']}, Location: {r['location']}, Method: {r.get('method', 'unknown')}",
                     }
-                    for r in results
-                ]
-                store_openredirects(target, entries, source="openredirectcli")
+                    store_vulnerability(
+                        target, vuln_data, discovery_tool="openredirectcli"
+                    )
                 if verbose:
                     click.echo(
-                        f"💾 Stored {len(entries)} redirects in database for {target}"
+                        f"💾 Stored {len(results)} vulnerabilities in database for {target}"
                     )
             except Exception as e:
                 if verbose:

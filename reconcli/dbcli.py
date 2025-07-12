@@ -90,6 +90,7 @@ def stats():
     """Show database statistics"""
     try:
         from reconcli.db import get_db_manager
+        from reconcli.db.models import Vulnerability, VulnSeverity, VulnType
 
         db = get_db_manager()
         info = db.get_database_info()
@@ -103,6 +104,89 @@ def stats():
             click.echo("\nTable Counts:")
             for table, count in info["tables"].items():
                 click.echo(f"  {table.ljust(15)}: {count:,}")
+
+        # Detailed vulnerability statistics
+        if info["tables"].get("vulnerabilities", 0) > 0:
+            with db.get_session() as session:
+                click.echo("\n🐛 Vulnerability Breakdown:")
+
+                # By severity
+                click.echo("\n📊 By Severity:")
+                for severity in VulnSeverity:
+                    count = (
+                        session.query(Vulnerability)
+                        .filter_by(severity=severity)
+                        .count()
+                    )
+                    if count > 0:
+                        severity_icon = {
+                            VulnSeverity.CRITICAL: "🔥",
+                            VulnSeverity.HIGH: "⚠️",
+                            VulnSeverity.MEDIUM: "🟡",
+                            VulnSeverity.LOW: "🔵",
+                            VulnSeverity.INFO: "ℹ️",
+                        }.get(severity, "⚪")
+                        click.echo(
+                            f"  {severity_icon} {severity.value.upper().ljust(8)}: {count:,}"
+                        )
+
+                # By type
+                click.echo("\n🔍 By Type:")
+                for vuln_type in VulnType:
+                    count = (
+                        session.query(Vulnerability)
+                        .filter_by(vuln_type=vuln_type)
+                        .count()
+                    )
+                    if count > 0:
+                        type_icon = {
+                            VulnType.XSS: "🚨",
+                            VulnType.SQLI: "💉",
+                            VulnType.SSRF: "🌐",
+                            VulnType.LFI: "📁",
+                            VulnType.RFI: "🔗",
+                            VulnType.RCE: "💥",
+                            VulnType.IDOR: "🔑",
+                            VulnType.BROKEN_AUTH: "🔐",
+                            VulnType.SENSITIVE_DATA: "📊",
+                            VulnType.XXE: "📋",
+                            VulnType.CSRF: "🎭",
+                            VulnType.OPEN_REDIRECT: "↗️",
+                        }.get(vuln_type, "🔍")
+                        type_name = vuln_type.value.replace("_", " ").title()
+                        click.echo(f"  {type_icon} {type_name.ljust(15)}: {count:,}")
+
+                # Recent findings
+                from datetime import datetime, timedelta
+
+                recent_date = datetime.now() - timedelta(days=7)
+                recent_count = (
+                    session.query(Vulnerability)
+                    .filter(Vulnerability.discovered_date >= recent_date)
+                    .count()
+                )
+                if recent_count > 0:
+                    click.echo(f"\n🕒 Recent (7 days): {recent_count:,}")
+
+                # Top targets with vulnerabilities
+                from reconcli.db.models import Target
+                from sqlalchemy import func
+
+                click.echo("\n🎯 Top Affected Targets:")
+                top_targets = (
+                    session.query(
+                        Target.domain, func.count(Vulnerability.id).label("vuln_count")
+                    )
+                    .join(Vulnerability)
+                    .group_by(Target.domain)
+                    .order_by(func.count(Vulnerability.id).desc())
+                    .limit(5)
+                    .all()
+                )
+
+                for target, count in top_targets:
+                    click.echo(f"  🔴 {target.ljust(20)}: {count:,} vulnerabilities")
+
     except ImportError as e:
         click.echo(f"❌ Database module not available: {e}")
         exit(1)
