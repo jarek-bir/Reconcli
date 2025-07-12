@@ -47,6 +47,33 @@ export GOOGLE_API_KEY='your-google-api-key'
 reconcli aicli --prompt "Hello, AI assistant!" --persona trainer
 ```
 
+## 🚀 Latest Updates
+
+### 📸 **VhostCLI Screenshot Functionality** (New!)
+- **Automated Screenshots**: Capture screenshots of discovered virtual hosts
+- **Dual Tool Support**: Gowitness and Aquatone integration 
+- **Advanced Options**: Full-page screenshots, custom timeouts and thread control
+- **Seamless Integration**: Works with all VhostCLI engines (ffuf, httpx, gobuster, vhostfinder)
+
+```bash
+# Screenshots with Gowitness (supports full-page)
+reconcli vhostcli --domain example.com --ip 1.2.3.4 --wordlist wordlist.txt \
+  --screenshot --screenshot-tool gowitness --fullpage
+
+# Screenshots with Aquatone (HTML reports)
+reconcli vhostcli --domain example.com --ip 1.2.3.4 --wordlist wordlist.txt \
+  --screenshot --screenshot-tool aquatone --screenshot-timeout 30
+```
+
+**Requirements**: Install screenshot tools
+```bash
+# Install gowitness
+go install github.com/sensepost/gowitness@latest
+
+# Install aquatone  
+go install github.com/michenriksen/aquatone@latest
+```
+
 ## ✨ Features
 
 ### 🧠 **AI-Powered Reconnaissance Assistant (`aicli`)**
@@ -73,16 +100,27 @@ reconcli aicli --interactive --persona trainer --save-chat learning_session
 ```
 
 ### 🎯 Virtual Host Discovery (`vhostcli`)
-- **Engines**: FFuf and HTTPx support
+- **Engines**: FFuf, HTTPx, Gobuster, and VhostFinder support
 - **Flexible Input**: Single IP or IP list
 - **Output Formats**: JSON and Markdown reports
 - **Proxy Support**: HTTP/HTTPS proxy configuration
 - **Notifications**: Slack/Discord webhook integration
 - **Verbose Mode**: Detailed progress tracking
+- **📸 Screenshot Capture**: Automated screenshots of discovered virtual hosts
+- **Screenshot Tools**: Gowitness and Aquatone integration
+- **Advanced Options**: Full-page screenshots, custom timeouts and threads
 
 ```bash
 # Basic VHOST discovery
 reconcli vhostcli --domain example.com --ip 1.2.3.4 --wordlist wordlist.txt
+
+# With screenshots using gowitness
+reconcli vhostcli --domain example.com --ip 1.2.3.4 --wordlist wordlist.txt \
+  --screenshot --screenshot-tool gowitness --fullpage
+
+# With aquatone for HTML reports
+reconcli vhostcli --domain example.com --ip 1.2.3.4 --wordlist wordlist.txt \
+  --screenshot --screenshot-tool aquatone --screenshot-timeout 30
 
 # With notifications
 reconcli vhostcli --domain example.com --ip 1.2.3.4 --wordlist wordlist.txt \
@@ -761,6 +799,12 @@ reconcli --help
 #### For Virtual Host Discovery (`vhostcli`)
 - **FFuf**: `go install github.com/ffuf/ffuf/v2@latest`
 - **HTTPx**: `go install -v github.com/projectdiscovery/httpx/cmd/httpx@latest`
+- **Gobuster**: `go install github.com/OJ/gobuster/v3@latest`
+- **VhostFinder**: Download from [GitHub releases](https://github.com/codingo/VHostScan/releases)
+
+**📸 Screenshot Tools (Optional):**
+- **Gowitness**: `go install github.com/sensepost/gowitness@latest`
+- **Aquatone**: `go install github.com/michenriksen/aquatone@latest`
 
 #### For Takeover Detection (`takeover`)
 - **Subzy**: Download from [GitHub releases](https://github.com/LukaSikic/subzy/releases)
