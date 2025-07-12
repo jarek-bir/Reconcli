@@ -117,3 +117,15 @@ test_brands.*
 *_ROADMAP.md
 BRAND_FUNCTIONALITY_SUMMARY.md
 PERMUTCLI_ROADMAP.md
+
+# Test URLs and payloads (local only)
+reconcli/custom_payloads.txt
+reconcli/debug_ips_loaded.txt
+reconcli/ecommerce_urls.txt
+reconcli/enterprise_urls.txt
+reconcli/live_test_urls.txt
+reconcli/real_world_urls.txt
+reconcli/urls.txt
+reconcli/test_*.txt
+reconcli/tests/
+TOMORROW_COMMANDS.md
