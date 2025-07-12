@@ -529,7 +529,70 @@ reconcli wafdetectcli -i large_targets.txt --resume --all-tools \
 - **Risk Assessment**: Color-coded risk levels based on bypass success rates
 - **Responsive Design**: Mobile-friendly interface with collapsible sections
 
-### 📝 **Enhanced Markdown Reports (`mdreport`)**
+### � **Open Redirect Vulnerability Scanner (`openredirectcli`)**
+- **🧠 AI-Powered Analysis**: Intelligent payload generation and vulnerability detection
+- **🚀 External Tool Integration**: OpenRedirex, kxss, waybackurls, GAU, unfurl, httpx support
+- **🎯 Advanced Detection Methods**: Header redirects, JavaScript redirects, meta refresh analysis
+- **🔍 Smart URL Discovery**: Historical URL fetching with parameter-based filtering
+- **📊 Comprehensive Reporting**: JSON, Markdown, CSV, Burp Suite compatible outputs
+- **⚡ Resume Functionality**: Continue interrupted scans with state management
+- **🔔 Real-time Notifications**: Slack and Discord webhook integration for critical findings
+- **🛡️ Multiple Payload Types**: Default, advanced, and AI-generated payloads with encoding options
+
+#### 🎯 Key Features
+- **AI-Enhanced Testing**: Context-aware payload generation based on URL structure analysis
+- **Multi-Method Detection**: Header analysis, JavaScript redirect detection, meta refresh parsing
+- **External Tool Integration**: Seamless integration with popular security tools
+- **Database Storage**: ReconCLI database integration with program classification
+- **Severity Assessment**: AI-powered risk evaluation with confidence scoring
+- **Professional Reports**: Detailed Markdown reports with remediation guidance
+
+#### 🔄 Advanced CLI Options
+```bash
+# Basic open redirect testing
+reconcli openredirectcli -i urls.txt --verbose
+
+# AI-powered testing with advanced payloads
+reconcli openredirectcli -i urls.txt --ai-mode --advanced-payloads \
+  --ai-model "gpt-4" --ai-confidence 0.8 --verbose
+
+# Complete security assessment with external tools
+reconcli openredirectcli -i urls.txt --ai-mode --use-openredirex \
+  --use-kxss --use-waybackurls --use-gau --filter-params \
+  --check-javascript --check-meta-refresh --markdown --store-db
+
+# Bug bounty workflow with notifications
+reconcli openredirectcli -i scope_urls.txt --ai-mode --use-waybackurls \
+  --use-httpx --store-db --program "hackerone-target" \
+  --target-domain example.com --severity medium --markdown \
+  --slack-webhook "https://hooks.slack.com/..." --verbose
+
+# Custom payload testing with encoding
+reconcli openredirectcli -i urls.txt --payloads custom_payloads.txt \
+  --payload-encoding double --keyword "FUZZ" --advanced-payloads \
+  --proxy http://127.0.0.1:8080 --save-responses --verbose
+
+# URL discovery and testing pipeline
+reconcli openredirectcli -i domains.txt --use-waybackurls --use-gau \
+  --use-httpx --httpx-flags "-mc 200,301,302,303,307,308" \
+  --use-gf --gf-pattern "redirect" --filter-params --ai-mode \
+  --resume --threads 100 --verbose
+```
+
+#### 🧠 AI-Powered Capabilities
+- **Smart Payload Generation**: Context-aware payloads based on URL structure and parameters
+- **Intelligent Response Analysis**: AI detection of hidden redirect mechanisms and patterns
+- **Dynamic Severity Assessment**: Context-based risk evaluation considering business impact
+- **Actionable Insights**: Comprehensive vulnerability analysis with remediation priorities
+
+#### 📊 Output Formats & Integration
+- **JSON Reports**: Structured data with AI insights and severity breakdowns
+- **Markdown Reports**: Professional documentation with AI-generated recommendations
+- **Burp Suite Export**: Compatible format for manual verification
+- **Nuclei Integration**: Export findings for automated verification workflows
+- **Database Storage**: Persistent storage with program and target classification
+
+### �📝 **Enhanced Markdown Reports (`mdreport`)**
 - **🎨 Emoji Control**: `--emoji-off` flag for professional, emoji-free reports
 - **🏢 Enterprise Templates**: Clean formatting suitable for corporate environments
 - **📋 Multiple Formats**: Support for executive summaries and technical documentation
@@ -719,6 +782,16 @@ reconcli --help
 - **Nmap**: Install from [nmap.org](https://nmap.org/download.html) (for WAF detection scripts)
 - **httpx**: `go install -v github.com/projectdiscovery/httpx/cmd/httpx@latest`
 
+#### For Open Redirect Testing (`openredirectcli`)
+- **OpenRedirex**: `go install github.com/devanshbatham/OpenRedireX@latest`
+- **kxss**: `go install github.com/Emoe/kxss@latest`
+- **waybackurls**: `go install github.com/tomnomnom/waybackurls@latest`
+- **GAU**: `go install github.com/lc/gau/v2/cmd/gau@latest`
+- **unfurl**: `go install github.com/tomnomnom/unfurl@latest`
+- **httpx**: `go install github.com/projectdiscovery/httpx/cmd/httpx@latest`
+- **gf**: `go install github.com/tomnomnom/gf@latest`
+- **qsreplace**: `go install github.com/tomnomnom/qsreplace@latest`
+
 ### API Keys
 
 #### WhoisFreaks API (for `whoisfreaks`)
@@ -776,6 +849,7 @@ reconcli/
 ├── portcli.py             # Port scanning and service enumeration
 ├── cnamecli.py            # CNAME analysis and subdomain takeover detection (NEW)
 ├── wafdetectcli.py        # WAF detection & bypass testing (NEW)
+├── openredirectcli.py     # Advanced open redirect vulnerability scanner with AI (NEW)
 ├── mdreport.py            # Enhanced markdown reporting with emoji control (ENHANCED)
 ├── utils/
 │   ├── __init__.py

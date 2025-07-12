@@ -31,6 +31,8 @@ from reconcli.aicli import aicli  # Importing the aicli command
 from reconcli.crawlercli import crawlercli
 from reconcli.mdreport import cli as mdreport_cli  # Advanced Markdown Report Generator
 from reconcli.wafdetectcli import wafdetectcli  # Importing the wafdetectcli command
+from reconcli.openredirectcli import openredirectcli
+
 
 # Database management (optional)
 try:
@@ -154,6 +156,11 @@ permutcli.short_help = "Generate permutation-based wordlists"
 cli.add_command(tagger_cli, name="taggercli")
 tagger_cli.short_help = "🏷️ Advanced subdomain tagging and classification"
 
+# Open Redirect Detection
+cli.add_command(openredirectcli, name="openredirectcli")
+openredirectcli.short_help = "🔄 Open redirect vulnerability detection"
+
+
 # AI-Powered Reconnaissance
 cli.add_command(aicli, name="aicli")
 aicli.short_help = "AI-powered reconnaissance and analysis tools"
@@ -186,6 +193,7 @@ wafdetectcli.short_help = "🛡️ Advanced WAF detection, testing and bypass an
 if DATABASE_AVAILABLE:
     cli.add_command(dbcli, name="dbcli")
     dbcli.short_help = "🗄️ Database management for reconnaissance data storage"
+
 
 if __name__ == "__main__":
     cli()

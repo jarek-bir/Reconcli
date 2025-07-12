@@ -1,0 +1,8 @@
+https://example.com/redirect?url=FUZZ
+https://target.com/goto?next=FUZZ
+https://site.com/login?returnUrl=FUZZ
+https://app.com/auth?redirect_uri=FUZZ
+https://portal.com/oauth?state=FUZZ&redirect=FUZZ
+https://demo.com/callback?continue=FUZZ
+https://test.com/proxy?target=FUZZ
+https://api.com/forward?destination=FUZZ

