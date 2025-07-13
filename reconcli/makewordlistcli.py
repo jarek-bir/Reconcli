@@ -6,9 +6,8 @@ import json
 import requests
 import re
 import os
-import hashlib
 from pathlib import Path
-from urllib.parse import urlparse, urljoin
+from urllib.parse import urljoin
 import time
 import random
 from collections import Counter
@@ -23,8 +22,6 @@ def find_executable(name):
         raise FileNotFoundError(f"Executable '{name}' not found in PATH")
     return path
 
-
-import threading
 
 # Global variable for Markov chain ngrams
 MARKOV_NGRAMS = {}
@@ -761,7 +758,7 @@ def run_pydictor(words, minlen, maxlen):
 
         return generated_words
 
-    except Exception as e:
+    except Exception:
         return []
 
 
@@ -1085,7 +1082,7 @@ def osint_wordlist_enrichment(target, source_type="github"):
                     words.update(
                         re.findall(r"\b[a-zA-Z]{3,}\b", name + " " + description)
                     )
-        except Exception as e:
+        except Exception:
             pass
 
     return list(words)
@@ -2027,14 +2024,14 @@ def makewordlist(
             if similarity_filter > 0:
                 f.write(f"**Similarity Filter:** {similarity_filter}  \n")
             if entropy_sort:
-                f.write(f"**Sorting:** Entropy/complexity based  \n")
+                f.write("**Sorting:** Entropy/complexity based  \n")
             f.write("\n")
 
             f.write("## Sources\n\n")
             for source in stats["sources"]:
                 f.write(f"- {source}\n")
 
-            f.write(f"\n## Statistics\n\n")
+            f.write("\n## Statistics\n\n")
             f.write(f"- **Raw words collected:** {stats['total_words']}\n")
             f.write(f"- **After filtering:** {stats['filtered_words']}\n")
             f.write(f"- **Final output:** {len(sorted_final)}\n")
@@ -2042,16 +2039,16 @@ def makewordlist(
             # Frequency analysis if enabled
             if enable_frequency_analysis and len(sorted_final) > 0:
                 freq_stats = frequency_analysis(sorted_final)
-                f.write(f"\n## Frequency Analysis\n\n")
-                f.write(f"### Most Common Words\n")
+                f.write("\n## Frequency Analysis\n\n")
+                f.write("### Most Common Words\n")
                 for word, count in freq_stats["most_common_words"][:10]:
                     f.write(f"- `{word}`: {count}\n")
 
-                f.write(f"\n### Length Distribution\n")
+                f.write("\n### Length Distribution\n")
                 for length, count in sorted(freq_stats["length_distribution"].items()):
                     f.write(f"- Length {length}: {count} words\n")
 
-                f.write(f"\n### Character Patterns\n")
+                f.write("\n### Character Patterns\n")
                 f.write(
                     f"**Most common first characters:** {', '.join([f'{char}({count})' for char, count in list(freq_stats['first_char_freq'].items())[:5]])}\n"
                 )
@@ -2059,7 +2056,7 @@ def makewordlist(
                     f"**Most common last characters:** {', '.join([f'{char}({count})' for char, count in list(freq_stats['last_char_freq'].items())[:5]])}\n"
                 )
 
-            f.write(f"\n## Sample Words\n\n")
+            f.write("\n## Sample Words\n\n")
             f.write("```\n")
             for word in sorted_final[:20]:  # Show first 20 words
                 f.write(f"{word}\n")
@@ -2070,7 +2067,7 @@ def makewordlist(
         click.secho(f"[✓] 📊 .md report saved: {md_file}", fg="green")
 
     # Print summary
-    click.secho(f"\n🎉 Wordlist generation complete!", fg="green", bold=True)
+    click.secho("\n🎉 Wordlist generation complete!", fg="green", bold=True)
     click.secho(f"📊 Final wordlist: {len(sorted_final)} words", fg="cyan")
     click.secho(f"📁 Files saved with prefix: {output_prefix}", fg="cyan")
 
@@ -2081,7 +2078,7 @@ def makewordlist(
             click.secho("[+] 🧹 Resume state cleaned up", fg="green")
 
     if verbose:
-        click.secho(f"\n📈 Generation Summary:", fg="cyan")
+        click.secho("\n📈 Generation Summary:", fg="cyan")
         for source in stats["sources"]:
             click.secho(f"  • {source}", fg="blue")
         click.secho(f"  • Total collected: {stats['total_words']} words", fg="blue")

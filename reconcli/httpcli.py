@@ -4,15 +4,12 @@
 # - retries support for unstable HTTP responses
 
 import click
-import os
 import requests
 import json
 import csv
 from urllib.parse import urlparse
 from pathlib import Path
 from rich.console import Console
-import re
-import hashlib
 import mmh3
 from bs4 import BeautifulSoup
 import subprocess
@@ -228,7 +225,7 @@ def httpcli(
                     if h in r.get("security_headers", {}):
                         f.write(f"- {h}: {r['security_headers'][h]}\n")
                 if r.get("nuclei"):
-                    f.write(f"- Nuclei:\n")
+                    f.write("- Nuclei:\n")
                     for finding in r["nuclei"]:
                         f.write(f"  - {finding}\n")
                 if r.get("error"):

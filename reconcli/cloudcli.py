@@ -1,13 +1,10 @@
 import click
 import os
-import requests
 import json
-import socket
 from datetime import datetime
 from reconcli.utils.cloud_detect import (
     detect_cloud_provider,
     print_cloud_detection_results,
-    batch_detect_cloud_providers,
 )
 from reconcli.utils.s3_enum import (
     enumerate_s3_buckets,
@@ -125,7 +122,7 @@ def cloudcli(
 
         if resume and resume_state:
             if verbose:
-                click.echo(f"[+] 📁 Checking for previous batch scans...")
+                click.echo("[+] 📁 Checking for previous batch scans...")
 
             # Find the most recent incomplete scan
             for key, data in sorted(
@@ -216,7 +213,7 @@ def cloudcli(
                         )
 
             except KeyboardInterrupt:
-                print(f"\n[!] ⏸️  Scan interrupted. Resume with --resume flag")
+                print("\n[!] ⏸️  Scan interrupted. Resume with --resume flag")
                 print(
                     f"[+] 📊 Progress saved: {len(processed_domains)}/{len(domains)} domains processed"
                 )
@@ -248,7 +245,7 @@ def cloudcli(
 
         # S3 enumeration for batch processing (if requested)
         if s3_enum:
-            print(f"\n[+] Starting S3 enumeration for processed domains...")
+            print("\n[+] Starting S3 enumeration for processed domains...")
 
             # S3 enumeration with resume capability
             s3_scan_key = f"s3_batch_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
@@ -335,7 +332,7 @@ def cloudcli(
                 )
 
             except KeyboardInterrupt:
-                print(f"\n[!] ⏸️  S3 scan interrupted. Resume with --resume flag")
+                print("\n[!] ⏸️  S3 scan interrupted. Resume with --resume flag")
                 print(
                     f"[+] 📊 S3 progress saved: {len(s3_processed_domains)}/{len(domains)} domains processed"
                 )

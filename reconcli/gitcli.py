@@ -7,12 +7,9 @@ Provides version control, backup, and collaboration features.
 """
 
 import os
-import sys
-import json
 import subprocess
 import click
 from datetime import datetime
-from pathlib import Path
 from typing import Optional, List, Dict, Any
 
 
@@ -290,7 +287,7 @@ def status():
 
     # Sync status
     if status["commits"]["ahead"] > 0 or status["commits"]["behind"] > 0:
-        click.echo(f"🔄 Sync Status:")
+        click.echo("🔄 Sync Status:")
         if status["commits"]["ahead"] > 0:
             click.echo(f"  ⬆️  {status['commits']['ahead']} commits ahead")
         if status["commits"]["behind"] > 0:
@@ -510,7 +507,7 @@ def restore(tag_name: str, force: bool):
         if result.returncode == 0:
             click.echo(f"✅ Restored to {tag_name}")
         else:
-            click.echo(f"❌ Failed to restore: checkout failed")
+            click.echo("❌ Failed to restore: checkout failed")
 
     except Exception as e:
         click.echo(f"❌ Error during restore: {e}")

@@ -7,7 +7,6 @@ Provides basic operations like initialization, backup, and statistics.
 """
 
 import click
-import json
 import subprocess
 import os
 import shutil

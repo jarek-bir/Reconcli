@@ -5,10 +5,9 @@ Handles SQLite database connections, initialization, and basic operations.
 Provides a simple interface for storing and retrieving reconnaissance data.
 """
 
-import os
 import sqlite3
 from pathlib import Path
-from typing import Optional, Dict, Any, Union
+from typing import Optional, Dict, Any
 from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy.engine import Engine

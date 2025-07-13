@@ -12,7 +12,6 @@ import os
 import sys
 import shutil
 from pathlib import Path
-from typing import Optional, List
 from datetime import datetime
 
 
@@ -708,7 +707,7 @@ def _generate_security_summary(csv_file, summary_file, target_domain):
     """Generate markdown security summary"""
     try:
         with open(summary_file, "w") as f:
-            f.write(f"# Security Analysis Summary\n\n")
+            f.write("# Security Analysis Summary\n\n")
             f.write(f"**File:** {os.path.basename(csv_file)}\n")
             f.write(f"**Generated:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
             if target_domain:

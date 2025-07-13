@@ -2,11 +2,9 @@ import json
 import os
 import sys
 import click
-import time
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional, Any, Union
-from reconcli.utils.mdexport import generate_dns_summary, export_zonewalk_report
 from reconcli.utils.resume import (
     load_resume,
     save_resume_state,
@@ -717,7 +715,7 @@ graph TB
             percentage = (count / len(data)) * 100
             pie_data.append(f'"{country}" : {percentage:.1f}')
 
-        charts["countries"] = f"pie title Country Distribution\n    " + "\n    ".join(
+        charts["countries"] = "pie title Country Distribution\n    " + "\n    ".join(
             pie_data
         )
 
@@ -796,7 +794,7 @@ def generate_obsidian_template(
     content.append("")
     content.append(f"- **Target Domain**: `{domain}`")
     content.append(f"- **Generated**: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-    content.append(f"- **Template**: Obsidian")
+    content.append("- **Template**: Obsidian")
     content.append(
         f"- **Total Records**: {sum(len(records) for records in data.values())}"
     )

@@ -6,8 +6,6 @@ import requests
 import socket
 from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from urllib.parse import urlparse
-import time
 
 # Known vulnerable CNAME patterns and providers
 TAKEOVER_PATTERNS = {
@@ -604,7 +602,7 @@ def analyze_domain(
 def generate_markdown_report(results, output_path):
     """Generate detailed markdown report"""
     with open(output_path, "w") as f:
-        f.write(f"# 🔍 CNAME Analysis Report\n\n")
+        f.write("# 🔍 CNAME Analysis Report\n\n")
         f.write(
             f"**Generated:** {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')} UTC\n"
         )
@@ -621,14 +619,14 @@ def generate_markdown_report(results, output_path):
             status = result.get("status", "unknown")
             status_counts[status] = status_counts.get(status, 0) + 1
 
-        f.write(f"## 📊 Summary Statistics\n")
+        f.write("## 📊 Summary Statistics\n")
         f.write(f"- **🚨 Critical Risk:** {critical_count} domains\n")
         f.write(f"- **⚠️ High Risk:** {high_count} domains\n")
         f.write(f"- **🔓 Confirmed Vulnerable:** {vulnerable_count} domains\n")
         f.write(f"- **📈 Total Analyzed:** {len(results)} domains\n\n")
 
         # Status breakdown
-        f.write(f"## 📈 Status Breakdown\n")
+        f.write("## 📈 Status Breakdown\n")
         status_emojis = {
             "no_cname": "🔵",
             "resolves_ok": "✅",
@@ -648,13 +646,13 @@ def generate_markdown_report(results, output_path):
 
         # Vulnerable domains first
         if vulnerable_count > 0:
-            f.write(f"## 🚨 Critical Vulnerabilities\n\n")
+            f.write("## 🚨 Critical Vulnerabilities\n\n")
             for result in results:
                 if result["vulnerable"]:
                     f.write(f"### 🔴 {result['domain']}\n")
                     f.write(f"- **CNAME Target:** `{result['cname']}`\n")
                     f.write(f"- **Provider:** {result['provider_name']}\n")
-                    f.write(f"- **Status:** ⚠️ **VULNERABLE TO TAKEOVER**\n")
+                    f.write("- **Status:** ⚠️ **VULNERABLE TO TAKEOVER**\n")
                     f.write(f"- **Details:** {result['vulnerability_details']}\n")
                     f.write(
                         f"- **Resolves:** {'✅ Yes' if result['resolves'] else '❌ No'}\n\n"
@@ -665,7 +663,7 @@ def generate_markdown_report(results, output_path):
             r for r in results if r["risk_level"] == "high" and not r["vulnerable"]
         ]
         if high_risk:
-            f.write(f"## ⚠️ High Risk Domains\n\n")
+            f.write("## ⚠️ High Risk Domains\n\n")
             for result in high_risk:
                 f.write(f"### 🟡 {result['domain']}\n")
                 f.write(f"- **CNAME Target:** `{result['cname']}`\n")
@@ -674,11 +672,11 @@ def generate_markdown_report(results, output_path):
                     f"- **Resolves:** {'✅ Yes' if result['resolves'] else '❌ No'}\n"
                 )
                 f.write(
-                    f"- **Risk:** Domain points to potentially vulnerable service\n\n"
+                    "- **Risk:** Domain points to potentially vulnerable service\n\n"
                 )
 
         # All results
-        f.write(f"## 📋 Complete Analysis Results\n\n")
+        f.write("## 📋 Complete Analysis Results\n\n")
         for result in results:
             risk_emoji = {"critical": "🔴", "high": "🟡", "medium": "🟠", "low": "🟢"}
             status_emojis = {
@@ -707,7 +705,7 @@ def generate_markdown_report(results, output_path):
 
             # Include direct A/AAAA records if available
             if result.get("direct_a") or result.get("direct_aaaa"):
-                f.write(f"- **Direct Records:**\n")
+                f.write("- **Direct Records:**\n")
                 if result.get("direct_a"):
                     f.write(f"  - **A Records:** {', '.join(result['direct_a'])}\n")
                 if result.get("direct_aaaa"):
@@ -730,7 +728,7 @@ def send_discord_notification(
     try:
         embed = {
             "title": "🚨 Subdomain Takeover Alert",
-            "description": f"**Critical vulnerability detected!**",
+            "description": "**Critical vulnerability detected!**",
             "color": 16711680,  # Red color
             "fields": [
                 {"name": "🎯 Domain", "value": f"`{domain}`", "inline": True},
@@ -1247,7 +1245,7 @@ def cnamecli(
                 click.echo(f"[!] ❌ Database storage failed: {e}")
 
     # Final summary
-    click.echo(f"\n✅ CNAME Analysis Complete!")
+    click.echo("\n✅ CNAME Analysis Complete!")
     click.echo(f"📊 Total domains analyzed: {len(results)}")
     if vulnerable_count > 0:
         click.echo(f"🚨 Critical vulnerabilities found: {vulnerable_count}")

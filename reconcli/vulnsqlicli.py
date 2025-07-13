@@ -6,15 +6,10 @@ import time
 import yaml
 from pathlib import Path
 from datetime import datetime
-from urllib.parse import urlparse, urljoin, parse_qs, urlunparse, quote, unquote
+from urllib.parse import urlparse, parse_qs, urlunparse
 import requests
-from concurrent.futures import ThreadPoolExecutor, as_completed
 import re
 import hashlib
-import base64
-import random
-import string
-from typing import Dict, List, Any, Optional, Union
 import tempfile
 import shutil
 import fcntl
@@ -321,7 +316,7 @@ def test_basic_sql_injection(url, timeout=5):
                             }
                         )
 
-        except Exception as e:
+        except Exception:
             continue
 
     return results
@@ -1372,7 +1367,7 @@ def main(
     if not resume:
         state_file = create_resume_state(output_dir, urls, options)
         if verbose:
-            print(f"💾 [RESUME] State file created for resume functionality")
+            print("💾 [RESUME] State file created for resume functionality")
 
     for i, target_url in enumerate(urls):
         if verbose:
@@ -1386,7 +1381,7 @@ def main(
 
         # Detect injection points
         if verbose:
-            print(f"🔍 [DETECT] Detecting injection points...")
+            print("🔍 [DETECT] Detecting injection points...")
         result["injection_points"] = detect_injection_points(target_url)
         if verbose:
             print(
@@ -1396,7 +1391,7 @@ def main(
         # Basic SQL injection testing
         if use_basic:
             if verbose:
-                print(f"🧪 [BASIC] Running basic SQL injection tests...")
+                print("🧪 [BASIC] Running basic SQL injection tests...")
             result["basic_sqli_results"] = test_basic_sql_injection(target_url)
             if verbose:
                 vulnerabilities = [
@@ -1409,7 +1404,7 @@ def main(
         # SQLMap testing
         if use_sqlmap and available_tools["sqlmap"]["available"]:
             if verbose:
-                print(f"🔥 [SQLMAP] Running SQLMap...")
+                print("🔥 [SQLMAP] Running SQLMap...")
             result["sqlmap_results"] = run_sqlmap(target_url, options, timeout)
             if result["sqlmap_results"]["success"]:
                 result["sqlmap_findings"] = parse_sqlmap_output(
@@ -1428,7 +1423,7 @@ def main(
         # Ghauri testing
         if use_ghauri and available_tools["ghauri"]["available"]:
             if verbose:
-                print(f"⚡ [GHAURI] Running Ghauri...")
+                print("⚡ [GHAURI] Running Ghauri...")
             result["ghauri_results"] = run_ghauri(target_url, options, timeout)
             if result["ghauri_results"]["success"]:
                 result["ghauri_findings"] = parse_ghauri_output(
@@ -1447,7 +1442,7 @@ def main(
         # GF pattern matching
         if use_gf and available_tools.get("gf", {}).get("available"):
             if verbose:
-                print(f"� [GF] Running GF pattern matching...")
+                print("� [GF] Running GF pattern matching...")
             urls_for_gf = [target_url] if not urls_file else urls
             result["gf_results"] = run_gf_sqli_patterns(urls_for_gf, output_dir)
             if verbose:
@@ -1550,7 +1545,7 @@ def main(
 
     # Send notifications
     if slack_webhook or discord_webhook:
-        summary_message = f"🔍 SQL Injection Vulnerability Scan Complete\n"
+        summary_message = "🔍 SQL Injection Vulnerability Scan Complete\n"
         summary_message += (
             f"Targets: {comprehensive_report['summary']['total_targets']}\n"
         )
@@ -1699,7 +1694,7 @@ def show_resume_status(output_dir):
         print("✅ [RESUME] Previous scan completed successfully")
     else:
         print("⏸️ [RESUME] Previous scan was interrupted")
-        print(f"  • Resume with: --resume")
+        print("  • Resume with: --resume")
 
 
 if __name__ == "__main__":

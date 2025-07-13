@@ -8,10 +8,9 @@ Part of the ReconCLI Cyber-Squad z Przyszłości toolkit
 import click
 import json
 import os
-import re
 import hashlib
 from datetime import datetime
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional
 from dataclasses import dataclass
 from pathlib import Path
 import time
@@ -405,7 +404,7 @@ reconcli vulncli --target {message}
 
             return result
 
-        except Exception as e:
+        except Exception:
             # Fallback to mock response on error
             return self.ask_ai_mock(message, context)
 
@@ -486,7 +485,7 @@ reconcli vulncli --target {message}
             "subdomain_enum": [
                 f"python main.py dnscli --target {target} --wordlist-size large",
                 f"python main.py permutcli --brand {target} --tools subfinder,amass",
-                f"python main.py tagger --input subs_resolved.txt --output tagged_subs.json",
+                "python main.py tagger --input subs_resolved.txt --output tagged_subs.json",
             ],
             "web_discovery": [
                 f"python main.py httpcli --target {target} --tech-detect",
@@ -1956,7 +1955,7 @@ def aicli(
             click.secho(f"❌ {report_data['error']}", fg="red")
             return
 
-        click.secho(f"\n📊 Security Assessment Report", fg="cyan", bold=True)
+        click.secho("\n📊 Security Assessment Report", fg="cyan", bold=True)
         click.secho(f"Source: {report}", fg="blue")
         click.secho(
             f"Generated: {report_data['report_metadata']['generated_at']}", fg="blue"
@@ -1967,7 +1966,7 @@ def aicli(
 
         # Display report summary
         summary = report_data["attack_flow_summary"]
-        click.secho(f"\n⚔️  Attack Flow Summary:", fg="yellow", bold=True)
+        click.secho("\n⚔️  Attack Flow Summary:", fg="yellow", bold=True)
         click.secho(
             f"  Attack Types: {' → '.join(summary['attack_types'])}", fg="white"
         )
@@ -1980,7 +1979,7 @@ def aicli(
 
         # Display risk metrics
         risk_metrics = report_data["risk_metrics"]
-        click.secho(f"\n📈 Risk Assessment:", fg="red", bold=True)
+        click.secho("\n📈 Risk Assessment:", fg="red", bold=True)
         click.secho(
             f"  Likelihood Score: {risk_metrics['likelihood_score']}/10", fg="white"
         )
@@ -1996,7 +1995,7 @@ def aicli(
         # Display MITRE analysis
         mitre_analysis = report_data["mitre_analysis"]
         if verbose and mitre_analysis["technique_count"] > 0:
-            click.secho(f"\n🎯 MITRE ATT&CK Analysis:", fg="cyan", bold=True)
+            click.secho("\n🎯 MITRE ATT&CK Analysis:", fg="cyan", bold=True)
             click.secho(
                 f"  Mapped Techniques: {mitre_analysis['technique_count']}", fg="white"
             )
@@ -2008,7 +2007,7 @@ def aicli(
         # Display compliance information
         compliance = report_data["compliance_notes"]
         if compliance["applicable_standards"]:
-            click.secho(f"\n⚖️  Compliance Impact:", fg="blue", bold=True)
+            click.secho("\n⚖️  Compliance Impact:", fg="blue", bold=True)
             click.secho(
                 f"  Standards: {len(compliance['applicable_standards'])} requirements",
                 fg="white",
@@ -2029,7 +2028,7 @@ def aicli(
 
         # Display key recommendations
         if report_data["recommendations"]:
-            click.secho(f"\n💡 Key Recommendations:", fg="yellow", bold=True)
+            click.secho("\n💡 Key Recommendations:", fg="yellow", bold=True)
             for i, rec in enumerate(report_data["recommendations"][:10], 1):
                 click.secho(f"{i}. {rec}", fg="green")
 
@@ -2176,7 +2175,7 @@ def aicli(
             click.secho(f"❌ {flow_data['error']}", fg="red")
             return
 
-        click.secho(f"\n⚔️  Multi-Stage Attack Flow", fg="red", bold=True)
+        click.secho("\n⚔️  Multi-Stage Attack Flow", fg="red", bold=True)
         click.secho(f"Attack Chain: {' → '.join(attack_types)}", fg="yellow")
         click.secho(f"Technique: {technique or 'adaptive'}", fg="blue")
         click.secho(
@@ -2191,7 +2190,7 @@ def aicli(
 
         # Show MITRE mapping if verbose
         if verbose and flow_data.get("mitre_mapping"):
-            click.secho(f"\n🎯 MITRE ATT&CK Mapping:", fg="cyan", bold=True)
+            click.secho("\n🎯 MITRE ATT&CK Mapping:", fg="cyan", bold=True)
             for attack_type, techniques in flow_data["mitre_mapping"].items():
                 if techniques:
                     click.secho(
@@ -2235,7 +2234,7 @@ def aicli(
             click.secho(f"❌ {scan_results['error']}", fg="red")
             return
 
-        click.secho(f"\n🔍 AI-Powered Vulnerability Scan Results", fg="red", bold=True)
+        click.secho("\n🔍 AI-Powered Vulnerability Scan Results", fg="red", bold=True)
         click.secho(f"Source: {vuln_scan}", fg="blue")
         click.secho(f"Scan Type: {scan_type.upper()}", fg="blue")
         click.secho(
@@ -2248,7 +2247,7 @@ def aicli(
 
         # Display risk assessment
         risk_assessment = scan_results["risk_assessment"]
-        click.secho(f"\n📊 Risk Assessment:", fg="yellow", bold=True)
+        click.secho("\n📊 Risk Assessment:", fg="yellow", bold=True)
         click.secho(
             f"  Composite Score: {risk_assessment['composite_score']}/10", fg="white"
         )
@@ -2263,14 +2262,14 @@ def aicli(
         # Display integration insights
         insights = scan_results["integration_insights"]
         if insights and verbose:
-            click.secho(f"\n🔗 ReconCLI Integration Insights:", fg="cyan", bold=True)
+            click.secho("\n🔗 ReconCLI Integration Insights:", fg="cyan", bold=True)
             for insight in insights[:5]:
                 click.secho(f"  • {insight}", fg="green")
 
         # Display vulnerability tests
         vuln_tests = scan_results["vulnerability_tests"]
         if verbose and vuln_tests:
-            click.secho(f"\n🎯 Vulnerability Test Categories:", fg="magenta", bold=True)
+            click.secho("\n🎯 Vulnerability Test Categories:", fg="magenta", bold=True)
             for test_type, test_data in vuln_tests.items():
                 click.secho(
                     f"  {test_type.upper()}: {test_data.get('description', 'N/A')}",
@@ -2286,14 +2285,14 @@ def aicli(
         # Display recommendations
         recommendations = scan_results["recommended_actions"]
         if recommendations:
-            click.secho(f"\n💡 Security Recommendations:", fg="yellow", bold=True)
+            click.secho("\n💡 Security Recommendations:", fg="yellow", bold=True)
             for i, rec in enumerate(recommendations[:10], 1):
                 click.secho(f"{i}. {rec}", fg="green")
 
         # Display compliance mapping
         compliance = scan_results["compliance_mapping"]
         if verbose and compliance:
-            click.secho(f"\n⚖️  Compliance Framework Mapping:", fg="blue", bold=True)
+            click.secho("\n⚖️  Compliance Framework Mapping:", fg="blue", bold=True)
             for framework, requirements in compliance.items():
                 if requirements:
                     click.secho(
@@ -2446,7 +2445,7 @@ Available commands:
 
         # Advanced Payload Mutation Engine integration
         if mutate and payload in ["xss", "sqli", "ssrf"]:
-            click.secho(f"\n🔬 Advanced Payload Mutations:", fg="magenta", bold=True)
+            click.secho("\n🔬 Advanced Payload Mutations:", fg="magenta", bold=True)
             mutator = PayloadMutator(context=context or "html", technique=payload)
             mutations_list = mutator.mutate()
 
@@ -2542,7 +2541,7 @@ Available commands:
         click.secho(f"{analysis_data['analysis']}", fg="white")
 
         if analysis_data["recommendations"]:
-            click.secho(f"\n💡 Key Recommendations:", fg="yellow", bold=True)
+            click.secho("\n💡 Key Recommendations:", fg="yellow", bold=True)
             for i, rec in enumerate(analysis_data["recommendations"], 1):
                 click.secho(f"{i}. {rec}", fg="green")
 
@@ -2564,7 +2563,7 @@ Available commands:
     # Direct prompt
     elif prompt:
         if verbose:
-            click.secho(f"[*] Processing prompt...", fg="cyan")
+            click.secho("[*] Processing prompt...", fg="cyan")
 
         response = ai_assistant.ask_ai(prompt, provider=provider, persona=persona)
 

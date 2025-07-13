@@ -1,5 +1,3 @@
-import os
-import sys
 import subprocess
 import shlex
 import click
@@ -10,7 +8,7 @@ import psutil
 import platform
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from typing import Dict, List, Optional, Tuple
+from typing import List, Optional
 import yaml
 
 
@@ -906,7 +904,7 @@ class ReconSession:
         if total_findings > 100:
             archive_path = self.create_archive()
             if archive_path:
-                self.log(f"📦 Large result set archived for easy sharing", "INFO")
+                self.log("📦 Large result set archived for easy sharing", "INFO")
 
         self.log(f"📁 Results saved to: {self.output_dir}", "SUCCESS")
 

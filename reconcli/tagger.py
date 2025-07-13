@@ -1,9 +1,7 @@
 import json
 import re
 import click
-import socket
 import ipaddress
-import urllib.parse
 import os
 import subprocess
 import shutil
@@ -414,7 +412,6 @@ def export_to_format(entries, output_file, format_type="json", csvtk_analysis=Fa
 
     elif format_type == "csv":
         import csv
-        import subprocess
 
         with open(output_file, "w", newline="") as f:
             if not entries:

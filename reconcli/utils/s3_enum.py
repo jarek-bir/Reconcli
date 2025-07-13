@@ -313,7 +313,7 @@ def print_s3_results(results: List[Dict], show_all: bool = False) -> None:
         r for r in results if r["status"] not in ["200", "403", "302", "404"]
     ]
 
-    print(f"\n📊 S3 Bucket Enumeration Results")
+    print("\n📊 S3 Bucket Enumeration Results")
     print(f"Total buckets checked: {len(results)}")
 
     if public_buckets:

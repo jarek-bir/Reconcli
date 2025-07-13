@@ -3,7 +3,6 @@ import subprocess
 import tempfile
 import os
 import json
-import re
 from datetime import datetime
 from pathlib import Path
 
@@ -395,7 +394,7 @@ def permutcli(
         base_items = list(set(base_items))
 
         if verbose and not silent:
-            click.secho(f"[+] 🔤 Added case variations", fg="cyan")
+            click.secho("[+] 🔤 Added case variations", fg="cyan")
 
     if verbose and not silent and keyword_list:
         click.secho(
@@ -1441,7 +1440,7 @@ def run_kitrunner_api(base_items, keyword_list, api_endpoints, verbose, timeout)
         else:
             if verbose:
                 click.secho(
-                    f"[!] ⚠️  kitrunner returned no results, falling back to internal patterns",
+                    "[!] ⚠️  kitrunner returned no results, falling back to internal patterns",
                     fg="yellow",
                 )
             raise Exception("No results from kitrunner")

@@ -8,11 +8,9 @@ import shutil
 from urllib.parse import urlparse
 from pathlib import Path
 from datetime import datetime
-from collections import defaultdict
 import threading
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import time
-import sys
 
 # Database and AI imports
 try:
@@ -277,9 +275,9 @@ def main(
         if proxy:
             click.echo(f"🔀 Proxy: {proxy}")
         if ai_mode:
-            click.echo(f"🧠 AI analysis: enabled")
+            click.echo("🧠 AI analysis: enabled")
         if store_db:
-            click.echo(f"💾 Database storage: enabled")
+            click.echo("💾 Database storage: enabled")
 
     # Initialize session
     session = requests.Session()
@@ -377,7 +375,7 @@ def main(
 
     if markdown:
         with open(Path(output_dir) / "js_findings.md", "w") as f:
-            f.write(f"# 🔍 JavaScript Analysis Results\n\n")
+            f.write("# 🔍 JavaScript Analysis Results\n\n")
             f.write(f"**Generated:** {timestamp}  \n")
             f.write(f"**Engine:** {engine}  \n")
             f.write(f"**Total URLs:** {len(js_urls)}  \n")
@@ -427,10 +425,10 @@ def main(
 
         # Save summary report
         with open(Path(output_dir) / "js_summary.md", "w") as f:
-            f.write(f"# 📊 JavaScript Scan Summary\n\n")
+            f.write("# 📊 JavaScript Scan Summary\n\n")
             f.write(f"**Generated:** {timestamp}  \n")
             f.write(f"**Engine:** {engine}  \n")
-            f.write(f"**Scan Configuration:**\n")
+            f.write("**Scan Configuration:**\n")
             f.write(f"- Concurrency: {concurrency}\n")
             f.write(f"- Timeout: {timeout}s\n")
             f.write(f"- Retries: {retry}\n")
@@ -442,22 +440,22 @@ def main(
             f.write(f"- Total endpoints found: {summary_stats['endpoints']}\n")
 
             if ai_analysis:
-                f.write(f"\n**AI Analysis:** ✅ Completed\n")
+                f.write("\n**AI Analysis:** ✅ Completed\n")
             if store_db:
-                f.write(f"**Database Storage:** ✅ Enabled\n")
+                f.write("**Database Storage:** ✅ Enabled\n")
 
     # Final summary
-    click.echo(f"\n🏁 JavaScript analysis completed!")
-    click.echo(f"📊 Summary:")
+    click.echo("\n🏁 JavaScript analysis completed!")
+    click.echo("📊 Summary:")
     click.echo(f"   • Total URLs processed: {summary_stats['total']}")
     click.echo(f"   • URLs with findings: {summary_stats['with_findings']}")
     click.echo(f"   • Secrets discovered: {summary_stats['secrets']}")
     click.echo(f"   • Endpoints discovered: {summary_stats['endpoints']}")
 
     if ai_analysis:
-        click.echo(f"   • AI analysis: ✅ Completed")
+        click.echo("   • AI analysis: ✅ Completed")
     if store_db:
-        click.echo(f"   • Database storage: ✅ Completed")
+        click.echo("   • Database storage: ✅ Completed")
 
     click.echo(f"💾 Results saved to: {output_dir}/")
 
@@ -482,14 +480,14 @@ def show_resume_status(output_dir):
             click.echo(f"   Started: {scan_data.get('start_time', 'unknown')}")
 
             if scan_data.get("completed"):
-                click.echo(f"   Status: ✅ Completed")
+                click.echo("   Status: ✅ Completed")
                 click.echo(
                     f"   Completed: {scan_data.get('completion_time', 'unknown')}"
                 )
                 click.echo(f"   URLs processed: {scan_data.get('urls_processed', 0)}")
                 click.echo(f"   Secrets found: {scan_data.get('secrets_found', 0)}")
             else:
-                click.echo(f"   Status: ⏳ Incomplete")
+                click.echo("   Status: ⏳ Incomplete")
                 click.echo(f"   URLs processed: {scan_data.get('urls_processed', 0)}")
                 if scan_data.get("last_error"):
                     click.echo(f"   Last Error: {scan_data.get('last_error')}")
@@ -515,7 +513,7 @@ def process_with_native_engine(
     stats = ThreadSafeStats()
 
     if verbose:
-        click.echo(f"🚀 Starting native engine analysis...")
+        click.echo("🚀 Starting native engine analysis...")
 
     with ThreadPoolExecutor(max_workers=concurrency) as executor:
         future_to_url = {
@@ -609,7 +607,7 @@ def run_jsluice(urls_file, output_dir, proxy, timeout, verbose):
         if result.returncode == 0:
             urls_output = result.stdout.strip()
             if verbose:
-                click.echo(f"✅ JSLuice URLs completed successfully")
+                click.echo("✅ JSLuice URLs completed successfully")
         else:
             if verbose:
                 click.echo(f"❌ JSLuice URLs failed: {result.stderr}")
@@ -620,7 +618,7 @@ def run_jsluice(urls_file, output_dir, proxy, timeout, verbose):
         urls_output = ""
     except FileNotFoundError:
         click.echo(
-            f"❌ JSLuice not found. Install with: go install github.com/BishopFox/jsluice@latest"
+            "❌ JSLuice not found. Install with: go install github.com/BishopFox/jsluice@latest"
         )
         return results
     except Exception as e:
@@ -642,7 +640,7 @@ def run_jsluice(urls_file, output_dir, proxy, timeout, verbose):
         if result_secrets.returncode == 0:
             secrets_output = result_secrets.stdout.strip()
             if verbose:
-                click.echo(f"✅ JSLuice Secrets completed successfully")
+                click.echo("✅ JSLuice Secrets completed successfully")
         else:
             if verbose:
                 click.echo(f"❌ JSLuice Secrets failed: {result_secrets.stderr}")
@@ -708,7 +706,7 @@ def run_jsleak(urls_file, output_dir, proxy, timeout, verbose):
     try:
         result = subprocess.run(cmd, capture_output=True, text=True, check=True)
         if verbose:
-            click.echo(f"✅ JSLeak completed successfully")
+            click.echo("✅ JSLeak completed successfully")
 
         # Parse JSLeak output
         if os.path.exists(output_file):
@@ -733,7 +731,7 @@ def run_jsleak(urls_file, output_dir, proxy, timeout, verbose):
         click.echo(f"❌ JSLeak failed: {e.stderr}")
     except FileNotFoundError:
         click.echo(
-            f"❌ JSLeak not found. Install with: go install github.com/channyein1337/jsleak@latest"
+            "❌ JSLeak not found. Install with: go install github.com/channyein1337/jsleak@latest"
         )
 
     return results
@@ -755,7 +753,7 @@ def run_subjs(urls_file, output_dir, proxy, timeout, verbose):
     try:
         result = subprocess.run(cmd, capture_output=True, text=True, check=True)
         if verbose:
-            click.echo(f"✅ SubJS completed successfully")
+            click.echo("✅ SubJS completed successfully")
 
         # Parse SubJS output (URLs only)
         for line in result.stdout.split("\n"):
@@ -774,7 +772,7 @@ def run_subjs(urls_file, output_dir, proxy, timeout, verbose):
         click.echo(f"❌ SubJS failed: {e.stderr}")
     except FileNotFoundError:
         click.echo(
-            f"❌ SubJS not found. Install with: go install github.com/lc/subjs@latest"
+            "❌ SubJS not found. Install with: go install github.com/lc/subjs@latest"
         )
 
     return results
@@ -797,7 +795,7 @@ def run_cariddi(urls_file, output_dir, proxy, timeout, verbose):
     try:
         result = subprocess.run(cmd, capture_output=True, text=True, check=True)
         if verbose:
-            click.echo(f"✅ Cariddi completed successfully")
+            click.echo("✅ Cariddi completed successfully")
 
         # Parse Cariddi output
         if os.path.exists(output_file):
@@ -826,7 +824,7 @@ def run_cariddi(urls_file, output_dir, proxy, timeout, verbose):
         click.echo(f"❌ Cariddi failed: {e.stderr}")
     except FileNotFoundError:
         click.echo(
-            f"❌ Cariddi not found. Install with: go install github.com/edoardottt/cariddi/cmd/cariddi@latest"
+            "❌ Cariddi not found. Install with: go install github.com/edoardottt/cariddi/cmd/cariddi@latest"
         )
 
     return results
@@ -848,7 +846,7 @@ def run_getjs(urls_file, output_dir, proxy, timeout, verbose):
     try:
         result = subprocess.run(cmd, capture_output=True, text=True, check=True)
         if verbose:
-            click.echo(f"✅ GetJS completed successfully")
+            click.echo("✅ GetJS completed successfully")
 
         # Parse GetJS output
         if os.path.exists(output_file):
@@ -872,7 +870,7 @@ def run_getjs(urls_file, output_dir, proxy, timeout, verbose):
             click.echo(f"❌ GetJS failed: {e.stderr}")
     except FileNotFoundError:
         click.echo(
-            f"❌ GetJS not found. Install with: go install github.com/003random/getJS@latest"
+            "❌ GetJS not found. Install with: go install github.com/003random/getJS@latest"
         )
 
     return results
@@ -902,7 +900,7 @@ def run_mantra(urls_file, output_dir, proxy, timeout, verbose):
         )
 
         if verbose:
-            click.echo(f"✅ Mantra completed successfully")
+            click.echo("✅ Mantra completed successfully")
 
         # Save output to file
         with open(output_file, "w") as f:
@@ -936,7 +934,7 @@ def run_mantra(urls_file, output_dir, proxy, timeout, verbose):
             click.echo(f"❌ Mantra failed: {e.stderr}")
     except FileNotFoundError:
         click.echo(
-            f"❌ Mantra not found. Install with: go install github.com/MrEmpy/mantra@latest"
+            "❌ Mantra not found. Install with: go install github.com/MrEmpy/mantra@latest"
         )
 
     return results

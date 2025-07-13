@@ -1,13 +1,10 @@
 import click
 import subprocess
-import os
 import json
 import time
 from pathlib import Path
 from datetime import datetime
-from urllib.parse import urlparse
 import requests
-from concurrent.futures import ThreadPoolExecutor, as_completed
 import re
 import hashlib
 import shutil
@@ -775,7 +772,7 @@ def generate_markdown_report(report_data):
         desc = status_descriptions.get(status, "Unknown")
         md_content += f"| {status} | {count} | {desc} |\n"
 
-    md_content += f"""
+    md_content += """
 ## 🎯 Findings by Category
 
 | Category | Count | Risk Level |
@@ -1102,7 +1099,7 @@ def get_user_agents(user_agent_option, user_agent_file, builtin_ua, random_ua):
                 ]
             return file_agents
         else:
-            print(f"[!] Failed to load User-Agents from file, falling back to builtin")
+            print("[!] Failed to load User-Agents from file, falling back to builtin")
 
     if builtin_ua:
         builtin_agents = get_builtin_user_agents()
@@ -1384,7 +1381,7 @@ def dirbcli(
     if show_resume:
         resume_data = load_resume_state(output_dir)
         if resume_data:
-            click.echo(f"📋 [RESUME] Previous scan status:")
+            click.echo("📋 [RESUME] Previous scan status:")
             click.echo(f"  • Target: {resume_data.get('url', 'Unknown')}")
             click.echo(f"  • Tool: {resume_data.get('tool', 'Unknown')}")
             click.echo(f"  • Status: {resume_data.get('status', 'Unknown')}")
@@ -2079,9 +2076,9 @@ print(f"Dirmap-like scan completed. Found {{len(results)}} results.")
         ]
 
         if verbose:
-            click.echo(f"🔧 [DIRMAP] Running dirmap-compatible scan...")
+            click.echo("🔧 [DIRMAP] Running dirmap-compatible scan...")
             click.echo(
-                f"🔧 [DIRMAP] Note: Using simplified implementation due to dirmap complexity"
+                "🔧 [DIRMAP] Note: Using simplified implementation due to dirmap complexity"
             )
 
         result = subprocess.run(dirmap_cmd, capture_output=True, text=True)
@@ -2095,7 +2092,7 @@ print(f"Dirmap-like scan completed. Found {{len(results)}} results.")
         if result.returncode != 0 and verbose:
             click.echo(f"⚠️ [DIRMAP] Warning: {result.stderr}")
             click.echo(
-                f"⚠️ [DIRMAP] Note: Install dirmap from https://github.com/H4ckForJob/dirmap for full functionality"
+                "⚠️ [DIRMAP] Note: Install dirmap from https://github.com/H4ckForJob/dirmap for full functionality"
             )
 
     elif tool == "dirhunt":
@@ -2211,7 +2208,7 @@ print(f"Dirmap-like scan completed. Found {{len(results)}} results.")
         if result.returncode != 0:
             if verbose:
                 click.echo(f"⚠️ [DIRHUNT] Warning: {result.stderr}")
-                click.echo(f"💡 [DIRHUNT] Install with: pip install dirhunt")
+                click.echo("💡 [DIRHUNT] Install with: pip install dirhunt")
 
             # Fallback: create a simple intelligent scanner
             if verbose:
@@ -2478,7 +2475,7 @@ print(f"Found {{len(urls)}} potential directories")
 
     # Display summary
     if verbose:
-        click.echo(f"\n📊 [SUMMARY] Scan Results:")
+        click.echo("\n📊 [SUMMARY] Scan Results:")
         click.echo(f"🎯 Target: {url}")
         click.echo(f"📝 Wordlist entries: {stats['wordlist_size']}")
         click.echo(f"📁 Total findings: {stats['findings_count']}")
@@ -2498,16 +2495,16 @@ print(f"Found {{len(urls)}} potential directories")
                 "sensitive_files",
             ]:
                 if not high_risk_found:
-                    click.echo(f"\n🔴 [HIGH RISK] Categories found:")
+                    click.echo("\n🔴 [HIGH RISK] Categories found:")
                     high_risk_found = True
                 click.echo(f"  • {category.replace('_', ' ').title()}: {count} items")
 
         if not high_risk_found:
-            click.echo(f"\n🟢 [GOOD] No high-risk categories detected")
+            click.echo("\n🟢 [GOOD] No high-risk categories detected")
 
     # Send completion notification
     if slack_webhook or discord_webhook:
-        completion_msg = f"✅ DirBCLI scan completed!\\n"
+        completion_msg = "✅ DirBCLI scan completed!\\n"
         completion_msg += f"Target: {url}\\n"
         completion_msg += f"Duration: {stats['scan_duration']:.1f}s\\n"
         completion_msg += f"Findings: {stats['findings_count']}\\n"
@@ -2524,13 +2521,13 @@ print(f"Found {{len(urls)}} potential directories")
         for cat in ["admin_panels", "config_files", "backups", "sensitive_files"]
     )
     if high_risk_count > 0 and (slack_webhook or discord_webhook):
-        risk_msg = f"🚨 HIGH-RISK FINDINGS DETECTED!\\n"
+        risk_msg = "🚨 HIGH-RISK FINDINGS DETECTED!\\n"
         risk_msg += f"Target: {url}\\n"
         risk_msg += f"High-risk items: {high_risk_count}\\n"
         risk_msg += (
-            f"Categories: Admin panels, Config files, Backups, Sensitive files\\n"
+            "Categories: Admin panels, Config files, Backups, Sensitive files\\n"
         )
-        risk_msg += f"Manual review recommended!"
+        risk_msg += "Manual review recommended!"
 
         if slack_webhook:
             send_notification(slack_webhook, risk_msg, "slack")
@@ -2608,7 +2605,7 @@ print(f"Found {{len(urls)}} potential directories")
                 click.echo("⚠️ [CLEANUP] Failed to clean up some temporary files")
 
     if verbose:
-        click.echo(f"\n🎉 [COMPLETE] DirBCLI scan finished successfully!")
+        click.echo("\n🎉 [COMPLETE] DirBCLI scan finished successfully!")
         click.echo(f"📂 All results saved in: {output_dir}")
     else:
         click.echo(f"\n[✓] Scan complete! Results in: {output_dir}")

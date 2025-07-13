@@ -1,22 +1,15 @@
 import click
-import subprocess
-import os
 import json
 import time
 import yaml
 import sqlite3
 from pathlib import Path
 from datetime import datetime
-from urllib.parse import urlparse, urljoin, parse_qs, urlunparse, quote
+from urllib.parse import urlparse, urljoin, quote
 import requests
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import re
-import hashlib
 import base64
-import jwt
-import random
-import string
-from typing import Dict, List, Any, Optional, Union
 
 
 def send_notification(webhook_url, message, service="slack"):
@@ -1142,7 +1135,7 @@ def scan_javascript_files(url, session, store_db=False, db_path=None):
     }
 
     try:
-        print(f"🔍 [JS-SCAN] Scanning JavaScript files for secrets...")
+        print("🔍 [JS-SCAN] Scanning JavaScript files for secrets...")
 
         # First, get the main page to extract JS URLs
         response = session.get(url, timeout=10, verify=False)
@@ -1229,7 +1222,7 @@ def scan_javascript_files(url, session, store_db=False, db_path=None):
 
                 results["js_files_scanned"] += 1
 
-            except Exception as e:
+            except Exception:
                 continue
 
         if results["total_secrets"] > 0:
@@ -1387,7 +1380,7 @@ def swagger_brute_force(base_url, session, rate_limit=15):
     found_files = []
     total_requests = 0
 
-    print(f"🔍 [SWAGGER-BRUTE] Starting brute force discovery...")
+    print("🔍 [SWAGGER-BRUTE] Starting brute force discovery...")
 
     for prefix in prefixes:
         for path in common_paths:
@@ -1782,7 +1775,7 @@ def main(
     # Handle Swagger/OpenAPI specific operations
     if swagger_brute:
         if verbose:
-            print(f"🔍 [SJ-BRUTE] Starting Swagger/OpenAPI brute force discovery...")
+            print("🔍 [SJ-BRUTE] Starting Swagger/OpenAPI brute force discovery...")
 
         found_swagger_files = swagger_brute_force(url, session, rate_limit)
 
@@ -1795,7 +1788,7 @@ def main(
                     f"   📄 {swagger_file['url']} (Status: {swagger_file['status_code']}, Size: {swagger_file['content_length']})"
                 )
         else:
-            print(f"❌ [SJ-BRUTE] No Swagger/OpenAPI definition files found")
+            print("❌ [SJ-BRUTE] No Swagger/OpenAPI definition files found")
 
         if store_db:
             initialize_database(store_db)
@@ -1885,7 +1878,7 @@ def main(
                     continue
 
         if not swagger_content:
-            print(f"❌ [SJ] No Swagger/OpenAPI definition found")
+            print("❌ [SJ] No Swagger/OpenAPI definition found")
             return
 
         # Parse Swagger content
@@ -1957,7 +1950,7 @@ def main(
             return  # Exit after generating commands
 
         if swagger_parse:
-            print(f"🚀 [SJ-AUTOMATE] Testing API endpoints automatically...")
+            print("🚀 [SJ-AUTOMATE] Testing API endpoints automatically...")
 
             # Determine base URL for requests
             base_url = url
@@ -2267,7 +2260,7 @@ def main(
 
     # Send notifications
     if slack_webhook or discord_webhook:
-        summary_message = f"🔍 API Security Scan Complete\n"
+        summary_message = "🔍 API Security Scan Complete\n"
         summary_message += f"Target: {url}\n"
         summary_message += (
             f"Endpoints: {security_report['summary']['total_endpoints']}\n"

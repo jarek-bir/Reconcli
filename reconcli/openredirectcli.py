@@ -1,19 +1,16 @@
 #!/usr/bin/env python3
 
 import os
-import sys
 import json
 import time
 import click
 import requests
 import subprocess
-import random
 import re
-from urllib.parse import urlparse, parse_qs, urlencode, urlunparse, quote, urljoin
+from urllib.parse import urlparse, parse_qs, urlencode, urlunparse, quote
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
-from typing import List, Dict, Optional
-from pathlib import Path
+from typing import List, Dict
 
 # Resume utilities (fallback if not available)
 try:
@@ -1679,7 +1676,7 @@ def openredirectcli(
     # Final summary
     if not quiet:
         click.echo("\n" + "=" * 60)
-        click.echo(f"🎯 Scan Summary:")
+        click.echo("🎯 Scan Summary:")
         click.echo(f"   • URLs tested: {len(tested)}")
         click.echo(f"   • Vulnerabilities found: {len(results)}")
 
@@ -1697,7 +1694,7 @@ def openredirectcli(
                 sev = result.get("severity", "unknown")
                 severity_counts[sev] = severity_counts.get(sev, 0) + 1
 
-            click.echo(f"   • Severity breakdown:")
+            click.echo("   • Severity breakdown:")
             for severity, count in sorted(
                 severity_counts.items(),
                 key=lambda x: severity_priority(x[0]),
@@ -1711,7 +1708,7 @@ def openredirectcli(
 
         # Display AI insights summary
         if ai_insights and not quiet:
-            click.echo(f"\n🧠 AI Analysis Summary:")
+            click.echo("\n🧠 AI Analysis Summary:")
             if "risk_assessment" in ai_insights:
                 risk_summary = (
                     ai_insights["risk_assessment"][:100] + "..."

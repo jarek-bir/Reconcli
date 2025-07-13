@@ -1,16 +1,13 @@
-import os
 import json
 import click
 import subprocess
 import time
 import concurrent.futures
-import threading
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Set, Optional, Tuple
+from typing import Dict, List, Set, Optional
 import requests
-import psutil
-from urllib.parse import urlparse, urljoin
+from urllib.parse import urlparse
 import re
 
 

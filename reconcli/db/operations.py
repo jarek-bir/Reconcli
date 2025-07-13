@@ -6,9 +6,8 @@ Provides simple interfaces for common operations without requiring
 direct SQLAlchemy knowledge.
 """
 
-from typing import List, Dict, Any, Optional, Union
+from typing import List, Dict, Any, Optional
 from datetime import datetime, timedelta
-from sqlalchemy.orm import Session
 from sqlalchemy import desc, func
 
 from .database import get_db_manager

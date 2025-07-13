@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 import click
-import os
 import json
 import subprocess
 import time

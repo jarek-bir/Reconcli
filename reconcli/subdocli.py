@@ -2,7 +2,6 @@
 import os
 import json
 import subprocess
-import shlex
 import click
 import requests
 import socket
@@ -353,7 +352,7 @@ def subdocli(
 
     if resume and resume_state:
         if verbose:
-            click.echo(f"[+] 📁 Loading resume state")
+            click.echo("[+] 📁 Loading resume state")
         # Find the most recent incomplete scan
         for key, data in sorted(resume_state.items(), reverse=True):
             if key.startswith("subdomain_") and not data.get("completed", False):
@@ -401,7 +400,7 @@ def subdocli(
     if active or all_tools:
         tools.update(active_tools)
         if verbose:
-            click.echo(f"[+] 🔥 Active enumeration enabled")
+            click.echo("[+] 🔥 Active enumeration enabled")
 
     current_scan = resume_state[scan_key]
     completed_tools = set(current_scan.get("tools_completed", []))
@@ -466,7 +465,7 @@ def subdocli(
 
     # Clean up and deduplicate subdomains
     if verbose:
-        click.echo(f"[+] 🧹 Processing and deduplicating subdomains...")
+        click.echo("[+] 🧹 Processing and deduplicating subdomains...")
 
     all_subs = sorted(set([s for s in all_subs if s.endswith(domain) and s.strip()]))
 
@@ -540,7 +539,7 @@ def subdocli(
     save_resume_state(outpath, resume_state)
 
     if verbose:
-        click.echo(f"[+] ✅ Subdomain enumeration completed!")
+        click.echo("[+] ✅ Subdomain enumeration completed!")
         click.echo(f"[+] 📁 Results saved to: {outpath}/")
 
     # Database storage
@@ -591,17 +590,17 @@ def subdocli(
                             click.echo(f"   Tools: {', '.join(tools_used)}")
                 else:
                     if verbose:
-                        click.echo(f"⚠️ No subdomains to store in database")
+                        click.echo("⚠️ No subdomains to store in database")
             else:
                 if verbose:
                     click.echo(
-                        f"⚠️ Could not determine target domain for database storage"
+                        "⚠️ Could not determine target domain for database storage"
                     )
 
         except ImportError:
             if verbose:
                 click.echo(
-                    f"⚠️ Database module not available. Install with: pip install sqlalchemy>=2.0.0"
+                    "⚠️ Database module not available. Install with: pip install sqlalchemy>=2.0.0"
                 )
         except Exception as e:
             if verbose:

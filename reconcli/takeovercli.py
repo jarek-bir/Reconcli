@@ -74,7 +74,7 @@ def validate_input_file(input_file):
                 valid_count += 1
 
         if valid_count == 0:
-            click.echo(f"[!] Warning: Input file may not contain valid domain names")
+            click.echo("[!] Warning: Input file may not contain valid domain names")
 
         click.echo(f"[+] Input file contains {len(lines)} entries")
         return True
@@ -100,13 +100,13 @@ def show_resume_status(output_dir):
         click.echo(f"   Started: {scan_data.get('start_time', 'unknown')}")
 
         if scan_data.get("completed"):
-            click.echo(f"   Status: ✅ Completed")
+            click.echo("   Status: ✅ Completed")
             click.echo(f"   Completed: {scan_data.get('completion_time', 'unknown')}")
             click.echo(
                 f"   Vulnerabilities: {scan_data.get('vulnerabilities_found', 0)}"
             )
         else:
-            click.echo(f"   Status: ⏳ Incomplete")
+            click.echo("   Status: ⏳ Incomplete")
             if scan_data.get("last_error"):
                 click.echo(f"   Last Error: {scan_data.get('last_error')}")
 
@@ -208,7 +208,7 @@ def takeovercli(
         click.echo(f"[+] Resuming previous {tool} scan for {Path(input).stem}")
         if resume_state[scan_key].get("completed"):
             click.echo(
-                f"[!] Previous scan already completed. Use --clear-resume to start fresh."
+                "[!] Previous scan already completed. Use --clear-resume to start fresh."
             )
             return
 
@@ -268,7 +268,7 @@ def takeovercli(
         click.echo(f"[+] Output directory: {output_dir}")
         click.echo(f"[+] Command: {' '.join(cmd)}")
         if resume:
-            click.echo(f"[+] Resume mode: enabled")
+            click.echo("[+] Resume mode: enabled")
 
     # Update resume state - scan started
     if resume:
@@ -369,7 +369,7 @@ def takeovercli(
         # Export Markdown if requested
         if markdown:
             with open(output_md, "w") as md:
-                md.write(f"# Subdomain Takeover Report\n\n")
+                md.write("# Subdomain Takeover Report\n\n")
                 md.write(
                     f"**Scan Date:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n"
                 )
@@ -411,7 +411,7 @@ def takeovercli(
             "md": str(output_md) if markdown and output_md.exists() else None,
         }
         save_resume_state(output_dir, resume_state)
-        click.echo(f"[+] Resume state updated: scan completed")
+        click.echo("[+] Resume state updated: scan completed")
 
     if vulnerable_findings:
         click.echo(

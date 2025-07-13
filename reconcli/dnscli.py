@@ -6,7 +6,7 @@ import time
 import click
 import concurrent.futures
 from datetime import datetime
-from typing import Dict, List, Optional, Tuple, Any, Union
+from typing import Dict, List, Optional, Tuple
 from tqdm import tqdm
 
 # Import notifications
@@ -243,10 +243,10 @@ def cli(
         sys.exit(1)
 
     if verbose:
-        click.echo(f"[+] 🚀 Starting DNS resolution scan")
+        click.echo("[+] 🚀 Starting DNS resolution scan")
         click.echo(f"[+] 📁 Output directory: {output_dir}")
         if use_scilla:
-            click.echo(f"[+] 🔍 Using Scilla for DNS reconnaissance")
+            click.echo("[+] 🔍 Using Scilla for DNS reconnaissance")
             click.echo(f"[+] 🎯 Scilla target: {scilla_target}")
         click.echo(f"[+] 🧵 Threads: {threads}")
         click.echo(f"[+] ⏰ Timeout: {timeout}s")
@@ -318,7 +318,7 @@ def cli(
     # Generate additional subdomains from wordlist if provided
     if wordlists:
         if verbose:
-            click.echo(f"[+] 📝 Generating subdomains from wordlist...")
+            click.echo("[+] 📝 Generating subdomains from wordlist...")
 
         # Skip wordlist generation - not implemented
         additional_subdomains = []
@@ -412,11 +412,11 @@ def cli(
     # Enrich with WHOIS data if provided
     if whois_file:
         if verbose:
-            click.echo(f"[+] 🔍 Enriching DNS results with WHOIS data...")
+            click.echo("[+] 🔍 Enriching DNS results with WHOIS data...")
 
         # Skip WHOIS enrichment - not implemented
         if verbose:
-            click.echo(f"[!] WHOIS enrichment not implemented, skipping...")
+            click.echo("[!] WHOIS enrichment not implemented, skipping...")
 
             if verbose:
                 whois_enriched = len(
@@ -459,7 +459,7 @@ def cli(
     elapsed = round(time.time() - start_time, 2)
 
     if verbose:
-        click.echo(f"\n[+] 📊 Scan Summary:")
+        click.echo("\n[+] 📊 Scan Summary:")
         click.echo(f"   - Total subdomains: {len(subdomains)}")
         click.echo(f"   - Successfully resolved: {resolved_count}")
         click.echo(f"   - Failed to resolve: {failed_count}")
@@ -489,7 +489,7 @@ def cli(
             if verbose:
                 click.echo(f"[!] Notification failed: {e}")
 
-    click.echo(f"\n[+] ✅ DNS resolution completed!")
+    click.echo("\n[+] ✅ DNS resolution completed!")
     click.echo(f"[+] 📁 Results saved to: {output_dir}")
 
 
@@ -771,18 +771,18 @@ def save_outputs(
                 else:
                     if verbose:
                         click.echo(
-                            f"[!] ⚠️  No resolved subdomains to store in database"
+                            "[!] ⚠️  No resolved subdomains to store in database"
                         )
             else:
                 if verbose:
                     click.echo(
-                        f"[!] ⚠️  Could not determine target domain for database storage"
+                        "[!] ⚠️  Could not determine target domain for database storage"
                     )
 
         except ImportError:
             if verbose:
                 click.echo(
-                    f"[!] ⚠️  Database module not available. Install with: pip install sqlalchemy>=2.0.0"
+                    "[!] ⚠️  Database module not available. Install with: pip install sqlalchemy>=2.0.0"
                 )
         except Exception as e:
             if verbose:
@@ -805,7 +805,6 @@ def run_scilla_enumeration(
     """
     import subprocess
     import os
-    import re
 
     results = []
     subdomains = []
@@ -905,11 +904,11 @@ def run_scilla_enumeration(
 
     except subprocess.TimeoutExpired:
         if verbose:
-            click.echo(f"[!] ⏰ Scilla timed out after 30 seconds")
+            click.echo("[!] ⏰ Scilla timed out after 30 seconds")
     except FileNotFoundError:
         if verbose:
             click.echo(
-                f"[!] ❌ Scilla not found. Install with: go install -v github.com/edoardottt/scilla/cmd/scilla@latest"
+                "[!] ❌ Scilla not found. Install with: go install -v github.com/edoardottt/scilla/cmd/scilla@latest"
             )
     except Exception as e:
         if verbose:

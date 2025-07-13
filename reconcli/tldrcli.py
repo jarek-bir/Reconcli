@@ -1,13 +1,12 @@
 #!/usr/bin/env python3
 
 import os
-import sys
 import json
 import time
 import click
 import concurrent.futures
 from datetime import datetime
-from typing import Dict, List, Optional, Tuple, Any
+from typing import Dict, List, Optional, Tuple
 from tqdm import tqdm
 import socket
 import shutil
@@ -2886,9 +2885,9 @@ def cli(
         click.echo(f"[+] ⏰ Timeout: {timeout}s")
         click.echo(f"[+] 🔄 Retries: {retries}")
         if http_check:
-            click.echo(f"[+] 🌐 HTTP probing enabled")
+            click.echo("[+] 🌐 HTTP probing enabled")
         if whois_check:
-            click.echo(f"[+] 📋 WHOIS checking enabled")
+            click.echo("[+] 📋 WHOIS checking enabled")
 
     # Build TLD list
     tld_list_final = build_tld_list(tld_list, categories, verbose)
@@ -3002,7 +3001,7 @@ def cli(
     elapsed = round(time.time() - start_time, 2)
 
     if verbose:
-        click.echo(f"\n[+] 📊 TLD Reconnaissance Summary:")
+        click.echo("\n[+] 📊 TLD Reconnaissance Summary:")
         click.echo(f"   - Base domain: {domain}")
         click.echo(f"   - Total TLDs tested: {len(tld_list_final)}")
         click.echo(f"   - DNS resolved: {resolved_count}")
@@ -3028,7 +3027,7 @@ def cli(
             verbose,
         )
 
-    click.echo(f"\n[+] ✅ TLD reconnaissance completed!")
+    click.echo("\n[+] ✅ TLD reconnaissance completed!")
     click.echo(f"[+] 📁 Results saved to: {output_dir}")
 
 
@@ -3193,8 +3192,6 @@ def check_http_status(
     domain: str, timeout: int, retries: int
 ) -> Tuple[Optional[int], Optional[int]]:
     """Check HTTP and HTTPS status codes"""
-    import urllib.request
-    import urllib.error
     import ssl
 
     def get_status(url: str) -> Optional[int]:
@@ -3374,7 +3371,7 @@ def generate_statistics(results: List[Dict], verbose: bool) -> Dict:
     }
 
     if verbose:
-        click.echo(f"\n[+] 📊 Detailed Statistics:")
+        click.echo("\n[+] 📊 Detailed Statistics:")
         click.echo(f"   - Total domains tested: {stats['total_domains']}")
         click.echo(f"   - DNS resolved: {stats['dns_resolved']}")
         click.echo(f"   - HTTP active: {stats['http_active']}")
@@ -3461,7 +3458,7 @@ def show_resume_status(output_dir: str):
             click.echo(f"   Started: {scan_data.get('start_time', 'unknown')}")
 
             if scan_data.get("completed"):
-                click.echo(f"   Status: ✅ Completed")
+                click.echo("   Status: ✅ Completed")
                 click.echo(
                     f"   Completed: {scan_data.get('completion_time', 'unknown')}"
                 )
@@ -3469,7 +3466,7 @@ def show_resume_status(output_dir: str):
                 click.echo(f"   DNS Resolved: {scan_data.get('resolved_count', 0)}")
                 click.echo(f"   HTTP Active: {scan_data.get('http_active_count', 0)}")
             else:
-                click.echo(f"   Status: ⏳ Incomplete")
+                click.echo("   Status: ⏳ Incomplete")
                 click.echo(f"   Processed: {scan_data.get('processed_count', 0)}")
 
             click.echo()

@@ -10,11 +10,11 @@ import re
 import yaml
 import json
 import sys
+import socket
 from datetime import datetime, timezone
 from urllib.parse import urlparse, parse_qs
 from collections import defaultdict
-from typing import Dict, List, Set, Tuple, Any
-import logging
+from typing import Dict, List, Tuple, Any
 
 # Import resume utilities
 try:
@@ -170,7 +170,7 @@ def sort(
             raise click.Abort()
 
     if verbose:
-        click.echo(f"[+] 🚀 Starting URL sorting")
+        click.echo("[+] 🚀 Starting URL sorting")
         click.echo(f"[+] 📁 Input source: {input if input != '-' else 'stdin'}")
         click.echo(f"[+] 📁 Output directory: {output_dir}")
 
@@ -272,14 +272,14 @@ def sort(
     save_resume_state(output_dir, resume_state)
 
     if verbose:
-        click.echo(f"\n[+] 📊 Sorting Summary:")
+        click.echo("\n[+] 📊 Sorting Summary:")
         click.echo(f"   - Total URLs processed: {len(processed_urls)}")
         click.echo(
             f"   - Categories with matches: {len([k for k, v in matches.items() if v])}"
         )
         click.echo(f"   - Total matches: {sum(len(v) for v in matches.values())}")
 
-    click.echo(f"\n[+] ✅ URL sorting completed!")
+    click.echo("\n[+] ✅ URL sorting completed!")
     click.echo(f"[+] 📁 Results saved to: {output_dir}")
 
 
@@ -308,7 +308,7 @@ def analyze(input, output_dir, verbose, export_json, markdown):
             raise click.Abort()
 
     if verbose:
-        click.echo(f"[+] 🔍 Starting URL analysis")
+        click.echo("[+] 🔍 Starting URL analysis")
         click.echo(f"[+] 📁 Input source: {input if input != '-' else 'stdin'}")
         click.echo(f"[+] 📁 Output directory: {output_dir}")
 
@@ -331,7 +331,7 @@ def analyze(input, output_dir, verbose, export_json, markdown):
         save_analysis_markdown(analysis_results, output_dir, verbose)
 
     if verbose:
-        click.echo(f"\n[+] ✅ URL analysis completed!")
+        click.echo("\n[+] ✅ URL analysis completed!")
         click.echo(f"[+] 📁 Analysis results saved to: {output_dir}")
 
 
@@ -445,11 +445,7 @@ def hakcheckurl(
     program,
 ):
     """Advanced URL checker with status filtering and content analysis"""
-    import httpx
     import time
-    import socket
-    import dns.resolver
-    from pathlib import Path
 
     # Database imports
     try:
@@ -483,7 +479,7 @@ def hakcheckurl(
         store_db = False
 
     if verbose:
-        click.echo(f"[+] 🚀 Starting HakCheckURL")
+        click.echo("[+] 🚀 Starting HakCheckURL")
         click.echo(f"[+] 📁 Input source: {input if input != '-' else 'stdin'}")
         click.echo(f"[+] 📁 Output directory: {output_dir}")
         click.echo(f"[+] 🧵 Threads: {threads}")
@@ -492,11 +488,11 @@ def hakcheckurl(
         click.echo(f"[+] ⚡ Rate limit: {rate_limit} req/s")
         click.echo(f"[+] 🌐 Method: {method}")
         if check_live:
-            click.echo(f"[+] 🔍 Live domain checking: enabled")
+            click.echo("[+] 🔍 Live domain checking: enabled")
         if filter_live:
-            click.echo(f"[+] 🔍 Live domain filtering: enabled")
+            click.echo("[+] 🔍 Live domain filtering: enabled")
         if store_db:
-            click.echo(f"[+] 💾 Database storage: enabled")
+            click.echo("[+] 💾 Database storage: enabled")
 
     os.makedirs(output_dir, exist_ok=True)
 
@@ -641,13 +637,13 @@ def hakcheckurl(
 
     # Summary
     if verbose:
-        click.echo(f"\n[+] 📊 HakCheckURL Summary:")
+        click.echo("\n[+] 📊 HakCheckURL Summary:")
         click.echo(f"   - Total URLs checked: {len(urls)}")
         click.echo(f"   - Results after filtering: {len(filtered_results)}")
         click.echo(f"   - Processing time: {elapsed_time:.2f}s")
         click.echo(f"   - Average time per URL: {elapsed_time/len(urls):.3f}s")
 
-    click.echo(f"\n[+] ✅ HakCheckURL completed!")
+    click.echo("\n[+] ✅ HakCheckURL completed!")
     click.echo(f"[+] 📁 Results saved to: {output_dir}")
 
 
@@ -727,7 +723,7 @@ def process_urls(
     if sort_urls:
         processed.sort()
         if verbose:
-            click.echo(f"[+] 🔍 URLs sorted alphabetically")
+            click.echo("[+] 🔍 URLs sorted alphabetically")
 
     return processed
 
@@ -759,7 +755,7 @@ def categorize_urls(
     }
 
     if verbose:
-        click.echo(f"[+] 📊 Analysis completed:")
+        click.echo("[+] 📊 Analysis completed:")
         for name, count in analysis["pattern_matches"].items():
             if count > 0:
                 click.echo(f"   - {name.upper()}: {count} matches")
@@ -1262,11 +1258,11 @@ def show_resume_status(output_dir: str, tool_prefix: str):
         click.echo(f"   Started: {scan_data.get('start_time', 'unknown')}")
 
         if scan_data.get("completed"):
-            click.echo(f"   Status: ✅ Completed")
+            click.echo("   Status: ✅ Completed")
             click.echo(f"   Completed: {scan_data.get('completion_time', 'unknown')}")
             click.echo(f"   Processed: {scan_data.get('processed_count', 0)}")
         else:
-            click.echo(f"   Status: ⏳ Incomplete")
+            click.echo("   Status: ⏳ Incomplete")
             click.echo(f"   Processed: {scan_data.get('processed_count', 0)}")
 
         click.echo()
@@ -1347,7 +1343,6 @@ def check_urls_advanced(
 ) -> List[Dict[str, Any]]:
     """Advanced URL checking with concurrent requests"""
     import httpx
-    import asyncio
     import time
     from concurrent.futures import ThreadPoolExecutor, as_completed
 
@@ -1379,7 +1374,7 @@ def check_urls_advanced(
 
             db_available = True
             if verbose:
-                click.echo(f"[+] 💾 Database storage initialized")
+                click.echo("[+] 💾 Database storage initialized")
 
             # Store target if provided
             if target_domain:
@@ -1388,7 +1383,7 @@ def check_urls_advanced(
                     click.echo(f"[+] 💾 Stored target: {target_domain}")
         except ImportError:
             if verbose:
-                click.echo(f"[!] ⚠️  Database not available, skipping storage")
+                click.echo("[!] ⚠️  Database not available, skipping storage")
 
     # Rate limiting
     request_delay = 1.0 / rate_limit if rate_limit > 0 else 0
@@ -1692,7 +1687,7 @@ def analyze_technologies(
     }
 
     if verbose:
-        click.echo(f"[+] 🔧 Technology analysis completed")
+        click.echo("[+] 🔧 Technology analysis completed")
         for tech, count in sorted(
             technologies.items(), key=lambda x: x[1], reverse=True
         )[:5]:
@@ -1739,7 +1734,7 @@ def analyze_security_headers(
     }
 
     if verbose:
-        click.echo(f"[+] 🔒 Security headers analysis completed")
+        click.echo("[+] 🔒 Security headers analysis completed")
         click.echo(f"   - Security score: {security_analysis['security_score']:.1f}%")
         for header, count in security_headers.items():
             percentage = (count / total_responses * 100) if total_responses > 0 else 0

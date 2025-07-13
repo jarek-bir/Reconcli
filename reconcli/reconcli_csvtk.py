@@ -121,9 +121,7 @@ def status():
     click.echo(
         f"📈 CSVTK Integration: {'✅ Available' if CSVTK_AVAILABLE else '❌ Not available'}"
     )
-    click.echo(
-        f"� Git CLI: {'✅ Available' if GIT_AVAILABLE else '❌ Not available'}"
-    )
+    click.echo(f"� Git CLI: {'✅ Available' if GIT_AVAILABLE else '❌ Not available'}")
     click.echo(
         f"�🗄️ Database CLI: {'✅ Available' if DATABASE_AVAILABLE else '❌ Not available'}"
     )

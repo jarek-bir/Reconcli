@@ -12,7 +12,6 @@ import os
 import json
 import datetime
 import ipaddress
-import sys
 
 CDN_RANGES = [
     "104.16.",
@@ -421,7 +420,7 @@ def write_markdown(results, path):
         targets_with_ports = len([r for r in results if r.get("open_ports")])
         total_ports = sum(len(r.get("open_ports", [])) for r in results)
 
-        f.write(f"## 📊 Summary\n")
+        f.write("## 📊 Summary\n")
         f.write(f"- **Total Targets:** {total_targets}\n")
         f.write(f"- **Targets with Open Ports:** {targets_with_ports}\n")
         f.write(f"- **Total Open Ports Found:** {total_ports}\n")
@@ -430,10 +429,10 @@ def write_markdown(results, path):
                 f"- **Success Rate:** {(targets_with_ports/total_targets*100):.1f}%\n\n"
             )
         else:
-            f.write(f"- **Success Rate:** 0.0%\n\n")
+            f.write("- **Success Rate:** 0.0%\n\n")
 
         # Detailed results
-        f.write(f"## 🎯 Detailed Results\n\n")
+        f.write("## 🎯 Detailed Results\n\n")
         for i, result in enumerate(results, 1):
             f.write(f"### [{i}] Target: {result['ip']}\n")
             f.write(f"- 🛰️ **Scanner:** {result['scanner']}\n")
@@ -467,7 +466,7 @@ def write_markdown(results, path):
                         f"- 🔍 **Detected Services:** `{', '.join(result['detected_services'])}`\n"
                     )
             else:
-                f.write(f"- ❌ **No open ports found**\n")
+                f.write("- ❌ **No open ports found**\n")
 
             # Cloud provider info
             if result.get("cloud_provider"):
@@ -643,7 +642,7 @@ def portcli(
     if not silent:
         click.echo(f"⚙️  Starting scan on {len(to_scan)} new targets...")
         if len(to_scan) > 10:
-            click.echo(f"📊 Progress will be shown every 10 targets...")
+            click.echo("📊 Progress will be shown every 10 targets...")
 
     successful_scans = 0
     failed_scans = 0
@@ -770,12 +769,12 @@ def portcli(
                         click.echo(f"    🔍 Detected: {services_str}")
 
                     if result["cdn"]:
-                        click.echo(f"    ☁️  CDN detected")
+                        click.echo("    ☁️  CDN detected")
 
                     if result["cloud_provider"]:
                         click.echo(f"    ☁️  Cloud: {result['cloud_provider'].upper()}")
                 else:
-                    click.echo(f"    ❌ No open ports found")
+                    click.echo("    ❌ No open ports found")
 
         except subprocess.TimeoutExpired:
             failed_scans += 1
@@ -849,7 +848,7 @@ def portcli(
         total_open_ports = sum(
             len(r["open_ports"]) for r in results if "open_ports" in r
         )
-        click.echo(f"\n📊 Final Summary:")
+        click.echo("\n📊 Final Summary:")
         click.echo(f"   • Targets scanned: {len(to_scan)}")
         click.echo(f"   • Successful: {successful_scans}")
         click.echo(f"   • Failed: {failed_scans}")
@@ -926,17 +925,17 @@ def portcli(
                         click.echo(f"   Scanner: {scanner}")
                 else:
                     if not silent:
-                        click.echo(f"⚠️ No port scan results to store in database")
+                        click.echo("⚠️ No port scan results to store in database")
             else:
                 if not silent:
                     click.echo(
-                        f"⚠️ Could not determine target domain for database storage"
+                        "⚠️ Could not determine target domain for database storage"
                     )
 
         except ImportError:
             if not silent:
                 click.echo(
-                    f"⚠️ Database module not available. Install with: pip install sqlalchemy>=2.0.0"
+                    "⚠️ Database module not available. Install with: pip install sqlalchemy>=2.0.0"
                 )
         except Exception as e:
             if not silent:

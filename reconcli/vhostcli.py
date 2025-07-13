@@ -283,11 +283,11 @@ def cli(
             click.echo(f"📸 Screenshot timeout: {screenshot_timeout}s")
             click.echo(f"📸 Screenshot threads: {screenshot_threads}")
             if screenshot_tool == "gowitness" and fullpage:
-                click.echo(f"📸 Full-page screenshots: enabled")
+                click.echo("📸 Full-page screenshots: enabled")
         if ai_mode:
-            click.echo(f"🧠 AI analysis: enabled")
+            click.echo("🧠 AI analysis: enabled")
         if store_db:
-            click.echo(f"💾 Database storage: enabled")
+            click.echo("💾 Database storage: enabled")
 
     # Initialize resume state
     if resume_data is None:
@@ -380,7 +380,7 @@ def cli(
         ai_analysis = None
         if ai_mode and ai_assistant and results:
             if verbose:
-                click.echo(f"🧠 Running AI analysis...")
+                click.echo("🧠 Running AI analysis...")
             ai_analysis = analyze_results_with_ai(
                 ai_assistant, results, domain, target_ip, ai_model
             )
@@ -536,7 +536,7 @@ def cli(
 
         # Enhanced Markdown output
         with open(md_path, "w") as f:
-            f.write(f"# 🎯 VHOST Scan Results\n\n")
+            f.write("# 🎯 VHOST Scan Results\n\n")
             f.write(f"**Domain:** `{domain}`  \n")
             f.write(f"**Target IP:** `{target_ip}`  \n")
             f.write(f"**Engine:** `{engine}`  \n")
@@ -598,7 +598,7 @@ def cli(
 
     # Final summary and cleanup
     click.echo(f"\n🏁 Scan completed! Total targets: {len(targets)}")
-    click.echo(f"📊 Summary:")
+    click.echo("📊 Summary:")
     click.echo(f"   • Total virtual hosts found: {len(all_results)}")
     click.echo(f"   • Unique hosts: {len(set([r['host'] for r in all_results]))}")
 
@@ -608,7 +608,7 @@ def cli(
             status = result["status"]
             status_summary[status] = status_summary.get(status, 0) + 1
 
-        click.echo(f"   • Status code breakdown:")
+        click.echo("   • Status code breakdown:")
         for status, count in sorted(status_summary.items()):
             emoji = "✅" if status == 200 else "⚠️" if status in [403, 401] else "❓"
             click.echo(f"     {emoji} {status}: {count}")
@@ -629,7 +629,7 @@ def cli(
         resume_file_path = resume_file or "vhost_resume.json"
         clear_resume(resume_file_path)
         if verbose:
-            click.echo(f"🧹 Resume state cleared")
+            click.echo("🧹 Resume state cleared")
 
     click.echo(f"💾 All results saved to: {output_dir}/")
 
@@ -699,7 +699,7 @@ def run_ffuf_scan(
         click.echo(f"❌ ffuf failed: {e.stderr}")
         return results
     except FileNotFoundError:
-        click.echo(f"❌ ffuf not found. Please install ffuf.")
+        click.echo("❌ ffuf not found. Please install ffuf.")
         return results
 
     # Parse results
@@ -815,7 +815,7 @@ def run_gobuster_scan(
     except subprocess.CalledProcessError as e:
         click.echo(f"❌ gobuster failed: {e.stderr}")
     except FileNotFoundError:
-        click.echo(f"❌ gobuster not found. Please install gobuster.")
+        click.echo("❌ gobuster not found. Please install gobuster.")
 
     return results
 
@@ -1050,11 +1050,11 @@ def run_vhostfinder_scan(
             click.echo(f"📄 VhostFinder stderr:\n{result.stderr}")
 
     except subprocess.TimeoutExpired:
-        click.echo(f"⏰ VhostFinder timed out after 120 seconds")
+        click.echo("⏰ VhostFinder timed out after 120 seconds")
     except subprocess.CalledProcessError as e:
         click.echo(f"❌ VhostFinder failed: {e.stderr}")
     except FileNotFoundError:
-        click.echo(f"❌ VhostFinder not found at /usr/local/bin/VhostFinder")
+        click.echo("❌ VhostFinder not found at /usr/local/bin/VhostFinder")
 
     if verbose:
         click.echo(f"📊 Parsed {len(results)} results from VhostFinder output")
@@ -1133,7 +1133,7 @@ def save_results_to_files(
 
     # Enhanced Markdown output
     with open(md_path, "w") as f:
-        f.write(f"# 🎯 VHOST Scan Results\n\n")
+        f.write("# 🎯 VHOST Scan Results\n\n")
         f.write(f"**Domain:** `{domain}`  \n")
         f.write(f"**Target IP:** `{target_ip}`  \n")
         f.write(f"**Engine:** `{engine}`  \n")
@@ -1211,7 +1211,7 @@ def run_gowitness_screenshots(
     if fullpage:
         gowitness_cmd += ["--full-page"]
 
-    click.echo(f"📸 Running gowitness screenshots...")
+    click.echo("📸 Running gowitness screenshots...")
 
     if verbose:
         click.echo(f"🚀 Command: {' '.join(gowitness_cmd)}")
@@ -1220,14 +1220,14 @@ def run_gowitness_screenshots(
         result = subprocess.run(
             gowitness_cmd, capture_output=True, text=True, check=True
         )
-        click.echo(f"✅ gowitness completed successfully")
+        click.echo("✅ gowitness completed successfully")
         if verbose and result.stdout:
             click.echo(f"📄 gowitness output:\n{result.stdout}")
     except subprocess.CalledProcessError as e:
         click.echo(f"❌ gowitness failed: {e.stderr}")
     except FileNotFoundError:
-        click.echo(f"❌ gowitness not found. Please install gowitness.")
-        click.echo(f"💡 Install with: go install github.com/sensepost/gowitness@latest")
+        click.echo("❌ gowitness not found. Please install gowitness.")
+        click.echo("💡 Install with: go install github.com/sensepost/gowitness@latest")
 
     return screenshot_dir
 
@@ -1276,7 +1276,7 @@ def run_aquatone_screenshots(
     if verbose:
         click.echo(f"📸 Running aquatone screenshots on {len(results)} hosts...")
 
-    click.echo(f"📸 Running aquatone screenshots...")
+    click.echo("📸 Running aquatone screenshots...")
 
     if verbose:
         click.echo(f"🚀 Command: {' '.join(aquatone_cmd)}")
@@ -1297,7 +1297,7 @@ def run_aquatone_screenshots(
         stdout, stderr = process.communicate(input=urls_input)
 
         if process.returncode == 0:
-            click.echo(f"✅ aquatone completed successfully")
+            click.echo("✅ aquatone completed successfully")
             if verbose and stdout:
                 click.echo(f"📄 aquatone output:\n{stdout}")
         else:
@@ -1306,9 +1306,9 @@ def run_aquatone_screenshots(
                 click.echo(f"Error: {stderr}")
 
     except FileNotFoundError:
-        click.echo(f"❌ aquatone not found. Please install aquatone.")
+        click.echo("❌ aquatone not found. Please install aquatone.")
         click.echo(
-            f"💡 Install with: go install github.com/michenriksen/aquatone@latest"
+            "💡 Install with: go install github.com/michenriksen/aquatone@latest"
         )
 
     return report_dir

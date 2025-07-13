@@ -5,7 +5,6 @@ Comprehensive health check for the ReconCLI toolkit
 """
 
 import sys
-import os
 import subprocess
 import importlib
 from pathlib import Path
@@ -207,7 +206,7 @@ def check_tool_availability():
             )
             # Print tool status
             if result.stdout:
-                print(f"\n📊 Tool Status:")
+                print("\n📊 Tool Status:")
                 for line in result.stdout.split("\n"):
                     if line.strip():
                         print(f"   {line}")

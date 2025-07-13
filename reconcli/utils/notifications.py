@@ -3,12 +3,11 @@ Notifications utility for Reconcli toolkit
 Supports Slack and Discord webhooks for scan result notifications
 """
 
-import json
 import time
 import httpx
 import click
 from datetime import datetime
-from typing import Dict, List, Optional, Any
+from typing import Dict, List, Optional
 
 
 class NotificationManager:
@@ -229,7 +228,7 @@ class NotificationManager:
                     if any(r.get("status") == 200 for r in results)
                     else 0xFF9900
                 )  # Green or orange
-                title = f"🎯 VHOST Discovery Results"
+                title = "🎯 VHOST Discovery Results"
                 description = f"Found {len(results)} virtual hosts for **{domain}**"
 
                 fields = [
@@ -280,7 +279,7 @@ class NotificationManager:
                 )
             else:
                 color = 0xFF0000  # Red
-                title = f"❌ VHOST Discovery Results"
+                title = "❌ VHOST Discovery Results"
                 description = f"No virtual hosts found for **{domain}**"
                 fields = [
                     {"name": "Domain", "value": f"`{domain}`", "inline": True},
@@ -371,7 +370,7 @@ class NotificationManager:
                 )
             else:
                 color = "good"
-                title = f"✅ Subdomain Takeover: No vulnerabilities found"
+                title = "✅ Subdomain Takeover: No vulnerabilities found"
                 fields = [
                     {
                         "title": "Tool Used",
@@ -419,7 +418,7 @@ class NotificationManager:
             # Build Discord embed for takeover results
             if results:
                 color = 0xFF0000  # Red for potential security issues
-                title = f"🚨 Subdomain Takeover Results"
+                title = "🚨 Subdomain Takeover Results"
                 description = f"Found {len(results)} potentially vulnerable subdomains"
 
                 fields = [
@@ -461,8 +460,8 @@ class NotificationManager:
                 )
             else:
                 color = 0x00FF00  # Green
-                title = f"✅ Subdomain Takeover Results"
-                description = f"No vulnerable subdomains detected"
+                title = "✅ Subdomain Takeover Results"
+                description = "No vulnerable subdomains detected"
                 fields = [
                     {
                         "name": "Tool Used",
@@ -593,7 +592,7 @@ class NotificationManager:
             color = (
                 0x00FF00 if total_urls > 0 else 0xFFAA00
             )  # Green if URLs found, amber if none
-            title = f"🔗 URL Discovery Complete"
+            title = "🔗 URL Discovery Complete"
             description = (
                 f"Found {total_urls} URLs across {domains_processed} domain(s)"
             )
@@ -776,7 +775,7 @@ class NotificationManager:
             color = (
                 0x00FF00 if resolved_count > 0 else 0xFFAA00
             )  # Green if resolved, amber if none
-            title = f"🔍 DNS Resolution Complete"
+            title = "🔍 DNS Resolution Complete"
             description = f"Resolved {resolved_count}/{total_subdomains} subdomains ({resolution_rate}%)"
 
             fields = [
@@ -907,7 +906,7 @@ class NotificationManager:
 
             else:
                 color = "warning"
-                title = f"🔍 WhoisFreaks Analysis: No domains successfully analyzed"
+                title = "🔍 WhoisFreaks Analysis: No domains successfully analyzed"
                 risk_text = "No data to analyze"
 
             fields = [
@@ -1022,7 +1021,7 @@ class NotificationManager:
                         else 0x00FF00
                     )
                 )
-                title = f"🔍 WhoisFreaks Analysis Complete"
+                title = "🔍 WhoisFreaks Analysis Complete"
                 description = (
                     f"**{success_count}/{total_domains}** domains analyzed successfully"
                 )
@@ -1037,15 +1036,15 @@ class NotificationManager:
                     risk_summary.append(f"⏰ **{expiring_domains}** expiring soon")
 
                 if risk_summary:
-                    description += f"\n\n**Security Alerts:**\n" + "\n".join(
+                    description += "\n\n**Security Alerts:**\n" + "\n".join(
                         risk_summary
                     )
                 else:
-                    description += f"\n\n✅ **No significant risks detected**"
+                    description += "\n\n✅ **No significant risks detected**"
 
             else:
                 color = 0xFFA500
-                title = f"🔍 WhoisFreaks Analysis"
+                title = "🔍 WhoisFreaks Analysis"
                 description = "No domains were successfully analyzed"
 
             embed = {

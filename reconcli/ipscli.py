@@ -20,7 +20,6 @@ from pathlib import Path
 from tqdm import tqdm
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from collections import Counter
-import time
 
 # CDN and Cloud provider IP ranges for filtering
 CDN_RANGES = [
@@ -237,7 +236,7 @@ def generate_uncover_summary(sources, query, output_dir):
     engine_counts = Counter(sources.values())
 
     with open(summary_path, "w") as f:
-        f.write(f"# Uncover Summary\n\n")
+        f.write("# Uncover Summary\n\n")
         f.write(f"**Query:** `{query}`\n")
         f.write(f"**Total IPs:** {len(sources)}\n")
         f.write(f"**Generated:** {datetime.utcnow().isoformat()}Z\n\n")
@@ -371,7 +370,7 @@ def load_ips(input_file, resolve_from):
                         except Exception:
                             # Skip invalid IP, don't crash
                             continue
-                except Exception as e:
+                except Exception:
                     # Skip problematic lines, don't crash entire operation
                     continue
     except Exception as e:
@@ -735,7 +734,7 @@ def generate_markdown_summary(ip_list, output_dir, ports_data=None):
         )
 
         # Executive Summary
-        f.write(f"## 📊 Executive Summary\n")
+        f.write("## 📊 Executive Summary\n")
         f.write(f"- **Total IPs Analyzed:** {len(ip_list)}\n")
         f.write(f"- **Unique ASNs:** {len(asns)}\n")
         f.write(f"- **Countries Represented:** {len(countries)}\n")
@@ -753,7 +752,7 @@ def generate_markdown_summary(ip_list, output_dir, ports_data=None):
 
         # Geographic Distribution
         if countries:
-            f.write(f"## 🌍 Geographic Distribution\n")
+            f.write("## 🌍 Geographic Distribution\n")
             country_counter = Counter()
             for ip, data in enriched_data.items():
                 if isinstance(data, dict) and "country" in data:
@@ -766,7 +765,7 @@ def generate_markdown_summary(ip_list, output_dir, ports_data=None):
 
         # Cloud Infrastructure
         if cloud_providers:
-            f.write(f"## ☁️ Cloud Infrastructure\n")
+            f.write("## ☁️ Cloud Infrastructure\n")
             for provider, count in cloud_providers.most_common():
                 percentage = (count / len(ip_list)) * 100
                 f.write(f"- **{provider.upper()}:** {count} IPs ({percentage:.1f}%)\n")
@@ -774,7 +773,7 @@ def generate_markdown_summary(ip_list, output_dir, ports_data=None):
 
         # Tag Analysis
         if tags_counter:
-            f.write(f"## 🏷️ IP Classification\n")
+            f.write("## 🏷️ IP Classification\n")
             for tag, count in tags_counter.most_common(15):
                 percentage = (count / len(ip_list)) * 100
                 f.write(f"- **{tag}:** {count} IPs ({percentage:.1f}%)\n")
@@ -782,8 +781,8 @@ def generate_markdown_summary(ip_list, output_dir, ports_data=None):
 
         # Port Analysis
         if port_counter:
-            f.write(f"## 🔌 Port Analysis\n")
-            f.write(f"### Most Common Open Ports\n")
+            f.write("## 🔌 Port Analysis\n")
+            f.write("### Most Common Open Ports\n")
             for port, count in port_counter.most_common(15):
                 percentage = (count / len(ip_list)) * 100
                 f.write(f"- **Port {port}:** {count} hosts ({percentage:.1f}%)\n")
@@ -791,7 +790,7 @@ def generate_markdown_summary(ip_list, output_dir, ports_data=None):
 
         # Service Analysis
         if service_counter:
-            f.write(f"### Service Distribution\n")
+            f.write("### Service Distribution\n")
             for service, count in service_counter.most_common():
                 percentage = (count / len(ip_list)) * 100
                 f.write(f"- **{service}:** {count} hosts ({percentage:.1f}%)\n")
@@ -799,7 +798,7 @@ def generate_markdown_summary(ip_list, output_dir, ports_data=None):
 
         # Top ASNs
         if asns:
-            f.write(f"## 🏢 Top Organizations (ASNs)\n")
+            f.write("## 🏢 Top Organizations (ASNs)\n")
             asn_counter = Counter()
             for ip, data in enriched_data.items():
                 if isinstance(data, dict) and "org" in data:
@@ -811,7 +810,7 @@ def generate_markdown_summary(ip_list, output_dir, ports_data=None):
             f.write("\n")
 
         # Sample Data
-        f.write(f"## 📋 Sample IP Data\n")
+        f.write("## 📋 Sample IP Data\n")
         sample_ips = list(ip_list)[:10]
         for ip in sample_ips:
             f.write(f"### {ip}\n")
@@ -829,7 +828,7 @@ def generate_markdown_summary(ip_list, output_dir, ports_data=None):
                             f"- **Cloud Provider:** {data['cloud_provider'].upper()}\n"
                         )
                     if "is_cdn" in data and data["is_cdn"]:
-                        f.write(f"- **CDN:** Yes\n")
+                        f.write("- **CDN:** Yes\n")
                     if "tags" in data and data["tags"]:
                         f.write(f"- **Tags:** {', '.join(data['tags'])}\n")
                     if (
@@ -844,7 +843,7 @@ def generate_markdown_summary(ip_list, output_dir, ports_data=None):
             f.write("\n")
 
         # Security Considerations
-        f.write(f"## 🔒 Security Considerations\n")
+        f.write("## 🔒 Security Considerations\n")
         honeypot_count = sum(
             1
             for data in enriched_data.values()
@@ -862,9 +861,9 @@ def generate_markdown_summary(ip_list, output_dir, ports_data=None):
             f.write(f"- **CDN IPs:** {cdn_count} identified\n")
 
         f.write(
-            f"- **High-Value Targets:** Look for government, education, or unique ASNs\n"
+            "- **High-Value Targets:** Look for government, education, or unique ASNs\n"
         )
-        f.write(f"- **Scan Responsibly:** Respect rate limits and terms of service\n")
+        f.write("- **Scan Responsibly:** Respect rate limits and terms of service\n")
 
 
 def save_json(data, path):
@@ -1388,10 +1387,10 @@ def ipscli(
             if not silent:
                 vprint(f"[✓] Analysis completed! Results in: {output_dir}")
                 if enrich:
-                    vprint(f"    - Enriched data: ips_enriched.json")
+                    vprint("    - Enriched data: ips_enriched.json")
                 if scan:
-                    vprint(f"    - Port scan data: ips_ports.json")
-                vprint(f"    - Summary report: ips_summary.md")
+                    vprint("    - Port scan data: ips_ports.json")
+                vprint("    - Summary report: ips_summary.md")
 
         except Exception as e:
             if not silent:

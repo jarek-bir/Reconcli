@@ -130,7 +130,7 @@ def vhostcheckcli(
 
     # Summary for multiple IPs
     if len(ip_list) > 1:
-        click.echo(f"\n📊 Summary:")
+        click.echo("\n📊 Summary:")
         click.echo(f"   Total IPs processed: {len(ip_list)}")
         click.echo(f"   Valid VHOSTs found: {valid_vhosts_found}")
         click.echo(f"   Success rate: {(valid_vhosts_found/len(ip_list)*100):.1f}%")
@@ -279,7 +279,7 @@ def check_vhost(
 
         # Verbose output
         if verbose:
-            click.echo(f"    📊  Response headers:")
+            click.echo("    📊  Response headers:")
             for key, value in resp.headers.items():
                 click.echo(f"        {key}: {value}")
             click.echo(f"    🔗  Final URL: {resp.url}")
@@ -354,8 +354,8 @@ def save_results(result, output_dir, output_format, ip, domain, vhost):
     else:  # txt format
         filepath = Path(output_dir) / f"{filename}.txt"
         with open(filepath, "w") as f:
-            f.write(f"VHOST Check Results\n")
-            f.write(f"==================\n\n")
+            f.write("VHOST Check Results\n")
+            f.write("==================\n\n")
             f.write(f"Target: {result['vhost']} on {result['target_url']}\n")
             f.write(f"Status: {result['status']}\n")
             f.write(f"Status Code: {result['status_code']}\n")
@@ -432,8 +432,8 @@ def save_batch_results(all_results, output_dir, output_format, domain, vhost):
     else:  # txt format
         filepath = Path(output_dir) / f"{filename}.txt"
         with open(filepath, "w") as f:
-            f.write(f"VHOST Batch Check Results\n")
-            f.write(f"========================\n\n")
+            f.write("VHOST Batch Check Results\n")
+            f.write("========================\n\n")
             f.write(f"VHOST: {vhost}.{domain}\n")
             f.write(f"Timestamp: {timestamp}\n")
             f.write(f"Total IPs: {len(all_results)}\n")
@@ -457,7 +457,7 @@ def save_batch_results(all_results, output_dir, output_format, domain, vhost):
                     f.write(f"    Title: {result['title']}\n")
                 if result["error"]:
                     f.write(f"    Error: {result['error']}\n")
-                f.write(f"\n")
+                f.write("\n")
 
     click.echo(f"💾 Batch results saved to: {filepath}")
 

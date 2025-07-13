@@ -12,7 +12,7 @@ import requests
 import click
 import concurrent.futures
 from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Tuple, Any
+from typing import Dict, List, Any
 from tqdm import tqdm
 
 # Database imports
@@ -227,7 +227,7 @@ def lookup(
         input_source = f"single domain: {domain}"
 
     if verbose:
-        click.echo(f"[+] 🚀 Starting WhoisFreaks bulk lookup")
+        click.echo("[+] 🚀 Starting WhoisFreaks bulk lookup")
         click.echo(f"[+] 📁 Output directory: {output_dir}")
         click.echo(f"[+] 🧵 Threads: {threads}")
         click.echo(f"[+] ⏰ Delay: {delay}s")
@@ -339,7 +339,7 @@ def lookup(
     # Perform risk analysis if requested
     if risk_analysis:
         if verbose:
-            click.echo(f"[+] 🔍 Performing risk analysis...")
+            click.echo("[+] 🔍 Performing risk analysis...")
         results = perform_risk_analysis(results, verbose)
 
     # Check expiring domains if requested
@@ -356,7 +356,7 @@ def lookup(
     elapsed = round(time.time() - start_time, 2)
 
     if verbose:
-        click.echo(f"\n[+] 📊 Scan Summary:")
+        click.echo("\n[+] 📊 Scan Summary:")
         click.echo(f"   - Total domains: {len(domains)}")
         click.echo(f"   - Successfully analyzed: {success_count}")
         click.echo(f"   - Failed to analyze: {failed_count}")
@@ -384,7 +384,7 @@ def lookup(
             verbose,
         )
 
-    click.echo(f"\n[+] ✅ WhoisFreaks analysis completed!")
+    click.echo("\n[+] ✅ WhoisFreaks analysis completed!")
     click.echo(f"[+] 📁 Results saved to: {output_dir}")
 
 
@@ -408,7 +408,7 @@ def analyze(input, output_dir, verbose, expire_days, save_json, save_markdown):
     """Analyze existing WHOIS data for security insights"""
 
     if verbose:
-        click.echo(f"[+] 🔍 Starting WHOIS data analysis")
+        click.echo("[+] 🔍 Starting WHOIS data analysis")
         click.echo(f"[+] 📁 Input file: {input}")
         click.echo(f"[+] 📁 Output directory: {output_dir}")
 
@@ -455,7 +455,7 @@ def analyze(input, output_dir, verbose, expire_days, save_json, save_markdown):
     )
 
     if verbose:
-        click.echo(f"\n[+] ✅ WHOIS analysis completed!")
+        click.echo("\n[+] ✅ WHOIS analysis completed!")
         click.echo(f"[+] 📁 Analysis results saved to: {output_dir}")
 
 
@@ -471,7 +471,7 @@ def bulk_whois_lookup(
             time.sleep(delay)  # Rate limiting
 
             # WhoisFreaks API endpoint
-            url = f"https://api.whoisfreaks.com/v1.0/whois"
+            url = "https://api.whoisfreaks.com/v1.0/whois"
             params = {"apiKey": api_key, "whois": "live", "domainName": domain.strip()}
 
             response = requests.get(url, params=params, timeout=30)
@@ -685,7 +685,7 @@ def analyze_registrars(results: List[Dict], verbose: bool) -> Dict:
     )
 
     if verbose:
-        click.echo(f"[+] 📊 Top 5 Registrars:")
+        click.echo("[+] 📊 Top 5 Registrars:")
         for registrar, count in sorted_registrars[:5]:
             click.echo(f"   - {registrar}: {count}")
 
@@ -744,7 +744,7 @@ def analyze_expirations(results: List[Dict], expire_days: int, verbose: bool) ->
                 pass
 
     if verbose:
-        click.echo(f"[+] ⏰ Expiration Analysis:")
+        click.echo("[+] ⏰ Expiration Analysis:")
         click.echo(f"   - Expiring within {expire_days} days: {len(expiring_soon)}")
         click.echo(f"   - Already expired: {len(expired)}")
 
@@ -810,7 +810,7 @@ def analyze_security_risks(results: List[Dict], verbose: bool) -> Dict:
             risk_factors[factor] = risk_factors.get(factor, 0) + 1
 
     if verbose:
-        click.echo(f"[+] 🚨 Security Risk Distribution:")
+        click.echo("[+] 🚨 Security Risk Distribution:")
         for level, count in risk_distribution.items():
             if count > 0:
                 click.echo(f"   - {level}: {count}")
@@ -857,7 +857,7 @@ def analyze_nameservers(results: List[Dict], verbose: bool) -> Dict:
     sorted_ns = sorted(nameserver_counts.items(), key=lambda x: x[1], reverse=True)
 
     if verbose:
-        click.echo(f"[+] 🌐 Top 5 Nameserver Providers:")
+        click.echo("[+] 🌐 Top 5 Nameserver Providers:")
         for provider, count in sorted_ns[:5]:
             click.echo(f"   - {provider}: {count}")
 
@@ -1233,13 +1233,13 @@ def show_resume_status(output_dir: str, tool_prefix: str):
         click.echo(f"   Started: {scan_data.get('start_time', 'unknown')}")
 
         if scan_data.get("completed"):
-            click.echo(f"   Status: ✅ Completed")
+            click.echo("   Status: ✅ Completed")
             click.echo(f"   Completed: {scan_data.get('completion_time', 'unknown')}")
             click.echo(f"   Processed: {scan_data.get('processed_count', 0)}")
             click.echo(f"   Success: {scan_data.get('success_count', 0)}")
             click.echo(f"   Failed: {scan_data.get('failed_count', 0)}")
         else:
-            click.echo(f"   Status: ⏳ Incomplete")
+            click.echo("   Status: ⏳ Incomplete")
             click.echo(f"   Processed: {scan_data.get('processed_count', 0)}")
 
         click.echo()

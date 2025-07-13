@@ -9,8 +9,6 @@ from os.path import expanduser, exists as path_exists
 from datetime import datetime
 import requests
 from concurrent.futures import ThreadPoolExecutor, as_completed
-import hashlib
-import re
 import shutil
 
 
@@ -178,7 +176,7 @@ def generate_markdown_report(output_dir, stats, scan_results):
 """
 
     if stats.get("technologies"):
-        md_content += f"""## 🛠️ Detected Technologies
+        md_content += """## 🛠️ Detected Technologies
 
 | Technology | Count |
 |------------|-------|
@@ -483,7 +481,7 @@ def ai_generate_executive_summary(stats, scan_results, tech_stack=None):
     for i, rec in enumerate(recommendations, 1):
         summary += f"{i}. {rec}\n"
 
-    summary += f"""
+    summary += """
 ### Next Steps
 1. **Immediate**: Verify high/critical severity findings manually
 2. **Short-term**: Implement recommended security controls
@@ -776,7 +774,7 @@ def vulncli(
     if not os.path.isdir(gf_dir) or not os.listdir(gf_dir):
         if verbose:
             click.echo(
-                f"⚠️ [GF] Local GF patterns not found or empty – falling back to global (~/.gf/)"
+                "⚠️ [GF] Local GF patterns not found or empty – falling back to global (~/.gf/)"
             )
         else:
             click.echo(
@@ -823,7 +821,7 @@ def vulncli(
                     )
             except subprocess.CalledProcessError:
                 if verbose:
-                    click.echo(f"  ❌ Local pattern failed")
+                    click.echo("  ❌ Local pattern failed")
 
         if gf_mode in ["global", "both"]:
             try:
@@ -841,7 +839,7 @@ def vulncli(
                     )
             except subprocess.CalledProcessError:
                 if verbose:
-                    click.echo(f"  ❌ Global pattern failed")
+                    click.echo("  ❌ Global pattern failed")
 
         with open(out_path, "w") as f:
             f.write(combined)
@@ -880,7 +878,7 @@ def vulncli(
     # === WAYBACK MACHINE FILTERING ===
     if wayback_filter:
         if verbose:
-            click.echo(f"🕰️ [WAYBACK] Filtering URLs through Wayback Machine...")
+            click.echo("🕰️ [WAYBACK] Filtering URLs through Wayback Machine...")
         wayback_filtered = []
         with ThreadPoolExecutor(max_workers=concurrency or 10) as executor:
             future_to_url = {
@@ -1062,7 +1060,7 @@ def vulncli(
                     signature_info += f" (excluding: {jaeles_exclude})"
 
             if verbose:
-                click.echo(f"🔧 [JAELES] Starting signature-based scan...")
+                click.echo("🔧 [JAELES] Starting signature-based scan...")
                 click.echo(f"🔧 [JAELES] Signatures: {signature_info}")
 
             jaeles_cmd = ["jaeles", "scan", "-u", str(all_file)]
@@ -1175,7 +1173,7 @@ def vulncli(
                 template_info = f"AI-Selected: {len(smart_templates)} categories"
 
             if verbose:
-                click.echo(f"⚡ [NUCLEI] Starting multi-vulnerability scan...")
+                click.echo("⚡ [NUCLEI] Starting multi-vulnerability scan...")
                 click.echo(f"⚡ [NUCLEI] Templates: {template_info}")
 
             nuclei_cmd = ["nuclei", "-l", str(all_file)]
@@ -1450,7 +1448,7 @@ def vulncli(
         # Save AI summary to file
         ai_summary_file = Path(output_dir) / "ai_executive_summary.md"
         with open(ai_summary_file, "w") as f:
-            f.write(f"# 🤖 AI-Enhanced Vulnerability Assessment Report\n")
+            f.write("# 🤖 AI-Enhanced Vulnerability Assessment Report\n")
             f.write(
                 f"**Generated**: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n"
             )
@@ -1475,7 +1473,7 @@ def vulncli(
 
     # Send completion notification
     if slack_webhook or discord_webhook:
-        completion_msg = f"✅ VulnCLI scan completed!\\n"
+        completion_msg = "✅ VulnCLI scan completed!\\n"
         completion_msg += f"🕐 Duration: {scan_time:.1f}s\\n"
         completion_msg += f"📁 URLs: {stats['total_urls']}\\n"
         completion_msg += f"⚡ Vulnerabilities: {stats['vulnerabilities_found']}\\n"
@@ -1488,11 +1486,11 @@ def vulncli(
 
     # Critical findings notification
     if stats["vulnerabilities_found"] > 10 and (slack_webhook or discord_webhook):
-        critical_msg = f"🚨 HIGH VULNERABILITY COUNT DETECTED!\\n"
+        critical_msg = "🚨 HIGH VULNERABILITY COUNT DETECTED!\\n"
         critical_msg += (
             f"Found {stats['vulnerabilities_found']} potential vulnerabilities\\n"
         )
-        critical_msg += f"Immediate review recommended!"
+        critical_msg += "Immediate review recommended!"
 
         if slack_webhook:
             send_notification(slack_webhook, critical_msg, "slack")
@@ -1500,7 +1498,7 @@ def vulncli(
             send_notification(discord_webhook, critical_msg, "discord")
 
     if verbose:
-        click.echo(f"\n🎉 [COMPLETE] VulnCLI scan finished successfully!")
+        click.echo("\n🎉 [COMPLETE] VulnCLI scan finished successfully!")
         click.echo(f"📂 All results saved in: {output_dir}")
     else:
         click.echo(f"\n[✓] Scan complete! Results in: {output_dir}")
@@ -1575,17 +1573,17 @@ def vulncli(
                         )
                 else:
                     if verbose:
-                        click.echo(f"⚠️ No vulnerabilities to store in database")
+                        click.echo("⚠️ No vulnerabilities to store in database")
             else:
                 if verbose:
                     click.echo(
-                        f"⚠️ Could not determine target domain for database storage"
+                        "⚠️ Could not determine target domain for database storage"
                     )
 
         except ImportError:
             if verbose:
                 click.echo(
-                    f"⚠️ Database module not available. Install with: pip install sqlalchemy>=2.0.0"
+                    "⚠️ Database module not available. Install with: pip install sqlalchemy>=2.0.0"
                 )
         except Exception as e:
             if verbose:

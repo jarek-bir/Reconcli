@@ -1,4 +1,3 @@
-import json as json_module
 import os
 import json
 import click
@@ -446,16 +445,16 @@ def main(
         timeout = config.get("timeout", timeout)
 
     if verbose:
-        click.echo(f"[+] 🚀 Starting URL discovery scan")
+        click.echo("[+] 🚀 Starting URL discovery scan")
         click.echo(f"[+] 📁 Output directory: {output_dir}")
         if use_cariddi:
-            click.echo(f"[+] 🕷️  Using Cariddi for advanced web crawling")
+            click.echo("[+] 🕷️  Using Cariddi for advanced web crawling")
             click.echo(f"[+] 🎯 Cariddi depth: {cariddi_depth}")
             click.echo(f"[+] 🧵 Cariddi concurrency: {cariddi_concurrency}")
             if cariddi_secrets:
-                click.echo(f"[+] 🕵️‍♂️ Cariddi secrets hunting: enabled")
+                click.echo("[+] 🕵️‍♂️ Cariddi secrets hunting: enabled")
             if cariddi_endpoints:
-                click.echo(f"[+] 📂 Cariddi endpoint discovery: enabled")
+                click.echo("[+] 📂 Cariddi endpoint discovery: enabled")
         click.echo(f"[+] ⏰ Timeout: {timeout}s")
         click.echo(f"[+] 🔄 Retries: {retries}")
         click.echo(f"[+] 🧵 Threads: {threads}")
@@ -554,7 +553,7 @@ def main(
             all_urls_global.update(urls)
 
             if verbose:
-                click.echo(f"[+] 🏷️  Starting URL tagging...")
+                click.echo("[+] 🏷️  Starting URL tagging...")
 
             # Tag URLs
             tagged = tag_urls(list(urls))
@@ -620,7 +619,7 @@ def main(
                     click.echo(f"[!] ⚠️  {len(domain_errors)} error(s) encountered")
 
         except KeyboardInterrupt:
-            click.echo(f"\n[!] ⏹️  Scan interrupted by user")
+            click.echo("\n[!] ⏹️  Scan interrupted by user")
             current_scan["last_error"] = "Interrupted by user"
             save_resume_state(output_dir, resume_state)
             return
@@ -641,7 +640,7 @@ def main(
     save_resume_state(output_dir, resume_state)
 
     if verbose:
-        click.echo(f"\n[+] 📊 Scan Summary:")
+        click.echo("\n[+] 📊 Scan Summary:")
         click.echo(f"   - Domains processed: {len(processed_domains)}")
         click.echo(f"   - Domains failed: {len(failed_domains)}")
         click.echo(f"   - Total URLs found: {len(all_tagged)}")
@@ -732,15 +731,15 @@ def main(
                 )
 
                 if success and verbose:
-                    click.echo(f"[+] ✅ Notifications sent successfully")
+                    click.echo("[+] ✅ Notifications sent successfully")
             elif (slack_webhook or discord_webhook) and verbose:
-                click.echo(f"[!] ⚠️  Notification system not available")
+                click.echo("[!] ⚠️  Notification system not available")
 
         except Exception as e:
             if verbose:
                 click.echo(f"[!] ❌ Notification failed: {e}")
 
-    click.echo(f"\n[+] ✅ URL discovery scan completed!")
+    click.echo("\n[+] ✅ URL discovery scan completed!")
     click.echo(f"[+] 📁 Results saved to: {output_dir}")
     if total_errors:
         click.echo(f"[!] ⚠️  {len(total_errors)} error(s) encountered during scan")
@@ -817,7 +816,7 @@ def main(
         try:
             os.unlink(input)
             if verbose:
-                click.echo(f"[+] 🧹 Cleaned up temporary file")
+                click.echo("[+] 🧹 Cleaned up temporary file")
         except:
             pass
 
@@ -878,7 +877,7 @@ def show_resume_status(output_dir):
             click.echo(f"   Started: {scan_data.get('start_time', 'unknown')}")
 
             if scan_data.get("completed"):
-                click.echo(f"   Status: ✅ Completed")
+                click.echo("   Status: ✅ Completed")
                 click.echo(
                     f"   Completed: {scan_data.get('completion_time', 'unknown')}"
                 )
@@ -889,7 +888,7 @@ def show_resume_status(output_dir):
                     f"   Total URLs found: {scan_data.get('total_urls_found', 0)}"
                 )
             else:
-                click.echo(f"   Status: ⏳ Incomplete")
+                click.echo("   Status: ⏳ Incomplete")
                 click.echo(
                     f"   Domains processed: {len(scan_data.get('domains_processed', []))}"
                 )
@@ -1013,22 +1012,22 @@ def enhanced_url_discovery(
         if katana_js_crawl:
             katana_cmd.extend(["-jc"])
             if verbose:
-                click.echo(f"[+] 🟡 Katana: JavaScript crawling enabled")
+                click.echo("[+] 🟡 Katana: JavaScript crawling enabled")
 
         if katana_headless:
             katana_cmd.extend(["-hl"])
             if verbose:
-                click.echo(f"[+] 🤖 Katana: Headless mode enabled")
+                click.echo("[+] 🤖 Katana: Headless mode enabled")
 
         if katana_form_fill:
             katana_cmd.extend(["-aff"])
             if verbose:
-                click.echo(f"[+] 📝 Katana: Automatic form filling enabled")
+                click.echo("[+] 📝 Katana: Automatic form filling enabled")
 
         if katana_tech_detect:
             katana_cmd.extend(["-td"])
             if verbose:
-                click.echo(f"[+] 🔍 Katana: Technology detection enabled")
+                click.echo("[+] 🔍 Katana: Technology detection enabled")
 
         if katana_scope:
             katana_cmd.extend(["-cs", katana_scope])
@@ -1160,18 +1159,18 @@ def enhanced_url_discovery(
             if cariddi_secrets:
                 cariddi_cmd.append("-s")
                 if verbose:
-                    click.echo(f"[+] 🕵️‍♂️ Cariddi: Secrets hunting enabled")
+                    click.echo("[+] 🕵️‍♂️ Cariddi: Secrets hunting enabled")
 
             if cariddi_endpoints:
                 cariddi_cmd.append("-e")
                 if verbose:
-                    click.echo(f"[+] 📂 Cariddi: Endpoint discovery mode enabled")
+                    click.echo("[+] 📂 Cariddi: Endpoint discovery mode enabled")
 
             if cariddi_extensions:
                 # Cariddi uses -ext with integer levels (1=juicy to 7=not juicy)
                 cariddi_cmd.extend(["-ext", "2"])  # level 2 juicy extensions
                 if verbose:
-                    click.echo(f"[+] 📂 Cariddi: Hunting for juicy file extensions")
+                    click.echo("[+] 📂 Cariddi: Hunting for juicy file extensions")
 
             if cariddi_ignore_extensions:
                 cariddi_cmd.extend(["-ie", cariddi_ignore_extensions])
@@ -1506,7 +1505,7 @@ def save_katana_analysis(domain, analysis, output_dir):
 
         return True
 
-    except Exception as e:
+    except Exception:
         return False
 
 
@@ -1520,7 +1519,7 @@ def run_katana_with_json_output(
         enhanced_cmd = katana_cmd + ["-jsonl", "-o", json_output_file]
 
         if verbose:
-            click.echo(f"[+] 🔧 Running enhanced Katana with JSON output")
+            click.echo("[+] 🔧 Running enhanced Katana with JSON output")
 
         result = subprocess.run(
             enhanced_cmd,

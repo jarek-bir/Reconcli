@@ -9,7 +9,7 @@ import asyncio
 import aiohttp
 import aiodns
 from datetime import datetime
-from typing import Dict, List, Optional, Tuple, Any
+from typing import Dict, List, Optional, Tuple
 from tqdm.asyncio import tqdm
 import socket
 
@@ -1267,7 +1267,7 @@ def build_tld_list(
             for cat_tlds in DEFAULT_TLDS.values():
                 tld_set.update(cat_tlds)
             if verbose:
-                click.echo(f"[+] 📋 Added ALL TLD categories")
+                click.echo("[+] 📋 Added ALL TLD categories")
             break
         elif category in DEFAULT_TLDS:
             tld_set.update(DEFAULT_TLDS[category])
@@ -1412,7 +1412,7 @@ def save_outputs_optimized(
             f.write(
                 f"**📅 Scan Date:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}  \n"
             )
-            f.write(f"**🔧 Tool:** TLD Recon CLI (Optimized v2.0)  \n")
+            f.write("**🔧 Tool:** TLD Recon CLI (Optimized v2.0)  \n")
             f.write(f"**📊 Total Domains:** {len(results)}  \n")
             f.write(
                 f"**✅ DNS Resolved:** {len([r for r in results if r['dns_resolved']])}  \n"
@@ -1456,7 +1456,7 @@ def save_outputs_optimized(
                     )
 
             # All results summary
-            f.write(f"\n## 📋 Complete Results Summary\n\n")
+            f.write("\n## 📋 Complete Results Summary\n\n")
             f.write(f"- **Total TLDs tested:** {len(results)}\n")
             f.write(
                 f"- **Success rate:** {(len([r for r in results if r['dns_resolved']]) / len(results) * 100):.1f}%\n"
@@ -1621,11 +1621,11 @@ def cli(
         click.echo(f"[+] ⏰ Timeout: {timeout}s")
         click.echo(f"[+] 🔄 Retries: {retries}")
         if http_check:
-            click.echo(f"[+] 🌐 HTTP probing enabled")
+            click.echo("[+] 🌐 HTTP probing enabled")
         if whois_check:
-            click.echo(f"[+] 📋 WHOIS checking enabled")
+            click.echo("[+] 📋 WHOIS checking enabled")
         if exclude_wildcards:
-            click.echo(f"[+] 🌟 Wildcard exclusion enabled")
+            click.echo("[+] 🌟 Wildcard exclusion enabled")
 
     # Build TLD list
     tld_list_final = build_tld_list(tld_list, categories, verbose)
@@ -1640,7 +1640,7 @@ def cli(
         click.echo(f"[+] 📝 Testing {len(tld_list_final)} TLD(s)")
         if len(tld_list_final) > 1000:
             click.echo(
-                f"[+] 🎯 Large TLD set detected - using maximum performance optimizations"
+                "[+] 🎯 Large TLD set detected - using maximum performance optimizations"
             )
 
     os.makedirs(output_dir, exist_ok=True)
@@ -1652,7 +1652,7 @@ def cli(
 
     # Run async TLD processing
     if verbose:
-        click.echo(f"[+] 🚀 Launching async TLD reconnaissance...")
+        click.echo("[+] 🚀 Launching async TLD reconnaissance...")
 
     try:
         results = asyncio.run(
@@ -1703,7 +1703,7 @@ def cli(
 
     # Performance summary
     if verbose:
-        click.echo(f"\n[+] 📊 OPTIMIZED TLD Reconnaissance Summary:")
+        click.echo("\n[+] 📊 OPTIMIZED TLD Reconnaissance Summary:")
         click.echo(f"   - Base domain: {domain}")
         click.echo(f"   - Total TLDs tested: {len(tld_list_final)}")
         click.echo(f"   - DNS resolved: {resolved_count}")
@@ -1756,12 +1756,12 @@ async def run_benchmark(concurrent: int, timeout: int, verbose: bool):
     test_domain = "example"
     test_tlds = DEFAULT_TLDS["popular"][:50]  # Test with 50 popular TLDs
 
-    click.echo(f"📊 Benchmark Configuration:")
+    click.echo("📊 Benchmark Configuration:")
     click.echo(f"   - Test domain: {test_domain}")
     click.echo(f"   - Test TLDs: {len(test_tlds)}")
     click.echo(f"   - Concurrent tasks: {concurrent}")
     click.echo(f"   - Timeout: {timeout}s")
-    click.echo(f"   - Mode: DNS-only (optimized)\n")
+    click.echo("   - Mode: DNS-only (optimized)\n")
 
     start_time = time.time()
 
@@ -1777,7 +1777,7 @@ async def run_benchmark(concurrent: int, timeout: int, verbose: bool):
     elapsed = time.time() - start_time
     resolved_count = len([r for r in results if r["dns_resolved"]])
 
-    click.echo(f"\n🎯 Benchmark Results:")
+    click.echo("\n🎯 Benchmark Results:")
     click.echo(f"   - Total time: {elapsed:.2f}s")
     click.echo(f"   - Performance: {len(test_tlds)/elapsed:.1f} TLDs/sec")
     click.echo(f"   - DNS resolved: {resolved_count}/{len(test_tlds)}")
@@ -1799,11 +1799,11 @@ async def run_benchmark(concurrent: int, timeout: int, verbose: bool):
     click.echo(f"   - Performance rating: {rating}")
 
     if tlds_per_sec < 20:
-        click.echo(f"\n💡 Performance Tips:")
-        click.echo(f"   - Increase --concurrent (try 150-200)")
-        click.echo(f"   - Reduce --timeout for faster scanning")
-        click.echo(f"   - Use --dns-only for maximum speed")
-        click.echo(f"   - Check network connectivity")
+        click.echo("\n💡 Performance Tips:")
+        click.echo("   - Increase --concurrent (try 150-200)")
+        click.echo("   - Reduce --timeout for faster scanning")
+        click.echo("   - Use --dns-only for maximum speed")
+        click.echo("   - Check network connectivity")
 
 
 def show_resume_status(output_dir: str):
@@ -1824,7 +1824,7 @@ def show_resume_status(output_dir: str):
             click.echo(f"   Started: {scan_data.get('start_time', 'unknown')}")
 
             if scan_data.get("completed"):
-                click.echo(f"   Status: ✅ Completed")
+                click.echo("   Status: ✅ Completed")
                 click.echo(
                     f"   Completed: {scan_data.get('completion_time', 'unknown')}"
                 )
@@ -1832,7 +1832,7 @@ def show_resume_status(output_dir: str):
                 click.echo(f"   DNS Resolved: {scan_data.get('resolved_count', 0)}")
                 click.echo(f"   HTTP Active: {scan_data.get('http_active_count', 0)}")
             else:
-                click.echo(f"   Status: ⏳ Incomplete")
+                click.echo("   Status: ⏳ Incomplete")
                 click.echo(f"   Processed: {scan_data.get('processed_count', 0)}")
 
             click.echo()
