@@ -4,6 +4,7 @@ import os
 import json
 import time
 import yaml
+import sqlite3
 from pathlib import Path
 from datetime import datetime
 from urllib.parse import urlparse, urljoin, parse_qs, urlunparse, quote
@@ -32,6 +33,151 @@ def send_notification(webhook_url, message, service="slack"):
     except Exception:
         pass
     return False
+
+
+def initialize_database(db_path):
+    """Initialize SQLite database for storing results."""
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+
+    # Create tables for storing API scan results
+    cursor.execute(
+        """
+        CREATE TABLE IF NOT EXISTS api_scans (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            timestamp TEXT NOT NULL,
+            target_url TEXT NOT NULL,
+            scan_type TEXT NOT NULL,
+            endpoint TEXT,
+            method TEXT,
+            status_code INTEGER,
+            response_size INTEGER,
+            response_time REAL,
+            vulnerabilities TEXT,
+            risk_level TEXT,
+            findings TEXT
+        )
+    """
+    )
+
+    # Create table for secret scanning results
+    cursor.execute(
+        """
+        CREATE TABLE IF NOT EXISTS secret_scans (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            timestamp TEXT NOT NULL,
+            target_url TEXT NOT NULL,
+            endpoint TEXT NOT NULL,
+            secret_type TEXT NOT NULL,
+            secret_value TEXT,
+            confidence_level REAL,
+            context TEXT,
+            line_number INTEGER,
+            file_path TEXT,
+            risk_assessment TEXT
+        )
+    """
+    )
+
+    # Create table for JavaScript analysis
+    cursor.execute(
+        """
+        CREATE TABLE IF NOT EXISTS js_analysis (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            timestamp TEXT NOT NULL,
+            target_url TEXT NOT NULL,
+            js_url TEXT NOT NULL,
+            file_size INTEGER,
+            secrets_found INTEGER,
+            endpoints_found INTEGER,
+            domains_found INTEGER,
+            analysis_data TEXT
+        )
+    """
+    )
+
+    conn.commit()
+    conn.close()
+    return db_path
+
+
+def store_scan_result(db_path, scan_data):
+    """Store scan result in database."""
+    try:
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+
+        scan_type = scan_data.get("scan_type", "api_scan")
+
+        if scan_type == "secret_scan":
+            cursor.execute(
+                """
+                INSERT INTO secret_scans 
+                (timestamp, target_url, endpoint, secret_type, secret_value, 
+                 confidence_level, context, line_number, file_path, risk_assessment)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+                (
+                    scan_data.get("timestamp"),
+                    scan_data.get("target_url"),
+                    scan_data.get("endpoint"),
+                    scan_data.get("secret_type"),
+                    scan_data.get("secret_value", "")[:500],  # Limit length
+                    scan_data.get("confidence_level", 0.0),
+                    scan_data.get("context", "")[:1000],
+                    scan_data.get("line_number", 0),
+                    scan_data.get("file_path", ""),
+                    scan_data.get("risk_assessment", ""),
+                ),
+            )
+        elif scan_type == "js_analysis":
+            cursor.execute(
+                """
+                INSERT INTO js_analysis 
+                (timestamp, target_url, js_url, file_size, secrets_found, 
+                 endpoints_found, domains_found, analysis_data)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+                (
+                    scan_data.get("timestamp"),
+                    scan_data.get("target_url"),
+                    scan_data.get("js_url"),
+                    scan_data.get("file_size", 0),
+                    scan_data.get("secrets_found", 0),
+                    scan_data.get("endpoints_found", 0),
+                    scan_data.get("domains_found", 0),
+                    json.dumps(scan_data.get("analysis_data", {})),
+                ),
+            )
+        else:
+            cursor.execute(
+                """
+                INSERT INTO api_scans 
+                (timestamp, target_url, scan_type, endpoint, method, status_code, 
+                 response_size, response_time, vulnerabilities, risk_level, findings)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+                (
+                    scan_data.get("timestamp"),
+                    scan_data.get("target_url"),
+                    scan_data.get("scan_type", "general"),
+                    scan_data.get("endpoint"),
+                    scan_data.get("method", "GET"),
+                    scan_data.get("status_code", 0),
+                    scan_data.get("response_size", 0),
+                    scan_data.get("response_time", 0.0),
+                    json.dumps(scan_data.get("vulnerabilities", [])),
+                    scan_data.get("risk_level", "low"),
+                    json.dumps(scan_data.get("findings", {})),
+                ),
+            )
+
+        conn.commit()
+        conn.close()
+        return True
+    except Exception as e:
+        print(f"❌ [DB ERROR] Failed to store scan result: {e}")
+        return False
 
 
 def check_api_accessibility(url, timeout=5):
@@ -784,6 +930,654 @@ def save_results(results, output_dir, format_type="json"):
         return output_file
 
 
+def scan_javascript_secrets(js_content, js_url="", confidence_threshold=0.7):
+    """Enhanced JavaScript secret scanning with SJ-like patterns."""
+
+    # Comprehensive secret patterns with confidence scoring
+    secret_patterns = {
+        "aws_access_key": {
+            "pattern": r'(?i)(aws_access_key_id|accesskeyid)\s*[:=]\s*["\']?(AKIA[0-9A-Z]{16})["\']?',
+            "confidence": 0.95,
+            "risk": "HIGH",
+        },
+        "aws_secret_key": {
+            "pattern": r'(?i)(aws_secret_access_key|secretaccesskey)\s*[:=]\s*["\']?([A-Za-z0-9/+=]{40})["\']?',
+            "confidence": 0.90,
+            "risk": "HIGH",
+        },
+        "github_token": {
+            "pattern": r"(?i)(github_token|gh[ps]_[a-zA-Z0-9]{36})",
+            "confidence": 0.95,
+            "risk": "HIGH",
+        },
+        "api_key_generic": {
+            "pattern": r'(?i)(api[_-]?key|apikey)\s*[:=]\s*["\']?([a-z0-9]{20,})["\']?',
+            "confidence": 0.75,
+            "risk": "MEDIUM",
+        },
+        "private_key": {
+            "pattern": r"-----BEGIN [A-Z ]*PRIVATE KEY-----",
+            "confidence": 0.99,
+            "risk": "CRITICAL",
+        },
+        "jwt_token": {
+            "pattern": r"eyJ[A-Za-z0-9-_=]+\.[A-Za-z0-9-_=]+\.?[A-Za-z0-9-_.+/=]*",
+            "confidence": 0.85,
+            "risk": "HIGH",
+        },
+        "database_url": {
+            "pattern": r'(?i)(database_url|db_url)\s*[:=]\s*["\']?(mongodb|mysql|postgresql|postgres)://[^\s"\']+["\']?',
+            "confidence": 0.90,
+            "risk": "HIGH",
+        },
+        "slack_token": {
+            "pattern": r"xox[baprs]-([0-9a-zA-Z]{10,48})",
+            "confidence": 0.95,
+            "risk": "HIGH",
+        },
+        "discord_webhook": {
+            "pattern": r"https://discord(?:app)?\.com/api/webhooks/[0-9]+/[A-Za-z0-9\-_]{68}",
+            "confidence": 0.95,
+            "risk": "MEDIUM",
+        },
+        "stripe_key": {
+            "pattern": r"(?i)(sk|pk)_(test|live)_[0-9a-zA-Z]{24}",
+            "confidence": 0.95,
+            "risk": "HIGH",
+        },
+        "google_api": {
+            "pattern": r"AIza[0-9A-Za-z\-_]{35}",
+            "confidence": 0.90,
+            "risk": "MEDIUM",
+        },
+        "facebook_token": {
+            "pattern": r"EAA[0-9A-Za-z]{90,}",
+            "confidence": 0.85,
+            "risk": "MEDIUM",
+        },
+        "twitter_token": {
+            "pattern": r'(?i)(twitter|oauth)[_-]?(token|key|secret)\s*[:=]\s*["\']?([a-zA-Z0-9]{50})["\']?',
+            "confidence": 0.80,
+            "risk": "MEDIUM",
+        },
+        "password_field": {
+            "pattern": r'(?i)(password|passwd|pwd)\s*[:=]\s*["\']([^"\']{8,})["\']',
+            "confidence": 0.60,
+            "risk": "MEDIUM",
+        },
+        "mongodb_connection": {
+            "pattern": r"mongodb://[^:\s]+:[^@\s]+@[^/\s]+",
+            "confidence": 0.95,
+            "risk": "HIGH",
+        },
+        "redis_url": {
+            "pattern": r"redis://[^:\s]*:[^@\s]*@[^/\s]+",
+            "confidence": 0.90,
+            "risk": "HIGH",
+        },
+        "mailgun_key": {
+            "pattern": r"key-[0-9a-zA-Z]{32}",
+            "confidence": 0.85,
+            "risk": "MEDIUM",
+        },
+        "sendgrid_key": {
+            "pattern": r"SG\.[0-9A-Za-z\-_]{22}\.[0-9A-Za-z\-_]{43}",
+            "confidence": 0.95,
+            "risk": "MEDIUM",
+        },
+        "twilio_key": {
+            "pattern": r"SK[0-9a-fA-F]{32}",
+            "confidence": 0.90,
+            "risk": "MEDIUM",
+        },
+        "paypal_token": {
+            "pattern": r'(?i)(paypal[_-]?(token|key|secret))\s*[:=]\s*["\']?([A-Z0-9]{20,})["\']?',
+            "confidence": 0.80,
+            "risk": "HIGH",
+        },
+    }
+
+    secrets_found = []
+    lines = js_content.split("\n")
+
+    for line_num, line in enumerate(lines, 1):
+        for secret_type, pattern_info in secret_patterns.items():
+            pattern = pattern_info["pattern"]
+            confidence = pattern_info["confidence"]
+            risk = pattern_info["risk"]
+
+            if confidence >= confidence_threshold:
+                matches = re.finditer(pattern, line)
+                for match in matches:
+                    # Extract the actual secret value
+                    secret_value = (
+                        match.group(2) if len(match.groups()) >= 2 else match.group(0)
+                    )
+
+                    # Skip if it's obviously a placeholder
+                    if any(
+                        placeholder in secret_value.lower()
+                        for placeholder in [
+                            "placeholder",
+                            "your_key",
+                            "your_token",
+                            "example",
+                            "test_key",
+                            "sample",
+                        ]
+                    ):
+                        continue
+
+                    # Context around the finding
+                    start_line = max(0, line_num - 2)
+                    end_line = min(len(lines), line_num + 2)
+                    context = "\n".join(lines[start_line:end_line])
+
+                    secret_info = {
+                        "type": secret_type,
+                        "value": (
+                            secret_value[:50] + "..."
+                            if len(secret_value) > 50
+                            else secret_value
+                        ),
+                        "full_value": secret_value,
+                        "line_number": line_num,
+                        "confidence": confidence,
+                        "risk_level": risk,
+                        "context": context,
+                        "js_url": js_url,
+                        "pattern_matched": pattern,
+                    }
+
+                    secrets_found.append(secret_info)
+
+    return secrets_found
+
+
+def extract_js_urls_from_html(html_content, base_url):
+    """Extract JavaScript URLs from HTML content."""
+    js_urls = set()
+
+    # Find script tags with src attributes
+    script_pattern = r'<script[^>]+src\s*=\s*["\']([^"\']+)["\'][^>]*>'
+    matches = re.finditer(script_pattern, html_content, re.IGNORECASE)
+
+    for match in matches:
+        js_url = match.group(1)
+
+        # Convert relative URLs to absolute
+        if js_url.startswith("//"):
+            js_url = "https:" + js_url
+        elif js_url.startswith("/"):
+            parsed_base = urlparse(base_url)
+            js_url = f"{parsed_base.scheme}://{parsed_base.netloc}{js_url}"
+        elif not js_url.startswith(("http://", "https://")):
+            parsed_base = urlparse(base_url)
+            base_path = "/".join(parsed_base.path.split("/")[:-1])
+            js_url = f"{parsed_base.scheme}://{parsed_base.netloc}{base_path}/{js_url}"
+
+        js_urls.add(js_url)
+
+    # Also look for inline script blocks
+    inline_pattern = r"<script[^>]*>(.*?)</script>"
+    inline_matches = re.finditer(
+        inline_pattern, html_content, re.IGNORECASE | re.DOTALL
+    )
+
+    inline_count = 0
+    for match in inline_matches:
+        inline_count += 1
+        js_urls.add(f"{base_url}#inline-{inline_count}")
+
+    return list(js_urls)
+
+
+def scan_javascript_files(url, session, store_db=False, db_path=None):
+    """Scan JavaScript files for secrets and sensitive information."""
+    results = {
+        "js_files_scanned": 0,
+        "secrets_found": [],
+        "total_secrets": 0,
+        "risk_summary": {"CRITICAL": 0, "HIGH": 0, "MEDIUM": 0, "LOW": 0},
+    }
+
+    try:
+        print(f"🔍 [JS-SCAN] Scanning JavaScript files for secrets...")
+
+        # First, get the main page to extract JS URLs
+        response = session.get(url, timeout=10, verify=False)
+        if response.status_code != 200:
+            return results
+
+        js_urls = extract_js_urls_from_html(response.text, url)
+
+        # Add common JS file paths
+        common_js_paths = [
+            "/js/app.js",
+            "/js/main.js",
+            "/js/bundle.js",
+            "/js/vendor.js",
+            "/assets/js/app.js",
+            "/static/js/main.js",
+            "/dist/js/bundle.js",
+            "/js/config.js",
+            "/js/api.js",
+            "/js/auth.js",
+        ]
+
+        parsed_url = urlparse(url)
+        base_url = f"{parsed_url.scheme}://{parsed_url.netloc}"
+
+        for path in common_js_paths:
+            js_urls.append(base_url + path)
+
+        # Scan each JavaScript file
+        for js_url in js_urls[:20]:  # Limit to prevent excessive requests
+            try:
+                if js_url.startswith(base_url + "#inline-"):
+                    # Handle inline scripts
+                    inline_num = js_url.split("#inline-")[1]
+                    inline_pattern = r"<script[^>]*>(.*?)</script>"
+                    inline_matches = list(
+                        re.finditer(
+                            inline_pattern, response.text, re.IGNORECASE | re.DOTALL
+                        )
+                    )
+
+                    if int(inline_num) <= len(inline_matches):
+                        js_content = inline_matches[int(inline_num) - 1].group(1)
+                    else:
+                        continue
+                else:
+                    js_response = session.get(js_url, timeout=5, verify=False)
+                    if js_response.status_code != 200:
+                        continue
+                    js_content = js_response.text
+
+                # Scan for secrets
+                secrets = scan_javascript_secrets(js_content, js_url)
+
+                if secrets:
+                    results["secrets_found"].extend(secrets)
+                    results["total_secrets"] += len(secrets)
+
+                    # Update risk summary
+                    for secret in secrets:
+                        risk_level = secret.get("risk_level", "LOW")
+                        results["risk_summary"][risk_level] += 1
+
+                    print(f"🚨 [SECRET] Found {len(secrets)} secrets in {js_url}")
+
+                    # Store in database if enabled
+                    if store_db and db_path:
+                        timestamp = datetime.now().isoformat()
+                        for secret in secrets:
+                            scan_data = {
+                                "scan_type": "secret_scan",
+                                "timestamp": timestamp,
+                                "target_url": url,
+                                "endpoint": js_url,
+                                "secret_type": secret.get("type"),
+                                "secret_value": secret.get("full_value", ""),
+                                "confidence_level": secret.get("confidence", 0.0),
+                                "context": secret.get("context", ""),
+                                "line_number": secret.get("line_number", 0),
+                                "file_path": js_url,
+                                "risk_assessment": secret.get("risk_level", "UNKNOWN"),
+                            }
+                            store_scan_result(db_path, scan_data)
+
+                results["js_files_scanned"] += 1
+
+            except Exception as e:
+                continue
+
+        if results["total_secrets"] > 0:
+            print(
+                f"📊 [JS-SUMMARY] Found {results['total_secrets']} total secrets across {results['js_files_scanned']} JS files"
+            )
+            print(
+                f"🎯 [RISK-BREAKDOWN] Critical: {results['risk_summary']['CRITICAL']}, High: {results['risk_summary']['HIGH']}, Medium: {results['risk_summary']['MEDIUM']}, Low: {results['risk_summary']['LOW']}"
+            )
+
+    except Exception as e:
+        print(f"❌ [JS-ERROR] JavaScript scanning failed: {e}")
+
+    return results
+
+
+def parse_swagger_openapi(swagger_content, base_url):
+    """Parse Swagger/OpenAPI definition file and extract API endpoints."""
+    try:
+        import json
+        import yaml
+
+        # Try to parse as JSON first, then YAML
+        try:
+            spec = json.loads(swagger_content)
+        except json.JSONDecodeError:
+            try:
+                spec = yaml.safe_load(swagger_content)
+            except yaml.YAMLError:
+                return {"error": "Invalid JSON/YAML format"}
+
+        # Extract basic info
+        api_info = {
+            "title": spec.get("info", {}).get("title", "Unknown"),
+            "description": spec.get("info", {}).get("description", ""),
+            "version": spec.get("info", {}).get("version", ""),
+            "base_path": spec.get("basePath", ""),
+            "host": spec.get("host", ""),
+            "schemes": spec.get("schemes", ["https"]),
+            "endpoints": [],
+            "security_schemes": [],
+            "servers": spec.get("servers", []),
+        }
+
+        # Extract endpoints
+        paths = spec.get("paths", {})
+        for path, methods in paths.items():
+            for method, operation in methods.items():
+                if method.upper() in [
+                    "GET",
+                    "POST",
+                    "PUT",
+                    "DELETE",
+                    "PATCH",
+                    "HEAD",
+                    "OPTIONS",
+                ]:
+                    endpoint_info = {
+                        "path": path,
+                        "method": method.upper(),
+                        "summary": operation.get("summary", ""),
+                        "description": operation.get("description", ""),
+                        "parameters": operation.get("parameters", []),
+                        "security": operation.get("security", []),
+                        "responses": operation.get("responses", {}),
+                        "tags": operation.get("tags", []),
+                    }
+                    api_info["endpoints"].append(endpoint_info)
+
+        # Extract security definitions
+        security_defs = spec.get("securityDefinitions", {}) or spec.get(
+            "components", {}
+        ).get("securitySchemes", {})
+        for name, scheme in security_defs.items():
+            api_info["security_schemes"].append(
+                {
+                    "name": name,
+                    "type": scheme.get("type", ""),
+                    "in": scheme.get("in", ""),
+                    "name_param": scheme.get("name", ""),
+                }
+            )
+
+        return api_info
+    except Exception as e:
+        return {"error": f"Failed to parse Swagger/OpenAPI: {str(e)}"}
+
+
+def swagger_brute_force(base_url, session, rate_limit=15):
+    """Brute force discover Swagger/OpenAPI definition files."""
+    import time
+
+    # Common Swagger/OpenAPI paths (from SJ tool)
+    common_paths = [
+        "",
+        "/index",
+        "/swagger",
+        "/swagger-ui",
+        "/swagger-resources",
+        "/swagger-config",
+        "/openapi",
+        "/api",
+        "/api-docs",
+        "/apidocs",
+        "/v1",
+        "/v2",
+        "/v3",
+        "/doc",
+        "/docs",
+        "/apispec",
+        "/apispec_1",
+        "/api-merged",
+    ]
+
+    # Common directory prefixes
+    prefixes = [
+        "",
+        "/swagger",
+        "/swagger/docs",
+        "/swagger/latest",
+        "/swagger/v1",
+        "/swagger/v2",
+        "/swagger/v3",
+        "/swagger/static",
+        "/swagger/ui",
+        "/swagger-ui",
+        "/api-docs",
+        "/api-docs/v1",
+        "/api-docs/v2",
+        "/apidocs",
+        "/api",
+        "/api/v1",
+        "/api/v2",
+        "/api/v3",
+        "/v1",
+        "/v2",
+        "/v3",
+        "/doc",
+        "/docs",
+        "/docs/swagger",
+        "/docs/swagger/v1",
+        "/docs/swagger/v2",
+        "/docs/swagger-ui",
+        "/docs/swagger-ui/v1",
+        "/docs/swagger-ui/v2",
+        "/docs/v1",
+        "/docs/v2",
+        "/docs/v3",
+        "/public",
+        "/redoc",
+    ]
+
+    extensions = ["", ".json", ".yaml", ".yml", "/"]
+
+    found_files = []
+    total_requests = 0
+
+    print(f"🔍 [SWAGGER-BRUTE] Starting brute force discovery...")
+
+    for prefix in prefixes:
+        for path in common_paths:
+            for ext in extensions:
+                url = f"{base_url}{prefix}{path}{ext}"
+                try:
+                    response = session.get(url, timeout=5, verify=False)
+                    total_requests += 1
+
+                    if response.status_code == 200:
+                        content = response.text.lower()
+                        # Check for Swagger/OpenAPI indicators
+                        if any(
+                            indicator in content
+                            for indicator in [
+                                "swagger",
+                                "openapi",
+                                "info",
+                                "paths",
+                                "definitions",
+                                "components",
+                                "securitydefinitions",
+                                "host",
+                                "basepath",
+                            ]
+                        ):
+                            found_files.append(
+                                {
+                                    "url": url,
+                                    "status_code": response.status_code,
+                                    "content_length": len(response.content),
+                                    "content_type": response.headers.get(
+                                        "Content-Type", ""
+                                    ),
+                                    "content": response.text,
+                                }
+                            )
+                            print(f"🎯 [SWAGGER-FOUND] Definition file found: {url}")
+
+                    # Rate limiting
+                    if rate_limit > 0:
+                        time.sleep(1.0 / rate_limit)
+
+                except Exception:
+                    continue
+
+    print(
+        f"📊 [SWAGGER-BRUTE] Completed {total_requests} requests, found {len(found_files)} definition files"
+    )
+    return found_files
+
+
+def generate_swagger_commands(endpoints, prepare_tool="curl", base_url=""):
+    """Generate testing commands from Swagger endpoints (SJ prepare mode)."""
+    commands = []
+
+    for endpoint in endpoints:
+        path = endpoint["path"]
+        method = endpoint["method"]
+
+        # Replace path parameters with test values
+        test_path = path
+        import re
+
+        test_path = re.sub(r"\{[^}]+\}", "test", test_path)
+
+        full_url = f"{base_url}{test_path}"
+
+        if prepare_tool.lower() == "curl":
+            cmd = f"curl -sk -X {method} '{full_url}'"
+
+            # Add headers
+            if method in ["POST", "PUT", "PATCH"]:
+                cmd += " -H 'Content-Type: application/json'"
+                # Add sample body for POST/PUT requests
+                if method in ["POST", "PUT"]:
+                    cmd += ' -d \'{"test": "data"}\''
+
+        elif prepare_tool.lower() == "sqlmap":
+            cmd = f"sqlmap --method={method} -u {full_url}"
+            if method in ["POST", "PUT", "PATCH"]:
+                cmd += " --data='test=data'"
+        else:
+            cmd = f"# {method} {full_url}"
+
+        commands.append(
+            {
+                "endpoint": endpoint,
+                "command": cmd,
+                "method": method,
+                "path": path,
+                "full_url": full_url,
+            }
+        )
+
+    return commands
+
+
+def swagger_automate_test(endpoints, session, base_url="", rate_limit=15):
+    """Automate testing of Swagger endpoints (SJ automate mode)."""
+    import time
+
+    results = []
+
+    print(f"🚀 [SWAGGER-AUTO] Testing {len(endpoints)} API endpoints...")
+
+    for endpoint in endpoints:
+        path = endpoint["path"]
+        method = endpoint["method"]
+
+        # Replace path parameters with test values
+        test_path = path
+        import re
+
+        test_path = re.sub(r"\{[^}]+\}", "test", test_path)
+
+        full_url = f"{base_url}{test_path}"
+
+        try:
+            # Prepare request data
+            data = None
+            headers = {"User-Agent": "APICLI/1.0 SJ-Integration Scanner"}
+
+            if method in ["POST", "PUT", "PATCH"]:
+                headers["Content-Type"] = "application/json"
+                data = '{"test": "data"}'
+
+            response = session.request(
+                method, full_url, data=data, headers=headers, timeout=5, verify=False
+            )
+
+            result = {
+                "endpoint": endpoint,
+                "url": full_url,
+                "method": method,
+                "status_code": response.status_code,
+                "response_time": response.elapsed.total_seconds(),
+                "content_length": len(response.content),
+                "content_type": response.headers.get("Content-Type", ""),
+                "accessible": response.status_code < 400,
+                "auth_required": response.status_code == 401,
+                "forbidden": response.status_code == 403,
+                "not_found": response.status_code == 404,
+                "server_error": response.status_code >= 500,
+            }
+
+            results.append(result)
+
+            # Log result
+            if result["accessible"]:
+                print(f"✅ [ACCESSIBLE] {method} {response.status_code} {full_url}")
+            elif result["auth_required"]:
+                print(f"🔐 [AUTH-REQ] {method} {response.status_code} {full_url}")
+            elif result["forbidden"]:
+                print(f"🚫 [FORBIDDEN] {method} {response.status_code} {full_url}")
+            elif result["not_found"]:
+                print(f"❌ [NOT-FOUND] {method} {response.status_code} {full_url}")
+            elif result["server_error"]:
+                print(f"💥 [ERROR] {method} {response.status_code} {full_url}")
+            else:
+                print(f"⚠️ [MANUAL] {method} {response.status_code} {full_url}")
+
+            # Rate limiting
+            if rate_limit > 0:
+                time.sleep(1.0 / rate_limit)
+
+        except Exception as e:
+            result = {
+                "endpoint": endpoint,
+                "url": full_url,
+                "method": method,
+                "status_code": 0,
+                "error": str(e),
+                "accessible": False,
+            }
+            results.append(result)
+            print(f"❌ [ERROR] {method} 0 {full_url} - {str(e)}")
+
+    # Summary
+    accessible = len([r for r in results if r.get("accessible", False)])
+    auth_required = len([r for r in results if r.get("auth_required", False)])
+    total = len(results)
+
+    print(
+        f"📊 [SWAGGER-SUMMARY] Tested {total} endpoints: {accessible} accessible, {auth_required} require auth"
+    )
+
+    return results
+
+
 @click.command()
 @click.option("--url", required=True, help="Target API URL or base URL")
 @click.option(
@@ -832,6 +1626,43 @@ def save_results(results, output_dir, format_type="json"):
     type=int,
     help="Maximum requests for rate limit testing",
 )
+@click.option(
+    "--secret-scan",
+    is_flag=True,
+    help="Enable JavaScript secret scanning (SJ integration)",
+)
+@click.option("--store-db", help="Store results in SQLite database (provide DB path)")
+@click.option(
+    "--swagger-parse",
+    is_flag=True,
+    help="Parse Swagger/OpenAPI definition files (SJ automate mode)",
+)
+@click.option(
+    "--swagger-brute",
+    is_flag=True,
+    help="Brute force discover Swagger/OpenAPI files (SJ brute mode)",
+)
+@click.option(
+    "--swagger-endpoints",
+    is_flag=True,
+    help="Extract endpoints from Swagger/OpenAPI files (SJ endpoints mode)",
+)
+@click.option(
+    "--swagger-prepare",
+    help="Generate testing commands (curl/sqlmap) from Swagger files",
+)
+@click.option("--swagger-url", help="Swagger/OpenAPI definition URL to parse")
+@click.option(
+    "--swagger-file",
+    type=click.Path(exists=True),
+    help="Local Swagger/OpenAPI definition file",
+)
+@click.option(
+    "--rate-limit",
+    default=15,
+    type=int,
+    help="Requests per second rate limit for SJ operations",
+)
 def main(
     url,
     endpoints_file,
@@ -859,6 +1690,15 @@ def main(
     tech_detect,
     verify_ssl,
     max_requests,
+    secret_scan,
+    store_db,
+    swagger_parse,
+    swagger_brute,
+    swagger_endpoints,
+    swagger_prepare,
+    swagger_url,
+    swagger_file,
+    rate_limit,
 ):
     """
     🔍 Advanced API Security Scanner and Analyzer
@@ -871,7 +1711,9 @@ def main(
     • Injection vulnerability testing (SQL, NoSQL, XSS, Command, LDAP, XML)
     • Rate limiting implementation testing
     • HTTP Parameter Pollution testing
+    • JavaScript secret scanning (SJ integration)
     • Technology stack detection
+    • Database storage for results
     • Comprehensive security reporting
 
     Security Testing Features:
@@ -882,6 +1724,8 @@ def main(
     --injection-test             # Injection vulnerability testing
     --rate-limit-test            # Rate limiting testing
     --parameter-pollution        # HTTP Parameter Pollution testing
+    --secret-scan                # JavaScript secret scanning (SJ tool)
+    --store-db path/to/db.sqlite # Store results in SQLite database
 
     Discovery and Analysis:
     --discover                   # Auto-discover API endpoints
@@ -892,17 +1736,20 @@ def main(
     # Basic API discovery
     apicli --url https://api.example.com --discover --tech-detect
 
-    # Comprehensive security testing
-    apicli --url https://api.example.com --security-test --json-report --markdown-report
+    # Comprehensive security testing with secret scanning
+    apicli --url https://api.example.com --security-test --secret-scan --store-db results.db --json-report --markdown-report
 
-    # Targeted testing
-    apicli --url https://api.example.com --method-test --cors-test --auth-bypass
+    # JavaScript secret scanning only
+    apicli --url https://api.example.com --secret-scan --store-db secrets.db
 
-    # Load endpoints from file
-    apicli --url https://api.example.com --endpoints-file endpoints.txt --injection-test
+    # Targeted testing with database storage
+    apicli --url https://api.example.com --method-test --cors-test --auth-bypass --store-db scan_results.db
 
-    # Full security assessment with reporting
-    apicli --url https://api.example.com --security-test --discover --slack-webhook https://hooks.slack.com/... --json-report --markdown-report
+    # Load endpoints from file with secret scanning
+    apicli --url https://api.example.com --endpoints-file endpoints.txt --injection-test --secret-scan
+
+    # Full security assessment with all features
+    apicli --url https://api.example.com --security-test --secret-scan --discover --store-db full_scan.db --slack-webhook https://hooks.slack.com/... --json-report --markdown-report
     """
 
     if verbose:
@@ -929,6 +1776,238 @@ def main(
         import urllib3
 
         urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+    # ========== SJ (Swagger Jacker) Integration ==========
+
+    # Handle Swagger/OpenAPI specific operations
+    if swagger_brute:
+        if verbose:
+            print(f"🔍 [SJ-BRUTE] Starting Swagger/OpenAPI brute force discovery...")
+
+        found_swagger_files = swagger_brute_force(url, session, rate_limit)
+
+        if found_swagger_files:
+            print(
+                f"🎯 [SJ-BRUTE] Found {len(found_swagger_files)} Swagger/OpenAPI definition files"
+            )
+            for swagger_file in found_swagger_files:
+                print(
+                    f"   📄 {swagger_file['url']} (Status: {swagger_file['status_code']}, Size: {swagger_file['content_length']})"
+                )
+        else:
+            print(f"❌ [SJ-BRUTE] No Swagger/OpenAPI definition files found")
+
+        if store_db:
+            initialize_database(store_db)
+            for swagger_file in found_swagger_files:
+                scan_data = {
+                    "scan_type": "swagger_discovery",
+                    "timestamp": datetime.now().isoformat(),
+                    "target_url": url,
+                    "endpoint": swagger_file["url"],
+                    "method": "GET",
+                    "status_code": swagger_file["status_code"],
+                    "response_size": swagger_file["content_length"],
+                    "response_time": 0.0,
+                    "vulnerabilities": [],
+                    "risk_level": "info",
+                    "findings": swagger_file,
+                }
+                store_scan_result(store_db, scan_data)
+
+        return  # Exit after brute force
+
+    if (
+        swagger_url
+        or swagger_file
+        or swagger_parse
+        or swagger_endpoints
+        or swagger_prepare
+    ):
+        swagger_content = ""
+        swagger_source = ""
+
+        # Load Swagger content
+        if swagger_file:
+            if verbose:
+                print(
+                    f"📂 [SJ] Loading Swagger/OpenAPI from local file: {swagger_file}"
+                )
+            with open(swagger_file, "r") as f:
+                swagger_content = f.read()
+            swagger_source = swagger_file
+        elif swagger_url:
+            if verbose:
+                print(f"🌐 [SJ] Loading Swagger/OpenAPI from URL: {swagger_url}")
+            try:
+                response = session.get(swagger_url, timeout=10, verify=False)
+                if response.status_code == 200:
+                    swagger_content = response.text
+                    swagger_source = swagger_url
+                else:
+                    print(
+                        f"❌ [SJ] Failed to load Swagger file: HTTP {response.status_code}"
+                    )
+                    return
+            except Exception as e:
+                print(f"❌ [SJ] Error loading Swagger file: {e}")
+                return
+        else:
+            # Try to auto-discover Swagger from current URL
+            swagger_urls = [
+                f"{url}/swagger.json",
+                f"{url}/swagger.yaml",
+                f"{url}/openapi.json",
+                f"{url}/openapi.yaml",
+                f"{url}/api-docs",
+                f"{url}/v2/swagger.json",
+                f"{url}/v3/swagger.json",
+                f"{url}/docs/swagger.json",
+            ]
+
+            for test_url in swagger_urls:
+                try:
+                    response = session.get(test_url, timeout=5, verify=False)
+                    if response.status_code == 200:
+                        content = response.text.lower()
+                        if any(
+                            indicator in content
+                            for indicator in ["swagger", "openapi", "paths", "info"]
+                        ):
+                            swagger_content = response.text
+                            swagger_source = test_url
+                            if verbose:
+                                print(
+                                    f"🎯 [SJ] Auto-discovered Swagger/OpenAPI at: {test_url}"
+                                )
+                            break
+                except:
+                    continue
+
+        if not swagger_content:
+            print(f"❌ [SJ] No Swagger/OpenAPI definition found")
+            return
+
+        # Parse Swagger content
+        api_spec = parse_swagger_openapi(swagger_content, url)
+
+        if "error" in api_spec:
+            print(f"❌ [SJ] {api_spec['error']}")
+            return
+
+        if verbose:
+            print(f"📊 [SJ] Parsed API: {api_spec['title']} v{api_spec['version']}")
+            print(f"📊 [SJ] Found {len(api_spec['endpoints'])} endpoints")
+
+        # Handle different SJ modes
+        if swagger_endpoints:
+            print(f"📋 [SJ-ENDPOINTS] API Endpoints from {swagger_source}:")
+            print(f"🔗 API: {api_spec['title']} v{api_spec['version']}")
+            if api_spec["description"]:
+                print(f"📝 Description: {api_spec['description']}")
+            print()
+
+            for endpoint in api_spec["endpoints"]:
+                print(f"  {endpoint['method']} {endpoint['path']}")
+                if endpoint["summary"]:
+                    print(f"    └─ {endpoint['summary']}")
+
+            return  # Exit after listing endpoints
+
+        if swagger_prepare:
+            print(
+                f"🛠️ [SJ-PREPARE] Generating {swagger_prepare} commands for API testing:"
+            )
+            print(f"🔗 API: {api_spec['title']} v{api_spec['version']}")
+            print()
+
+            # Determine base URL for requests
+            base_url = url
+            if api_spec["host"]:
+                scheme = api_spec["schemes"][0] if api_spec["schemes"] else "https"
+                base_url = f"{scheme}://{api_spec['host']}"
+            if api_spec["base_path"] and api_spec["base_path"] != "/":
+                base_url += api_spec["base_path"]
+
+            commands = generate_swagger_commands(
+                api_spec["endpoints"], swagger_prepare, base_url
+            )
+
+            for cmd_info in commands:
+                print(cmd_info["command"])
+
+            # Store commands in database
+            if store_db:
+                initialize_database(store_db)
+                scan_data = {
+                    "scan_type": "swagger_commands",
+                    "timestamp": datetime.now().isoformat(),
+                    "target_url": swagger_source,
+                    "endpoint": base_url,
+                    "method": "PREPARE",
+                    "status_code": 200,
+                    "response_size": len(swagger_content),
+                    "response_time": 0.0,
+                    "vulnerabilities": [],
+                    "risk_level": "info",
+                    "findings": {"commands": commands, "api_spec": api_spec},
+                }
+                store_scan_result(store_db, scan_data)
+
+            return  # Exit after generating commands
+
+        if swagger_parse:
+            print(f"🚀 [SJ-AUTOMATE] Testing API endpoints automatically...")
+
+            # Determine base URL for requests
+            base_url = url
+            if api_spec["host"]:
+                scheme = api_spec["schemes"][0] if api_spec["schemes"] else "https"
+                base_url = f"{scheme}://{api_spec['host']}"
+            if api_spec["base_path"] and api_spec["base_path"] != "/":
+                base_url += api_spec["base_path"]
+
+            # Test all endpoints automatically
+            test_results = swagger_automate_test(
+                api_spec["endpoints"], session, base_url, rate_limit
+            )
+
+            # Store results in database
+            if store_db:
+                initialize_database(store_db)
+                for result in test_results:
+                    scan_data = {
+                        "scan_type": "swagger_automate",
+                        "timestamp": datetime.now().isoformat(),
+                        "target_url": swagger_source,
+                        "endpoint": result["url"],
+                        "method": result["method"],
+                        "status_code": result.get("status_code", 0),
+                        "response_size": result.get("content_length", 0),
+                        "response_time": result.get("response_time", 0.0),
+                        "vulnerabilities": [],
+                        "risk_level": "info" if result.get("accessible") else "medium",
+                        "findings": result,
+                    }
+                    store_scan_result(store_db, scan_data)
+
+            # Generate summary report
+            accessible = len([r for r in test_results if r.get("accessible", False)])
+            auth_required = len(
+                [r for r in test_results if r.get("auth_required", False)]
+            )
+            forbidden = len([r for r in test_results if r.get("forbidden", False)])
+            not_found = len([r for r in test_results if r.get("not_found", False)])
+
+            print(f"\n📊 [SJ-AUTOMATE] Test Summary for {api_spec['title']}:")
+            print(f"   ✅ Accessible endpoints: {accessible}")
+            print(f"   🔐 Authentication required: {auth_required}")
+            print(f"   🚫 Forbidden: {forbidden}")
+            print(f"   ❌ Not found: {not_found}")
+
+            return  # Exit after automated testing
+
+    # ========== End SJ Integration ==========
 
     # Prepare endpoints list
     endpoints = []
@@ -1059,7 +2138,44 @@ def main(
                 endpoint, timeout
             )
 
+        # JavaScript secret scanning (SJ integration)
+        if secret_scan:
+            if verbose:
+                print(
+                    f"🔐 [SECRETS] Scanning JavaScript files for secrets on {endpoint}"
+                )
+            endpoint_results["javascript_secrets"] = scan_javascript_files(
+                endpoint,
+                session,
+                store_db=(store_db is not None),
+                db_path=store_db if store_db else None,
+            )
+
         all_results.append(endpoint_results)
+
+        # Store results in database if --store-db is specified
+        if store_db:
+            if verbose:
+                print(f"💾 [DB] Storing results to database: {store_db}")
+            initialize_database(store_db)
+
+            # Store main scan result
+            scan_data = {
+                "scan_type": "api_scan",
+                "timestamp": endpoint_results.get("timestamp"),
+                "target_url": url,
+                "endpoint": endpoint,
+                "method": "GET",
+                "status_code": endpoint_results.get("accessibility", {}).get(
+                    "status_code", 0
+                ),
+                "response_size": 0,
+                "response_time": 0.0,
+                "vulnerabilities": [],
+                "risk_level": "unknown",
+                "findings": endpoint_results,
+            }
+            store_scan_result(store_db, scan_data)
 
         # Add delay between requests
         if delay > 0:

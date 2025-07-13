@@ -49,6 +49,13 @@ test_nuclei_cves/
 resume.cfg
 wyniki/
 
+# Backup files
+*_backup.py
+*_backup_*.py
+*.backup
+*.bak
+*.old
+
 # Temporary test files
 *_perms.txt
 *_urlcrazy.txt

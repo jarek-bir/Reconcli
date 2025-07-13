@@ -1,6 +1,39 @@
 # ReconCLI - Modular Reconnaissance Toolkit
 
-[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
+[![Python 3.## 🚀 Latest Updates
+
+### 🔥 **APICLI - SJ (Swagger Jacker) Integration** (NEW!)
+- **🎯 Complete SJ Tool Integration**: Full BishopFox Swagger Jacker functionality integrated into APICLI
+- **🔍 Swagger/OpenAPI Discovery**: Brute force discovery of 600+ Swagger definition file patterns
+- **📋 Endpoint Extraction**: Extract and analyze all API endpoints from Swagger/OpenAPI files
+- **🚀 Automated Testing**: Comprehensive automated testing of all discovered endpoints
+- **🛠️ Command Generation**: Generate curl and sqlmap commands for manual testing
+- **🔐 JavaScript Secret Scanning**: 20+ patterns for AWS keys, GitHub tokens, JWT, API keys, private keys
+- **💾 Database Storage**: Complete SQLite integration with 3-table schema for result persistence
+- **⚡ Rate Limiting**: Configurable requests per second for responsible scanning
+
+```bash
+# Swagger/OpenAPI discovery and brute force
+reconcli apicli --url https://api.example.com --swagger-brute --store-db discovery.db --verbose
+
+# Extract endpoints from Swagger files
+reconcli apicli --url https://api.example.com --swagger-endpoints --swagger-url https://api.example.com/swagger.json
+
+# Automated endpoint testing (SJ automate mode)
+reconcli apicli --url https://api.example.com --swagger-parse --store-db results.db --rate-limit 10
+
+# Generate testing commands
+reconcli apicli --url https://api.example.com --swagger-prepare curl --swagger-file api.json
+reconcli apicli --url https://api.example.com --swagger-prepare sqlmap --swagger-url https://api.example.com/openapi.yaml
+
+# JavaScript secret scanning
+reconcli apicli --url https://api.example.com --secret-scan --store-db secrets.db --verbose
+
+# Complete security assessment with SJ integration
+reconcli apicli --url https://api.example.com --security-test --secret-scan --swagger-brute --store-db full_scan.db --json-report --markdown-report
+```
+
+### ℹ️ **WhoisFreaksCLI Database Integration** (New!)(https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![GitHub release](https://img.shields.io/github/release/jarek-bir/Reconcli.svg)](https://github.com/jarek-bir/Reconcli/releases)
 [![GitHub stars](https://img.shields.io/github/stars/jarek-bir/Reconcli.svg)](https://github.com/jarek-bir/Reconcli/stargazers)
@@ -123,6 +156,59 @@ reconcli aicli --attack-flow ssrf,xss,lfi --technique gopher --persona redteam
 # Interactive AI assistance for reconnaissance
 reconcli aicli --interactive --persona trainer --save-chat learning_session
 ```
+
+### 🔐 **API Security Testing (`apicli`) - SJ Integration**
+- **🎯 Complete SJ Tool Integration**: Full BishopFox Swagger Jacker functionality integrated
+- **🔍 Swagger/OpenAPI Discovery**: Brute force discovery with 600+ file patterns
+- **📋 Endpoint Extraction**: Parse and analyze all API endpoints from Swagger/OpenAPI files
+- **🚀 Automated Testing**: Comprehensive automated testing of discovered endpoints
+- **🛠️ Command Generation**: Generate curl and sqlmap commands for manual testing
+- **🔐 JavaScript Secret Scanning**: 20+ patterns for AWS keys, GitHub tokens, JWT, API keys
+- **💾 Database Storage**: Complete SQLite integration with 3-table schema
+- **⚡ Rate Limiting**: Configurable requests per second for responsible scanning
+- **🔧 Security Testing**: Authentication bypass, CORS, injection vulnerabilities
+- **📊 Professional Reports**: JSON, YAML, and Markdown output formats
+
+```bash
+# SJ Swagger/OpenAPI discovery and brute force
+reconcli apicli --url https://api.example.com --swagger-brute --store-db discovery.db --verbose
+
+# Extract endpoints from Swagger files
+reconcli apicli --url https://api.example.com --swagger-endpoints \
+  --swagger-url https://api.example.com/swagger.json
+
+# Automated endpoint testing (SJ automate mode)
+reconcli apicli --url https://api.example.com --swagger-parse \
+  --store-db results.db --rate-limit 10
+
+# Generate testing commands
+reconcli apicli --url https://api.example.com --swagger-prepare curl \
+  --swagger-file api.json
+reconcli apicli --url https://api.example.com --swagger-prepare sqlmap \
+  --swagger-url https://api.example.com/openapi.yaml
+
+# JavaScript secret scanning
+reconcli apicli --url https://api.example.com --secret-scan \
+  --store-db secrets.db --verbose
+
+# Complete security assessment with SJ integration
+reconcli apicli --url https://api.example.com --security-test \
+  --secret-scan --swagger-brute --store-db full_scan.db \
+  --json-report --markdown-report
+
+# Traditional API security testing
+reconcli apicli --url https://api.example.com --discover \
+  --security-test --auth-bypass --cors-test --injection-test \
+  --rate-limit-test --parameter-pollution --store-db security.db
+```
+
+**SJ Integration Features:**
+- **🔍 Brute Force Mode**: `--swagger-brute` - Discover Swagger/OpenAPI files
+- **📋 Endpoints Mode**: `--swagger-endpoints` - Extract endpoint information
+- **🚀 Automate Mode**: `--swagger-parse` - Automated endpoint testing
+- **🛠️ Prepare Mode**: `--swagger-prepare {curl,sqlmap}` - Generate commands
+- **🔐 Secret Scanning**: `--secret-scan` - JavaScript files analysis
+- **💾 Database Storage**: `--store-db path.db` - Store all results
 
 ### 🎯 Virtual Host Discovery (`vhostcli`)
 - **Engines**: FFuf, HTTPx, Gobuster, and VhostFinder support
