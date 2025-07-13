@@ -11,6 +11,15 @@ import requests
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import hashlib
 import re
+import shutil
+
+
+def find_executable(name):
+    """Helper function to find executable path securely"""
+    path = shutil.which(name)
+    if path is None:
+        raise FileNotFoundError(f"Executable '{name}' not found in PATH")
+    return path
 
 
 def send_notification(webhook_url, message, service="slack"):
@@ -800,7 +809,7 @@ def vulncli(
                 env = os.environ.copy()
                 env["GF_PATTERNS"] = gf_dir
                 result = subprocess.run(
-                    ["gf", pattern],
+                    [find_executable("gf"), pattern],
                     input=open(input_file, "rb").read(),
                     stdout=subprocess.PIPE,
                     stderr=subprocess.DEVNULL,
@@ -819,7 +828,7 @@ def vulncli(
         if gf_mode in ["global", "both"]:
             try:
                 result = subprocess.run(
-                    ["gf", pattern],
+                    [find_executable("gf"), pattern],
                     input=open(input_file, "rb").read(),
                     stdout=subprocess.PIPE,
                     stderr=subprocess.DEVNULL,

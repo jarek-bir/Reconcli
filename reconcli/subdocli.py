@@ -95,7 +95,9 @@ def resolve_subdomains(subdomains, threads=50, verbose=False):
     return results
 
 
-def probe_http_services(targets, timeout=10, threads=50, verbose=False):
+def probe_http_services(
+    targets, timeout=10, threads=50, verbose=False, ignore_ssl_errors=False
+):
     """Probe HTTP/HTTPS services on resolved subdomains."""
     results = []
 
@@ -120,7 +122,7 @@ def probe_http_services(targets, timeout=10, threads=50, verbose=False):
             response = requests.get(
                 f"http://{subdomain}",
                 timeout=timeout,
-                verify=False,
+                verify=True,  # HTTP doesn't use SSL anyway
                 allow_redirects=True,
             )
             result["http"] = True
@@ -141,7 +143,7 @@ def probe_http_services(targets, timeout=10, threads=50, verbose=False):
             response = requests.get(
                 f"https://{subdomain}",
                 timeout=timeout,
-                verify=False,
+                verify=not ignore_ssl_errors,  # Use parameter to control SSL verification
                 allow_redirects=True,
             )
             result["https"] = True
@@ -282,6 +284,11 @@ def display_scan_statistics(comprehensive_data, tool_stats):
 @click.option("--markdown", is_flag=True, help="Generate Markdown report")
 @click.option("--resolve", is_flag=True, help="Resolve subdomains to IP addresses")
 @click.option("--probe-http", is_flag=True, help="Probe HTTP/HTTPS services")
+@click.option(
+    "--ignore-ssl-errors",
+    is_flag=True,
+    help="Ignore SSL certificate errors when probing HTTPS",
+)
 @click.option("--verbose", "-v", is_flag=True, help="Enable verbose output")
 @click.option(
     "--timeout", default=30, help="Timeout for individual operations (seconds)"
@@ -313,6 +320,7 @@ def subdocli(
     markdown,
     resolve,
     probe_http,
+    ignore_ssl_errors,
     verbose,
     timeout,
     threads,
@@ -488,7 +496,9 @@ def subdocli(
         )
         if verbose:
             click.echo(f"[+] 🌐 Probing HTTP services on {len(targets)} targets...")
-        http_results = probe_http_services(targets, timeout, threads, verbose)
+        http_results = probe_http_services(
+            targets, timeout, threads, verbose, ignore_ssl_errors
+        )
 
         # Save HTTP results
         with open(os.path.join(outpath, "http_services.json"), "w") as f:

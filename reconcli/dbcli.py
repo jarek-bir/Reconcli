@@ -10,8 +10,17 @@ import click
 import json
 import subprocess
 import os
+import shutil
 from typing import Optional
 from pathlib import Path
+
+
+def find_executable(name):
+    """Find full path to executable, preventing B607 partial path issues."""
+    full_path = shutil.which(name)
+    if full_path:
+        return full_path
+    raise FileNotFoundError(f"Executable '{name}' not found in PATH")
 
 
 @click.group()
@@ -424,18 +433,41 @@ def _export_table(db_path, table, output_file, filter_clause, join_targets, verb
         JOIN targets t ON w.target_id = t.id
         """
     else:
-        query = f"SELECT * FROM {table}"
+        # Validate table name to prevent SQL injection
+        valid_tables = {
+            "targets",
+            "subdomains",
+            "dns_records",
+            "http_responses",
+            "vulnerabilities",
+            "whois_findings",
+            "crawl_results",
+            "port_scan_results",
+            "ssl_info",
+            "directory_results",
+        }
+        if table not in valid_tables:
+            click.echo(f"❌ Invalid table name: {table}")
+            click.echo(f"Valid tables: {', '.join(sorted(valid_tables))}")
+            return
+
+        # Safe table name insertion (validated above)
+        query = f"SELECT * FROM {table}"  # nosec: B608 - table name validated above
 
     if filter_clause:
         query += f" WHERE {filter_clause}"
 
-    # Export using sqlite3 command
-    cmd = f'sqlite3 "{db_path}" -header -csv "{query}" > "{output_file}"'
-
+    # Export using sqlite3 command safely
     if verbose:
         click.echo(f"🔄 Exporting {table}...")
 
-    result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
+    with open(output_file, "w") as f:
+        result = subprocess.run(
+            [find_executable("sqlite3"), db_path, "-header", "-csv", query],
+            stdout=f,
+            capture_output=False,
+            text=True,
+        )
 
     if result.returncode == 0:
         # Check if file has data
@@ -457,19 +489,28 @@ def _run_csvtk_analysis(csv_file, verbose):
     try:
         # Basic stats
         click.echo("📊 Basic Statistics:")
-        subprocess.run(["csvtk", "stats", csv_file], check=True)
+        subprocess.run([find_executable("csvtk"), "stats", csv_file], check=True)
 
         # Pretty view (first 10 rows)
         click.echo("\n📋 Sample Data:")
-        subprocess.run(
-            ["csvtk", "head", "-n", "10", csv_file, "|", "csvtk", "pretty"],
-            shell=True,
-            check=True,
+        proc1 = subprocess.Popen(
+            [find_executable("csvtk"), "head", "-n", "10", csv_file],
+            stdout=subprocess.PIPE,
+            text=True,
         )
+        subprocess.run(
+            [find_executable("csvtk"), "pretty"], stdin=proc1.stdout, check=True
+        )
+        if proc1.stdout:
+            proc1.stdout.close()
+        proc1.wait()
 
         # Column frequency analysis for key fields
         result = subprocess.run(
-            ["csvtk", "headers", csv_file], capture_output=True, text=True, check=True
+            [find_executable("csvtk"), "headers", csv_file],
+            capture_output=True,
+            text=True,
+            check=True,
         )
         headers = result.stdout.strip().split("\n")
 
@@ -479,7 +520,10 @@ def _run_csvtk_analysis(csv_file, verbose):
                 for keyword in ["domain", "method", "status", "registrar"]
             ):
                 click.echo(f"\n🔍 Frequency analysis for '{header}':")
-                subprocess.run(["csvtk", "freq", "-f", header, csv_file], check=True)
+                subprocess.run(
+                    [find_executable("csvtk"), "freq", "-f", header, csv_file],
+                    check=True,
+                )
 
     except subprocess.CalledProcessError as e:
         if verbose:
@@ -496,9 +540,9 @@ def _run_csvtk_stats(csv_file, verbose):
 
     try:
         click.echo("📊 CSV Statistics:")
-        subprocess.run(["csvtk", "nrow", csv_file], check=True)
-        subprocess.run(["csvtk", "ncol", csv_file], check=True)
-        subprocess.run(["csvtk", "headers", csv_file], check=True)
+        subprocess.run([find_executable("csvtk"), "nrow", csv_file], check=True)
+        subprocess.run([find_executable("csvtk"), "ncol", csv_file], check=True)
+        subprocess.run([find_executable("csvtk"), "headers", csv_file], check=True)
 
     except subprocess.CalledProcessError as e:
         if verbose:
@@ -508,7 +552,9 @@ def _run_csvtk_stats(csv_file, verbose):
 def _check_csvtk():
     """Check if csvtk is available"""
     try:
-        subprocess.run(["csvtk", "--version"], capture_output=True, check=True)
+        subprocess.run(
+            [find_executable("csvtk"), "--version"], capture_output=True, check=True
+        )
         return True
     except (subprocess.CalledProcessError, FileNotFoundError):
         click.echo(
@@ -546,43 +592,54 @@ def analyze(csv_file, analysis_type, field, pattern, verbose):
         if analysis_type == "summary":
             # Comprehensive summary
             click.echo("📊 File Summary:")
-            subprocess.run(["csvtk", "nrow", csv_file], check=True)
-            subprocess.run(["csvtk", "ncol", csv_file], check=True)
-            subprocess.run(["csvtk", "headers", csv_file], check=True)
+            subprocess.run([find_executable("csvtk"), "nrow", csv_file], check=True)
+            subprocess.run([find_executable("csvtk"), "ncol", csv_file], check=True)
+            subprocess.run([find_executable("csvtk"), "headers", csv_file], check=True)
 
             click.echo("\n📋 Sample Data:")
-            subprocess.run(
-                ["csvtk", "head", "-n", "5", csv_file, "|", "csvtk", "pretty"],
-                shell=True,
-                check=True,
+            proc1 = subprocess.Popen(
+                [find_executable("csvtk"), "head", "-n", "5", csv_file],
+                stdout=subprocess.PIPE,
+                text=True,
             )
+            subprocess.run(
+                [find_executable("csvtk"), "pretty"], stdin=proc1.stdout, check=True
+            )
+            if proc1.stdout:
+                proc1.stdout.close()
+            proc1.wait()
 
         elif analysis_type == "freq" and field:
-            subprocess.run(["csvtk", "freq", "-f", field, csv_file], check=True)
+            subprocess.run(
+                [find_executable("csvtk"), "freq", "-f", field, csv_file], check=True
+            )
 
         elif analysis_type == "grep" and field and pattern:
-            subprocess.run(
+            proc1 = subprocess.Popen(
                 [
-                    "csvtk",
+                    find_executable("csvtk"),
                     "grep",
                     "-f",
                     field,
                     "-p",
                     pattern,
                     csv_file,
-                    "|",
-                    "csvtk",
-                    "pretty",
                 ],
-                shell=True,
-                check=True,
+                stdout=subprocess.PIPE,
+                text=True,
             )
+            subprocess.run(
+                [find_executable("csvtk"), "pretty"], stdin=proc1.stdout, check=True
+            )
+            if proc1.stdout:
+                proc1.stdout.close()
+            proc1.wait()
 
         elif analysis_type == "stats":
-            subprocess.run(["csvtk", "stats", csv_file], check=True)
+            subprocess.run([find_executable("csvtk"), "stats", csv_file], check=True)
 
         elif analysis_type == "pretty":
-            subprocess.run(["csvtk", "pretty", csv_file], check=True)
+            subprocess.run([find_executable("csvtk"), "pretty", csv_file], check=True)
 
         else:
             click.echo("❌ Invalid combination of parameters")

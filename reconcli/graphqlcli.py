@@ -87,6 +87,11 @@ except ImportError:
     help="Transport type for gql-cli (default: auto)",
 )
 @click.option("--verbose", "-v", is_flag=True, help="Verbose output")
+@click.option(
+    "--insecure",
+    is_flag=True,
+    help="Disable SSL certificate verification (security risk)",
+)
 def graphqlcli(
     domain,
     engine,
@@ -122,6 +127,7 @@ def graphqlcli(
     interactive_gql,
     gql_transport,
     verbose,
+    insecure,
 ):
     """GraphQL recon & audit module using multiple engines and advanced techniques"""
 
@@ -129,6 +135,16 @@ def graphqlcli(
         click.echo("[!] Required dependencies not found. Install with:")
         click.echo("    pip install requests gql[all] click")
         return
+
+    # Security warning for insecure mode
+    if insecure:
+        click.echo(
+            "⚠️  WARNING: SSL certificate verification is disabled. This is a security risk!"
+        )
+        click.echo("    Use --insecure only for testing against trusted endpoints.")
+
+    # Set SSL verification behavior
+    ssl_verify = not insecure
 
     output_path = Path(output_dir)
     output_path.mkdir(parents=True, exist_ok=True)
@@ -187,7 +203,7 @@ def graphqlcli(
 
         if eng == "graphw00f":
             result = run_graphw00f(
-                domain, header, proxy, fingerprint, detect_engines, verbose
+                domain, header, proxy, fingerprint, detect_engines, verbose, ssl_verify
             )
         elif eng == "gql":
             result = run_gql_engine(domain, header, proxy, endpoint, timeout, verbose)
@@ -208,7 +224,9 @@ def graphqlcli(
                 verbose,
             )
         elif eng == "graphqlmap":
-            result = run_graphqlmap(domain, header, proxy, endpoint, timeout, verbose)
+            result = run_graphqlmap(
+                domain, header, proxy, endpoint, timeout, verbose, ssl_verify
+            )
         elif eng == "graphql-cop":
             result = run_graphqlcop(
                 domain, header, proxy, tor, endpoint, timeout, verbose
@@ -222,22 +240,22 @@ def graphqlcli(
         # Run advanced tests if requested
         if threat_matrix:
             results[f"{eng}_threat_matrix"] = run_threat_matrix_assessment(
-                target_url, header, proxy, timeout, verbose
+                target_url, header, proxy, timeout, verbose, ssl_verify
             )
 
         if batch_queries:
             results[f"{eng}_batch_test"] = test_batch_queries(
-                target_url, header, proxy, timeout, verbose
+                target_url, header, proxy, timeout, verbose, ssl_verify
             )
 
         if sqli_test:
             results[f"{eng}_sqli"] = test_sql_injection(
-                target_url, header, proxy, timeout, verbose
+                target_url, header, proxy, timeout, verbose, ssl_verify
             )
 
         if nosqli_test:
             results[f"{eng}_nosqli"] = test_nosql_injection(
-                target_url, header, proxy, timeout, verbose
+                target_url, header, proxy, timeout, verbose, ssl_verify
             )
 
     # Handle gql-cli specific operations
@@ -298,7 +316,9 @@ def graphqlcli(
     return results
 
 
-def run_graphw00f(domain, headers, proxy, fingerprint, detect_engines, verbose):
+def run_graphw00f(
+    domain, headers, proxy, fingerprint, detect_engines, verbose, ssl_verify=True
+):
     """Run GraphW00F fingerprinting tool"""
     url = f"https://{domain}/graphql"
     cmd = ["graphw00f", "-t", url]
@@ -349,12 +369,14 @@ def run_graphw00f(domain, headers, proxy, fingerprint, detect_engines, verbose):
         # Fallback to manual fingerprinting if GraphW00F not installed
         if verbose:
             click.echo("[!] GraphW00F not found, using manual fingerprinting")
-        return manual_graphql_fingerprinting(domain, headers, proxy, verbose)
+        return manual_graphql_fingerprinting(
+            domain, headers, proxy, verbose, ssl_verify
+        )
     except Exception as e:
         return {"engine": "graphw00f", "url": url, "error": str(e)}
 
 
-def manual_graphql_fingerprinting(domain, headers, proxy, verbose):
+def manual_graphql_fingerprinting(domain, headers, proxy, verbose, ssl_verify=True):
     """Manual GraphQL fingerprinting implementation"""
     url = f"https://{domain}/graphql"
 
@@ -380,7 +402,7 @@ def manual_graphql_fingerprinting(domain, headers, proxy, verbose):
             headers=header_dict,
             proxies=proxies,
             timeout=10,
-            verify=False,
+            verify=ssl_verify,
         )
         fingerprint_data["tests"]["introspection"] = {
             "status_code": response.status_code,
@@ -402,7 +424,7 @@ def manual_graphql_fingerprinting(domain, headers, proxy, verbose):
             headers=header_dict,
             proxies=proxies,
             timeout=10,
-            verify=False,
+            verify=ssl_verify,
         )
         error_text = response.text.lower()
 
@@ -440,7 +462,7 @@ def manual_graphql_fingerprinting(domain, headers, proxy, verbose):
             headers=header_dict,
             proxies=proxies,
             timeout=10,
-            verify=False,
+            verify=ssl_verify,
         )
         fingerprint_data["tests"]["batching"] = {
             "status_code": response.status_code,
@@ -592,7 +614,9 @@ def run_graphqlcop(
         return {"engine": "graphql-cop", "url": url, "error": str(e)}
 
 
-def run_graphqlmap(domain, headers, proxy, endpoint=None, timeout=30, verbose=False):
+def run_graphqlmap(
+    domain, headers, proxy, endpoint=None, timeout=30, verbose=False, ssl_verify=True
+):
     """Enhanced GraphQLMap with interactive mode simulation"""
     if endpoint:
         url = f"https://{domain}{endpoint}?query={{}}"
@@ -629,12 +653,12 @@ def run_graphqlmap(domain, headers, proxy, endpoint=None, timeout=30, verbose=Fa
                 # Simulate GraphQLMap commands by sending requests manually
                 if command == "dump_via_introspection":
                     result = test_graphqlmap_introspection(
-                        url, headers, proxy, timeout, verbose
+                        url, headers, proxy, timeout, verbose, ssl_verify
                     )
                     results["tests"][command] = result
                 elif command == "debug":
                     result = test_graphqlmap_debug(
-                        url, headers, proxy, timeout, verbose
+                        url, headers, proxy, timeout, verbose, ssl_verify
                     )
                     results["tests"][command] = result
             except Exception as e:
@@ -646,7 +670,9 @@ def run_graphqlmap(domain, headers, proxy, endpoint=None, timeout=30, verbose=Fa
         return {"engine": "graphqlmap", "url": url, "error": str(e)}
 
 
-def test_graphqlmap_introspection(url, headers, proxy, timeout, verbose):
+def test_graphqlmap_introspection(
+    url, headers, proxy, timeout, verbose, ssl_verify=True
+):
     """Test GraphQL introspection manually"""
     header_dict = {}
     for h in headers:
@@ -665,7 +691,7 @@ def test_graphqlmap_introspection(url, headers, proxy, timeout, verbose):
             headers=header_dict,
             proxies=proxies,
             timeout=timeout,
-            verify=False,
+            verify=ssl_verify,
         )
         return {
             "status_code": response.status_code,
@@ -677,7 +703,7 @@ def test_graphqlmap_introspection(url, headers, proxy, timeout, verbose):
         return {"error": str(e)}
 
 
-def test_graphqlmap_debug(url, headers, proxy, timeout, verbose):
+def test_graphqlmap_debug(url, headers, proxy, timeout, verbose, ssl_verify=True):
     """Test GraphQL debug information"""
     header_dict = {}
     for h in headers:
@@ -696,7 +722,7 @@ def test_graphqlmap_debug(url, headers, proxy, timeout, verbose):
             headers=header_dict,
             proxies=proxies,
             timeout=timeout,
-            verify=False,
+            verify=ssl_verify,
         )
         return {
             "status_code": response.status_code,
@@ -707,7 +733,9 @@ def test_graphqlmap_debug(url, headers, proxy, timeout, verbose):
         return {"error": str(e)}
 
 
-def run_threat_matrix_assessment(url, headers, proxy, timeout, verbose):
+def run_threat_matrix_assessment(
+    url, headers, proxy, timeout, verbose, ssl_verify=True
+):
     """Run GraphQL Threat Matrix assessment"""
     if verbose:
         click.echo("[+] Running GraphQL Threat Matrix assessment...")
@@ -722,19 +750,19 @@ def run_threat_matrix_assessment(url, headers, proxy, timeout, verbose):
 
     threats = {
         "introspection_enabled": test_introspection_threat(
-            url, header_dict, proxies, timeout
+            url, header_dict, proxies, timeout, ssl_verify
         ),
         "deep_recursion": test_deep_recursion_threat(
-            url, header_dict, proxies, timeout
+            url, header_dict, proxies, timeout, ssl_verify
         ),
         "field_duplication": test_field_duplication_threat(
-            url, header_dict, proxies, timeout
+            url, header_dict, proxies, timeout, ssl_verify
         ),
         "alias_overload": test_alias_overload_threat(
-            url, header_dict, proxies, timeout
+            url, header_dict, proxies, timeout, ssl_verify
         ),
         "directive_overload": test_directive_overload_threat(
-            url, header_dict, proxies, timeout
+            url, header_dict, proxies, timeout, ssl_verify
         ),
     }
 
@@ -746,7 +774,7 @@ def run_threat_matrix_assessment(url, headers, proxy, timeout, verbose):
     }
 
 
-def test_introspection_threat(url, headers, proxies, timeout):
+def test_introspection_threat(url, headers, proxies, timeout, ssl_verify=True):
     """Test for introspection vulnerability"""
     query = {"query": "{ __schema { queryType { name } } }"}
     try:
@@ -756,7 +784,7 @@ def test_introspection_threat(url, headers, proxies, timeout):
             headers=headers,
             proxies=proxies,
             timeout=timeout,
-            verify=False,
+            verify=ssl_verify,
         )
         return {
             "vulnerable": "queryType" in response.text and response.status_code == 200,
@@ -767,7 +795,7 @@ def test_introspection_threat(url, headers, proxies, timeout):
         return {"error": str(e), "vulnerable": False}
 
 
-def test_deep_recursion_threat(url, headers, proxies, timeout):
+def test_deep_recursion_threat(url, headers, proxies, timeout, ssl_verify=True):
     """Test for deep recursion DoS"""
     deep_query = {"query": "{ " + "user { user { " * 50 + "id" + " } }" * 50 + " }"}
     try:
@@ -778,7 +806,7 @@ def test_deep_recursion_threat(url, headers, proxies, timeout):
             headers=headers,
             proxies=proxies,
             timeout=timeout,
-            verify=False,
+            verify=ssl_verify,
         )
         response_time = time.time() - start_time
 
@@ -791,7 +819,7 @@ def test_deep_recursion_threat(url, headers, proxies, timeout):
         return {"error": str(e), "vulnerable": False}
 
 
-def test_field_duplication_threat(url, headers, proxies, timeout):
+def test_field_duplication_threat(url, headers, proxies, timeout, ssl_verify=True):
     """Test for field duplication DoS"""
     duplicate_query = {"query": "{ " + "__typename " * 1000 + " }"}
     try:
@@ -802,7 +830,7 @@ def test_field_duplication_threat(url, headers, proxies, timeout):
             headers=headers,
             proxies=proxies,
             timeout=timeout,
-            verify=False,
+            verify=ssl_verify,
         )
         response_time = time.time() - start_time
 
@@ -815,7 +843,7 @@ def test_field_duplication_threat(url, headers, proxies, timeout):
         return {"error": str(e), "vulnerable": False}
 
 
-def test_alias_overload_threat(url, headers, proxies, timeout):
+def test_alias_overload_threat(url, headers, proxies, timeout, ssl_verify=True):
     """Test for alias overload DoS"""
     alias_query = {
         "query": "{ " + " ".join([f"alias{i}: __typename" for i in range(1000)]) + " }"
@@ -828,7 +856,7 @@ def test_alias_overload_threat(url, headers, proxies, timeout):
             headers=headers,
             proxies=proxies,
             timeout=timeout,
-            verify=False,
+            verify=ssl_verify,
         )
         response_time = time.time() - start_time
 
@@ -841,7 +869,7 @@ def test_alias_overload_threat(url, headers, proxies, timeout):
         return {"error": str(e), "vulnerable": False}
 
 
-def test_directive_overload_threat(url, headers, proxies, timeout):
+def test_directive_overload_threat(url, headers, proxies, timeout, ssl_verify=True):
     """Test for directive overload DoS"""
     directive_query = {"query": "{ __typename " + "@include(if: true) " * 1000 + " }"}
     try:
@@ -852,7 +880,7 @@ def test_directive_overload_threat(url, headers, proxies, timeout):
             headers=headers,
             proxies=proxies,
             timeout=timeout,
-            verify=False,
+            verify=ssl_verify,
         )
         response_time = time.time() - start_time
 
@@ -865,7 +893,7 @@ def test_directive_overload_threat(url, headers, proxies, timeout):
         return {"error": str(e), "vulnerable": False}
 
 
-def test_batch_queries(url, headers, proxy, timeout, verbose):
+def test_batch_queries(url, headers, proxy, timeout, verbose, ssl_verify=True):
     """Test GraphQL batching capabilities"""
     if verbose:
         click.echo("[+] Testing GraphQL batching...")
@@ -892,7 +920,7 @@ def test_batch_queries(url, headers, proxy, timeout, verbose):
                 headers=header_dict,
                 proxies=proxies,
                 timeout=timeout,
-                verify=False,
+                verify=ssl_verify,
             )
             response_time = time.time() - start_time
 
@@ -908,7 +936,7 @@ def test_batch_queries(url, headers, proxy, timeout, verbose):
     return {"test_type": "batch_queries", "url": url, "results": batch_tests}
 
 
-def test_sql_injection(url, headers, proxy, timeout, verbose):
+def test_sql_injection(url, headers, proxy, timeout, verbose, ssl_verify=True):
     """Test for SQL injection vulnerabilities"""
     if verbose:
         click.echo("[+] Testing SQL injection...")
@@ -942,7 +970,7 @@ def test_sql_injection(url, headers, proxy, timeout, verbose):
                 headers=header_dict,
                 proxies=proxies,
                 timeout=timeout,
-                verify=False,
+                verify=ssl_verify,
             )
 
             # Look for SQL error indicators
@@ -970,7 +998,7 @@ def test_sql_injection(url, headers, proxy, timeout, verbose):
     return {"test_type": "sql_injection", "url": url, "results": injection_tests}
 
 
-def test_nosql_injection(url, headers, proxy, timeout, verbose):
+def test_nosql_injection(url, headers, proxy, timeout, verbose, ssl_verify=True):
     """Test for NoSQL injection vulnerabilities"""
     if verbose:
         click.echo("[+] Testing NoSQL injection...")
@@ -1004,7 +1032,7 @@ def test_nosql_injection(url, headers, proxy, timeout, verbose):
                 headers=header_dict,
                 proxies=proxies,
                 timeout=timeout,
-                verify=False,
+                verify=ssl_verify,
             )
 
             # Look for NoSQL error indicators
@@ -1099,13 +1127,10 @@ def generate_markdown_report(domain, engines, results, verbose):
     )
 
     for engine, data in results.items():
-        lines.append(f"### {engine.upper()}")
-
         if isinstance(data, dict):
-            if "error" in data:
-                lines.append(f"❌ **Error**: `{data['error']}`")
-            elif "introspection" in data:
-                if data["introspection"]:
+            lines.append(f"### {engine.upper()}")
+            if "introspection" in data:
+                if data.get("introspection"):
                     lines.append("✅ **Introspection**: Enabled")
                     lines.append(f"- Types found: {data.get('types_count', 'N/A')}")
                     lines.append(

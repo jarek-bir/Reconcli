@@ -177,6 +177,9 @@ def detect_waf_headers(headers):
 @click.option("--full", is_flag=True, help="Include full raw tool output.")
 @click.option("--timeout", default=15, help="Timeout per target.")
 @click.option(
+    "--ignore-ssl-errors", is_flag=True, help="Ignore SSL certificate errors."
+)
+@click.option(
     "--proxy", help="Proxy (http://127.0.0.1:8080 or socks5://127.0.0.1:9050)."
 )
 @click.option("--resume", is_flag=True, help="Skip already scanned targets.")
@@ -203,6 +206,7 @@ def wafdetectcli(
     output_html,
     full,
     timeout,
+    ignore_ssl_errors,
     proxy,
     resume,
     use_whatwaf,
@@ -437,7 +441,9 @@ def wafdetectcli(
 
             # Test bypass payloads
             if tools_to_use["payload_test"]:
-                payload_result = test_waf_bypass_payloads(t, timeout, max_payloads)
+                payload_result = test_waf_bypass_payloads(
+                    t, timeout, max_payloads, ignore_ssl_errors
+                )
                 target_result["payload_test"] = payload_result
                 if payload_result.get("blocked_count", 0) > 0:
                     target_result["waf_detected"] = True
@@ -445,7 +451,7 @@ def wafdetectcli(
 
             # Header analysis
             if tools_to_use["header_analysis"]:
-                header_result = advanced_header_analysis(t, timeout)
+                header_result = advanced_header_analysis(t, timeout, ignore_ssl_errors)
                 target_result["header_analysis"] = header_result
                 if header_result.get("waf_indicators"):
                     target_result["waf_detected"] = True
@@ -458,7 +464,9 @@ def wafdetectcli(
                 try:
                     proxy_dict = proxy if proxy else None
                     with httpx.Client(
-                        timeout=timeout, follow_redirects=True, verify=False
+                        timeout=timeout,
+                        follow_redirects=True,
+                        verify=not ignore_ssl_errors,
                     ) as client:
                         url = t if t.startswith("http") else f"http://{t}"
                         response = client.get(url)
@@ -631,7 +639,10 @@ def run_nmap_waf_scripts(target: str, timeout: int = 30) -> Dict:
 
 
 def test_waf_bypass_payloads(
-    target: str, timeout: int = 15, max_payloads: int = 5
+    target: str,
+    timeout: int = 15,
+    max_payloads: int = 5,
+    ignore_ssl_errors: bool = False,
 ) -> Dict:
     """Test various bypass payloads against target"""
     result = {
@@ -666,7 +677,9 @@ def test_waf_bypass_payloads(
                     test_url = f"{url}?test={urllib.parse.quote(payload)}"
 
                     with httpx.Client(
-                        timeout=timeout, follow_redirects=True, verify=False
+                        timeout=timeout,
+                        follow_redirects=True,
+                        verify=not ignore_ssl_errors,
                     ) as client:
                         response = client.get(test_url)
 
@@ -711,7 +724,9 @@ def test_waf_bypass_payloads(
                         result["bypassed_count"] += 1
 
                     # Małe opóźnienie między requestami
-                    time.sleep(random.uniform(0.5, 1.5))
+                    time.sleep(
+                        random.uniform(0.5, 1.5)
+                    )  # nosec: B311 - non-cryptographic delay for rate limiting
 
                 except Exception as e:
                     test_result["error"] = str(e)
@@ -729,7 +744,9 @@ def test_waf_bypass_payloads(
     return result
 
 
-def advanced_header_analysis(target: str, timeout: int = 15) -> Dict:
+def advanced_header_analysis(
+    target: str, timeout: int = 15, ignore_ssl_errors: bool = False
+) -> Dict:
     """Zaawansowana analiza nagłówków HTTP"""
     result = {
         "tool": "header_analysis",
@@ -745,7 +762,7 @@ def advanced_header_analysis(target: str, timeout: int = 15) -> Dict:
         url = target if target.startswith("http") else f"http://{target}"
 
         with httpx.Client(
-            timeout=timeout, follow_redirects=True, verify=False
+            timeout=timeout, follow_redirects=True, verify=not ignore_ssl_errors
         ) as client:
             # Test różnych metod HTTP
             methods = ["GET", "POST", "OPTIONS", "HEAD"]

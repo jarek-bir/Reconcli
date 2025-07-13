@@ -2029,10 +2029,18 @@ def update_dns_resolvers(verbose=False):
                 click.secho(f"[*] 📥 Downloading {source['description']}...", fg="blue")
 
             import urllib.request
+            import urllib.parse
 
             output_path = resolvers_dir / source["name"]
 
-            urllib.request.urlretrieve(source["url"], output_path)
+            # Validate URL scheme for security
+            parsed_url = urllib.parse.urlparse(source["url"])
+            if parsed_url.scheme not in ("https", "http"):
+                raise ValueError(f"Unsupported URL scheme: {parsed_url.scheme}")
+
+            urllib.request.urlretrieve(
+                source["url"], output_path
+            )  # nosec: B310 - URL validated above
 
             # Count lines in the file
             with open(output_path, "r") as f:

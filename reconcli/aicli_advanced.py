@@ -173,7 +173,7 @@ class AIReconAssistant:
     def create_session(self, target: str) -> str:
         """Create new reconnaissance session"""
         session_id = hashlib.md5(
-            f"{target}_{datetime.now().isoformat()}".encode()
+            f"{target}_{datetime.now().isoformat()}".encode(), usedforsecurity=False
         ).hexdigest()[:8]
 
         self.current_session = ReconSession(

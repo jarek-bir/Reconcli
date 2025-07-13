@@ -10,6 +10,7 @@ from datetime import datetime
 from typing import Dict, List, Optional, Tuple, Any
 from tqdm import tqdm
 import socket
+import shutil
 
 # Import notifications
 try:
@@ -17,6 +18,15 @@ try:
 except ImportError:
     send_notification = None
     NotificationManager = None
+
+
+def find_executable(name):
+    """Helper function to find executable path securely"""
+    path = shutil.which(name)
+    if path is None:
+        raise FileNotFoundError(f"Executable '{name}' not found in PATH")
+    return path
+
 
 # Import resume utilities
 try:
@@ -3164,7 +3174,9 @@ def detect_wildcard(domain: str, tld: str, resolved_ip: str, timeout: int) -> bo
     try:
         # Generate random subdomain
         random_sub = "".join(
-            random.choices(string.ascii_lowercase + string.digits, k=15)
+            random.choices(
+                string.ascii_lowercase + string.digits, k=15
+            )  # nosec: B311 - non-cryptographic wildcard detection
         )
         test_domain = f"{random_sub}.{domain}.{tld}"
 
@@ -3186,6 +3198,13 @@ def check_http_status(
     import ssl
 
     def get_status(url: str) -> Optional[int]:
+        # Validate URL scheme for security
+        import urllib.parse
+
+        parsed_url = urllib.parse.urlparse(url)
+        if parsed_url.scheme not in ("http", "https"):
+            return None
+
         for attempt in range(retries + 1):
             try:
                 # Create SSL context that doesn't verify certificates
@@ -3197,7 +3216,7 @@ def check_http_status(
                     url, headers={"User-Agent": "Mozilla/5.0 (TLD-Recon/1.0)"}
                 )
 
-                with urllib.request.urlopen(
+                with urllib.request.urlopen(  # nosec: B310 - URL scheme validated above
                     req, timeout=timeout, context=ssl_context
                 ) as response:
                     return response.getcode()
@@ -3224,7 +3243,7 @@ def simple_whois_check(domain: str, timeout: int) -> Optional[bool]:
         import subprocess
 
         result = subprocess.run(
-            ["whois", domain],
+            [find_executable("whois"), domain],
             capture_output=True,
             text=True,
             timeout=timeout,

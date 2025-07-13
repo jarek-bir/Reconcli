@@ -337,11 +337,15 @@ def main(
         temp_file.write(domain + "\n")
         temp_file.close()
         input = temp_file.name
+        # Mark as our temporary file for cleanup
+        is_our_temp_file = True
         if verbose:
             click.echo(f"[+] 🎯 Single domain mode: {domain}")
     elif input and domain:
         click.echo("Error: Cannot specify both --input and --domain. Choose one.")
         return
+    else:
+        is_our_temp_file = False
 
     # Enhanced resume system with more detailed tracking
     os.makedirs(output_dir, exist_ok=True)
@@ -808,8 +812,8 @@ def main(
             if verbose:
                 click.echo(f"[!] ❌ Database storage failed: {e}")
 
-    # Clean up temporary file if single domain was used
-    if domain and input and input.startswith("/tmp"):
+    # Clean up temporary file if it was created by us
+    if domain and input and is_our_temp_file:
         try:
             os.unlink(input)
             if verbose:

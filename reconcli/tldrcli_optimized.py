@@ -1163,7 +1163,9 @@ class TLDReconOptimized:
 
         # Generate random subdomain
         random_sub = "".join(
-            random.choices(string.ascii_lowercase + string.digits, k=12)
+            random.choices(
+                string.ascii_lowercase + string.digits, k=12
+            )  # nosec: B311 - non-cryptographic wildcard detection
         )
         test_domain = f"{random_sub}.{domain}.{tld}"
 

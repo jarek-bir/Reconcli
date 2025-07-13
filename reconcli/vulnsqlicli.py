@@ -17,9 +17,16 @@ import string
 from typing import Dict, List, Any, Optional, Union
 import tempfile
 import shutil
-import pickle
 import fcntl
 from contextlib import contextmanager
+
+
+def find_executable(name):
+    """Find full path to executable, preventing B607 partial path issues."""
+    full_path = shutil.which(name)
+    if full_path:
+        return full_path
+    raise FileNotFoundError(f"Executable '{name}' not found in PATH")
 
 
 @contextmanager
@@ -60,7 +67,10 @@ def check_tool_availability():
     # Check SQLMap
     try:
         result = subprocess.run(
-            ["sqlmap", "--version"], capture_output=True, text=True, timeout=10
+            [find_executable("sqlmap"), "--version"],
+            capture_output=True,
+            text=True,
+            timeout=10,
         )
         if result.returncode == 0:
             tools["sqlmap"] = {
@@ -78,7 +88,10 @@ def check_tool_availability():
     # Check Ghauri
     try:
         result = subprocess.run(
-            ["ghauri", "--version"], capture_output=True, text=True, timeout=10
+            [find_executable("ghauri"), "--version"],
+            capture_output=True,
+            text=True,
+            timeout=10,
         )
         if result.returncode == 0:
             tools["ghauri"] = {
@@ -96,7 +109,7 @@ def check_tool_availability():
     # Check GF (grep for fun)
     try:
         result = subprocess.run(
-            ["gf", "-list"], capture_output=True, text=True, timeout=10
+            [find_executable("gf"), "-list"], capture_output=True, text=True, timeout=10
         )
         if result.returncode == 0:
             patterns = result.stdout.strip().split("\n") if result.stdout else []
@@ -1285,9 +1298,7 @@ def main(
             print(
                 f"⏸️ [RESUME] Resuming from previous state: {resume_state.get('scan_id')}"
             )
-            print(
-                f"📊 [RESUME] Processed: {len(resume_state.get('processed_urls', []))}"
-            )
+            print(f"📊 [RESUME] Processed: {resume_state.get('processed_urls', [])}")
             print(f"📊 [RESUME] Remaining: {len(urls)}")
     elif urls_file:
         if verbose:

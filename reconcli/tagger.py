@@ -6,7 +6,16 @@ import ipaddress
 import urllib.parse
 import os
 import subprocess
+import shutil
 from datetime import datetime
+
+
+def find_executable(name):
+    """Find full path to executable, preventing B607 partial path issues."""
+    full_path = shutil.which(name)
+    if full_path:
+        return full_path
+    raise FileNotFoundError(f"Executable '{name}' not found in PATH")
 
 
 def strip_ansi(text):
@@ -451,29 +460,35 @@ def run_csvtk_analysis(csv_file):
     """Run comprehensive csvtk analysis on tagged domain data"""
     try:
         # Check if csvtk is available
-        subprocess.run(["csvtk", "--version"], capture_output=True, check=True)
+        subprocess.run(
+            [find_executable("csvtk"), "--version"], capture_output=True, check=True
+        )
 
         print(f"\n📊 CSVTK Analysis for {csv_file}")
         print("=" * 50)
 
         # Basic statistics
         print("\n📋 Basic Statistics:")
-        subprocess.run(["csvtk", "nrow", csv_file], check=True)
-        subprocess.run(["csvtk", "ncol", csv_file], check=True)
+        subprocess.run([find_executable("csvtk"), "nrow", csv_file], check=True)
+        subprocess.run([find_executable("csvtk"), "ncol", csv_file], check=True)
 
         # Tag frequency analysis
         print("\n🏷️ Tag Distribution:")
-        subprocess.run(["csvtk", "freq", "-f", "tags", csv_file], check=True)
+        subprocess.run(
+            [find_executable("csvtk"), "freq", "-f", "tags", csv_file], check=True
+        )
 
         # Risk score analysis
         print("\n⚠️ Risk Score Analysis:")
-        subprocess.run(["csvtk", "freq", "-f", "risk_score", csv_file], check=True)
+        subprocess.run(
+            [find_executable("csvtk"), "freq", "-f", "risk_score", csv_file], check=True
+        )
 
         # High risk domains
         print("\n🚨 High Risk Domains (Risk Score >= 7):")
-        subprocess.run(
+        proc1 = subprocess.Popen(
             [
-                "csvtk",
+                find_executable("csvtk"),
                 "grep",
                 "-f",
                 "risk_score",
@@ -481,19 +496,22 @@ def run_csvtk_analysis(csv_file):
                 "-p",
                 "^[789]|10",
                 csv_file,
-                "|",
-                "csvtk",
-                "pretty",
             ],
-            shell=True,
-            check=True,
+            stdout=subprocess.PIPE,
+            text=True,
         )
+        subprocess.run(
+            [find_executable("csvtk"), "pretty"], stdin=proc1.stdout, check=True
+        )
+        if proc1.stdout:
+            proc1.stdout.close()
+        proc1.wait()
 
         # Domains with admin tags
         print("\n🔑 Admin/Security Related Domains:")
-        subprocess.run(
+        proc2 = subprocess.Popen(
             [
-                "csvtk",
+                find_executable("csvtk"),
                 "grep",
                 "-f",
                 "tags",
@@ -502,19 +520,22 @@ def run_csvtk_analysis(csv_file):
                 "-p",
                 "admin|security|auth",
                 csv_file,
-                "|",
-                "csvtk",
-                "pretty",
             ],
-            shell=True,
-            check=True,
+            stdout=subprocess.PIPE,
+            text=True,
         )
+        subprocess.run(
+            [find_executable("csvtk"), "pretty"], stdin=proc2.stdout, check=True
+        )
+        if proc2.stdout:
+            proc2.stdout.close()
+        proc2.wait()
 
         # API endpoints
         print("\n🔌 API Endpoints:")
-        subprocess.run(
+        proc3 = subprocess.Popen(
             [
-                "csvtk",
+                find_executable("csvtk"),
                 "grep",
                 "-f",
                 "tags",
@@ -523,19 +544,22 @@ def run_csvtk_analysis(csv_file):
                 "-p",
                 "api",
                 csv_file,
-                "|",
-                "csvtk",
-                "pretty",
             ],
-            shell=True,
-            check=True,
+            stdout=subprocess.PIPE,
+            text=True,
         )
+        subprocess.run(
+            [find_executable("csvtk"), "pretty"], stdin=proc3.stdout, check=True
+        )
+        if proc3.stdout:
+            proc3.stdout.close()
+        proc3.wait()
 
         # Development environments
         print("\n🛠️ Development/Testing Environments:")
-        subprocess.run(
+        proc4 = subprocess.Popen(
             [
-                "csvtk",
+                find_executable("csvtk"),
                 "grep",
                 "-f",
                 "tags",
@@ -544,13 +568,16 @@ def run_csvtk_analysis(csv_file):
                 "-p",
                 "development",
                 csv_file,
-                "|",
-                "csvtk",
-                "pretty",
             ],
-            shell=True,
-            check=True,
+            stdout=subprocess.PIPE,
+            text=True,
         )
+        subprocess.run(
+            [find_executable("csvtk"), "pretty"], stdin=proc4.stdout, check=True
+        )
+        if proc4.stdout:
+            proc4.stdout.close()
+        proc4.wait()
 
     except subprocess.CalledProcessError:
         print("⚠️ csvtk not found. Install from: https://github.com/shenwei356/csvtk")
@@ -616,47 +643,6 @@ def generate_security_focused_report(entries, output_file):
     print(
         f"   csvtk sort -k risk_score:nr {output_file} | csvtk head -n 10 | csvtk pretty"
     )
-    if format_type == "json":
-        with open(output_file, "w") as f:
-            json.dump(entries, f, indent=2)
-
-    elif format_type == "csv":
-        import csv
-
-        with open(output_file, "w", newline="") as f:
-            if not entries:
-                return
-
-            fieldnames = ["domain", "ip", "tags", "risk_score"]
-            writer = csv.DictWriter(f, fieldnames=fieldnames)
-            writer.writeheader()
-
-            for entry in entries:
-                row = entry.copy()
-                row["tags"] = ",".join(entry.get("tags", []))
-                writer.writerow(row)
-
-    elif format_type == "txt":
-        with open(output_file, "w") as f:
-            for entry in entries:
-                tags_str = ",".join(entry.get("tags", []))
-                risk = entry.get("risk_score", 0)
-                f.write(
-                    f"{entry['domain']} [{entry.get('ip', 'N/A')}] Tags: {tags_str} Risk: {risk}\n"
-                )
-
-    elif format_type == "markdown":
-        with open(output_file, "w") as f:
-            f.write("# Domain Tagging Report\n\n")
-            f.write(f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n")
-            f.write("| Domain | IP | Tags | Risk Score |\n")
-            f.write("|--------|----|----- |-----------|\n")
-
-            for entry in entries:
-                tags_str = ", ".join(entry.get("tags", []))
-                risk = entry.get("risk_score", 0)
-                ip = entry.get("ip", "N/A")
-                f.write(f"| {entry['domain']} | {ip} | {tags_str} | {risk} |\n")
 
 
 @click.command()

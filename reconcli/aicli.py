@@ -13,7 +13,6 @@ import hashlib
 import threading
 import asyncio
 import time
-import pickle
 import base64
 import urllib.parse
 from datetime import datetime, timedelta
@@ -48,6 +47,7 @@ except ImportError:
 
 try:
     from dotenv import load_dotenv
+
     load_dotenv()
     HAS_DOTENV = True
 except ImportError:
@@ -371,7 +371,8 @@ class AIReconAssistant:
                     try:
                         with open(self.cache_index_file, "r") as f:
                             return json.load(f)
-                    except:
+                    except Exception as e:
+                        # Cache file corrupted or unreadable, start fresh
                         pass
                 return {}
 
@@ -670,7 +671,7 @@ class AIReconAssistant:
     def create_session(self, target: str) -> str:
         """Create new reconnaissance session"""
         session_id = hashlib.md5(
-            f"{target}_{datetime.now().isoformat()}".encode()
+            f"{target}_{datetime.now().isoformat()}".encode(), usedforsecurity=False
         ).hexdigest()[:8]
 
         self.current_session = ReconSession(
@@ -2424,7 +2425,8 @@ Provide structured, phase-based reconnaissance plans with specific tools and tec
                         recon_data["subdomains"] = [
                             line.strip() for line in f if line.strip()
                         ][:50]
-                except:
+                except Exception:
+                    # Subdomain file not found or unreadable
                     pass
 
         # Look for technology detection file
@@ -2440,9 +2442,10 @@ Provide structured, phase-based reconnaissance plans with specific tools and tec
                             recon_data["technologies"] = tech_data["technologies"]
                         elif isinstance(tech_data, list):
                             recon_data["technologies"] = tech_data
-                except:
+                except Exception:
+                    # Technology file not found or unreadable
                     pass
-        
+
         return recon_data
 
     def generate_compliance_report(

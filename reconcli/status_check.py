@@ -10,6 +10,15 @@ import subprocess
 import importlib
 from pathlib import Path
 from datetime import datetime
+import shutil
+
+
+def find_executable(name):
+    """Helper function to find executable path securely"""
+    path = shutil.which(name)
+    if path is None:
+        raise FileNotFoundError(f"Executable '{name}' not found in PATH")
+    return path
 
 
 def print_header(title):
@@ -114,7 +123,10 @@ def check_external_tools():
     for tool, description in tools:
         try:
             result = subprocess.run(
-                ["which", tool], capture_output=True, text=True, timeout=5
+                [find_executable("which"), tool],
+                capture_output=True,
+                text=True,
+                timeout=5,
             )
             if result.returncode == 0:
                 path = result.stdout.strip()

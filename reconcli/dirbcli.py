@@ -10,6 +10,15 @@ import requests
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import re
 import hashlib
+import shutil
+
+
+def find_executable(name):
+    """Find full path to executable, preventing B607 partial path issues."""
+    full_path = shutil.which(name)
+    if full_path:
+        return full_path
+    raise FileNotFoundError(f"Executable '{name}' not found in PATH")
 
 
 def send_notification(webhook_url, message, service="slack"):
@@ -1086,7 +1095,11 @@ def get_user_agents(user_agent_option, user_agent_file, builtin_ua, random_ua):
             if random_ua and len(file_agents) > 1:
                 import random
 
-                return [random.choice(file_agents)]
+                return [
+                    random.choice(
+                        file_agents
+                    )  # nosec: B311 - non-cryptographic use for UA selection
+                ]
             return file_agents
         else:
             print(f"[!] Failed to load User-Agents from file, falling back to builtin")
@@ -1096,7 +1109,11 @@ def get_user_agents(user_agent_option, user_agent_file, builtin_ua, random_ua):
         if random_ua:
             import random
 
-            return [random.choice(builtin_agents)]
+            return [
+                random.choice(
+                    builtin_agents
+                )  # nosec: B311 - non-cryptographic use for UA selection
+            ]
         return builtin_agents
 
     if user_agent_option:
@@ -1524,7 +1541,7 @@ def dirbcli(
     if tool == "ffuf":
         output_file = output_path / "ffuf.json"
         ffuf_cmd = [
-            "ffuf",
+            find_executable("ffuf"),
             "-w",
             wordlist,
             "-u",
@@ -1610,7 +1627,7 @@ def dirbcli(
     elif tool == "feroxbuster":
         output_file = output_path / "feroxbuster.txt"
         ferox_cmd = [
-            "feroxbuster",
+            find_executable("feroxbuster"),
             "-u",
             url,
             "-w",
@@ -1682,7 +1699,7 @@ def dirbcli(
     elif tool == "gobuster":
         output_file = output_path / "gobuster.txt"
         gobuster_cmd = [
-            "gobuster",
+            find_executable("gobuster"),
             "dir",
             "-u",
             url,

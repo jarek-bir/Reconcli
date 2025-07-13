@@ -6,6 +6,16 @@ import re
 import logging
 from urllib.parse import urlparse
 from typing import Dict, List, Optional
+import shutil
+
+
+def find_executable(name):
+    """Helper function to find executable path securely"""
+    path = shutil.which(name)
+    if path is None:
+        raise FileNotFoundError(f"Executable '{name}' not found in PATH")
+    return path
+
 
 # Rozszerzona baza cloud providers z dodatkową informacją
 CLOUD_KEYWORDS = {
@@ -196,7 +206,7 @@ def detect_cloud_provider(
 
                 try:
                     dig_result = subprocess.run(
-                        ["dig", "+short", "CNAME", domain],
+                        [find_executable("dig"), "+short", "CNAME", domain],
                         capture_output=True,
                         text=True,
                         timeout=5,
