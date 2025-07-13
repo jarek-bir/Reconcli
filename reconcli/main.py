@@ -33,7 +33,7 @@ from reconcli.mdreport import cli as mdreport_cli  # Advanced Markdown Report Ge
 from reconcli.wafdetectcli import wafdetectcli  # Importing the wafdetectcli command
 from reconcli.openredirectcli import openredirectcli
 from reconcli.csvtkcli import csvtkcli  # CSV data analysis and manipulation with csvtk
-
+from reconcli.graphqlcli import graphqlcli  # GraphQL API testing and analysis
 
 # Git Operations
 try:
@@ -94,6 +94,10 @@ httpcli.short_help = "HTTP client for web application testing"
 # IP Address Analysis
 cli.add_command(ipscli, name="ipscli")
 ipscli.short_help = "IP address analysis and geolocation"
+
+# GraphQL API Testing
+cli.add_command(graphqlcli, name="graphqlcli")
+graphqlcli.short_help = "GraphQL API testing and analysis"
 
 # OneShot Reconnaissance
 cli.add_command(one_shot_cli, name="oneshotcli")

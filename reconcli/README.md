@@ -210,6 +210,59 @@ reconcli apicli --url https://api.example.com --discover \
 - **🔐 Secret Scanning**: `--secret-scan` - JavaScript files analysis
 - **💾 Database Storage**: `--store-db path.db` - Store all results
 
+### 🔮 **GraphQL Security Assessment (`graphqlcli`)** (NEW!)
+
+Advanced GraphQL reconnaissance and security testing with multiple engines and comprehensive vulnerability assessment.
+
+**🛡️ Multi-Engine Support:**
+- **GraphW00F**: GraphQL fingerprinting and engine detection
+- **GraphQL-Cop**: 12+ security vulnerability tests
+- **GraphQLMap**: Interactive testing simulation
+- **GQL**: Python client with introspection analysis
+- **GQL-CLI**: Schema downloading and query execution
+
+```bash
+# Complete GraphQL security assessment
+reconcli graphqlcli --domain api.example.com --endpoint /graphql --engine all \
+  --threat-matrix --batch-queries --sqli-test --nosqli-test --report
+
+# Schema download and analysis
+reconcli graphqlcli --domain api.example.com --engine gql-cli --print-schema \
+  --schema-file schema.graphql --verbose
+
+# GraphW00F fingerprinting with engine detection
+reconcli graphqlcli --domain api.example.com --engine graphw00f \
+  --fingerprint --detect-engines --report
+
+# Threat matrix assessment with multiple tests
+reconcli graphqlcli --domain api.example.com --engine gql \
+  --threat-matrix --batch-queries --sqli-test --csv-output
+
+# Interactive GraphQL testing
+reconcli graphqlcli --domain api.example.com --engine gql-cli \
+  --interactive-gql --gql-variables "code:PL,name:Poland"
+```
+
+**🔍 Security Tests:**
+- **Introspection Detection**: Check if schema introspection is enabled
+- **DoS Testing**: Deep recursion, field duplication, alias overload
+- **Injection Testing**: SQL and NoSQL injection attempts
+- **Batch Query Testing**: Test query batching capabilities
+- **Engine Fingerprinting**: Detect Apollo, Hasura, GraphQL implementations
+
+**📊 Output Formats:**
+- **JSON**: Detailed technical results with vulnerability data
+- **CSV**: Spreadsheet-compatible format for analysis
+- **Markdown**: Executive security reports with recommendations
+- **Session State**: Resume functionality for large assessments
+
+**⚡ Advanced Features:**
+- **Multiple Engines**: Run all 5 engines simultaneously
+- **Threat Matrix**: Based on GraphQL security research
+- **Manual Fallbacks**: When external tools unavailable
+- **Schema Analysis**: Parse types, queries, mutations
+- **Transport Support**: HTTP, WebSocket, and proxy configurations
+
 ### 🎯 Virtual Host Discovery (`vhostcli`)
 - **Engines**: FFuf, HTTPx, Gobuster, and VhostFinder support
 - **Flexible Input**: Single IP or IP list
