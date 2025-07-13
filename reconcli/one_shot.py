@@ -1,14 +1,15 @@
-import subprocess
-import shlex
-import click
-import time
-import json
 import datetime
-import psutil
+import json
 import platform
-from pathlib import Path
+import shlex
+import subprocess
+import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from pathlib import Path
 from typing import List, Optional
+
+import click
+import psutil
 import yaml
 
 
@@ -91,29 +92,29 @@ def cli(
     retry_failed,
 ):
     """🚀 OneShot Automated Reconnaissance Pipeline
-    
+
     Advanced automated reconnaissance with AI analysis, parallel execution,
     comprehensive reporting, and enterprise-grade features.
-    
+
     Examples:
         # Quick reconnaissance
         reconcli oneshot --domain example.com --output-dir results --profile quick
-        
+
         # Comprehensive bug bounty reconnaissance
         reconcli oneshot --domain target.com --output-dir results --profile bug-bounty \
           --parallel --ai-analysis --include-cloud --include-permut --max-workers 6
-        
+
         # Stealth reconnaissance with notifications
         reconcli oneshot --domain target.com --output-dir results --profile stealth \
           --notifications "https://hooks.slack.com/..." --proxy http://127.0.0.1:8080
-        
+
         # Custom reconnaissance with timeout and retry
         reconcli oneshot --domain target.com --output-dir results \
           --exclude vuln --timeout 7200 --retry-failed --verbose
-          
+
         # Resume previous session
         reconcli oneshot --domain target.com --output-dir results --resume
-        
+
         # Custom configuration
         reconcli oneshot --domain target.com --output-dir results \
           --profile custom --config custom_recon.yaml
@@ -878,7 +879,7 @@ class ReconSession:
 
         self.log("🎉 Reconnaissance completed successfully!", "SUCCESS")
         self.log(
-            f"⏱️  Total execution time: {self.stats['execution_time']:.2f} seconds ({self.stats['execution_time']//60:.0f}m {self.stats['execution_time']%60:.0f}s)",
+            f"⏱️  Total execution time: {self.stats['execution_time']:.2f} seconds ({self.stats['execution_time'] // 60:.0f}m {self.stats['execution_time'] % 60:.0f}s)",
             "INFO",
         )
         self.log(f"📊 Subdomains: {self.stats['total_subdomains']:,}", "INFO")
@@ -999,33 +1000,33 @@ class ReconSession:
 - **🌐 Domain:** `{self.domain}`
 - **📝 Profile:** `{self.profile}`
 - **⏰ Start Time:** {start_time_str}
-- **⌛ Execution Time:** {self.stats['execution_time']:.2f} seconds ({self.stats['execution_time']//60:.0f}m {self.stats['execution_time']%60:.0f}s)
-- **💾 Peak Memory Usage:** {self.stats.get('peak_memory_usage', 0):.1f}%
+- **⌛ Execution Time:** {self.stats["execution_time"]:.2f} seconds ({self.stats["execution_time"] // 60:.0f}m {self.stats["execution_time"] % 60:.0f}s)
+- **💾 Peak Memory Usage:** {self.stats.get("peak_memory_usage", 0):.1f}%
 
 ## 📊 Results Summary
-- **🔍 Subdomains Discovered:** {self.stats['total_subdomains']:,}
-- **🖥️  Unique IPs Found:** {self.stats['total_ips']:,}
-- **🔗 URLs Discovered:** {self.stats['total_urls']:,}
-- **🛡️  Vulnerabilities Found:** {self.stats['total_vulnerabilities']:,}
-- **🚪 Open Ports:** {self.stats.get('total_open_ports', 0):,}
+- **🔍 Subdomains Discovered:** {self.stats["total_subdomains"]:,}
+- **🖥️  Unique IPs Found:** {self.stats["total_ips"]:,}
+- **🔗 URLs Discovered:** {self.stats["total_urls"]:,}
+- **🛡️  Vulnerabilities Found:** {self.stats["total_vulnerabilities"]:,}
+- **🚪 Open Ports:** {self.stats.get("total_open_ports", 0):,}
 
 ## ⚙️ Execution Statistics
-- **✅ Modules Successful:** {len(self.stats['modules_executed'])} ({success_rate:.1f}% success rate)
-- **❌ Modules Failed:** {len(self.stats['modules_failed'])}
+- **✅ Modules Successful:** {len(self.stats["modules_executed"])} ({success_rate:.1f}% success rate)
+- **❌ Modules Failed:** {len(self.stats["modules_failed"])}
 - **🔄 Module Retries:** {retries_count}
 - **🧠 Max Workers Used:** {self.max_workers}
 
 ## 📋 Module Results
 ### ✅ Successful Modules
-{chr(10).join(f'- **{mod.upper()}**: Completed successfully' for mod in self.stats['modules_executed']) if self.stats['modules_executed'] else '- None'}
+{chr(10).join(f"- **{mod.upper()}**: Completed successfully" for mod in self.stats["modules_executed"]) if self.stats["modules_executed"] else "- None"}
 
-### ❌ Failed Modules  
-{chr(10).join(f'- **{mod.upper()}**: Failed to complete' for mod in self.stats['modules_failed']) if self.stats['modules_failed'] else '- None'}
+### ❌ Failed Modules
+{chr(10).join(f"- **{mod.upper()}**: Failed to complete" for mod in self.stats["modules_failed"]) if self.stats["modules_failed"] else "- None"}
 
 ## 🖥️  System Information
-- **Platform:** {self.stats.get('system_info', {}).get('platform', 'Unknown')}
-- **CPU Cores:** {self.stats.get('system_info', {}).get('cpu_count', 'Unknown')}
-- **Total Memory:** {self.stats.get('system_info', {}).get('memory_gb', 'Unknown')} GB
+- **Platform:** {self.stats.get("system_info", {}).get("platform", "Unknown")}
+- **CPU Cores:** {self.stats.get("system_info", {}).get("cpu_count", "Unknown")}
+- **Total Memory:** {self.stats.get("system_info", {}).get("memory_gb", "Unknown")} GB
 
 ## 📁 File Locations
 - **🔍 DNS Results:** `subs_resolved.txt`, `subs_resolved_tagged.txt`
@@ -1047,14 +1048,14 @@ class ReconSession:
 7. **📋 Cross-reference findings** with threat intelligence and CVE databases
 
 ## 🔧 Performance Notes
-- Execution completed in {self.stats['execution_time']:.1f} seconds
-- Peak memory usage: {self.stats.get('peak_memory_usage', 0):.1f}%
+- Execution completed in {self.stats["execution_time"]:.1f} seconds
+- Peak memory usage: {self.stats.get("peak_memory_usage", 0):.1f}%
 - {retries_count} module retries performed
-- {len(self.stats['modules_executed'])} out of {total_modules} modules successful
+- {len(self.stats["modules_executed"])} out of {total_modules} modules successful
 
 ---
-*🚀 Generated by ReconCLI OneShot Pipeline v2.0*  
-*Report generated on {datetime.datetime.now().strftime('%Y-%m-%d at %H:%M:%S')}*
+*🚀 Generated by ReconCLI OneShot Pipeline v2.0*
+*Report generated on {datetime.datetime.now().strftime("%Y-%m-%d at %H:%M:%S")}*
 """
 
         with open(report_file, "w") as f:

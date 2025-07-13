@@ -408,7 +408,7 @@ done
 
 ---
 
-**Author**: ReconCLI Team  
-**Version**: 1.0  
-**Last Updated**: July 2025  
+**Author**: ReconCLI Team
+**Version**: 1.0
+**Last Updated**: July 2025
 **API Provider**: WhoisFreaks.com

@@ -1,11 +1,12 @@
-import json
-import re
-import click
 import ipaddress
+import json
 import os
-import subprocess
+import re
 import shutil
+import subprocess
 from datetime import datetime
+
+import click
 
 
 def find_executable(name):
@@ -837,7 +838,9 @@ def cli(
             color = (
                 "red"
                 if risk_level == "high"
-                else "yellow" if risk_level == "medium" else "green"
+                else "yellow"
+                if risk_level == "medium"
+                else "green"
             )
             click.secho(f"  {risk_level.capitalize()}: {count}", fg=color)
 

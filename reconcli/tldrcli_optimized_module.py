@@ -7,6 +7,7 @@ functionality into the main ReconCLI suite.
 """
 
 import sys
+
 import click
 
 # Import the optimized CLI function

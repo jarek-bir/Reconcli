@@ -6,18 +6,19 @@ Provides simple interfaces for common operations without requiring
 direct SQLAlchemy knowledge.
 """
 
-from typing import List, Dict, Any, Optional
 from datetime import datetime, timedelta
+from typing import Any, Dict, List, Optional
+
 from sqlalchemy import desc, func
 
 from .database import get_db_manager
 from .models import (
-    Target,
-    Subdomain,
     PortScan,
-    Vulnerability,
-    ScopeType,
     Priority,
+    ScopeType,
+    Subdomain,
+    Target,
+    Vulnerability,
     VulnSeverity,
     VulnType,
 )
@@ -466,9 +467,10 @@ def store_whois_findings(
     Returns:
         WhoisFinding ID
     """
-    from .models import WhoisFinding, Target
     import json
     from datetime import datetime as dt
+
+    from .models import Target, WhoisFinding
 
     db = get_db_manager()
     with db.get_session() as session:

@@ -1,20 +1,19 @@
-import click
-import os
 import json
+import os
 from datetime import datetime
+
+import click
+
 from reconcli.utils.cloud_detect import (
     detect_cloud_provider,
     print_cloud_detection_results,
 )
+from reconcli.utils.resume import clear_resume as clear_resume_func
+from reconcli.utils.resume import load_resume, save_resume_state
 from reconcli.utils.s3_enum import (
     enumerate_s3_buckets,
     print_s3_results,
     save_s3_results,
-)
-from reconcli.utils.resume import (
-    load_resume,
-    save_resume_state,
-    clear_resume as clear_resume_func,
 )
 
 
@@ -183,7 +182,7 @@ def cloudcli(
 
             try:
                 if verbose:
-                    print(f"\n[{i+1}/{len(domains)}] Processing: {target_domain}")
+                    print(f"\n[{i + 1}/{len(domains)}] Processing: {target_domain}")
 
                 result = detect_cloud_provider(target_domain, verbose=verbose)
                 all_results.append(result)

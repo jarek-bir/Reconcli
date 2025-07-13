@@ -15,7 +15,7 @@ This directory contains YAML configuration files for different URL discovery sce
   - High concurrency, tagged URLs only
   - Quick initial reconnaissance
 
-### Standard Scans  
+### Standard Scans
 - **url_passive.yaml** - Passive discovery (30 min timeout)
   - wayback + gau
   - No active crawling
@@ -58,7 +58,7 @@ The enhanced urlcli now supports advanced Katana options:
 
 ### CLI Options
 - `--katana-depth` - Crawl depth (default: 3)
-- `--katana-js-crawl` - Enable JavaScript endpoint parsing  
+- `--katana-js-crawl` - Enable JavaScript endpoint parsing
 - `--katana-headless` - Use headless browser mode
 - `--katana-form-fill` - Automatic form filling
 - `--katana-tech-detect` - Technology detection
@@ -72,7 +72,7 @@ All Katana options can be configured in YAML flows:
 ```yaml
 katana: true
 katana_depth: 5
-katana_js_crawl: true  
+katana_js_crawl: true
 katana_headless: true
 katana_form_fill: true
 katana_tech_detect: true
@@ -102,7 +102,7 @@ python main.py urlcli --input domains.txt --flow flows/url_passive.yaml
 # Manual Katana options
 python main.py urlcli --input domains.txt --katana --katana-depth 5 --katana-js-crawl --katana-headless
 
-# Full aggressive scan (40 min) 
+# Full aggressive scan (40 min)
 python main.py urlcli --input domains.txt --flow flows/url_aggressive.yaml
 
 # Deep comprehensive scan (60 min)

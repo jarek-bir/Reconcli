@@ -1,15 +1,16 @@
 #!/usr/bin/env python3
 
-import click
 import json
 import subprocess
 import time
 from datetime import datetime
 from pathlib import Path
 
+import click
+
 try:
     import requests
-    from gql import gql, Client
+    from gql import Client, gql
     from gql.transport.requests import RequestsHTTPTransport
 
     DEPENDENCIES_AVAILABLE = True
@@ -985,14 +986,14 @@ def test_sql_injection(url, headers, proxy, timeout, verbose, ssl_verify=True):
                 indicator in response.text.lower() for indicator in error_indicators
             )
 
-            injection_tests[f"payload_{i+1}"] = {
+            injection_tests[f"payload_{i + 1}"] = {
                 "payload": payload,
                 "status_code": response.status_code,
                 "sql_error_detected": sql_error_detected,
                 "response_snippet": response.text[:200],
             }
         except Exception as e:
-            injection_tests[f"payload_{i+1}"] = {"payload": payload, "error": str(e)}
+            injection_tests[f"payload_{i + 1}"] = {"payload": payload, "error": str(e)}
 
     return {"test_type": "sql_injection", "url": url, "results": injection_tests}
 
@@ -1048,14 +1049,14 @@ def test_nosql_injection(url, headers, proxy, timeout, verbose, ssl_verify=True)
                 indicator in response.text.lower() for indicator in error_indicators
             )
 
-            injection_tests[f"payload_{i+1}"] = {
+            injection_tests[f"payload_{i + 1}"] = {
                 "payload": payload,
                 "status_code": response.status_code,
                 "nosql_error_detected": nosql_error_detected,
                 "response_snippet": response.text[:200],
             }
         except Exception as e:
-            injection_tests[f"payload_{i+1}"] = {"payload": payload, "error": str(e)}
+            injection_tests[f"payload_{i + 1}"] = {"payload": payload, "error": str(e)}
 
     return {"test_type": "nosql_injection", "url": url, "results": injection_tests}
 

@@ -1,11 +1,12 @@
-import click
 import json
 import os
+import socket
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from datetime import datetime
+
+import click
 import dns.resolver
 import requests
-import socket
-from datetime import datetime
-from concurrent.futures import ThreadPoolExecutor, as_completed
 
 # Known vulnerable CNAME patterns and providers
 TAKEOVER_PATTERNS = {
@@ -964,7 +965,9 @@ def cnamecli(
         webhook_type = (
             "Discord"
             if "discord" in notification_webhook.lower()
-            else "Slack" if "slack" in notification_webhook.lower() else "Unknown"
+            else "Slack"
+            if "slack" in notification_webhook.lower()
+            else "Unknown"
         )
         click.echo(f"🔔 Notifications enabled: {webhook_type} webhook")
 
@@ -1190,7 +1193,7 @@ def cnamecli(
     # Database storage
     if store_db and results:
         try:
-            from reconcli.db.operations import store_target, store_cname_scan
+            from reconcli.db.operations import store_cname_scan, store_target
 
             # Auto-detect target domain if not provided
             if not target_domain and results:

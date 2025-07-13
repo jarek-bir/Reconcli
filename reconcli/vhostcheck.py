@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-import httpx
 import click
+import httpx
 
 
 @click.command()

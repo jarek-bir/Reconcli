@@ -186,7 +186,7 @@ pip install -e .
 # JSLuice
 go install github.com/BishopFox/jsluice@latest
 
-# JSLeak  
+# JSLeak
 go install github.com/channyein1337/jsleak@latest
 
 # SubJS

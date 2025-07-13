@@ -7,10 +7,11 @@ Provides a simple interface for storing and retrieving reconnaissance data.
 
 import sqlite3
 from pathlib import Path
-from typing import Optional, Dict, Any
+from typing import Any, Dict, Optional
+
 from sqlalchemy import create_engine, event
-from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy.engine import Engine
+from sqlalchemy.orm import Session, sessionmaker
 
 from .models import Base
 
@@ -80,9 +81,9 @@ class DatabaseManager:
             try:
                 # Get table counts
                 from .models import (
-                    Target,
-                    Subdomain,
                     PortScan,
+                    Subdomain,
+                    Target,
                     Vulnerability,
                     WhoisFinding,
                 )

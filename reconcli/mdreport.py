@@ -1,15 +1,14 @@
 import json
 import os
 import sys
-import click
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional, Any, Union
-from reconcli.utils.resume import (
-    load_resume,
-    save_resume_state,
-    clear_resume as clear_resume_fn,
-)
+from typing import Any, Dict, List, Optional, Union
+
+import click
+
+from reconcli.utils.resume import clear_resume as clear_resume_fn
+from reconcli.utils.resume import load_resume, save_resume_state
 
 
 @click.command()
@@ -80,10 +79,10 @@ def cli(
 ):
     """
     🧠 Advanced Markdown Report Generator for ReconCLI
-    
+
     Generate comprehensive, template-based markdown reports from enriched DNS/subdomain data.
     Supports multiple output formats including Obsidian, GitHub, Confluence, and Notion.
-    
+
     Features:
     - Multiple template formats (Obsidian, GitHub, Confluence, Notion)
     - Statistical analysis and visualizations
@@ -93,25 +92,25 @@ def cli(
     - Export to multiple formats (JSON, CSV)
     - Auto-tagging based on analysis
     - Mermaid chart generation
-    
+
     Examples:
         # Basic Obsidian report
         reconcli mdreport --input enriched_data.json --output report.md
-        
+
         # Advanced security report with stats and charts
         reconcli mdreport --input data.json --output security_report.md \
                          --template github --include-stats --include-security \
                          --include-charts --auto-tags
-        
+
         # Filtered report by country
         reconcli mdreport --input data.json --output us_report.md \
                          --filter-country "United States" --include-timeline
-        
+
         # Grouped report with multiple exports
         reconcli mdreport --input data.json --output grouped_report.md \
                          --group-by org --export-json results.json \
                          --export-csv results.csv
-        
+
         # Resume interrupted session
         reconcli mdreport --resume
     """
@@ -687,9 +686,7 @@ def generate_mermaid_charts(
     charts = {}
 
     # Infrastructure overview chart
-    charts[
-        "infrastructure"
-    ] = """
+    charts["infrastructure"] = """
 graph TB
     A[Domain] --> B[Subdomains]
     B --> C[IP Addresses]

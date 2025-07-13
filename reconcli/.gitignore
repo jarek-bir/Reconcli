@@ -136,3 +136,6 @@ reconcli/urls.txt
 reconcli/test_*.txt
 reconcli/tests/*
 TOMORROW_COMMANDS.md
+.github/SECRETS.md
+.github/workflows/security-status.yml
+.pre-commit-config.yaml

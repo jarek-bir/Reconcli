@@ -8,7 +8,7 @@ GraphQLCLI has been significantly enhanced with multiple engines, advanced secur
 
 ### 1. GraphW00F (Default)
 - **Purpose**: Advanced GraphQL fingerprinting and engine detection
-- **Features**: 
+- **Features**:
   - Detects 30+ GraphQL implementations
   - Engine version detection
   - Technology stack fingerprinting

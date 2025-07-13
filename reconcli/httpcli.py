@@ -3,23 +3,24 @@
 # - CSV export added as http_results.csv
 # - retries support for unstable HTTP responses
 
-import click
-import requests
-import json
 import csv
-from urllib.parse import urlparse
-from pathlib import Path
-from rich.console import Console
-import mmh3
-from bs4 import BeautifulSoup
+import json
 import subprocess
-from base64 import b64encode
 import tempfile
-from datetime import datetime
-from collections import Counter
 import time
+from base64 import b64encode
+from collections import Counter
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from datetime import datetime
+from pathlib import Path
+from urllib.parse import urlparse
+
+import click
 import httpx
+import mmh3
+import requests
+from bs4 import BeautifulSoup
+from rich.console import Console
 
 console = Console()
 
@@ -253,7 +254,7 @@ def httpcli(
     # Database storage
     if store_db and results:
         try:
-            from reconcli.db.operations import store_target, store_http_scan
+            from reconcli.db.operations import store_http_scan, store_target
 
             # Auto-detect target domain if not provided
             if not target_domain and results:

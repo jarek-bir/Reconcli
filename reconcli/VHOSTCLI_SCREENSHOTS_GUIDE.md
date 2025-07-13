@@ -67,7 +67,7 @@ vhostcli_output/
 │   └── vhosts_found.md
 ```
 
-### With Aquatone  
+### With Aquatone
 ```
 vhostcli_output/
 ├── [target_ip]/
@@ -97,7 +97,7 @@ vhostcli_output/
 # Install gowitness
 go install github.com/sensepost/gowitness@latest
 
-# Install aquatone  
+# Install aquatone
 go install github.com/michenriksen/aquatone@latest
 ```
 
@@ -105,7 +105,7 @@ go install github.com/michenriksen/aquatone@latest
 
 Successfully tested with:
 - ✅ Gowitness basic screenshots
-- ✅ Gowitness full-page screenshots  
+- ✅ Gowitness full-page screenshots
 - ✅ Aquatone HTML reports with screenshots
 - ✅ Tool availability validation
 - ✅ Multiple virtual host discovery and screenshot

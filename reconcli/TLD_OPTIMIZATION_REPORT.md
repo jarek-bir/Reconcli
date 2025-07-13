@@ -17,7 +17,7 @@
 
 ## Key Optimizations Applied
 
-### 1. **Async Architecture** 
+### 1. **Async Architecture**
 - Replaced threading with asyncio for true concurrency
 - Non-blocking I/O operations
 - Eliminated thread overhead and GIL limitations
@@ -108,7 +108,7 @@ chmod +x tldrcli_optimized.py
 # Fast scan with popular TLDs
 reconcli tldrcli-opti -d example --categories popular --concurrent 150 -v
 
-# Maximum performance scan  
+# Maximum performance scan
 reconcli tldrcli-opti -d mycompany --categories popular,country --concurrent 200 --timeout 1 -v
 
 # Comprehensive business scan
@@ -257,7 +257,7 @@ python3 tldrcli_optimized.py --clear-resume
 # Slack notifications
 --slack-webhook "https://hooks.slack.com/..."
 
-# Discord notifications  
+# Discord notifications
 --discord-webhook "https://discord.com/api/webhooks/..."
 ```
 
@@ -320,6 +320,6 @@ python3 tldrcli_optimized.py -d domain --categories all --concurrent 50
 
 ---
 
-**Created**: December 2024  
-**Performance Optimization**: 21x speed improvement achieved  
+**Created**: December 2024
+**Performance Optimization**: 21x speed improvement achieved
 **Status**: Production ready ✅

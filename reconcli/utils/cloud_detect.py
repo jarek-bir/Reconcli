@@ -1,8 +1,9 @@
+import shutil
 import socket
-import requests
 import ssl
 from typing import Dict, List, Optional
-import shutil
+
+import requests
 
 
 def find_executable(name):
@@ -171,8 +172,8 @@ def detect_cloud_provider(
         try:
             # Try dnspython first, fallback to system resolver
             try:
-                import dns.resolver
                 import dns.exception
+                import dns.resolver
 
                 try:
                     answers = dns.resolver.resolve(domain, "CNAME")

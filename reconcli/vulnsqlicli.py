@@ -1,19 +1,20 @@
-import click
-import subprocess
-import os
-import json
-import time
-import yaml
-from pathlib import Path
-from datetime import datetime
-from urllib.parse import urlparse, parse_qs, urlunparse
-import requests
-import re
-import hashlib
-import tempfile
-import shutil
 import fcntl
+import hashlib
+import json
+import os
+import re
+import shutil
+import subprocess
+import tempfile
+import time
 from contextlib import contextmanager
+from datetime import datetime
+from pathlib import Path
+from urllib.parse import parse_qs, urlparse, urlunparse
+
+import click
+import requests
+import yaml
 
 
 def find_executable(name):
@@ -1371,7 +1372,7 @@ def main(
 
     for i, target_url in enumerate(urls):
         if verbose:
-            print(f"🔍 [SCAN] Processing URL {i+1}/{len(urls)}: {target_url}")
+            print(f"🔍 [SCAN] Processing URL {i + 1}/{len(urls)}: {target_url}")
 
         result = {
             "target": target_url,

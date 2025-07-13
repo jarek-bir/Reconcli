@@ -38,7 +38,7 @@ python main.py makewordlist --domain example.com --word-boost panel --output-pre
 
 **Profile boost:**
 - **admin**: administrator, root, manager, chief + wzorce
-- **auth**: login, password, credential, access + wzorce  
+- **auth**: login, password, credential, access + wzorce
 - **panel**: dashboard, control, console, interface + wzorce
 - **qa**: test, debug, dev, staging, beta + wzorce
 - **api**: rest, endpoint, service, webservice + wzorce
@@ -65,7 +65,7 @@ python main.py makewordlist --domain target.com --combine-with subdomains.txt --
 
 **Metody kombinacji:**
 - **merge**: Prosta suma list (A ∪ B)
-- **intersect**: Część wspólna (A ∩ B)  
+- **intersect**: Część wspólna (A ∩ B)
 - **combine**: Kombinacje kartezjańskie (A×B: admin+api, api+admin, admin_api, etc.)
 - **permute**: Permutacje słów z obu list
 
@@ -88,7 +88,7 @@ python main.py makewordlist --name admin --markovify common_passwords.txt --word
 - **markov-count**: Liczba słów do wygenerowania (default: 1000)
 - **markov-length**: Długość łańcucha (1-4, default: 2)
   - 1: Bardzo losowe
-  - 2: Wyważone (zalecane)  
+  - 2: Wyważone (zalecane)
   - 3: Bardziej zgodne z oryginałem
   - 4: Bardzo podobne do treningu
 
@@ -165,6 +165,6 @@ python main.py makewordlist \
 ## 📈 Wydajność
 
 - **Resume**: Oszczędza czas przy przerwanych sesjach
-- **Word boost**: +20-50% słów specjalistycznych  
+- **Word boost**: +20-50% słów specjalistycznych
 - **Markov**: Generuje unikalne słowa podobne do treningu
 - **Combine**: Eksponencjalny wzrost - ustaw limity

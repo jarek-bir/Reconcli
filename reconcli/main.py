@@ -1,39 +1,39 @@
 import click
 
+from reconcli.aicli import aicli  # Importing the aicli command
+from reconcli.apicli import main as api_cli
+from reconcli.cloudcli import cloudcli
+from reconcli.cnamecli import cnamecli  # CNAME Record Analysis and Takeover Detection
+from reconcli.crawlercli import crawlercli
+from reconcli.csvtkcli import csvtkcli  # CSV data analysis and manipulation with csvtk
+from reconcli.dirbcli import dirbcli
 from reconcli.dnscli import cli as dns_cli
-from reconcli.urlcli import main as url_cli
-from reconcli.vhostcli import cli as vhost_cli  # ← poprawiona linia
-from reconcli.vhostcheckcli import vhostcheckcli
-from reconcli.urlsorter import cli as urlsort_cli
-from reconcli.jscli import main as js_cli
+from reconcli.graphqlcli import graphqlcli  # GraphQL API testing and analysis
 from reconcli.httpcli import httpcli
 from reconcli.ipscli import ipscli
+from reconcli.jscli import main as js_cli
+from reconcli.makewordlistcli import (  # ✅ Importing the makewordlist command
+    makewordlist,
+)
+from reconcli.mdreport import cli as mdreport_cli  # Advanced Markdown Report Generator
 from reconcli.one_shot import cli as one_shot_cli
-from reconcli.zonewalkcli import cli as zonewalk_cli
-from reconcli.takeovercli import takeovercli
-from reconcli.whoisfreakscli import cli as whoisfreaks_cli
+from reconcli.openredirectcli import openredirectcli
+from reconcli.permutcli import permutcli  # Importing the permutcli command
+from reconcli.portcli import portcli
 from reconcli.subdocli import subdocli
+from reconcli.tagger import cli as tagger_cli
+from reconcli.takeovercli import takeovercli
 from reconcli.tldrcli import cli as tldr_cli
 from reconcli.tldrcli_optimized_module import cli as tldr_opti_cli
-from reconcli.cloudcli import cloudcli
-from reconcli.portcli import portcli
-from reconcli.cnamecli import cnamecli  # CNAME Record Analysis and Takeover Detection
+from reconcli.urlcli import main as url_cli
+from reconcli.urlsorter import cli as urlsort_cli
+from reconcli.vhostcheckcli import vhostcheckcli
+from reconcli.vhostcli import cli as vhost_cli  # ← poprawiona linia
 from reconcli.vulncli import vulncli
-from reconcli.dirbcli import dirbcli
-from reconcli.apicli import main as api_cli
 from reconcli.vulnsqlicli import main as vulnsql_cli
-from reconcli.makewordlistcli import (
-    makewordlist,
-)  # ✅ Importing the makewordlist command
-from reconcli.permutcli import permutcli  # Importing the permutcli command
-from reconcli.tagger import cli as tagger_cli
-from reconcli.aicli import aicli  # Importing the aicli command
-from reconcli.crawlercli import crawlercli
-from reconcli.mdreport import cli as mdreport_cli  # Advanced Markdown Report Generator
 from reconcli.wafdetectcli import wafdetectcli  # Importing the wafdetectcli command
-from reconcli.openredirectcli import openredirectcli
-from reconcli.csvtkcli import csvtkcli  # CSV data analysis and manipulation with csvtk
-from reconcli.graphqlcli import graphqlcli  # GraphQL API testing and analysis
+from reconcli.whoisfreakscli import cli as whoisfreaks_cli
+from reconcli.zonewalkcli import cli as zonewalk_cli
 
 # Git Operations
 try:

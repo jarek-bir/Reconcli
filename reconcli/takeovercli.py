@@ -2,14 +2,15 @@
 takeovercli.py - Subdomain takeover detection module for reconcli
 """
 
-import subprocess
-import click
+import json
 import os
 import shutil
-from pathlib import Path
-from datetime import datetime
-import json
+import subprocess
 import sys
+from datetime import datetime
+from pathlib import Path
+
+import click
 
 # Import utilities
 try:
@@ -19,7 +20,7 @@ except ImportError:
 
 # Import resume utilities
 try:
-    from reconcli.utils.resume import load_resume, save_resume_state, clear_resume
+    from reconcli.utils.resume import clear_resume, load_resume, save_resume_state
 except ImportError:
     # Fallback if utils not available
     def load_resume(output_dir):

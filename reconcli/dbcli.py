@@ -6,12 +6,13 @@ Simple command-line interface for managing the ReconCLI database.
 Provides basic operations like initialization, backup, and statistics.
 """
 
-import click
-import subprocess
 import os
 import shutil
-from typing import Optional
+import subprocess
 from pathlib import Path
+from typing import Optional
+
+import click
 
 
 def find_executable(name):
@@ -180,8 +181,9 @@ def stats():
                     click.echo(f"\n🕒 Recent (7 days): {recent_count:,}")
 
                 # Top targets with vulnerabilities
-                from reconcli.db.models import Target
                 from sqlalchemy import func
+
+                from reconcli.db.models import Target
 
                 click.echo("\n🎯 Top Affected Targets:")
                 top_targets = (
@@ -242,7 +244,7 @@ def add_target(domain: str, program: Optional[str], scope: str, priority: str):
 def show_target(domain: str):
     """Show target information and statistics"""
     try:
-        from reconcli.db.operations import get_target, get_subdomains
+        from reconcli.db.operations import get_subdomains, get_target
 
         target_info = get_target(domain)
         if not target_info:
@@ -419,16 +421,16 @@ def _export_table(db_path, table, output_file, filter_clause, join_targets, verb
     """Export specific table to CSV"""
     if join_targets and table == "subdomains":
         query = """
-        SELECT s.subdomain, s.ip_address, s.discovery_method, s.discovered_date, 
+        SELECT s.subdomain, s.ip_address, s.discovery_method, s.discovered_date,
                s.status, s.http_status, s.http_title, t.domain
-        FROM subdomains s 
+        FROM subdomains s
         JOIN targets t ON s.target_id = t.id
         """
     elif join_targets and table == "whois_findings":
         query = """
-        SELECT w.domain, w.registrar, w.creation_date, w.expiration_date, 
+        SELECT w.domain, w.registrar, w.creation_date, w.expiration_date,
                w.name_servers, w.status, t.domain as target_domain
-        FROM whois_findings w 
+        FROM whois_findings w
         JOIN targets t ON w.target_id = t.id
         """
     else:
@@ -473,7 +475,7 @@ def _export_table(db_path, table, output_file, filter_clause, join_targets, verb
         with open(output_file, "r") as f:
             lines = f.readlines()
             if len(lines) > 1:  # More than just header
-                click.echo(f"✅ Exported {len(lines)-1} records to {output_file}")
+                click.echo(f"✅ Exported {len(lines) - 1} records to {output_file}")
             else:
                 click.echo(f"⚠️ No data found in {table}")
     else:

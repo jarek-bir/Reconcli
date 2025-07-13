@@ -8,9 +8,10 @@ Provides version control, backup, and collaboration features.
 
 import os
 import subprocess
-import click
 from datetime import datetime
-from typing import Optional, List, Dict, Any
+from typing import Any, Dict, List, Optional
+
+import click
 
 
 @click.group()
@@ -206,7 +207,7 @@ python -m reconcli.gitcli backup --tag daily-backup
 - Use .gitignore to exclude sensitive files
 - Regular backups with git tags
 
-Created: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+Created: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
 """
             with open("README.md", "w") as f:
                 f.write(readme_content)

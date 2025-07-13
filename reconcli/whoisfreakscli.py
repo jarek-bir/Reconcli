@@ -4,15 +4,16 @@ WhoisFreaks CLI for Reconcli Toolkit
 Advanced WHOIS analysis and domain intelligence gathering
 """
 
+import concurrent.futures
+import json
 import os
 import sys
-import json
 import time
-import requests
-import click
-import concurrent.futures
 from datetime import datetime, timedelta
-from typing import Dict, List, Any
+from typing import Any, Dict, List
+
+import click
+import requests
 from tqdm import tqdm
 
 # Database imports
@@ -24,14 +25,14 @@ except ImportError:
 
 # Import notifications
 try:
-    from reconcli.utils.notifications import send_notification, NotificationManager
+    from reconcli.utils.notifications import NotificationManager, send_notification
 except ImportError:
     send_notification = None
     NotificationManager = None
 
 # Import resume utilities
 try:
-    from reconcli.utils.resume import load_resume, save_resume_state, clear_resume
+    from reconcli.utils.resume import clear_resume, load_resume, save_resume_state
 except ImportError:
 
     def load_resume(output_dir):
@@ -362,7 +363,7 @@ def lookup(
         click.echo(f"   - Failed to analyze: {failed_count}")
         click.echo(f"   - Scan duration: {elapsed}s")
         click.echo(
-            f"   - Success rate: {success_count/len(domains)*100:.1f}%"
+            f"   - Success rate: {success_count / len(domains) * 100:.1f}%"
             if len(domains) > 0
             else "   - Success rate: 0.0%"
         )
@@ -505,7 +506,6 @@ def bulk_whois_lookup(
         with tqdm(
             total=len(domains), desc="🔍 WHOIS Lookup", disable=not verbose, ncols=100
         ) as pbar:
-
             # Submit all tasks
             future_to_domain = {
                 executor.submit(lookup_domain, domain): domain for domain in domains

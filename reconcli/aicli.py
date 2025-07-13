@@ -5,19 +5,20 @@ Advanced AI module for intelligent recon planning, payload generation, and secur
 Part of the ReconCLI Cyber-Squad z Przyszłości toolkit
 """
 
-import click
+import base64
+import hashlib
 import json
 import os
-import hashlib
 import threading
 import time
-import base64
 import urllib.parse
-from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Any
-from dataclasses import dataclass, field
-from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor
+from dataclasses import dataclass, field
+from datetime import datetime, timedelta
+from pathlib import Path
+from typing import Any, Dict, List, Optional
+
+import click
 
 # AI Provider imports (with fallback handling)
 try:
@@ -804,7 +805,7 @@ Attribute: " onload=alert(1) "
 **Tools Sequence:**
 ```bash
 reconcli dnscli --target {message}
-reconcli permutcli --brand {message.split('.')[0] if '.' in message else message}
+reconcli permutcli --brand {message.split(".")[0] if "." in message else message}
 reconcli httpcli --target {message}
 reconcli vulncli --target {message}
 ```
@@ -1128,14 +1129,14 @@ reconcli vulncli --target {message}
         ai_prompt = f"""
         Create a detailed reconnaissance plan for target: {target}
         Scope: {scope}
-        
+
         Consider:
         1. Target type and technology stack
         2. Optimal tool selection and ordering
         3. Potential challenges and mitigations
         4. Time estimates and resource requirements
         5. Output formats and reporting needs
-        
+
         Provide specific command examples and best practices.
         """
 
@@ -1200,21 +1201,21 @@ reconcli vulncli --target {message}
         # Build AI prompt for payload generation
         ai_prompt = f"""
         Generate advanced {payload_type.upper()} payloads with the following specifications:
-        
+
         Payload Type: {payload_type}
-        Context: {context or 'general'}
-        Technique: {technique or 'all'}
-        
-        Available contexts: {', '.join(category['contexts'])}
-        Available techniques: {', '.join(category['techniques'])}
-        
+        Context: {context or "general"}
+        Technique: {technique or "all"}
+
+        Available contexts: {", ".join(category["contexts"])}
+        Available techniques: {", ".join(category["techniques"])}
+
         Please provide:
         1. Multiple payload variations
         2. Context-specific adaptations
         3. Bypass techniques for common WAFs
         4. Explanation of each payload's mechanism
         5. Testing methodology and validation steps
-        
+
         Format as structured payload examples with clear explanations.
         """
 
@@ -1235,7 +1236,7 @@ reconcli vulncli --target {message}
         """Perform AI-powered target analysis"""
         analysis_prompt = f"""
         Perform comprehensive target analysis for: {target}
-        
+
         Analyze:
         1. Domain structure and naming patterns
         2. Technology stack indicators
@@ -1244,7 +1245,7 @@ reconcli vulncli --target {message}
         5. Cloud infrastructure indicators
         6. Security posture assessment
         7. Reconnaissance methodology recommendations
-        
+
         Provide actionable insights and specific tool recommendations.
         """
 
@@ -1481,9 +1482,9 @@ Provide structured, phase-based reconnaissance plans with specific tools and tec
         # Build comprehensive attack flow prompt
         attack_chain_prompt = f"""
         Design a sophisticated multi-stage attack flow combining these vulnerability types:
-        Attack Types: {', '.join(attack_types)}
-        Specific Technique: {technique or 'adaptive'}
-        Target: {target or 'generic web application'}
+        Attack Types: {", ".join(attack_types)}
+        Specific Technique: {technique or "adaptive"}
+        Target: {target or "generic web application"}
 
         Create a comprehensive attack flow that:
         1. Shows logical progression from initial reconnaissance to full compromise
@@ -1740,52 +1741,52 @@ Provide structured, phase-based reconnaissance plans with specific tools and tec
         # Create comprehensive report prompt
         report_prompt = f"""
         Generate a comprehensive security assessment report based on the following attack flow analysis:
-        
+
         **Attack Flow Details:**
-        - Attack Types: {', '.join(attack_types)}
+        - Attack Types: {", ".join(attack_types)}
         - Technique: {technique}
         - Target: {target}
         - Risk Level: {risk_level}
         - Generated: {generated_at}
-        
+
         **MITRE ATT&CK Mapping:**
         {json.dumps(mitre_mapping, indent=2)}
-        
+
         **Original Analysis:**
-        {flow_data.get('attack_flow', 'No analysis available')}
-        
+        {flow_data.get("attack_flow", "No analysis available")}
+
         Please create a professional security report that includes:
-        
+
         1. **Executive Summary**
            - High-level overview of findings
            - Business impact assessment
            - Key recommendations
-        
+
         2. **Technical Analysis**
            - Detailed vulnerability breakdown
            - Attack vector analysis
            - Exploitation methodology
-        
+
         3. **Risk Assessment**
            - Likelihood and impact analysis
            - CVSS scoring where applicable
            - Business risk categorization
-        
+
         4. **MITRE ATT&CK Framework Alignment**
            - Technique mapping and analysis
            - Threat actor behavior correlation
            - Detection and mitigation strategies
-        
+
         5. **Remediation Recommendations**
            - Immediate actions (quick wins)
            - Short-term improvements
            - Long-term strategic recommendations
-        
+
         6. **Implementation Timeline**
            - Priority-based action plan
            - Resource requirements
            - Success metrics
-        
+
         Format the report professionally with clear sections, bullet points, and actionable recommendations.
         """
 
@@ -1929,7 +1930,7 @@ Provide structured, phase-based reconnaissance plans with specific tools and tec
         vuln_prompt = f"""
         Perform AI-powered vulnerability assessment on the following targets:
 
-        **Targets:** {', '.join(targets)}
+        **Targets:** {", ".join(targets)}
         **Scan Type:** {scan_type}
         **ReconCLI Integration Data:**
         {recon_context}
@@ -2511,50 +2512,50 @@ Provide structured, phase-based reconnaissance plans with specific tools and tec
 
         compliance_prompt = f"""
         Generate a detailed compliance assessment report based on the following scan results:
-        
+
         **Scan Data:**
         {json.dumps(scan_results, indent=2)[:2000]}...
-        
+
         **Framework Focus:** {framework}
-        
+
         Create a comprehensive compliance report that includes:
-        
+
         1. **Executive Summary**
            - Overall compliance posture
            - Key risk areas identified
            - Business impact assessment
            - Remediation priority matrix
-        
+
         2. **Detailed Compliance Mapping**
            - Map findings to specific compliance requirements
            - Gap analysis for each framework requirement
            - Risk scoring for each violation
            - Evidence of compliance where applicable
-        
+
         3. **Framework-Specific Analysis**
            {"- OWASP Top 10 2021 mapping and coverage" if framework in ["owasp", "comprehensive"] else ""}
            {"- NIST Cybersecurity Framework alignment" if framework in ["nist", "comprehensive"] else ""}
            {"- ISO 27001:2013 control mapping" if framework in ["iso27001", "comprehensive"] else ""}
            {"- PCI DSS v4.0 requirement coverage" if framework in ["pci_dss", "comprehensive"] else ""}
-        
+
         4. **Risk Assessment Matrix**
            - Critical/High/Medium/Low risk categorization
            - Likelihood and impact analysis
            - Compliance score calculation
            - Trend analysis and benchmarking
-        
+
         5. **Remediation Roadmap**
            - Immediate actions required (0-30 days)
            - Short-term improvements (30-90 days)
            - Long-term strategic initiatives (90+ days)
            - Resource requirements and cost estimates
-        
+
         6. **Continuous Monitoring Recommendations**
            - KPIs and metrics for ongoing compliance
            - Automated testing strategies
            - Regular assessment schedules
            - Audit preparation guidance
-        
+
         Format as a professional compliance assessment with specific, actionable recommendations.
         """
 
@@ -2795,53 +2796,53 @@ Provide structured, phase-based reconnaissance plans with specific tools and tec
 
         simulation_prompt = f"""
         Design advanced attack simulation scenarios for the following environment:
-        
+
         **Target Environment:**
         {json.dumps(target_environment, indent=2)}
-        
-        **Attack Scenarios:** {', '.join(attack_scenarios)}
-        
+
+        **Attack Scenarios:** {", ".join(attack_scenarios)}
+
         Create detailed attack simulation plans that include:
-        
+
         1. **Advanced Persistent Threat (APT) Simulation**
            - Multi-stage attack progression
            - Persistence mechanisms
            - Lateral movement techniques
            - Data exfiltration methods
            - Anti-forensics techniques
-        
+
         2. **Red Team Scenarios**
            - Social engineering vectors
            - Physical security bypasses
            - Network segmentation testing
            - Privilege escalation paths
            - Zero-day exploitation simulation
-        
+
         3. **Supply Chain Attack Scenarios**
            - Third-party component compromise
            - CI/CD pipeline attacks
            - Software supply chain risks
            - Dependency confusion attacks
-        
+
         4. **Cloud-Specific Attack Scenarios**
            - Cloud misconfigurations
            - Container escape techniques
            - Serverless attack vectors
            - Multi-cloud attack paths
-        
+
         5. **Insider Threat Scenarios**
            - Malicious insider simulation
            - Compromised credentials
            - Data theft scenarios
            - Sabotage simulation
-        
+
         For each scenario, provide:
         - Attack timeline and phases
         - Tools and techniques required
         - Expected indicators of compromise
         - Detection evasion methods
         - Success metrics and KPIs
-        
+
         Format as executable attack simulation playbooks.
         """
 
@@ -3437,7 +3438,9 @@ def aicli(
                 trend_color = (
                     "green"
                     if kpi["trend"] == "improving"
-                    else "yellow" if kpi["trend"] == "stable" else "red"
+                    else "yellow"
+                    if kpi["trend"] == "stable"
+                    else "red"
                 )
                 click.secho(
                     f"  {kpi['kpi']}: {kpi['current']} (target: {kpi['target']}) [{kpi['trend']}]",
@@ -3462,39 +3465,39 @@ def aicli(
         )
         markdown_content = f"""# Compliance Assessment Report
 
-**Framework:** {compliance_framework.upper()}  
-**Generated:** {compliance_data['report_metadata']['generated_at']}  
-**Persona:** {persona or 'default'}  
+**Framework:** {compliance_framework.upper()}
+**Generated:** {compliance_data["report_metadata"]["generated_at"]}
+**Persona:** {persona or "default"}
 
 ## Executive Summary
 
 ### Compliance Scores
-- **Overall Score:** {summary['overall_score']}/10
-- **Compliance Percentage:** {summary['compliance_percentage']:.1f}%
-- **Critical Issues:** {summary['critical_issues']}
-- **Total Findings:** {summary['total_findings']}
+- **Overall Score:** {summary["overall_score"]}/10
+- **Compliance Percentage:** {summary["compliance_percentage"]:.1f}%
+- **Critical Issues:** {summary["critical_issues"]}
+- **Total Findings:** {summary["total_findings"]}
 
 ### Framework Scores
-{chr(10).join(f"- **{fw.upper()}:** {score:.1f}/10" for fw, score in summary['framework_scores'].items())}
+{chr(10).join(f"- **{fw.upper()}:** {score:.1f}/10" for fw, score in summary["framework_scores"].items())}
 
 ## Technical Assessment
 
-{compliance_data['ai_generated_report']}
+{compliance_data["ai_generated_report"]}
 
 ## Remediation Roadmap
 
 ### Immediate Actions (0-30 days)
-{chr(10).join(f"- {action}" for action in remediation['immediate_actions'])}
+{chr(10).join(f"- {action}" for action in remediation["immediate_actions"])}
 
 ### Short-term Improvements (30-90 days)
-{chr(10).join(f"- {action}" for action in remediation['short_term'])}
+{chr(10).join(f"- {action}" for action in remediation["short_term"])}
 
 ### Long-term Strategic (90+ days)
-{chr(10).join(f"- {action}" for action in remediation['long_term'])}
+{chr(10).join(f"- {action}" for action in remediation["long_term"])}
 
 ## Monitoring KPIs
 
-{chr(10).join(f"- **{kpi['kpi']}:** {kpi['current']} (target: {kpi['target']}) - {kpi['trend']}" for kpi in compliance_data['monitoring_kpis'])}
+{chr(10).join(f"- **{kpi['kpi']}:** {kpi['current']} (target: {kpi['target']}) - {kpi['trend']}" for kpi in compliance_data["monitoring_kpis"])}
 
 ---
 *Report generated by ReconCLI AI Compliance Assistant*
@@ -3635,10 +3638,10 @@ def aicli(
         )
         playbook_content = f"""# Advanced Attack Simulation Playbook
 
-**Target:** {attack_simulation}  
-**Scenarios:** {', '.join(scenarios)}  
-**Generated:** {simulation_data['simulation_metadata']['generated_at']}  
-**Persona:** {persona or 'default'}  
+**Target:** {attack_simulation}
+**Scenarios:** {", ".join(scenarios)}
+**Generated:** {simulation_data["simulation_metadata"]["generated_at"]}
+**Persona:** {persona or "default"}
 
 ## Environment Configuration
 
@@ -3646,19 +3649,19 @@ def aicli(
 
 ## Simulation Plan
 
-{simulation_data['ai_generated_simulation']}
+{simulation_data["ai_generated_simulation"]}
 
 ## Cyber Kill Chain
 
-{chr(10).join(f"### {phase.title()}" + chr(10) + chr(10).join(f"- {technique}" for technique in techniques) for phase, techniques in simulation_data['attack_kill_chain'].items())}
+{chr(10).join(f"### {phase.title()}" + chr(10) + chr(10).join(f"- {technique}" for technique in techniques) for phase, techniques in simulation_data["attack_kill_chain"].items())}
 
 ## MITRE ATT&CK Techniques
 
-{chr(10).join(f"### {tactic.title()}" + chr(10) + chr(10).join(f"- {technique}" for technique in techniques) for tactic, techniques in simulation_data['mitre_techniques'].items())}
+{chr(10).join(f"### {tactic.title()}" + chr(10) + chr(10).join(f"- {technique}" for technique in techniques) for tactic, techniques in simulation_data["mitre_techniques"].items())}
 
 ## Success Metrics
 
-{chr(10).join(f"- **{metric}:** {description}" for metric, description in simulation_data['success_metrics'].items())}
+{chr(10).join(f"- **{metric}:** {description}" for metric, description in simulation_data["success_metrics"].items())}
 
 ---
 *Playbook generated by ReconCLI AI Attack Simulation Engine*
@@ -3751,7 +3754,7 @@ def aicli(
                     click.secho(f"    • {std}", fg="white")
                 if len(compliance["applicable_standards"]) > 5:
                     click.secho(
-                        f"    ... and {len(compliance['applicable_standards'])-5} more",
+                        f"    ... and {len(compliance['applicable_standards']) - 5} more",
                         fg="white",
                     )
 
@@ -3778,43 +3781,43 @@ def aicli(
         markdown_filename = f"security_report_{int(time.time())}.md"
         markdown_content = f"""# Security Assessment Report
 
-**Generated:** {report_data['report_metadata']['generated_at']}  
-**Source:** {report}  
-**Persona:** {persona or 'default'}  
+**Generated:** {report_data["report_metadata"]["generated_at"]}
+**Source:** {report}
+**Persona:** {persona or "default"}
 
 ## Executive Summary
 
 ### Attack Flow Details
-- **Attack Types:** {' → '.join(summary['attack_types'])}
-- **Technique:** {summary['technique']}
-- **Target:** {summary['target']}
-- **Risk Level:** {summary['risk_level']}
+- **Attack Types:** {" → ".join(summary["attack_types"])}
+- **Technique:** {summary["technique"]}
+- **Target:** {summary["target"]}
+- **Risk Level:** {summary["risk_level"]}
 
 ### Risk Assessment
-- **Likelihood Score:** {risk_metrics['likelihood_score']}/10
-- **Impact Score:** {risk_metrics['impact_score']}/10
-- **Composite Risk:** {risk_metrics['composite_risk_score']}/10
-- **Severity Rating:** {risk_metrics['severity_rating']}
+- **Likelihood Score:** {risk_metrics["likelihood_score"]}/10
+- **Impact Score:** {risk_metrics["impact_score"]}/10
+- **Composite Risk:** {risk_metrics["composite_risk_score"]}/10
+- **Severity Rating:** {risk_metrics["severity_rating"]}
 
 ## Technical Analysis
 
-{report_data['ai_generated_report']}
+{report_data["ai_generated_report"]}
 
 ## MITRE ATT&CK Mapping
 
-- **Mapped Techniques:** {mitre_analysis['technique_count']}
-- **Coverage Areas:** {', '.join(mitre_analysis['coverage_areas'])}
+- **Mapped Techniques:** {mitre_analysis["technique_count"]}
+- **Coverage Areas:** {", ".join(mitre_analysis["coverage_areas"])}
 
 ## Compliance Impact
 
-{compliance['compliance_summary']}
+{compliance["compliance_summary"]}
 
 ### Applicable Standards
-{chr(10).join(f"- {std}" for std in compliance['applicable_standards'])}
+{chr(10).join(f"- {std}" for std in compliance["applicable_standards"])}
 
 ## Key Recommendations
 
-{chr(10).join(f"{i}. {rec}" for i, rec in enumerate(report_data['recommendations'][:10], 1))}
+{chr(10).join(f"{i}. {rec}" for i, rec in enumerate(report_data["recommendations"][:10], 1))}
 
 ---
 *Report generated by ReconCLI AI Assistant*
@@ -4049,24 +4052,24 @@ def aicli(
             report_filename = f"vuln_report_{scan_type}_{int(time.time())}.md"
             markdown_content = f"""# AI-Powered Vulnerability Assessment Report
 
-**Generated:** {scan_results['scan_metadata']['timestamp']}  
-**Source:** {vuln_scan}  
-**Scan Type:** {scan_type.upper()}  
-**Persona:** {persona or 'default'}  
+**Generated:** {scan_results["scan_metadata"]["timestamp"]}
+**Source:** {vuln_scan}
+**Scan Type:** {scan_type.upper()}
+**Persona:** {persona or "default"}
 
 ## Executive Summary
 
 ### Risk Assessment
-- **Composite Score:** {risk_assessment['composite_score']}/10
-- **Risk Level:** {risk_assessment['risk_level']}
-- **Endpoints Scanned:** {scan_results['endpoint_metadata']['total_endpoints']}
+- **Composite Score:** {risk_assessment["composite_score"]}/10
+- **Risk Level:** {risk_assessment["risk_level"]}
+- **Endpoints Scanned:** {scan_results["endpoint_metadata"]["total_endpoints"]}
 
 ### Recommendation
-{risk_assessment['recommendation']}
+{risk_assessment["recommendation"]}
 
 ## Technical Analysis
 
-{scan_results['ai_analysis']}
+{scan_results["ai_analysis"]}
 
 ## Integration Insights
 
@@ -4120,7 +4123,7 @@ def aicli(
 Available commands:
 - Any recon question or request
 - 'payload <type>' - Generate payload
-- 'plan <domain>' - Create recon plan  
+- 'plan <domain>' - Create recon plan
 - 'analyze <domain>' - Analyze target
 - 'session info' - Show session details
 - 'providers' - List AI providers

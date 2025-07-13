@@ -1,24 +1,25 @@
-import os
-import sys
-import socket
-import json
-import time
-import click
 import concurrent.futures
+import json
+import os
+import socket
+import sys
+import time
 from datetime import datetime
 from typing import Dict, List, Optional, Tuple
+
+import click
 from tqdm import tqdm
 
 # Import notifications
 try:
-    from reconcli.utils.notifications import send_notification, NotificationManager
+    from reconcli.utils.notifications import NotificationManager, send_notification
 except ImportError:
     send_notification = None
     NotificationManager = None
 
 # Import resume utilities
 try:
-    from reconcli.utils.resume import load_resume, save_resume_state, clear_resume
+    from reconcli.utils.resume import clear_resume, load_resume, save_resume_state
 except ImportError:
 
     def load_resume(output_dir):
@@ -465,7 +466,7 @@ def cli(
         click.echo(f"   - Failed to resolve: {failed_count}")
         click.echo(f"   - Scan duration: {elapsed}s")
         click.echo(
-            f"   - Resolution rate: {resolved_count/len(subdomains)*100:.1f}%"
+            f"   - Resolution rate: {resolved_count / len(subdomains) * 100:.1f}%"
             if len(subdomains) > 0
             else "   - Resolution rate: 0.0%"
         )
@@ -569,7 +570,6 @@ def enhanced_dns_resolution(
             disable=not verbose,
             ncols=100,
         ) as pbar:
-
             # Submit all tasks
             future_to_subdomain = {
                 executor.submit(resolve_subdomain, sub): sub for sub in subdomains
@@ -728,7 +728,7 @@ def save_outputs(
     # Database storage
     if store_db:
         try:
-            from reconcli.db.operations import store_target, store_subdomains
+            from reconcli.db.operations import store_subdomains, store_target
 
             # Auto-detect target domain if not provided
             if not target_domain and results:
@@ -770,9 +770,7 @@ def save_outputs(
                             click.echo(f"    Program: {program}")
                 else:
                     if verbose:
-                        click.echo(
-                            "[!] ⚠️  No resolved subdomains to store in database"
-                        )
+                        click.echo("[!] ⚠️  No resolved subdomains to store in database")
             else:
                 if verbose:
                     click.echo(
@@ -803,8 +801,8 @@ def run_scilla_enumeration(
     Returns:
         Tuple of (detailed_results, subdomain_list)
     """
-    import subprocess
     import os
+    import subprocess
 
     results = []
     subdomains = []
@@ -821,7 +819,10 @@ def run_scilla_enumeration(
 
         # Run Scilla and capture stdout
         process = subprocess.run(
-            cmd, capture_output=True, text=True, timeout=30  # 30 second timeout
+            cmd,
+            capture_output=True,
+            text=True,
+            timeout=30,  # 30 second timeout
         )
 
         if process.returncode == 0:

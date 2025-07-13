@@ -1,24 +1,26 @@
-import os
-import json
-import click
-import subprocess
 import hashlib
+import json
+import os
+import subprocess
+import time
+
+import click
 import requests
 import urllib3
-import time
+
 from reconcli.url_tagger import tag_urls
 from reconcli.utils.loaders import dedupe_paths
 
 # Import notifications
 try:
-    from reconcli.utils.notifications import send_notification, NotificationManager
+    from reconcli.utils.notifications import NotificationManager, send_notification
 except ImportError:
     send_notification = None
     NotificationManager = None
 
 # Import resume utilities
 try:
-    from reconcli.utils.resume import load_resume, save_resume_state, clear_resume
+    from reconcli.utils.resume import clear_resume, load_resume, save_resume_state
 except ImportError:
 
     def load_resume(output_dir):
@@ -40,10 +42,11 @@ except ImportError:
 
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-import yaml
-from urllib.parse import urlparse
-from bs4 import BeautifulSoup
 from datetime import datetime
+from urllib.parse import urlparse
+
+import yaml
+from bs4 import BeautifulSoup
 
 # Heurystyki do wykrywania sekretów
 SENSITIVE_PATTERNS = [

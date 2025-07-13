@@ -7,7 +7,7 @@ VulnCLI teraz obsługuje zaawansowany wybór sygnatur Jaeles:
 ### Podstawowe opcje:
 - `--jaeles-signatures /path/to/custom/signatures/` - Użyj niestandardowych sygnatur
 - `--jaeles-select 'pattern'` - Wybierz sygnatury według wzorca regex
-- `--jaeles-exclude 'pattern'` - Wyklucz sygnatury według wzorca regex  
+- `--jaeles-exclude 'pattern'` - Wyklucz sygnatury według wzorca regex
 - `--jaeles-level N` - Filtruj sygnatury według poziomu (1-5)
 
 ### Przykłady użycia:
@@ -50,7 +50,7 @@ python vulncli.py -i urls.txt -o results --run-jaeles \
 ### Dostępne kategorie sygnatur (~/Documents/pro-signatures/):
 
 - **common/** - Podstawowe podatności i misconfigurations
-- **sensitive/** - Wrażliwe pliki i informacje  
+- **sensitive/** - Wrażliwe pliki i informacje
 - **fuzz/** - Fuzzing (sqli, xss, crlf, etc.)
 - **cves/** - Konkretne CVE
 - **passives/** - Pasywne skanowanie

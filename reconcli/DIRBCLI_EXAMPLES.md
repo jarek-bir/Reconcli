@@ -214,7 +214,7 @@ OUTPUT_BASE="results"
 
 while IFS= read -r domain; do
     echo "Skanowanie domeny: $domain"
-    
+
     python3 main.py dirbcli \
         --url "https://$domain" \
         --wordlist "$WORDLIST" \
@@ -230,7 +230,7 @@ while IFS= read -r domain; do
         --json-report \
         --markdown-report \
         --verbose
-    
+
     echo "Skanowanie zakończone dla: $domain"
     echo "---"
 done < "$DOMAINS_FILE"

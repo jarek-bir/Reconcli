@@ -1,15 +1,16 @@
-import click
-import json
-import time
-import yaml
-import sqlite3
-from pathlib import Path
-from datetime import datetime
-from urllib.parse import urlparse, urljoin, quote
-import requests
-from concurrent.futures import ThreadPoolExecutor, as_completed
-import re
 import base64
+import json
+import re
+import sqlite3
+import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from datetime import datetime
+from pathlib import Path
+from urllib.parse import quote, urljoin, urlparse
+
+import click
+import requests
+import yaml
 
 
 def send_notification(webhook_url, message, service="slack"):
@@ -105,8 +106,8 @@ def store_scan_result(db_path, scan_data):
         if scan_type == "secret_scan":
             cursor.execute(
                 """
-                INSERT INTO secret_scans 
-                (timestamp, target_url, endpoint, secret_type, secret_value, 
+                INSERT INTO secret_scans
+                (timestamp, target_url, endpoint, secret_type, secret_value,
                  confidence_level, context, line_number, file_path, risk_assessment)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
@@ -126,8 +127,8 @@ def store_scan_result(db_path, scan_data):
         elif scan_type == "js_analysis":
             cursor.execute(
                 """
-                INSERT INTO js_analysis 
-                (timestamp, target_url, js_url, file_size, secrets_found, 
+                INSERT INTO js_analysis
+                (timestamp, target_url, js_url, file_size, secrets_found,
                  endpoints_found, domains_found, analysis_data)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             """,
@@ -145,8 +146,8 @@ def store_scan_result(db_path, scan_data):
         else:
             cursor.execute(
                 """
-                INSERT INTO api_scans 
-                (timestamp, target_url, scan_type, endpoint, method, status_code, 
+                INSERT INTO api_scans
+                (timestamp, target_url, scan_type, endpoint, method, status_code,
                  response_size, response_time, vulnerabilities, risk_level, findings)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
@@ -1243,6 +1244,7 @@ def parse_swagger_openapi(swagger_content, base_url):
     """Parse Swagger/OpenAPI definition file and extract API endpoints."""
     try:
         import json
+
         import yaml
 
         # Try to parse as JSON first, then YAML
@@ -2071,7 +2073,7 @@ def main(
     # Process each endpoint
     for i, endpoint in enumerate(endpoints):
         if verbose:
-            print(f"🔍 [SCAN] Processing endpoint {i+1}/{len(endpoints)}: {endpoint}")
+            print(f"🔍 [SCAN] Processing endpoint {i + 1}/{len(endpoints)}: {endpoint}")
 
         endpoint_results = {
             "endpoint": endpoint,

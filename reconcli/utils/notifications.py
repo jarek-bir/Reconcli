@@ -4,10 +4,11 @@ Supports Slack and Discord webhooks for scan result notifications
 """
 
 import time
-import httpx
-import click
 from datetime import datetime
 from typing import Dict, List, Optional
+
+import click
+import httpx
 
 
 class NotificationManager:

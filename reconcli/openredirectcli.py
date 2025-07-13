@@ -1,20 +1,21 @@
 #!/usr/bin/env python3
 
-import os
 import json
-import time
-import click
-import requests
-import subprocess
+import os
 import re
-from urllib.parse import urlparse, parse_qs, urlencode, urlunparse, quote
+import subprocess
+import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
-from typing import List, Dict
+from typing import Dict, List
+from urllib.parse import parse_qs, quote, urlencode, urlparse, urlunparse
+
+import click
+import requests
 
 # Resume utilities (fallback if not available)
 try:
-    from reconcli.utils.resume import load_resume, save_resume_state, clear_resume
+    from reconcli.utils.resume import clear_resume, load_resume, save_resume_state
 except ImportError:
 
     def load_resume(output_dir):
@@ -324,14 +325,14 @@ def generate_ai_payloads(target_url, ai_analyzer=None):
         URL: {target_url}
         Domain: {parsed.netloc}
         Parameters: {list(parse_qs(parsed.query).keys())}
-        
+
         Generate payloads that:
         1. Test different redirect techniques
         2. Use domain-specific evasion methods
         3. Include protocol manipulation
         4. Test parameter pollution
         5. Use encoding bypass techniques
-        
+
         Return only the payload URLs, one per line.
         """
 
@@ -358,17 +359,17 @@ def ai_analyze_response(response_text, test_url, ai_analyzer=None):
 
         prompt = f"""
         Analyze this HTTP response for potential open redirect vulnerabilities:
-        
+
         Test URL: {test_url}
         Response (first 1000 chars): {response_text[:1000]}
-        
+
         Look for:
         1. JavaScript redirects (window.location, location.href)
         2. Meta refresh redirects
         3. Form-based redirects
         4. AJAX/fetch redirects
         5. Hidden redirect mechanisms
-        
+
         Return analysis as JSON with fields: redirect_found, method, confidence, location.
         """
 
@@ -396,19 +397,19 @@ def ai_assess_severity(
 
         prompt = f"""
         Assess the severity of this open redirect vulnerability:
-        
+
         Original URL: {original_url}
         Test URL: {test_url}
         Redirects to: {redirect_location}
         Target domain: {domain}
-        
+
         Consider:
         1. External domain redirect (higher risk)
         2. Protocol changes (HTTP to HTTPS, etc.)
         3. Subdomain vs external domain
         4. Potential for phishing attacks
         5. Business impact
-        
+
         Return severity: critical, high, medium, or low
         """
 
@@ -450,19 +451,19 @@ def ai_generate_report_insights(results, ai_analyzer=None):
 
         prompt = f"""
         Analyze these open redirect vulnerability findings and provide insights:
-        
+
         Total findings: {total_findings}
         External redirects: {external_redirects}
         Severity breakdown: {severity_counts}
         Detection methods: {list(methods_used)}
-        
+
         Provide:
         1. Risk assessment summary
         2. Remediation priorities
         3. Common patterns found
         4. Business impact analysis
         5. Next steps recommendations
-        
+
         Return as structured analysis.
         """
 

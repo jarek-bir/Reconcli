@@ -1,10 +1,11 @@
-import click
+import json
+import os
 import subprocess
 import tempfile
-import os
-import json
 from datetime import datetime
 from pathlib import Path
+
+import click
 
 
 @click.command()
@@ -455,12 +456,12 @@ def permutcli(
                 end_idx = min((i + 1) * chunk, len(results))
                 chunk_results = results[start_idx:end_idx]
 
-                chunk_filename = f"{base_name}_chunk_{i+1:03d}.{extension}"
+                chunk_filename = f"{base_name}_chunk_{i + 1:03d}.{extension}"
                 save_results(chunk_results, chunk_filename, format, verbose)
 
                 if verbose and not silent:
                     click.secho(
-                        f"[+] 📁 Chunk {i+1}/{total_chunks}: {chunk_filename}",
+                        f"[+] 📁 Chunk {i + 1}/{total_chunks}: {chunk_filename}",
                         fg="green",
                     )
 
@@ -611,12 +612,12 @@ def permutcli(
                 end_idx = min((i + 1) * chunk, len(results))
                 chunk_results = results[start_idx:end_idx]
 
-                chunk_filename = f"{base_name}_chunk_{i+1:03d}.{extension}"
+                chunk_filename = f"{base_name}_chunk_{i + 1:03d}.{extension}"
                 save_results(chunk_results, chunk_filename, format, verbose)
 
                 if verbose and not silent:
                     click.secho(
-                        f"[+] 📁 Chunk {i+1}/{total_chunks}: {chunk_filename}",
+                        f"[+] 📁 Chunk {i + 1}/{total_chunks}: {chunk_filename}",
                         fg="green",
                     )
 
@@ -635,8 +636,8 @@ def permutcli(
         if store_db and results:
             try:
                 from reconcli.db.operations import (
-                    store_target,
                     store_subdomain_permutation,
+                    store_target,
                 )
 
                 # Auto-detect target domain if not provided
@@ -2027,8 +2028,8 @@ def update_dns_resolvers(verbose=False):
             if verbose:
                 click.secho(f"[*] 📥 Downloading {source['description']}...", fg="blue")
 
-            import urllib.request
             import urllib.parse
+            import urllib.request
 
             output_path = resolvers_dir / source["name"]
 
@@ -2037,9 +2038,7 @@ def update_dns_resolvers(verbose=False):
             if parsed_url.scheme not in ("https", "http"):
                 raise ValueError(f"Unsupported URL scheme: {parsed_url.scheme}")
 
-            urllib.request.urlretrieve(
-                source["url"], output_path
-            )  # nosec: B310 - URL validated above
+            urllib.request.urlretrieve(source["url"], output_path)  # nosec: B310 - URL validated above
 
             # Count lines in the file
             with open(output_path, "r") as f:

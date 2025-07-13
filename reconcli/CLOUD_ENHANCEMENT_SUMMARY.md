@@ -5,7 +5,7 @@
 ### 🔧 Nowe funkcje:
 - **Rozszerzona baza cloud providers** - dodano 60+ dostawców (AWS, GCP, Azure, Cloudflare, DigitalOcean, Chinese clouds, etc.)
 - **Multi-source ASN detection** - ipinfo.io + ipapi.co jako backup
-- **HTTP headers analysis** - detekcja poprzez nagłówki serwera 
+- **HTTP headers analysis** - detekcja poprzez nagłówki serwera
 - **SSL certificate inspection** - analiza wystawcy certyfikatu
 - **Better error handling** - obsługa różnych wersji dnspython
 - **Verbose mode** - szczegółowe logowanie procesu detekcji
@@ -77,20 +77,20 @@ python main.py cloudcli --domains-file domains.txt --s3-enum --s3-threads 15
 ## Wyniki testów:
 
 ✅ **github.com** - wykryto: Azure, GitHub, GitHub Pages
-✅ **cloudflare.com** - wykryto: Cloudflare, GCP  
+✅ **cloudflare.com** - wykryto: Cloudflare, GCP
 ✅ **amazon.com** - wykryto: AWS CloudFront, AWS
 ✅ **google.com** - wykryto: GCP
 ✅ **microsoft.com** - wykryto: Akamai, Azure
 
 **S3 buckets znalezione dla github.com:**
 - github.com (403 - exists but private)
-- github (403 - exists but private) 
+- github (403 - exists but private)
 - github.com-backup (403 - exists but private)
 - www.github.com (403 - exists but private)
 
 ## Status modułów:
 - ✅ cloud_detect.py - kompletnie udoskonalony
-- ✅ s3_enum.py - kompletnie udoskonalony  
+- ✅ s3_enum.py - kompletnie udoskonalony
 - ✅ cloudcli.py - kompletnie udoskonalony
 - ✅ Integration testing - wszystko działa
 - ✅ CLI consistency - spójne z resztą ReconCLI

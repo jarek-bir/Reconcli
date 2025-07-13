@@ -4,12 +4,12 @@ ReconCLI Status Check Script
 Comprehensive health check for the ReconCLI toolkit
 """
 
-import sys
-import subprocess
 import importlib
-from pathlib import Path
-from datetime import datetime
 import shutil
+import subprocess
+import sys
+from datetime import datetime
+from pathlib import Path
 
 
 def find_executable(name):
@@ -22,9 +22,9 @@ def find_executable(name):
 
 def print_header(title):
     """Print a formatted header."""
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print(f"🔍 {title}")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
 
 
 def print_section(title):
@@ -277,7 +277,7 @@ def generate_summary():
     for check, status in results.items():
         check_status(check, status)
 
-    print(f"\n📊 Health Score: {passed}/{total} ({passed/total*100:.1f}%)")
+    print(f"\n📊 Health Score: {passed}/{total} ({passed / total * 100:.1f}%)")
 
     if passed == total:
         print("🎉 All systems operational! ReconCLI is ready to use.")

@@ -1,28 +1,29 @@
 #!/usr/bin/env python3
 
-import os
-import sys
-import json
-import time
-import click
 import asyncio
-import aiohttp
-import aiodns
+import json
+import os
+import socket
+import sys
+import time
 from datetime import datetime
 from typing import Dict, List, Optional, Tuple
+
+import aiodns
+import aiohttp
+import click
 from tqdm.asyncio import tqdm
-import socket
 
 # Import notifications
 try:
-    from reconcli.utils.notifications import send_notification, NotificationManager
+    from reconcli.utils.notifications import NotificationManager, send_notification
 except ImportError:
     send_notification = None
     NotificationManager = None
 
 # Import resume utilities
 try:
-    from reconcli.utils.resume import load_resume, save_resume_state, clear_resume
+    from reconcli.utils.resume import clear_resume, load_resume, save_resume_state
 except ImportError:
 
     def load_resume(output_dir):
@@ -1163,9 +1164,7 @@ class TLDReconOptimized:
 
         # Generate random subdomain
         random_sub = "".join(
-            random.choices(
-                string.ascii_lowercase + string.digits, k=12
-            )  # nosec: B311 - non-cryptographic wildcard detection
+            random.choices(string.ascii_lowercase + string.digits, k=12)  # nosec: B311 - non-cryptographic wildcard detection
         )
         test_domain = f"{random_sub}.{domain}.{tld}"
 
@@ -1710,9 +1709,9 @@ def cli(
         click.echo(f"   - HTTP active: {http_active_count}")
         click.echo(f"   - Wildcards detected: {wildcard_count}")
         click.echo(f"   - Scan duration: {elapsed}s")
-        click.echo(f"   - Performance: {len(tld_list_final)/elapsed:.1f} TLDs/sec")
+        click.echo(f"   - Performance: {len(tld_list_final) / elapsed:.1f} TLDs/sec")
         click.echo(
-            f"   - Success rate: {(resolved_count/len(tld_list_final)*100):.1f}%"
+            f"   - Success rate: {(resolved_count / len(tld_list_final) * 100):.1f}%"
         )
 
     # Notifications (if configured)
@@ -1724,7 +1723,7 @@ def cli(
                 "resolved_count": resolved_count,
                 "active_count": http_active_count,
                 "scan_duration": f"{elapsed}s",
-                "performance": f"{len(tld_list_final)/elapsed:.1f} TLDs/sec",
+                "performance": f"{len(tld_list_final) / elapsed:.1f} TLDs/sec",
                 "timestamp": datetime.now().strftime("%Y%m%d_%H%M%S"),
                 "tool": "tldrcli-optimized",
                 "version": "2.0",
@@ -1779,9 +1778,9 @@ async def run_benchmark(concurrent: int, timeout: int, verbose: bool):
 
     click.echo("\n🎯 Benchmark Results:")
     click.echo(f"   - Total time: {elapsed:.2f}s")
-    click.echo(f"   - Performance: {len(test_tlds)/elapsed:.1f} TLDs/sec")
+    click.echo(f"   - Performance: {len(test_tlds) / elapsed:.1f} TLDs/sec")
     click.echo(f"   - DNS resolved: {resolved_count}/{len(test_tlds)}")
-    click.echo(f"   - Success rate: {(resolved_count/len(test_tlds)*100):.1f}%")
+    click.echo(f"   - Success rate: {(resolved_count / len(test_tlds) * 100):.1f}%")
 
     # Performance rating
     tlds_per_sec = len(test_tlds) / elapsed

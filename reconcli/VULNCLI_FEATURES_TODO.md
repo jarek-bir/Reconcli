@@ -1,12 +1,12 @@
 # 🎯 VulnCLI - Immediate Implementation Proposals
 
-**Ready for Implementation**: Features that can be added to current vulncli.py  
-**Status**: Detailed specifications with code examples  
+**Ready for Implementation**: Features that can be added to current vulncli.py
+**Status**: Detailed specifications with code examples
 **Priority**: High-impact, low-complexity enhancements
 
 ---
 
-## 🔧 **1. YAML Pipeline Configuration** 
+## 🔧 **1. YAML Pipeline Configuration**
 **Complexity**: Medium | **Value**: High | **Timeline**: 2-3 weeks
 
 ### Implementation Plan:
@@ -26,7 +26,7 @@ class PipelineStage:
     ai_enhanced: bool = False
     conditions: Optional[Dict] = None
 
-@dataclass 
+@dataclass
 class PipelineConfig:
     name: str
     stages: List[PipelineStage]
@@ -36,7 +36,7 @@ def load_pipeline_config(config_path: str) -> PipelineConfig:
     """Load and validate pipeline configuration from YAML"""
     with open(config_path, 'r') as f:
         config_data = yaml.safe_load(f)
-    
+
     stages = []
     for stage_data in config_data.get('stages', []):
         stage = PipelineStage(
@@ -48,7 +48,7 @@ def load_pipeline_config(config_path: str) -> PipelineConfig:
             conditions=stage_data.get('conditions')
         )
         stages.append(stage)
-    
+
     return PipelineConfig(
         name=config_data.get('name', 'Default Pipeline'),
         stages=stages,
@@ -58,20 +58,20 @@ def load_pipeline_config(config_path: str) -> PipelineConfig:
 def execute_pipeline(config: PipelineConfig, base_args):
     """Execute pipeline stages with dependency resolution"""
     completed_stages = set()
-    
+
     for stage in config.stages:
         # Check dependencies
         if stage.depends_on:
             missing_deps = set(stage.depends_on) - completed_stages
             if missing_deps:
                 raise Exception(f"Stage {stage.name} missing dependencies: {missing_deps}")
-        
+
         # Execute stage tools
         if stage.parallel:
             execute_stage_parallel(stage, base_args)
         else:
             execute_stage_sequential(stage, base_args)
-            
+
         completed_stages.add(stage.name)
 ```
 
@@ -96,24 +96,24 @@ stages:
   - name: "reconnaissance"
     tools: ["httpx", "technology_detect"]
     parallel: true
-    
+
   - name: "pattern_analysis"
     tools: ["gf_filtering"]
     depends_on: ["reconnaissance"]
-    
+
   - name: "vulnerability_scanning"
     tools: ["nuclei", "jaeles"]
     depends_on: ["pattern_analysis"]
     ai_enhanced: true
     conditions:
       min_urls: 10
-      
+
   - name: "specialized_testing"
     tools: ["dalfox"]
     depends_on: ["pattern_analysis"]
     conditions:
       has_xss_patterns: true
-      
+
   - name: "reporting"
     tools: ["markdown_report", "ai_summary"]
     depends_on: ["vulnerability_scanning", "specialized_testing"]
@@ -173,57 +173,57 @@ def calculate_cvss_from_cve(cve_id: str) -> Optional[CVSSScore]:
 def calculate_risk_score(vuln: VulnerabilityRisk, tech_stack: List[str] = None) -> float:
     """Calculate comprehensive risk score"""
     base_risk = vuln.severity.value
-    
+
     # CVSS integration
     if vuln.cvss:
         base_risk = max(base_risk, vuln.cvss.base_score)
-    
+
     # Exploitability factor
     exploitability_factor = vuln.exploitability
-    
+
     # Business impact (configurable per asset)
     business_factor = vuln.business_impact
-    
+
     # Confidence in finding
     confidence_factor = vuln.confidence
-    
+
     # Technology stack multiplier
     tech_multiplier = 1.0
     if tech_stack:
         high_risk_techs = ['php', 'wordpress', 'apache', 'old_versions']
         if any(tech.lower() in high_risk_techs for tech in tech_stack):
             tech_multiplier = 1.2
-    
+
     final_score = (
         base_risk * 0.4 +
         exploitability_factor * 3.0 +
         business_factor * 2.0 +
         confidence_factor * 1.0
     ) * tech_multiplier
-    
+
     return min(final_score, 10.0)
 
 def enhance_nuclei_findings_with_risk(findings_file: str, tech_stack: List[str]) -> List[VulnerabilityRisk]:
     """Parse Nuclei output and enhance with risk scoring"""
     vulnerabilities = []
-    
+
     with open(findings_file, 'r') as f:
         for line in f:
             if '[' in line and ']' in line:
                 # Parse Nuclei output format
                 severity_match = re.search(r'\[(critical|high|medium|low|info)\]', line.lower())
                 cve_match = re.search(r'(CVE-\d{4}-\d+)', line)
-                
+
                 severity = SeverityLevel.INFO
                 if severity_match:
                     severity_str = severity_match.group(1).upper()
                     severity = SeverityLevel[severity_str] if severity_str in SeverityLevel.__members__ else SeverityLevel.INFO
-                
+
                 cvss_score = None
                 if cve_match:
                     cve_id = cve_match.group(1)
                     cvss_score = calculate_cvss_from_cve(cve_id)
-                
+
                 vuln = VulnerabilityRisk(
                     id=hashlib.md5(line.encode()).hexdigest()[:8],
                     type=extract_vulnerability_type(line),
@@ -231,10 +231,10 @@ def enhance_nuclei_findings_with_risk(findings_file: str, tech_stack: List[str])
                     cvss=cvss_score,
                     confidence=0.8  # Default confidence
                 )
-                
+
                 vuln.risk_score = calculate_risk_score(vuln, tech_stack)
                 vulnerabilities.append(vuln)
-    
+
     return vulnerabilities
 ```
 
@@ -257,23 +257,23 @@ def enhance_nuclei_findings_with_risk(findings_file: str, tech_stack: List[str])
 def run_httpx(input_file: str, output_dir: str, verbose: bool = False) -> Dict:
     """Run httpx for HTTP probing and technology detection"""
     httpx_out = Path(output_dir) / "httpx.json"
-    
+
     if verbose:
         click.echo("🌐 [HTTPX] Starting HTTP probing...")
-    
+
     httpx_cmd = [
         "httpx", "-l", input_file,
         "-json", "-tech-detect", "-status-code",
         "-content-length", "-response-time",
         "-o", str(httpx_out)
     ]
-    
+
     result = subprocess.run(httpx_cmd, capture_output=True, text=True)
-    
+
     # Parse results
     live_hosts = []
     technologies = {}
-    
+
     if httpx_out.exists():
         with open(httpx_out, 'r') as f:
             for line in f:
@@ -286,7 +286,7 @@ def run_httpx(input_file: str, output_dir: str, verbose: bool = False) -> Dict:
                                 technologies[tech] = technologies.get(tech, 0) + 1
                 except json.JSONDecodeError:
                     continue
-    
+
     return {
         "live_hosts": live_hosts,
         "technologies": technologies,
@@ -296,23 +296,23 @@ def run_httpx(input_file: str, output_dir: str, verbose: bool = False) -> Dict:
 def run_subfinder(domain: str, output_dir: str, verbose: bool = False) -> Dict:
     """Run subfinder for subdomain discovery"""
     subfinder_out = Path(output_dir) / "subfinder.txt"
-    
+
     if verbose:
         click.echo(f"🔍 [SUBFINDER] Discovering subdomains for {domain}...")
-    
+
     subfinder_cmd = [
         "subfinder", "-d", domain,
         "-o", str(subfinder_out),
         "-silent"
     ]
-    
+
     subprocess.run(subfinder_cmd, capture_output=True)
-    
+
     subdomains = []
     if subfinder_out.exists():
         with open(subfinder_out, 'r') as f:
             subdomains = [line.strip() for line in f if line.strip()]
-    
+
     return {
         "subdomains": subdomains,
         "count": len(subdomains),
@@ -322,10 +322,10 @@ def run_subfinder(domain: str, output_dir: str, verbose: bool = False) -> Dict:
 def run_gobuster(url: str, wordlist: str, output_dir: str, verbose: bool = False) -> Dict:
     """Run gobuster for directory discovery"""
     gobuster_out = Path(output_dir) / "gobuster.txt"
-    
+
     if verbose:
         click.echo(f"📂 [GOBUSTER] Directory brute force on {url}...")
-    
+
     gobuster_cmd = [
         "gobuster", "dir",
         "-u", url,
@@ -333,16 +333,16 @@ def run_gobuster(url: str, wordlist: str, output_dir: str, verbose: bool = False
         "-o", str(gobuster_out),
         "-q"  # Quiet mode
     ]
-    
+
     subprocess.run(gobuster_cmd, capture_output=True)
-    
+
     directories = []
     if gobuster_out.exists():
         with open(gobuster_out, 'r') as f:
             for line in f:
                 if 'Status:' in line:
                     directories.append(line.strip())
-    
+
     return {
         "directories": directories,
         "count": len(directories),
@@ -373,7 +373,7 @@ def generate_risk_heatmap(vulnerabilities: List[VulnerabilityRisk], output_dir: 
         import matplotlib.pyplot as plt
         import seaborn as sns
         import pandas as pd
-        
+
         # Prepare data
         risk_data = []
         for vuln in vulnerabilities:
@@ -383,22 +383,22 @@ def generate_risk_heatmap(vulnerabilities: List[VulnerabilityRisk], output_dir: 
                 'Risk Score': vuln.risk_score,
                 'Confidence': vuln.confidence
             })
-        
+
         df = pd.DataFrame(risk_data)
-        
+
         # Create heatmap
         plt.figure(figsize=(12, 8))
         pivot_table = df.pivot_table(values='Risk Score', index='Type', columns='Severity', aggfunc='mean')
         sns.heatmap(pivot_table, annot=True, cmap='Reds', cbar_kws={'label': 'Risk Score'})
         plt.title('Vulnerability Risk Heatmap')
         plt.tight_layout()
-        
+
         heatmap_file = Path(output_dir) / "risk_heatmap.png"
         plt.savefig(heatmap_file, dpi=300, bbox_inches='tight')
         plt.close()
-        
+
         return str(heatmap_file)
-        
+
     except ImportError:
         click.echo("⚠️ [VISUALIZATION] matplotlib/seaborn not installed - skipping heatmap")
         return None
@@ -423,7 +423,7 @@ def generate_executive_dashboard(stats: Dict, scan_results: Dict, output_dir: st
 </head>
 <body>
     <h1>🎯 Security Assessment Dashboard</h1>
-    
+
     <div class="metrics">
         <div class="metric critical">
             <h3>Total Vulnerabilities</h3>
@@ -442,11 +442,11 @@ def generate_executive_dashboard(stats: Dict, scan_results: Dict, output_dir: st
             <h2>{len(stats.get('scan_tools', []))}</h2>
         </div>
     </div>
-    
+
     <div class="chart">
         <canvas id="vulnerabilityChart"></canvas>
     </div>
-    
+
     <script>
         // Vulnerability distribution chart
         const ctx = document.getElementById('vulnerabilityChart').getContext('2d');
@@ -473,17 +473,17 @@ def generate_executive_dashboard(stats: Dict, scan_results: Dict, output_dir: st
 </body>
 </html>
 """
-    
+
     dashboard_file = Path(output_dir) / "executive_dashboard.html"
     with open(dashboard_file, 'w') as f:
         f.write(dashboard_html)
-    
+
     return str(dashboard_file)
 
 def generate_detailed_report(vulnerabilities: List[VulnerabilityRisk], output_dir: str) -> str:
     """Generate detailed vulnerability report"""
     report_content = "# 📋 Detailed Vulnerability Report\\n\\n"
-    
+
     # Group by severity
     by_severity = {}
     for vuln in vulnerabilities:
@@ -491,11 +491,11 @@ def generate_detailed_report(vulnerabilities: List[VulnerabilityRisk], output_di
         if severity not in by_severity:
             by_severity[severity] = []
         by_severity[severity].append(vuln)
-    
+
     for severity in ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW', 'INFO']:
         if severity in by_severity:
             report_content += f"## {severity} Severity ({len(by_severity[severity])} findings)\\n\\n"
-            
+
             for vuln in by_severity[severity]:
                 report_content += f"### {vuln.type}\\n"
                 report_content += f"- **Risk Score**: {vuln.risk_score:.1f}/10\\n"
@@ -503,11 +503,11 @@ def generate_detailed_report(vulnerabilities: List[VulnerabilityRisk], output_di
                 if vuln.cvss:
                     report_content += f"- **CVSS Score**: {vuln.cvss.base_score}\\n"
                 report_content += "\\n"
-    
+
     report_file = Path(output_dir) / "detailed_vulnerability_report.md"
     with open(report_file, 'w') as f:
         f.write(report_content)
-    
+
     return str(report_file)
 ```
 
@@ -565,10 +565,10 @@ def should_resume_stage(stage_name: str, output_dir: str, max_age_hours: int = 2
         'jaeles': ['jaeles.txt'],
         'dalfox': ['dalfox.txt']
     }
-    
+
     if stage_name not in stage_outputs:
         return False
-    
+
     output_path = Path(output_dir)
     for output_file in stage_outputs[stage_name]:
         file_path = output_path / output_file
@@ -577,7 +577,7 @@ def should_resume_stage(stage_name: str, output_dir: str, max_age_hours: int = 2
             file_age = datetime.now() - datetime.fromtimestamp(file_path.stat().st_mtime)
             if file_age < timedelta(hours=max_age_hours):
                 return True
-    
+
     return False
 
 def display_progress_bar(current: int, total: int, stage: str, prefix: str = "Progress"):
@@ -586,9 +586,9 @@ def display_progress_bar(current: int, total: int, stage: str, prefix: str = "Pr
     bar_length = 50
     filled_length = int(bar_length * percent // 100)
     bar = '█' * filled_length + '-' * (bar_length - filled_length)
-    
+
     click.echo(f"\\r{prefix} [{bar}] {percent:.1f}% - {stage} ({current}/{total})", nl=False)
-    
+
     if current == total:
         click.echo()  # New line when complete
 ```
@@ -616,10 +616,10 @@ def smart_url_deduplication(urls: List[str], similarity_threshold: float = 0.8) 
     """Advanced URL deduplication with similarity detection"""
     unique_urls = []
     url_signatures = {}
-    
+
     for url in urls:
         signature = generate_url_signature(url)
-        
+
         # Check similarity with existing URLs
         is_duplicate = False
         for existing_sig, existing_url in url_signatures.items():
@@ -631,24 +631,24 @@ def smart_url_deduplication(urls: List[str], similarity_threshold: float = 0.8) 
                     url_signatures[signature] = url
                     unique_urls[unique_urls.index(existing_url)] = url
                 break
-        
+
         if not is_duplicate:
             url_signatures[signature] = url
             unique_urls.append(url)
-    
+
     return unique_urls
 
 def generate_url_signature(url: str) -> str:
     """Generate URL signature for similarity comparison"""
     parsed = urllib.parse.urlparse(url)
-    
+
     # Normalize path
     path_parts = [part for part in parsed.path.split('/') if part]
     normalized_path = '/'.join(path_parts)
-    
+
     # Extract parameter names only (ignore values)
     param_names = sorted(urllib.parse.parse_qs(parsed.query).keys())
-    
+
     signature = f"{parsed.netloc}:{normalized_path}:{','.join(param_names)}"
     return signature
 
@@ -656,10 +656,10 @@ def calculate_url_similarity(sig1: str, sig2: str) -> float:
     """Calculate similarity between URL signatures"""
     parts1 = sig1.split(':')
     parts2 = sig2.split(':')
-    
+
     if len(parts1) != len(parts2):
         return 0.0
-    
+
     similarities = []
     for p1, p2 in zip(parts1, parts2):
         if p1 == p2:
@@ -668,17 +668,17 @@ def calculate_url_similarity(sig1: str, sig2: str) -> float:
             # Use Levenshtein distance for partial similarity
             similarity = 1.0 - (levenshtein_distance(p1, p2) / max(len(p1), len(p2), 1))
             similarities.append(max(0.0, similarity))
-    
+
     return sum(similarities) / len(similarities)
 
 def levenshtein_distance(s1: str, s2: str) -> int:
     """Calculate Levenshtein distance between two strings"""
     if len(s1) < len(s2):
         return levenshtein_distance(s2, s1)
-    
+
     if len(s2) == 0:
         return len(s1)
-    
+
     previous_row = range(len(s2) + 1)
     for i, c1 in enumerate(s1):
         current_row = [i + 1]
@@ -688,7 +688,7 @@ def levenshtein_distance(s1: str, s2: str) -> int:
             substitutions = previous_row[j] + (c1 != c2)
             current_row.append(min(insertions, deletions, substitutions))
         previous_row = current_row
-    
+
     return previous_row[-1]
 
 def intelligent_parameter_extraction(urls: List[str]) -> Dict[str, List[str]]:
@@ -701,17 +701,17 @@ def intelligent_parameter_extraction(urls: List[str]) -> Dict[str, List[str]]:
         'page_params': ['page', 'limit', 'offset', 'start', 'end'],
         'security_params': ['token', 'key', 'hash', 'signature', 'auth']
     }
-    
+
     categorized_urls = defaultdict(list)
-    
+
     for url in urls:
         parsed = urllib.parse.urlparse(url)
         params = urllib.parse.parse_qs(parsed.query)
-        
+
         for category, param_list in param_categories.items():
             if any(param in params for param in param_list):
                 categorized_urls[category].append(url)
-    
+
     return dict(categorized_urls)
 ```
 
@@ -739,11 +739,11 @@ class NotificationManager:
     def __init__(self):
         self.webhooks = []
         self.notification_queue = asyncio.Queue()
-    
+
     def add_webhook(self, url: str, service: str = "generic"):
         self.webhooks.append({"url": url, "service": service})
-    
-    async def send_notification(self, message: str, severity: str = "info", 
+
+    async def send_notification(self, message: str, severity: str = "info",
                               attachment: Optional[str] = None):
         """Send notification to all configured webhooks"""
         notification = {
@@ -752,9 +752,9 @@ class NotificationManager:
             "timestamp": datetime.now().isoformat(),
             "attachment": attachment
         }
-        
+
         await self.notification_queue.put(notification)
-    
+
     async def process_notifications(self):
         """Process notification queue asynchronously"""
         while True:
@@ -764,7 +764,7 @@ class NotificationManager:
                 self.notification_queue.task_done()
             except Exception as e:
                 click.echo(f"⚠️ Notification error: {e}")
-    
+
     async def _send_to_webhooks(self, notification: Dict):
         """Send notification to all webhooks"""
         async with aiohttp.ClientSession() as session:
@@ -772,45 +772,45 @@ class NotificationManager:
             for webhook in self.webhooks:
                 task = self._send_webhook(session, webhook, notification)
                 tasks.append(task)
-            
+
             if tasks:
                 await asyncio.gather(*tasks, return_exceptions=True)
-    
-    async def _send_webhook(self, session: aiohttp.ClientSession, 
+
+    async def _send_webhook(self, session: aiohttp.ClientSession,
                            webhook: Dict, notification: Dict):
         """Send individual webhook"""
         try:
             payload = self._format_payload(webhook["service"], notification)
-            
+
             async with session.post(
-                webhook["url"], 
-                json=payload, 
+                webhook["url"],
+                json=payload,
                 timeout=aiohttp.ClientTimeout(total=10)
             ) as response:
                 if response.status == 200:
                     return True
-                    
+
         except Exception as e:
             click.echo(f"⚠️ Webhook failed {webhook['url']}: {e}")
             return False
-    
+
     def _format_payload(self, service: str, notification: Dict) -> Dict:
         """Format payload for different services"""
         message = notification["message"]
         severity = notification["severity"]
-        
+
         # Severity emojis
         emoji_map = {
             "critical": "🚨",
-            "high": "⚠️", 
+            "high": "⚠️",
             "medium": "ℹ️",
             "low": "✅",
             "info": "📋"
         }
-        
+
         emoji = emoji_map.get(severity, "📋")
         formatted_message = f"{emoji} {message}"
-        
+
         if service == "slack":
             return {
                 "text": formatted_message,
@@ -821,7 +821,7 @@ class NotificationManager:
                         "value": severity.upper(),
                         "short": True
                     }, {
-                        "title": "Timestamp", 
+                        "title": "Timestamp",
                         "value": notification["timestamp"],
                         "short": True
                     }]
@@ -839,12 +839,12 @@ class NotificationManager:
             }
         else:  # Generic webhook
             return notification
-    
+
     def _get_color(self, severity: str) -> str:
         """Get color code for severity"""
         colors = {
             "critical": "#ff0000",
-            "high": "#ff6600", 
+            "high": "#ff6600",
             "medium": "#ffcc00",
             "low": "#00cc00",
             "info": "#0066cc"
@@ -852,7 +852,7 @@ class NotificationManager:
         return colors.get(severity, "#808080")
 
 # Integration with main scanner
-async def notify_scan_progress(notification_manager: NotificationManager, 
+async def notify_scan_progress(notification_manager: NotificationManager,
                              stage: str, progress: int, total: int):
     """Send scan progress notifications"""
     if progress == 0:
@@ -868,7 +868,7 @@ async def notify_scan_progress(notification_manager: NotificationManager,
             f"📊 {stage} progress: {progress}/{total} ({progress/total*100:.1f}%)", "info"
         )
 
-async def notify_critical_finding(notification_manager: NotificationManager, 
+async def notify_critical_finding(notification_manager: NotificationManager,
                                  vulnerability: VulnerabilityRisk):
     """Send immediate notification for critical findings"""
     if vulnerability.severity in [SeverityLevel.CRITICAL, SeverityLevel.HIGH]:
@@ -911,7 +911,7 @@ async def notify_critical_finding(notification_manager: NotificationManager,
 3. Add CLI options: `--risk-scoring`, `--cvss-lookup`
 4. Integrate with existing Nuclei output parsing
 
-### Step 2: Smart Filtering (Week 2) 
+### Step 2: Smart Filtering (Week 2)
 1. Add `smart_url_deduplication()` function
 2. Implement `intelligent_parameter_extraction()`
 3. Add CLI options: `--smart-dedup`, `--categorize-params`

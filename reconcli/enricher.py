@@ -1,6 +1,7 @@
+import argparse
 import json
 import socket
-import argparse
+
 import requests
 from ipwhois import IPWhois
 

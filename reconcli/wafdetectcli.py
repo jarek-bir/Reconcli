@@ -1,17 +1,18 @@
 #!/usr/bin/env python3
 
-import click
-import subprocess
 import json
-import httpx
-import time
 import random
+import subprocess
+import time
 import urllib.parse
+from datetime import datetime
 from pathlib import Path
+from typing import Dict, List, Optional
+
+import click
+import httpx
 from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn
-from datetime import datetime
-from typing import Dict, List, Optional
 
 
 def load_targets_from_file(file_path):
@@ -302,12 +303,11 @@ def wafdetectcli(
         console=console,
         transient=True,
     ) as progress:
-
         task = progress.add_task("Scanning targets...", total=len(targets_to_scan))
 
         for i, t in enumerate(targets_to_scan):
             progress.update(
-                task, description=f"Scanning {t} ({i+1}/{len(targets_to_scan)})"
+                task, description=f"Scanning {t} ({i + 1}/{len(targets_to_scan)})"
             )
 
             if verbose:
@@ -519,7 +519,7 @@ def wafdetectcli(
     console.print(f"  • Total targets: {total_targets}")
     console.print(f"  • WAF detected: {detected_count}")
     console.print(
-        f"  • Detection rate: {(detected_count/total_targets*100):.1f}%"
+        f"  • Detection rate: {(detected_count / total_targets * 100):.1f}%"
         if total_targets > 0
         else "  • Detection rate: N/A"
     )
@@ -721,9 +721,7 @@ def test_waf_bypass_payloads(
                         result["bypassed_count"] += 1
 
                     # Małe opóźnienie między requestami
-                    time.sleep(
-                        random.uniform(0.5, 1.5)
-                    )  # nosec: B311 - non-cryptographic delay for rate limiting
+                    time.sleep(random.uniform(0.5, 1.5))  # nosec: B311 - non-cryptographic delay for rate limiting
 
                 except Exception as e:
                     test_result["error"] = str(e)
@@ -963,175 +961,175 @@ def generate_html_report(results: List[Dict], output_path: str):
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <style>
             * {{ margin: 0; padding: 0; box-sizing: border-box; }}
-            body {{ 
-                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            body {{
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
                 background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
                 color: #333;
                 line-height: 1.6;
             }}
             .container {{ max-width: 1200px; margin: 0 auto; padding: 20px; }}
-            .header {{ 
-                background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%); 
-                color: white; 
-                padding: 30px; 
-                border-radius: 15px; 
+            .header {{
+                background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+                color: white;
+                padding: 30px;
+                border-radius: 15px;
                 text-align: center;
                 box-shadow: 0 10px 30px rgba(0,0,0,0.3);
                 margin-bottom: 30px;
             }}
             .header h1 {{ font-size: 2.5em; margin-bottom: 10px; }}
             .header p {{ font-size: 1.2em; opacity: 0.9; }}
-            
-            .summary {{ 
-                background: white; 
-                padding: 25px; 
-                border-radius: 15px; 
+
+            .summary {{
+                background: white;
+                padding: 25px;
+                border-radius: 15px;
                 margin-bottom: 30px;
                 box-shadow: 0 5px 20px rgba(0,0,0,0.1);
             }}
             .summary h2 {{ color: #2c3e50; margin-bottom: 20px; }}
-            
-            .stats-grid {{ 
-                display: grid; 
-                grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); 
-                gap: 20px; 
+
+            .stats-grid {{
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+                gap: 20px;
                 margin-bottom: 25px;
             }}
-            .stat-card {{ 
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
-                color: white; 
-                padding: 20px; 
-                border-radius: 10px; 
+            .stat-card {{
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: white;
+                padding: 20px;
+                border-radius: 10px;
                 text-align: center;
                 box-shadow: 0 5px 15px rgba(0,0,0,0.2);
             }}
             .stat-number {{ font-size: 2.5em; font-weight: bold; margin-bottom: 5px; }}
             .stat-label {{ font-size: 1.1em; opacity: 0.9; }}
-            
-            .summary-table {{ 
-                width: 100%; 
-                border-collapse: collapse; 
+
+            .summary-table {{
+                width: 100%;
+                border-collapse: collapse;
                 background: white;
                 border-radius: 10px;
                 overflow: hidden;
                 box-shadow: 0 5px 15px rgba(0,0,0,0.1);
             }}
-            .summary-table th {{ 
-                background: #34495e; 
-                color: white; 
-                padding: 15px; 
+            .summary-table th {{
+                background: #34495e;
+                color: white;
+                padding: 15px;
                 text-align: left;
                 font-weight: 600;
             }}
-            .summary-table td {{ 
-                padding: 12px 15px; 
+            .summary-table td {{
+                padding: 12px 15px;
                 border-bottom: 1px solid #ecf0f1;
             }}
             .summary-table tr:hover {{ background: #f8f9fa; }}
-            
-            .target-section {{ 
-                background: white; 
-                margin: 25px 0; 
-                padding: 25px; 
-                border-radius: 15px; 
+
+            .target-section {{
+                background: white;
+                margin: 25px 0;
+                padding: 25px;
+                border-radius: 15px;
                 box-shadow: 0 5px 20px rgba(0,0,0,0.1);
             }}
             .target-section.detected {{ border-left: 5px solid #e74c3c; }}
             .target-section.not-detected {{ border-left: 5px solid #27ae60; }}
-            
-            .target-header {{ 
-                display: flex; 
-                justify-content: space-between; 
-                align-items: center; 
+
+            .target-header {{
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
                 margin-bottom: 20px;
                 padding-bottom: 15px;
                 border-bottom: 2px solid #ecf0f1;
             }}
             .target-title {{ font-size: 1.8em; color: #2c3e50; }}
-            .status-badge {{ 
-                padding: 8px 15px; 
-                border-radius: 20px; 
-                color: white; 
+            .status-badge {{
+                padding: 8px 15px;
+                border-radius: 20px;
+                color: white;
                 font-weight: bold;
                 font-size: 0.9em;
             }}
             .status-detected {{ background: #e74c3c; }}
             .status-not-detected {{ background: #27ae60; }}
-            
-            .tool-results {{ 
-                display: grid; 
-                grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); 
-                gap: 20px; 
+
+            .tool-results {{
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+                gap: 20px;
                 margin: 20px 0;
             }}
-            .tool-card {{ 
-                background: #f8f9fa; 
-                padding: 20px; 
-                border-radius: 10px; 
+            .tool-card {{
+                background: #f8f9fa;
+                padding: 20px;
+                border-radius: 10px;
                 border: 1px solid #dee2e6;
             }}
             .tool-card h4 {{ color: #495057; margin-bottom: 15px; font-size: 1.3em; }}
             .tool-card ul {{ list-style: none; }}
-            .tool-card li {{ 
-                padding: 5px 0; 
+            .tool-card li {{
+                padding: 5px 0;
                 border-bottom: 1px solid #dee2e6;
                 display: flex;
                 justify-content: space-between;
             }}
             .tool-card li:last-child {{ border-bottom: none; }}
-            
-            .payload-table {{ 
-                width: 100%; 
-                border-collapse: collapse; 
+
+            .payload-table {{
+                width: 100%;
+                border-collapse: collapse;
                 margin-top: 15px;
                 background: white;
                 border-radius: 8px;
                 overflow: hidden;
             }}
-            .payload-table th {{ 
-                background: #6c757d; 
-                color: white; 
-                padding: 10px; 
+            .payload-table th {{
+                background: #6c757d;
+                color: white;
+                padding: 10px;
                 text-align: left;
                 font-size: 0.9em;
             }}
-            .payload-table td {{ 
-                padding: 8px 10px; 
+            .payload-table td {{
+                padding: 8px 10px;
                 border-bottom: 1px solid #dee2e6;
                 font-size: 0.85em;
             }}
-            .payload-table .payload-cell {{ 
-                max-width: 200px; 
-                overflow: hidden; 
-                text-overflow: ellipsis; 
+            .payload-table .payload-cell {{
+                max-width: 200px;
+                overflow: hidden;
+                text-overflow: ellipsis;
                 white-space: nowrap;
                 font-family: monospace;
                 background: #f8f9fa;
             }}
-            
+
             .risk-high {{ color: #e74c3c; font-weight: bold; }}
             .risk-medium {{ color: #f39c12; font-weight: bold; }}
             .risk-low {{ color: #27ae60; font-weight: bold; }}
-            
-            .toggle-section {{ 
-                background: #e9ecef; 
-                padding: 10px 15px; 
-                border-radius: 5px; 
-                cursor: pointer; 
+
+            .toggle-section {{
+                background: #e9ecef;
+                padding: 10px 15px;
+                border-radius: 5px;
+                cursor: pointer;
                 margin: 10px 0;
                 user-select: none;
             }}
             .toggle-section:hover {{ background: #dee2e6; }}
-            .toggle-content {{ 
-                display: none; 
+            .toggle-content {{
+                display: none;
                 padding: 15px 0;
             }}
             .toggle-content.active {{ display: block; }}
-            
-            .footer {{ 
-                text-align: center; 
-                padding: 30px; 
-                color: white; 
+
+            .footer {{
+                text-align: center;
+                padding: 30px;
+                color: white;
                 font-size: 0.9em;
                 opacity: 0.8;
             }}
@@ -1141,13 +1139,13 @@ def generate_html_report(results: List[Dict], output_path: str):
                 const content = document.getElementById(id);
                 content.classList.toggle('active');
             }}
-            
+
             function filterTable(inputId, tableId) {{
                 const input = document.getElementById(inputId);
                 const table = document.getElementById(tableId);
                 const filter = input.value.toLowerCase();
                 const rows = table.getElementsByTagName('tr');
-                
+
                 for (let i = 1; i < rows.length; i++) {{
                     const row = rows[i];
                     const text = row.textContent.toLowerCase();
@@ -1160,7 +1158,7 @@ def generate_html_report(results: List[Dict], output_path: str):
         <div class="container">
             <div class="header">
                 <h1>🛡️ WAF Detection & Bypass Report</h1>
-                <p>Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p>
+                <p>Generated: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}</p>
                 <p>Comprehensive analysis of {len(results)} targets</p>
             </div>
     """
@@ -1192,7 +1190,7 @@ def generate_html_report(results: List[Dict], output_path: str):
     html_content += f"""
             <div class="summary">
                 <h2>📊 Executive Summary</h2>
-                
+
                 <div class="stats-grid">
                     <div class="stat-card">
                         <div class="stat-number">{total_targets}</div>
@@ -1211,11 +1209,11 @@ def generate_html_report(results: List[Dict], output_path: str):
                         <div class="stat-label">Payloads Tested</div>
                     </div>
                 </div>
-                
-                <input type="text" id="filterInput" placeholder="🔍 Filter targets..." 
-                       onkeyup="filterTable('filterInput', 'summaryTable')" 
+
+                <input type="text" id="filterInput" placeholder="🔍 Filter targets..."
+                       onkeyup="filterTable('filterInput', 'summaryTable')"
                        style="width: 100%; padding: 10px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 5px;">
-                
+
                 <table class="summary-table" id="summaryTable">
                     <thead>
                         <tr>
@@ -1290,10 +1288,10 @@ def generate_html_report(results: List[Dict], output_path: str):
         html_content += f"""
             <div class="target-section {detected_class}">
                 <div class="target-header">
-                    <h3 class="target-title">🎯 {result['target']}</h3>
+                    <h3 class="target-title">🎯 {result["target"]}</h3>
                     <span class="status-badge {status_class}">{status_text}</span>
                 </div>
-                
+
                 <div class="tool-results">
         """
 
@@ -1304,8 +1302,8 @@ def generate_html_report(results: List[Dict], output_path: str):
                     <div class="tool-card">
                         <h4>🔍 wafw00f Results</h4>
                         <ul>
-                            <li><span>Detected:</span> <span>{'✅ Yes' if wafw00f.get('detected') else '❌ No'}</span></li>
-                            <li><span>WAF Name:</span> <span>{wafw00f.get('waf', 'None')}</span></li>
+                            <li><span>Detected:</span> <span>{"✅ Yes" if wafw00f.get("detected") else "❌ No"}</span></li>
+                            <li><span>WAF Name:</span> <span>{wafw00f.get("waf", "None")}</span></li>
                         </ul>
                     </div>
             """
@@ -1316,9 +1314,9 @@ def generate_html_report(results: List[Dict], output_path: str):
                     <div class="tool-card">
                         <h4>🧪 GoTestWAF Results</h4>
                         <ul>
-                            <li><span>Detected:</span> <span>{'✅ Yes' if gtw.get('detected') else '❌ No'}</span></li>
-                            <li><span>WAF Name:</span> <span>{gtw.get('waf_name', 'None')}</span></li>
-                            <li><span>Bypass Score:</span> <span>{gtw.get('bypass_score', 'N/A')}%</span></li>
+                            <li><span>Detected:</span> <span>{"✅ Yes" if gtw.get("detected") else "❌ No"}</span></li>
+                            <li><span>WAF Name:</span> <span>{gtw.get("waf_name", "None")}</span></li>
+                            <li><span>Bypass Score:</span> <span>{gtw.get("bypass_score", "N/A")}%</span></li>
                         </ul>
                     </div>
             """
@@ -1331,8 +1329,8 @@ def generate_html_report(results: List[Dict], output_path: str):
                         <h4>📋 Header Analysis</h4>
                         <ul>
                             <li><span>WAF Indicators:</span> <span>{waf_indicators}</span></li>
-                            <li><span>Fingerprint Score:</span> <span>{ha.get('fingerprint_score', 0)}/100</span></li>
-                            <li><span>Security Headers:</span> <span>{len(ha.get('security_headers', {}))}</span></li>
+                            <li><span>Fingerprint Score:</span> <span>{ha.get("fingerprint_score", 0)}/100</span></li>
+                            <li><span>Security Headers:</span> <span>{len(ha.get("security_headers", {}))}</span></li>
                         </ul>
                     </div>
             """
@@ -1346,7 +1344,7 @@ def generate_html_report(results: List[Dict], output_path: str):
             pt = result["payload_test"]
             html_content += f"""
                 <div class="toggle-section" onclick="toggleSection('payload-{i}')">
-                    <strong>💉 Payload Testing Results</strong> - {pt.get('total_tests', 0)} tests, {pt.get('blocked_count', 0)} blocked ({pt.get('detection_rate', 0):.1f}% detection rate)
+                    <strong>💉 Payload Testing Results</strong> - {pt.get("total_tests", 0)} tests, {pt.get("blocked_count", 0)} blocked ({pt.get("detection_rate", 0):.1f}% detection rate)
                 </div>
                 <div class="toggle-content" id="payload-{i}">
                     <table class="payload-table">
@@ -1371,9 +1369,9 @@ def generate_html_report(results: List[Dict], output_path: str):
 
                 html_content += f"""
                             <tr>
-                                <td>{pr.get('type', 'N/A')}</td>
-                                <td class="payload-cell" title="{pr.get('payload', '')}">{payload_display}</td>
-                                <td>{pr.get('status_code', 'N/A')}</td>
+                                <td>{pr.get("type", "N/A")}</td>
+                                <td class="payload-cell" title="{pr.get("payload", "")}">{payload_display}</td>
+                                <td>{pr.get("status_code", "N/A")}</td>
                                 <td>{blocked}</td>
                                 <td>{indicators}</td>
                             </tr>

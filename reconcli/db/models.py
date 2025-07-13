@@ -8,21 +8,22 @@ Defines the database schema for storing reconnaissance data including:
 - Vulnerability findings
 """
 
+import enum
+from datetime import datetime
+
 from sqlalchemy import (
-    Column,
-    Integer,
-    String,
-    DateTime,
-    Text,
-    ForeignKey,
     Boolean,
+    Column,
+    DateTime,
     Enum,
     Float,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
 )
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
-from datetime import datetime
-import enum
 
 Base = declarative_base()
 

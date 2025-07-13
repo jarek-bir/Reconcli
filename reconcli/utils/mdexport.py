@@ -1,5 +1,5 @@
-import re
 import os
+import re
 
 
 def strip_ansi(text):

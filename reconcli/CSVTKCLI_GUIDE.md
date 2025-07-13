@@ -324,6 +324,6 @@ python reconcli_csvtk.py csvtkcli freq output/exports/subdomains_export.csv -f d
 
 ---
 
-**Author**: ReconCLI Team  
-**Version**: 1.0  
+**Author**: ReconCLI Team
+**Version**: 1.0
 **Last Updated**: July 2025

@@ -8,7 +8,7 @@
 - **6 built-in pattern types**: credential, subdomain, directory, filename, parameter, endpoint
 - **Intelligent pattern matching** for specific attack scenarios
 
-### 2. 🧠 Hybrid/Intelligent Generation  
+### 2. 🧠 Hybrid/Intelligent Generation
 - **AI-like word combination** using similarity analysis
 - **Markov chain-inspired** word generation
 - **Smart substring matching** and replacement
@@ -28,7 +28,7 @@
 
 ### 5. 🔐 Password Pattern Engine
 - **Password-style pattern generation** with years, symbols
-- **Industry-standard password formats** 
+- **Industry-standard password formats**
 - **Date-aware patterns** with current/past years
 - **Special character integration** (!@#$%)
 
@@ -46,7 +46,7 @@
 
 ### 8. 📊 Entropy-Based Analysis
 - **Complexity scoring algorithm** for wordlist ranking
-- **Character diversity calculation** 
+- **Character diversity calculation**
 - **Pattern complexity assessment**
 - **Intelligent sorting** by entropy/randomness
 
@@ -78,7 +78,7 @@
 
 ### Code Architecture
 - **Modular function design** for easy extension
-- **Clean separation of concerns** 
+- **Clean separation of concerns**
 - **Error handling** and timeout protection
 - **Memory optimization** for large datasets
 
@@ -106,7 +106,7 @@
 --pattern [credential|subdomain|directory|filename|parameter|endpoint]
 --custom-patterns TEXT          # Custom pattern file path
 --hybrid                        # Enable hybrid generation
---frequency-analysis            # Include frequency analysis  
+--frequency-analysis            # Include frequency analysis
 --transform-rules TEXT          # Comma-separated transformation rules
 --keyboard-patterns             # Include keyboard patterns
 --password-patterns             # Generate password patterns
@@ -121,7 +121,7 @@
 
 ### Penetration Testing
 - **Corporate wordlists** with company-specific patterns
-- **Credential attacks** with intelligent mutations  
+- **Credential attacks** with intelligent mutations
 - **Directory/file enumeration** with extension combinations
 - **Subdomain discovery** with pattern-based generation
 
@@ -131,7 +131,7 @@
 - **Hybrid attack vectors** combining multiple sources
 - **OSINT-enhanced** target research
 
-### Red Team Operations  
+### Red Team Operations
 - **Custom pattern creation** for specific targets
 - **Multi-source intelligence** gathering
 - **Professional reporting** with detailed analysis
@@ -148,7 +148,7 @@
 ## 🔧 Integration & Compatibility
 
 - **Full backward compatibility** with existing features
-- **Seamless main.py integration** 
+- **Seamless main.py integration**
 - **External tool support** (pydictor, cewl, crunch, kitrunner)
 - **Cross-platform compatibility** (Linux/Windows/macOS)
 

@@ -4,21 +4,22 @@ URL Sorter for Reconcli Toolkit
 Advanced URL categorization and pattern matching for security testing
 """
 
-import click
+import json
 import os
 import re
-import yaml
-import json
-import sys
 import socket
-from datetime import datetime, timezone
-from urllib.parse import urlparse, parse_qs
+import sys
 from collections import defaultdict
-from typing import Dict, List, Tuple, Any
+from datetime import datetime, timezone
+from typing import Any, Dict, List, Tuple
+from urllib.parse import parse_qs, urlparse
+
+import click
+import yaml
 
 # Import resume utilities
 try:
-    from reconcli.utils.resume import load_resume, save_resume_state, clear_resume
+    from reconcli.utils.resume import clear_resume, load_resume, save_resume_state
 except ImportError:
 
     def load_resume(output_dir):
@@ -641,7 +642,7 @@ def hakcheckurl(
         click.echo(f"   - Total URLs checked: {len(urls)}")
         click.echo(f"   - Results after filtering: {len(filtered_results)}")
         click.echo(f"   - Processing time: {elapsed_time:.2f}s")
-        click.echo(f"   - Average time per URL: {elapsed_time/len(urls):.3f}s")
+        click.echo(f"   - Average time per URL: {elapsed_time / len(urls):.3f}s")
 
     click.echo("\n[+] ✅ HakCheckURL completed!")
     click.echo(f"[+] 📁 Results saved to: {output_dir}")
@@ -1342,9 +1343,10 @@ def check_urls_advanced(
     program: str = None,
 ) -> List[Dict[str, Any]]:
     """Advanced URL checking with concurrent requests"""
-    import httpx
     import time
     from concurrent.futures import ThreadPoolExecutor, as_completed
+
+    import httpx
 
     results = []
     processed_count = 0
@@ -1508,7 +1510,7 @@ def check_urls_advanced(
         # Progress indicator
         if verbose and processed_count % 50 == 0:
             click.echo(
-                f"[+] Progress: {processed_count}/{total_urls} ({processed_count/total_urls*100:.1f}%)"
+                f"[+] Progress: {processed_count}/{total_urls} ({processed_count / total_urls * 100:.1f}%)"
             )
 
         # Update resume state periodically

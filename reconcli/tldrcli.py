@@ -1,19 +1,20 @@
 #!/usr/bin/env python3
 
-import os
-import json
-import time
-import click
 import concurrent.futures
+import json
+import os
+import shutil
+import socket
+import time
 from datetime import datetime
 from typing import Dict, List, Optional, Tuple
+
+import click
 from tqdm import tqdm
-import socket
-import shutil
 
 # Import notifications
 try:
-    from reconcli.utils.notifications import send_notification, NotificationManager
+    from reconcli.utils.notifications import NotificationManager, send_notification
 except ImportError:
     send_notification = None
     NotificationManager = None
@@ -29,7 +30,7 @@ def find_executable(name):
 
 # Import resume utilities
 try:
-    from reconcli.utils.resume import load_resume, save_resume_state, clear_resume
+    from reconcli.utils.resume import clear_resume, load_resume, save_resume_state
 except ImportError:
 
     def load_resume(output_dir):
@@ -3007,7 +3008,9 @@ def cli(
         click.echo(f"   - DNS resolved: {resolved_count}")
         click.echo(f"   - HTTP active: {http_active_count}")
         click.echo(f"   - Scan duration: {elapsed}s")
-        click.echo(f"   - Success rate: {resolved_count/len(tld_list_final)*100:.1f}%")
+        click.echo(
+            f"   - Success rate: {resolved_count / len(tld_list_final) * 100:.1f}%"
+        )
 
     # Generate statistics
     stats = generate_statistics(results, verbose)
@@ -3143,7 +3146,6 @@ def process_tlds_concurrent(
             disable=not verbose,
             ncols=100,
         ) as pbar:
-
             # Submit all tasks
             future_to_tld = {
                 executor.submit(check_domain_tld, tld): tld for tld in tlds
@@ -3173,9 +3175,7 @@ def detect_wildcard(domain: str, tld: str, resolved_ip: str, timeout: int) -> bo
     try:
         # Generate random subdomain
         random_sub = "".join(
-            random.choices(
-                string.ascii_lowercase + string.digits, k=15
-            )  # nosec: B311 - non-cryptographic wildcard detection
+            random.choices(string.ascii_lowercase + string.digits, k=15)  # nosec: B311 - non-cryptographic wildcard detection
         )
         test_domain = f"{random_sub}.{domain}.{tld}"
 

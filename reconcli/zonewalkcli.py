@@ -1,11 +1,13 @@
 import os
+
 import click
-import dns.query
-import dns.zone
-import dns.resolver
-import dns.name
 import dns.message
+import dns.name
+import dns.query
+import dns.resolver
+import dns.zone
 from tqdm import tqdm
+
 from reconcli.utils.loaders import load_lines
 from reconcli.utils.mdexport import export_zonewalk_report
 

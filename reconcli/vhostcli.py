@@ -1,19 +1,21 @@
-import click
-import subprocess
-import os
-import httpx
 import json
+import os
 import shutil
+import subprocess
 import time
 from datetime import datetime
 from pathlib import Path
+
+import click
+import httpx
+
 from reconcli.utils.notifications import send_notification
 
 # Database and AI imports
 try:
-    from reconcli.db.operations import store_target, store_subdomains
     from reconcli.aicli import AIReconAssistant
-    from reconcli.utils.resume import load_resume, save_resume_state, clear_resume
+    from reconcli.db.operations import store_subdomains, store_target
+    from reconcli.utils.resume import clear_resume, load_resume, save_resume_state
 except ImportError:
     store_target = None
     store_subdomains = None
@@ -479,7 +481,9 @@ def cli(
                     status_emoji = (
                         "✅"
                         if r["status"] == 200
-                        else "⚠️" if r["status"] in [403, 401] else "❓"
+                        else "⚠️"
+                        if r["status"] in [403, 401]
+                        else "❓"
                     )
                     click.echo(f"   {status_emoji} {r['host']} ({r['status']})")
         else:
@@ -555,7 +559,9 @@ def cli(
                     status_emoji = (
                         "✅"
                         if r["status"] == 200
-                        else "⚠️" if r["status"] in [403, 401] else "❓"
+                        else "⚠️"
+                        if r["status"] in [403, 401]
+                        else "❓"
                     )
                     f.write(f"| `{r['host']}` | {status_emoji} {r['status']} |\n")
             else:
@@ -837,7 +843,9 @@ def run_httpx_scan(
         vhost = f"{word}.{domain}"
 
         if verbose and idx % 50 == 0:
-            click.echo(f"🔄 Progress: {idx}/{len(words)} ({idx/len(words)*100:.1f}%)")
+            click.echo(
+                f"🔄 Progress: {idx}/{len(words)} ({idx / len(words) * 100:.1f}%)"
+            )
 
         for attempt in range(retries + 1):
             try:
@@ -1079,10 +1087,10 @@ def analyze_results_with_ai(ai_assistant, results, domain, target_ip, ai_model):
 
         prompt = f"""
         Analyze these VHOST scan results for {domain} on {target_ip}:
-        
+
         Found {len(results)} virtual hosts:
         {json.dumps(analysis_data, indent=2)}
-        
+
         Please provide:
         1. Security assessment of discovered vhosts
         2. Interesting patterns or anomalies
@@ -1152,7 +1160,9 @@ def save_results_to_files(
                 status_emoji = (
                     "✅"
                     if r["status"] == 200
-                    else "⚠️" if r["status"] in [403, 401] else "❓"
+                    else "⚠️"
+                    if r["status"] in [403, 401]
+                    else "❓"
                 )
                 length = r.get("length", "N/A")
                 source = r.get("source", engine)

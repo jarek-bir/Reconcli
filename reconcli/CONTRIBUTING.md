@@ -86,30 +86,30 @@ bandit -r .
 ```python
 def process_urls(urls: List[str], output_dir: str, verbose: bool = False) -> Dict[str, Any]:
     """Process a list of URLs and generate vulnerability reports.
-    
+
     Args:
         urls: List of URLs to process
         output_dir: Directory to save output files
         verbose: Enable verbose logging
-        
+
     Returns:
         Dictionary containing processing results and statistics
-        
+
     Raises:
         ValueError: If urls list is empty
         FileNotFoundError: If output_dir doesn't exist
     """
     if not urls:
         raise ValueError("URLs list cannot be empty")
-    
+
     results = {"processed": 0, "vulnerabilities": []}
-    
+
     for url in urls:
         if verbose:
             click.echo(f"Processing: {url}")
         # Processing logic here
         results["processed"] += 1
-    
+
     return results
 ```
 
@@ -164,17 +164,17 @@ from unittest.mock import patch, MagicMock
 
 class TestYourModule:
     """Test class for your module"""
-    
+
     def test_basic_functionality(self):
         """Test basic functionality"""
         # Test implementation
         pass
-    
+
     @pytest.mark.slow
     def test_slow_operation(self):
         """Test that takes significant time"""
         pass
-    
+
     @patch('subprocess.run')
     def test_external_command(self, mock_subprocess):
         """Test external command execution"""

@@ -1,9 +1,10 @@
-import requests
-import time
 import json
-from typing import List, Dict, Optional
-from concurrent.futures import ThreadPoolExecutor, as_completed
 import threading
+import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from typing import Dict, List, Optional
+
+import requests
 
 # Extended S3 bucket naming patterns
 COMMON_BUCKET_PATTERNS = [
@@ -118,7 +119,6 @@ def check_s3_bucket(
     """Check a single S3 bucket for existence and accessibility."""
 
     with rate_limiter:  # Rate limiting
-
         # Build URL based on region
         if region == "us-east-1":
             url = f"http://{bucket_name}.s3.amazonaws.com"
@@ -238,7 +238,6 @@ def enumerate_s3_buckets(
 
     # Use ThreadPoolExecutor for concurrent requests
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
-
         # Submit all bucket/region combinations
         future_to_bucket = {}
 
@@ -264,7 +263,9 @@ def enumerate_s3_buckets(
                     status_emoji = (
                         "🟢"
                         if result["status"] == "200"
-                        else "🟡" if result["status"] in ["403", "302"] else "🔴"
+                        else "🟡"
+                        if result["status"] in ["403", "302"]
+                        else "🔴"
                     )
                     print(
                         f"{status_emoji} {result['bucket']} ({result['region']}) - {result['status']} - {result['notes']}"

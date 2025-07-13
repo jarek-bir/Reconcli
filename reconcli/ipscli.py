@@ -6,20 +6,21 @@ Advanced IP reconnaissance using multiple sources (ipinfo.io, uncover, shodan) w
 resume functionality, ASN mapping, geolocation analysis, and professional reporting.
 """
 
-import sys
-import os
-import json
-import click
-import subprocess
-import socket
 import ipaddress
-import requests
+import json
+import os
 import re
+import socket
+import subprocess
+import sys
+from collections import Counter
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 from pathlib import Path
+
+import click
+import requests
 from tqdm import tqdm
-from concurrent.futures import ThreadPoolExecutor, as_completed
-from collections import Counter
 
 # CDN and Cloud provider IP ranges for filtering
 CDN_RANGES = [
@@ -1000,26 +1001,26 @@ def ipscli(
 ):
     """
     Advanced IP Analysis and Reconnaissance
-    
+
     Comprehensive IP intelligence gathering using multiple sources with geolocation,
     ASN mapping, cloud detection, port scanning, and professional reporting.
-    
+
     Examples:
         # Basic IP enrichment and analysis
         reconcli ipscli --input ips.txt --enrich --verbose
-        
+
         # Full analysis with port scanning and cloud detection
         reconcli ipscli --input subdomains_resolved.txt --enrich --scan rustscan \
           --filter-cdn --markdown --verbose
-        
+
         # Expand CIDR ranges and analyze with uncover
         reconcli ipscli --input cidrs.txt --cidr-expand --enrich \
           --use-uncover --uncover-engine shodan
-        
-        # Filter analysis by geography and cloud providers  
+
+        # Filter analysis by geography and cloud providers
         reconcli ipscli --input ips.txt --enrich --filter-country US \
           --filter-cloud aws,gcp --json
-        
+
         # Resume interrupted analysis
         reconcli ipscli --resume --verbose
     """
@@ -1319,7 +1320,7 @@ def ipscli(
             # Database storage
             if store_db and ip_list:
                 try:
-                    from reconcli.db.operations import store_target, store_ip_scan
+                    from reconcli.db.operations import store_ip_scan, store_target
 
                     # Auto-detect target domain if not provided
                     if not target_domain and enriched_data:

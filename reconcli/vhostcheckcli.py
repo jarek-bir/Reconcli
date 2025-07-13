@@ -7,12 +7,13 @@ on target IP addresses. Features comprehensive error handling, technology detect
 and detailed response analysis.
 """
 
+import os
+import time
+from datetime import datetime
+from pathlib import Path
+
 import click
 import httpx
-import time
-import os
-from pathlib import Path
-from datetime import datetime
 
 
 @click.command()
@@ -133,7 +134,7 @@ def vhostcheckcli(
         click.echo("\n📊 Summary:")
         click.echo(f"   Total IPs processed: {len(ip_list)}")
         click.echo(f"   Valid VHOSTs found: {valid_vhosts_found}")
-        click.echo(f"   Success rate: {(valid_vhosts_found/len(ip_list)*100):.1f}%")
+        click.echo(f"   Success rate: {(valid_vhosts_found / len(ip_list) * 100):.1f}%")
 
     # Save results if requested
     if save_output:
@@ -439,7 +440,7 @@ def save_batch_results(all_results, output_dir, output_format, domain, vhost):
             f.write(f"Total IPs: {len(all_results)}\n")
             f.write(f"Valid VHOSTs: {sum(1 for r in all_results if r['is_valid'])}\n")
             f.write(
-                f"Success Rate: {(sum(1 for r in all_results if r['is_valid'])/len(all_results)*100):.1f}%\n\n"
+                f"Success Rate: {(sum(1 for r in all_results if r['is_valid']) / len(all_results) * 100):.1f}%\n\n"
             )
 
             for i, result in enumerate(all_results, 1):

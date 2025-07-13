@@ -22,7 +22,7 @@ A comprehensive, modular reconnaissance toolkit designed for security profession
 
 **🚀 Cyber-Squad z Przyszłości**
 - **Jarek** 🧑‍💻 - Lead Developer & Security Researcher
-- **AI Assistant** 🤖 - Code Architecture & Advanced Features  
+- **AI Assistant** 🤖 - Code Architecture & Advanced Features
 - **GitHub Copilot** ⚡ - Code Generation & Optimization
 
 *Collaboration between human expertise and AI innovation to create cutting-edge security tools.*
@@ -40,7 +40,7 @@ reconcli --help
 
 # Configure AI providers for advanced features (optional)
 export OPENAI_API_KEY='your-openai-api-key'
-export ANTHROPIC_API_KEY='your-anthropic-api-key'  
+export ANTHROPIC_API_KEY='your-anthropic-api-key'
 export GOOGLE_API_KEY='your-google-api-key'
 
 # Test AI-powered features
@@ -51,7 +51,7 @@ reconcli aicli --prompt "Hello, AI assistant!" --persona trainer
 
 ### 📸 **VhostCLI Screenshot Functionality** (New!)
 - **Automated Screenshots**: Capture screenshots of discovered virtual hosts
-- **Dual Tool Support**: Gowitness and Aquatone integration 
+- **Dual Tool Support**: Gowitness and Aquatone integration
 - **Advanced Options**: Full-page screenshots, custom timeouts and thread control
 - **Seamless Integration**: Works with all VhostCLI engines (ffuf, httpx, gobuster, vhostfinder)
 
@@ -70,7 +70,7 @@ reconcli vhostcli --domain example.com --ip 1.2.3.4 --wordlist wordlist.txt \
 # Install gowitness
 go install github.com/sensepost/gowitness@latest
 
-# Install aquatone  
+# Install aquatone
 go install github.com/michenriksen/aquatone@latest
 ```
 
@@ -78,7 +78,7 @@ go install github.com/michenriksen/aquatone@latest
 
 ### 🧠 **AI-Powered Reconnaissance Assistant (`aicli`)**
 - **🎭 Multi-Persona AI System**: RedTeam, BugBounty, Pentester, Trainer, OSINT personas
-- **🔬 Advanced Payload Mutation Engine**: XSS, SQLi, SSRF mutations with WAF bypasses  
+- **🔬 Advanced Payload Mutation Engine**: XSS, SQLi, SSRF mutations with WAF bypasses
 - **🎯 AI-Powered Vulnerability Scanner**: Comprehensive security assessment with ReconCLI integration
 - **⚔️ Multi-Stage Attack Flows**: SSRF→XSS→LFI chains with MITRE ATT&CK mapping
 - **📊 Professional Reports**: Executive summaries, compliance mapping, remediation guidance
@@ -200,7 +200,7 @@ reconcli vhostcheckcli --input target_ips.txt --domain example.com --vhost store
 
 **Filtering & Selection:**
 - `--filter-tags TAG1,TAG2`: Show only results with specific tags
-- `--exclude-tags TAG1,TAG2`: Exclude results with specific tags  
+- `--exclude-tags TAG1,TAG2`: Exclude results with specific tags
 - `--filter-services SERVICE1,SERVICE2`: Show only specific detected services
 - `--web-only`: Scan only common web ports (80,443,8080,8443,etc.)
 - `--top-ports N`: Scan top N most common ports
@@ -451,7 +451,7 @@ reconcli takeovercli --input subdomains.txt --resume \
 - **JSLuice**: BishopFox's JavaScript analysis tool for URLs and secrets
 - **JSLeak**: Advanced JavaScript secrets scanner
 - **SubJS**: JavaScript file discovery and enumeration
-- **Cariddi**: Comprehensive JavaScript crawler and analyzer  
+- **Cariddi**: Comprehensive JavaScript crawler and analyzer
 - **GetJS**: JavaScript file discovery from domains and URLs
 - **Mantra**: JavaScript analysis with detailed pattern matching
 

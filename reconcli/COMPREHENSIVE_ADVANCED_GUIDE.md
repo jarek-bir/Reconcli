@@ -177,7 +177,7 @@ Krok 1: Dodaj słowa z profilu admin
 Krok 2: Zastosuj wzorce
 target + admin patterns:
 - targetadmin, admintarget
-- target_admin, admin_target  
+- target_admin, admin_target
 - target-admin, admin-target
 
 Krok 3: Multiplier effect (x3 dla admin)
@@ -281,7 +281,7 @@ Przypadek użycia: Kartezjański iloczyn, maksymalne kombinacje
 **🔄 Permute (--combine-method permute)**
 ```
 Lista A: [admin, user]
-Lista B: [panel, api] 
+Lista B: [panel, api]
 Wszystkie słowa: [admin, user, panel, api]
 Wynik: [
   adminuser, adminpanel, adminapi,
@@ -301,7 +301,7 @@ Przypadek użycia: Wszystkie możliwe kombinacje, discovery mode
 # Mamy podstawową listę subdomen
 echo -e "admin\napi\ntest\ndev\nstaging" > base_subdomains.txt
 
-# Mamy custom listę od klienta  
+# Mamy custom listę od klienta
 echo -e "portal\ndashboard\nmanagement\ncontrol" > client_subdomains.txt
 
 # Połączenie metodą merge
@@ -382,14 +382,14 @@ Markov Chain to model AI, który analizuje wzorce w istniejących danych i gener
 ```
 1. Analiza Training Data:
    Input: ["password123", "admin2024", "user123"]
-   
+
 2. Budowa N-gram Patterns:
    Chain Length 2: "pa" -> "s", "as" -> "s", "ss" -> "w", etc.
-   
+
 3. Generacja Nowych Słów:
    Start: "pa" -> wybierz najczęstszy następny znak -> "s"
    Kontynuj: "as" -> "s" -> "sw" -> "w" -> "wo" -> etc.
-   
+
 4. Output: "password", "admin124", "user124", etc.
 ```
 
@@ -398,7 +398,7 @@ Markov Chain to model AI, który analizuje wzorce w istniejących danych i gener
 **Chain Length (--markov-length)**
 ```
 Length 1: Bardzo losowe, mało podobne do oryginału
-Length 2: Wyważone, zalecane (default)  
+Length 2: Wyważone, zalecane (default)
 Length 3: Bardziej podobne do treningu
 Length 4: Bardzo podobne, mniej kreatywne
 
@@ -734,7 +734,7 @@ python main.py makewordlist --full --crunch-min 10 --crunch-max 15  # Może trwa
 
 # Użyj etapowego podejścia
 python main.py makewordlist --basic-sources --output-prefix step1
-python main.py makewordlist --resume-from step1_resume.json --markov-sources --output-prefix step2  
+python main.py makewordlist --resume-from step1_resume.json --markov-sources --output-prefix step2
 python main.py makewordlist --resume-from step2_resume.json --crunch-min 8 --crunch-max 10 --output-prefix final
 ```
 
@@ -864,7 +864,7 @@ python main.py makewordlist \
 
 # Sprawdź quality_check.md dla:
 # - Length distribution (czy rozsądna?)
-# - Character frequency (czy naturalna?)  
+# - Character frequency (czy naturalna?)
 # - Most common words (czy sensowne?)
 ```
 
@@ -873,7 +873,7 @@ python main.py makewordlist \
 # Wersja A: Bez AI
 python main.py makewordlist --basic-approach --output-prefix version_a
 
-# Wersja B: Z AI  
+# Wersja B: Z AI
 python main.py makewordlist --advanced --markovify training.txt --output-prefix version_b
 
 # Compare rozmiary i quality
@@ -892,7 +892,7 @@ wc -l version_a.txt version_b.txt
 # - Identyfikuj technologie
 # - Znajdź naming patterns
 
-# 2. Training Preparation  
+# 2. Training Preparation
 # - Stwórz custom training sets
 # - Znajdź relevant external wordlists
 # - Przygotuj combination lists
@@ -947,7 +947,7 @@ python main.py makewordlist --basic --output-prefix v1
 # Iteration 2: Add AI
 python main.py makewordlist --basic --markovify training.txt --output-prefix v2
 
-# Test v2, then specialize  
+# Test v2, then specialize
 # Iteration 3: Target-specific
 python main.py makewordlist --v2-approach --word-boost specific_profile --output-prefix v3_final
 ```
@@ -959,7 +959,7 @@ python main.py makewordlist --v2-approach --word-boost specific_profile --output
 Nowe funkcje MakeWordListCLI przekształciły go z prostego generatora w zaawansowany, AI-wspierany system tworzenia wyspecjalizowanych wordlist. Każda z czterech funkcji rozwiązuje konkretny problem:
 
 - **Resume**: Eliminuje frustrację związaną z przerywanymi długimi procesami
-- **Word Boost**: Fokusuje generację na rzeczywiste attack vectors  
+- **Word Boost**: Fokusuje generację na rzeczywiste attack vectors
 - **Combination**: Wykorzystuje istniejącą wiedzę i wordlisty
 - **Markov**: Dodaje AI intelligence dla realistycznych słów
 
@@ -967,7 +967,7 @@ Razem tworzą potężny toolkit, który może generować wordlisty dopasowane do
 
 **Kluczowe Takeaways:**
 1. Zawsze zacznij od research i intelligence gathering
-2. Użyj odpowiednich profili boost dla target type  
+2. Użyj odpowiednich profili boost dla target type
 3. Trenuj Markov na relevant data dla lepszych rezultatów
 4. Łącz multiple sources dla comprehensive coverage
 5. Zastosuj smart filtering dla high-quality output

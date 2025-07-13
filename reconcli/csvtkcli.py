@@ -6,13 +6,14 @@ Powerful CSV data analysis and manipulation using csvtk tool integration.
 Provides advanced analytics for reconnaissance data exports.
 """
 
-import click
-import subprocess
 import os
-import sys
 import shutil
-from pathlib import Path
+import subprocess
+import sys
 from datetime import datetime
+from pathlib import Path
+
+import click
 
 
 def find_executable(cmd: str) -> str:
@@ -87,9 +88,7 @@ def freq(csv_file, field, top, sort_by_count):
             ]
             if top:
                 # Use pipe with separate process for head command
-                proc1 = subprocess.Popen(
-                    cmd, stdout=subprocess.PIPE, text=True
-                )  # nosec: B603 - controlled command with validated args
+                proc1 = subprocess.Popen(cmd, stdout=subprocess.PIPE, text=True)  # nosec: B603 - controlled command with validated args
                 proc2 = subprocess.run(  # nosec: B603 - controlled csvtk command
                     [find_executable("csvtk"), "head", "-n", str(top)],
                     stdin=proc1.stdout,
@@ -273,7 +272,7 @@ def security_report(csv_file, output_dir, target_domain):
                 lines = f.readlines()
                 if len(lines) > 1:  # More than header
                     click.echo(
-                        f"✅ {description}: {len(lines)-1} entries → {report_file}"
+                        f"✅ {description}: {len(lines) - 1} entries → {report_file}"
                     )
                 else:
                     os.remove(report_file)  # Remove empty files
@@ -483,20 +482,14 @@ def _security_categorization(csv_file, field, output_file):
         # Add security category column - use safer approach with temporary files
         import tempfile
 
-        with tempfile.NamedTemporaryFile(
-            mode="w", suffix=".csv", delete=False
-        ) as temp1, tempfile.NamedTemporaryFile(
-            mode="w", suffix=".csv", delete=False
-        ) as temp2, tempfile.NamedTemporaryFile(
-            mode="w", suffix=".csv", delete=False
-        ) as temp3, tempfile.NamedTemporaryFile(
-            mode="w", suffix=".csv", delete=False
-        ) as temp4, tempfile.NamedTemporaryFile(
-            mode="w", suffix=".csv", delete=False
-        ) as temp5, tempfile.NamedTemporaryFile(
-            mode="w", suffix=".csv", delete=False
-        ) as temp6:
-
+        with (
+            tempfile.NamedTemporaryFile(mode="w", suffix=".csv", delete=False) as temp1,
+            tempfile.NamedTemporaryFile(mode="w", suffix=".csv", delete=False) as temp2,
+            tempfile.NamedTemporaryFile(mode="w", suffix=".csv", delete=False) as temp3,
+            tempfile.NamedTemporaryFile(mode="w", suffix=".csv", delete=False) as temp4,
+            tempfile.NamedTemporaryFile(mode="w", suffix=".csv", delete=False) as temp5,
+            tempfile.NamedTemporaryFile(mode="w", suffix=".csv", delete=False) as temp6,
+        ):
             # Step 1: mutate
             subprocess.run(
                 [

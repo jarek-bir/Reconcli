@@ -1,17 +1,19 @@
 #!/usr/bin/env python3
-import os
+import concurrent.futures
 import json
+import os
+import re
+import socket
 import subprocess
+import time
+from datetime import datetime
+
 import click
 import requests
-import socket
-import concurrent.futures
-from datetime import datetime
-import time
 
 # Import resume utilities
 try:
-    from reconcli.utils.resume import load_resume, save_resume_state, clear_resume
+    from reconcli.utils.resume import clear_resume, load_resume, save_resume_state
 except ImportError:
 
     def load_resume(output_dir):
@@ -270,6 +272,14 @@ def display_scan_statistics(comprehensive_data, tool_stats):
     click.echo("=" * 60 + "\n")
 
 
+def validate_domain(domain):
+    """Validate domain to prevent shell injection."""
+    # Allow only alphanumeric, dots, hyphens (valid domain characters)
+    if not re.match(r"^[a-zA-Z0-9.-]+$", domain):
+        raise ValueError(f"Invalid domain format: {domain}")
+    return domain
+
+
 @click.command()
 @click.option(
     "--domain", "-d", required=True, help="Target domain for subdomain enumeration"
@@ -333,6 +343,13 @@ def subdocli(
     program,
 ):
     """Enhanced subdomain enumeration using multiple tools with resolution and HTTP probing"""
+
+    # Validate domain input to prevent shell injection
+    try:
+        domain = validate_domain(domain)
+    except ValueError as e:
+        click.echo(f"❌ Error: {e}")
+        return
 
     # Handle resume operations
     if clear_resume:
@@ -429,6 +446,8 @@ def subdocli(
 
         start_time = time.time()
         try:
+            # NOTE: shell=True is required for complex commands with pipes and redirections
+            # Domain is validated above to prevent shell injection
             result = subprocess.check_output(  # nosec B602
                 cmd, shell=True, stderr=subprocess.DEVNULL, text=True, timeout=timeout
             )
@@ -545,7 +564,7 @@ def subdocli(
     # Database storage
     if store_db:
         try:
-            from reconcli.db.operations import store_target, store_subdomains
+            from reconcli.db.operations import store_subdomains, store_target
 
             # Use provided target_domain or fall back to domain
             final_target_domain = target_domain or domain
@@ -605,7 +624,3 @@ def subdocli(
         except Exception as e:
             if verbose:
                 click.echo(f"❌ Error storing to database: {e}")
-
-
-if __name__ == "__main__":
-    subdocli()

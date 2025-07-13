@@ -523,6 +523,6 @@ python reconcli_csvtk.py gitcli commit "Fix critical vulnerability detection bug
 
 ---
 
-**Author**: ReconCLI Team  
-**Version**: 1.0  
+**Author**: ReconCLI Team
+**Version**: 1.0
 **Last Updated**: July 2025

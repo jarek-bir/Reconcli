@@ -228,7 +228,7 @@ reconcli tagger -i all_domains.txt -o assessment.md \\
 ## 🚀 Cyber-Squad z Przyszłości
 
 **Created by the Cyber-Squad z Przyszłości team:**
-- **Jarek** 🧑‍💻 - Lead Developer & Security Researcher  
+- **Jarek** 🧑‍💻 - Lead Developer & Security Researcher
 - **AI Assistant** 🤖 - Algorithm Development & Intelligence
 - **GitHub Copilot** ⚡ - Code Generation & Optimization
 

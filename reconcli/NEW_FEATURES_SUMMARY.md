@@ -7,7 +7,7 @@
 
 **Features:**
 - Automatic checkpoint saving during long operations
-- Resume state management with JSON persistence  
+- Resume state management with JSON persistence
 - Cleanup after successful completion
 - Integration with all generation sources
 
@@ -22,7 +22,7 @@ python main.py makewordlist --resume-from wordlist_resume.json --output-prefix r
 
 **Profiles Available:**
 - `admin`: administrator, root, manager, chief + patterns
-- `auth`: login, password, credential, access + patterns  
+- `auth`: login, password, credential, access + patterns
 - `panel`: dashboard, control, console, interface + patterns
 - `qa`: test, debug, dev, staging, beta + patterns
 - `api`: rest, endpoint, service, webservice + patterns
@@ -93,7 +93,7 @@ accestrol, authention, board123, cret, curivilegermin, el123, gnin, hboard
 # Word Boost
 ✅ +118 words with admin profile
 
-# Combination  
+# Combination
 ✅ 96 combined words using 'combine' method
 
 # Markov
@@ -112,7 +112,7 @@ python main.py makewordlist \
 
 # Results:
 ✅ Combined wordlist (merge)
-✅ Markov generation: 30 words  
+✅ Markov generation: 30 words
 ✅ Word boost (auth): +133 words
 ✅ Total: 362 words → filtered to 100
 ```
@@ -130,7 +130,7 @@ python main.py makewordlist \
 
 # Results:
 ✅ 19,102 total words collected
-✅ Advanced filtering and similarity removal  
+✅ Advanced filtering and similarity removal
 ✅ Entropy-based sorting
 ✅ Complete multi-format export
 ✅ Resume state management
@@ -181,7 +181,7 @@ python main.py makewordlist \
 All four requested advanced features have been successfully implemented, tested, and documented:
 
 1. **Resume from checkpoint** - Handles interruptions gracefully
-2. **Word boost profiles** - Enhances specific word categories  
+2. **Word boost profiles** - Enhances specific word categories
 3. **Wordlist combination** - Merges external wordlists intelligently
 4. **Markov chain generation** - AI-powered word creation
 
@@ -193,7 +193,7 @@ The features integrate seamlessly with existing functionality and maintain the h
 
 **Additional Boost Profiles:**
 - `network`: router, switch, firewall, gateway patterns
-- `mobile`: ios, android, app, apk patterns  
+- `mobile`: ios, android, app, apk patterns
 - `infra`: docker, k8s, terraform, ansible patterns
 - `financial`: bank, payment, credit, transaction patterns
 
@@ -253,14 +253,14 @@ class CustomWordGenerator:
 - Solution: Combined Markov training on employee directory + financial terminology
 - Result: 15% higher hit rate vs traditional wordlists
 
-**Case Study 2: API Security Assessment**  
+**Case Study 2: API Security Assessment**
 - Target: Fintech startup with GraphQL/REST hybrid
 - Challenge: Non-standard endpoint naming patterns
 - Solution: Training Markov on fintech API documentation + word boost api profile
 - Result: Discovered 23 undocumented endpoints
 
 **Case Study 3: Infrastructure Penetration Test**
-- Target: Cloud-native microservices architecture  
+- Target: Cloud-native microservices architecture
 - Challenge: Kubernetes service discovery across multiple namespaces
 - Solution: Resume-enabled generation with infrastructure boost profile
 - Result: Complete service enumeration in 4-hour engagement
@@ -284,7 +284,7 @@ class CustomWordGenerator:
 ## 📖 Documentation Links
 
 - **📚 [COMPREHENSIVE_ADVANCED_GUIDE.md](COMPREHENSIVE_ADVANCED_GUIDE.md)** - Complete guide with extensive examples
-- **📋 [ADVANCED_FEATURES_GUIDE.md](ADVANCED_FEATURES_GUIDE.md)** - Quick reference for new features  
+- **📋 [ADVANCED_FEATURES_GUIDE.md](ADVANCED_FEATURES_GUIDE.md)** - Quick reference for new features
 - **🎯 [MAKEWORDLISTCLI_GUIDE.md](MAKEWORDLISTCLI_GUIDE.md)** - Updated main documentation
 
 **The most advanced wordlist generation system for modern penetration testing and security research.**

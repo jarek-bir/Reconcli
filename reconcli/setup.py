@@ -4,8 +4,9 @@ ReconCLI - Modular Reconnaissance Toolkit
 Setup configuration for package installation and distribution.
 """
 
-from setuptools import setup, find_packages
 import os
+
+from setuptools import find_packages, setup
 
 
 # Read README for long description

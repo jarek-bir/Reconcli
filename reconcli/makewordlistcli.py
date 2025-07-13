@@ -1,18 +1,19 @@
-import click
-import subprocess
 import itertools
-import tempfile
 import json
-import requests
-import re
 import os
-from pathlib import Path
-from urllib.parse import urljoin
-import time
 import random
+import re
+import shutil
+import subprocess
+import tempfile
+import time
 from collections import Counter
 from difflib import SequenceMatcher
-import shutil
+from pathlib import Path
+from urllib.parse import urljoin
+
+import click
+import requests
 
 
 def find_executable(name):
@@ -61,12 +62,8 @@ TRANSFORMATION_RULES = {
     "title": lambda w: w.title(),
     "reverse": lambda w: w[::-1],
     "duplicate": lambda w: w + w,
-    "append_num": lambda w: w
-    + str(
-        random.randint(1, 999)
-    ),  # nosec: B311 - non-cryptographic wordlist generation
-    "prepend_num": lambda w: str(random.randint(1, 999))
-    + w,  # nosec: B311 - non-cryptographic wordlist generation
+    "append_num": lambda w: w + str(random.randint(1, 999)),  # nosec: B311 - non-cryptographic wordlist generation
+    "prepend_num": lambda w: str(random.randint(1, 999)) + w,  # nosec: B311 - non-cryptographic wordlist generation
     "toggle_case": lambda w: "".join(
         c.lower() if c.isupper() else c.upper() for c in w
     ),
@@ -569,18 +566,14 @@ class MarkovWordGenerator:
             attempts += 1
 
             # Pick random starting sequence
-            start_key = random.choice(
-                list(self.chain.keys())
-            )  # nosec: B311 - non-cryptographic wordlist generation
+            start_key = random.choice(list(self.chain.keys()))  # nosec: B311 - non-cryptographic wordlist generation
             word = start_key
 
             # Generate word character by character
             current_key = start_key
             while len(word) < max_length:
                 if current_key in self.chain and self.chain[current_key]:
-                    next_char = random.choice(
-                        self.chain[current_key]
-                    )  # nosec: B311 - non-cryptographic wordlist generation
+                    next_char = random.choice(self.chain[current_key])  # nosec: B311 - non-cryptographic wordlist generation
                     if next_char is None:  # End of word
                         break
                     word += next_char
@@ -722,9 +715,9 @@ def run_cewl(url):
 def run_pydictor(words, minlen, maxlen):
     """Run pydictor to generate word combinations"""
     try:
-        import tempfile
-        import os
         import glob
+        import os
+        import tempfile
 
         # Pydictor has maxlen limit of 20
         pydictor_maxlen = min(maxlen, 20)
@@ -985,9 +978,7 @@ def apply_transformation_rules(words, rules=None, max_per_word=5):
 
     result = set()
     for word in words[:1000]:  # Limit to prevent explosion
-        transformations = random.sample(
-            rules, min(len(rules), max_per_word)
-        )  # nosec: B311 - non-cryptographic wordlist transformation
+        transformations = random.sample(rules, min(len(rules), max_per_word))  # nosec: B311 - non-cryptographic wordlist transformation
         for rule in transformations:
             if rule in TRANSFORMATION_RULES:
                 try:

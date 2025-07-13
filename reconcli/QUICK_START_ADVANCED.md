@@ -66,7 +66,7 @@ python main.py makewordlist \
 # Basic boost
 --word-boost admin|auth|panel|qa|api
 
-# Markov AI generation  
+# Markov AI generation
 --markovify training_file.txt --markov-count 1000 --markov-length 2
 
 # Wordlist combination

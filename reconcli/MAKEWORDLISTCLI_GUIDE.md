@@ -6,7 +6,7 @@
 - `--resume-from <file>`: Resume interrupted wordlist generation
 - Automatic checkpoints for large operations
 
-### 🚀 Word Boost Profiles  
+### 🚀 Word Boost Profiles
 - `--word-boost <profile>`: Enhance specific categories (admin, auth, panel, qa, api)
 - Specialized patterns and multiplied variations
 
@@ -116,7 +116,7 @@ reconcli makewordlist \
 - intranet, portal, secure, employee, dashboard, files
 - hr, finance, accounting, sales, marketing, support
 
-### 🔐 **login** - Authentication Systems  
+### 🔐 **login** - Authentication Systems
 - admin, login, signin, auth, access, account
 - user, member, guest, root, administrator
 
@@ -255,6 +255,6 @@ Works seamlessly with other ReconCLI modules:
 
 ---
 
-**Enhanced by**: Advanced AI Assistant  
-**Status**: Production Ready 🚀  
+**Enhanced by**: Advanced AI Assistant
+**Status**: Production Ready 🚀
 **Security**: Reviewed ✅

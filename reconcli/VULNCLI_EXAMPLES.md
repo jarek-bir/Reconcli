@@ -1,7 +1,7 @@
 # 🧪 VulnCLI Testing & Configuration Examples
 
-**Purpose**: Ready-to-use configurations and test scenarios for VulnCLI  
-**Status**: Production-ready examples  
+**Purpose**: Ready-to-use configurations and test scenarios for VulnCLI
+**Status**: Production-ready examples
 **Usage**: Copy and modify for your specific needs
 
 ---
@@ -28,7 +28,7 @@ stages:
       patterns: "xss,lfi,sqli,redirect,ssrf"
       gf_mode: "both"
       dedup: true
-    
+
   - name: "vulnerability_scanning"
     description: "Run vulnerability scanners"
     tools: ["nuclei", "jaeles"]
@@ -38,14 +38,14 @@ stages:
     settings:
       nuclei_severity: "critical,high,medium"
       jaeles_level: 2
-    
+
   - name: "specialized_testing"
     description: "Targeted testing based on patterns"
     tools: ["dalfox"]
     depends_on: ["url_filtering"]
     conditions:
       has_xss_patterns: true
-    
+
   - name: "reporting"
     description: "Generate comprehensive reports"
     tools: ["json_report", "markdown_report", "ai_summary"]
@@ -77,7 +77,7 @@ stages:
     settings:
       httpx_tech_detect: true
       domain: "target.com"
-    
+
   - name: "discovery"
     description: "Content and directory discovery"
     tools: ["gobuster", "ffuf"]
@@ -86,7 +86,7 @@ stages:
     settings:
       gobuster_wordlist: "/usr/share/wordlists/dirb/common.txt"
       ffuf_extensions: "php,asp,aspx,jsp,html"
-    
+
   - name: "pattern_analysis"
     description: "Advanced pattern matching and filtering"
     tools: ["gf_filtering"]
@@ -96,7 +96,7 @@ stages:
       smart_dedup: true
       categorize_params: true
       max_urls_per_pattern: 1000
-    
+
   - name: "vulnerability_scanning"
     description: "Multi-tool vulnerability assessment"
     tools: ["nuclei", "jaeles", "nikto"]
@@ -110,7 +110,7 @@ stages:
       jaeles_level: 2
       ai_reduce_fp: true
       ai_confidence_threshold: 0.7
-    
+
   - name: "specialized_testing"
     description: "Targeted vulnerability testing"
     tools: ["dalfox", "sqlmap", "commix"]
@@ -121,7 +121,7 @@ stages:
     settings:
       dalfox_blind: "https://your-xss-hunter.com"
       proxy: "http://127.0.0.1:8080"  # For manual testing
-    
+
   - name: "analysis_and_reporting"
     description: "AI-powered analysis and comprehensive reporting"
     tools: ["risk_analysis", "json_report", "markdown_report", "ai_summary", "executive_dashboard"]
@@ -158,7 +158,7 @@ stages:
       patterns: "xss,sqli,ssrf,redirect,lfi"
       gf_mode: "global"
       smart_dedup: true
-    
+
   - name: "fast_scanning"
     tools: ["nuclei"]
     depends_on: ["quick_filtering"]
@@ -168,7 +168,7 @@ stages:
       nuclei_severity: "critical,high"
       ai_smart_templates: true
       ai_reduce_fp: true
-    
+
   - name: "quick_xss"
     tools: ["dalfox"]
     depends_on: ["quick_filtering"]
@@ -176,7 +176,7 @@ stages:
       has_xss_patterns: true
     settings:
       concurrency: 10
-    
+
   - name: "quick_report"
     tools: ["markdown_report"]
     depends_on: ["fast_scanning", "quick_xss"]
@@ -206,7 +206,7 @@ stages:
     settings:
       httpx_tech_detect: true
       include_status_codes: "200,401,403,404,500"
-    
+
   - name: "api_filtering"
     tools: ["gf_filtering"]
     depends_on: ["api_discovery"]
@@ -214,7 +214,7 @@ stages:
       patterns: "api,json,xml,graphql,jwt"
       extract_params: true
       param_filter: "id,token,key,secret,admin"
-    
+
   - name: "api_vulnerability_scan"
     tools: ["nuclei"]
     depends_on: ["api_filtering"]
@@ -223,14 +223,14 @@ stages:
       nuclei_select: "http/exposures/apis/,http/misconfiguration/,http/cves/"
       nuclei_tags: "api,jwt,auth,exposure"
       ai_smart_templates: true
-    
+
   - name: "api_fuzzing"
     tools: ["ffuf"]
     depends_on: ["api_filtering"]
     settings:
       ffuf_extensions: "json,xml"
       wordlist: "/usr/share/wordlists/api_endpoints.txt"
-    
+
   - name: "api_reporting"
     tools: ["json_report", "ai_summary"]
     depends_on: ["api_vulnerability_scan", "api_fuzzing"]
@@ -260,7 +260,7 @@ python vulncli.py \\
 
 # Expected output files:
 # - results_basic/nuclei.txt
-# - results_basic/dalfox.txt  
+# - results_basic/dalfox.txt
 # - results_basic/vulncli_report.md
 # - results_basic/ai_executive_summary.md
 # - results_basic/nuclei_ai_analysis.json
@@ -358,7 +358,7 @@ AI Features: All enabled
 ### Medium Scale (100-1000 URLs)
 ```bash
 # Expected performance
-URLs: 100-1000  
+URLs: 100-1000
 Duration: 10-30 minutes
 Memory: 500MB-2GB
 CPU: 2-4 cores
@@ -372,7 +372,7 @@ Rate Limit: 50 req/sec
 URLs: 1000-10000
 Duration: 1-3 hours
 Memory: 2-8GB
-CPU: 4-8 cores  
+CPU: 4-8 cores
 Concurrency: 15-25
 Rate Limit: 25 req/sec (to avoid blocking)
 Recommended: Pipeline config, resume enabled
@@ -390,16 +390,16 @@ default_settings:
   timeout: 300
   ai_mode: true
   verbose: true
-  
+
 patterns:
   web_app: "xss,lfi,sqli,redirect,ssrf"
   api: "api,json,jwt,graphql"
   cms: "wp,drupal,joomla"
-  
+
 nuclei:
   default_severity: "critical,high,medium"
   default_templates: "http/exposures/,http/misconfiguration/"
-  
+
 jaeles:
   default_level: 2
   default_signatures: "sensitive/.*,common/.*"
@@ -445,7 +445,7 @@ EOF
 ### Pre-Scan Checklist
 - [ ] Target URLs file prepared and validated
 - [ ] Output directory has sufficient space
-- [ ] Network connectivity to targets confirmed  
+- [ ] Network connectivity to targets confirmed
 - [ ] Required tools installed (nuclei, gf, dalfox, jaeles)
 - [ ] Nuclei templates updated (`nuclei -update-templates`)
 - [ ] GF patterns installed (`go install github.com/tomnomnom/gf@latest`)
@@ -472,7 +472,7 @@ python vulncli.py -i test_urls.txt -o test2 --run-nuclei --ai-smart-templates --
 # Test 3: Pipeline configuration
 python vulncli.py --pipeline-config basic_web_assessment.yaml --verbose
 
-# Test 4: Resume functionality  
+# Test 4: Resume functionality
 python vulncli.py -i test_urls.txt -o test4 --run-nuclei --resume
 
 # Test 5: Error handling
@@ -529,7 +529,7 @@ performance_metrics:
   cpu_usage: "< 80% average"
   accuracy: "> 90% true positives"
   coverage: "> 95% URL processing"
-  
+
 quality_metrics:
   false_positive_rate: "< 10%"
   critical_finding_detection: "> 95%"
@@ -545,7 +545,7 @@ htop  # Or top on systems without htop
 # Monitor disk space
 df -h
 
-# Monitor network usage  
+# Monitor network usage
 iftop  # Or nethogs
 
 # Monitor scan progress

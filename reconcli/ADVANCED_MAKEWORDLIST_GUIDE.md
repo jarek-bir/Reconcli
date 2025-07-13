@@ -9,7 +9,7 @@ Generate wordlists based on specific attack patterns:
 # Generate credential-focused wordlist
 python makewordlistcli.py --name john --surname doe --pattern credential --output-prefix creds_test
 
-# Generate subdomain patterns  
+# Generate subdomain patterns
 python makewordlistcli.py --domain example.com --pattern subdomain --output-prefix subdomains_test
 
 # Use custom patterns from file
@@ -19,7 +19,7 @@ python makewordlistcli.py --name admin --custom-patterns custom_patterns.txt --o
 **Available patterns:**
 - `credential`: admin/user/login patterns
 - `subdomain`: subdomain variations
-- `directory`: directory path patterns  
+- `directory`: directory path patterns
 - `filename`: file name variations
 - `parameter`: URL parameter patterns
 - `endpoint`: API endpoint patterns
@@ -119,7 +119,7 @@ Enable ALL advanced features at once:
 # Ultimate wordlist generation
 python makewordlistcli.py --name admin --domain target.com --advanced --output-prefix ultimate_test
 
-# Enables: full, mutations, dates, hybrid, keyboard-patterns, password-patterns, 
+# Enables: full, mutations, dates, hybrid, keyboard-patterns, password-patterns,
 #          frequency-analysis, entropy-sort, similarity-filter, crawl-deep, etc.
 ```
 
@@ -141,7 +141,7 @@ New profile categories:
 ```bash
 # New profiles available
 python makewordlistcli.py --profile healthcare --output-prefix health_test
-python makewordlistcli.py --profile education --output-prefix edu_test  
+python makewordlistcli.py --profile education --output-prefix edu_test
 python makewordlistcli.py --profile finance --output-prefix finance_test
 
 # healthcare: patient, doctor, medical, hospital, clinic, health, pharmacy
@@ -182,7 +182,7 @@ python makewordlistcli.py \
     --output-prefix corporate_pentest
 ```
 
-### 2. Web Application Testing  
+### 2. Web Application Testing
 ```bash
 # Web app focused wordlist
 python makewordlistcli.py \
@@ -211,7 +211,7 @@ python makewordlistcli.py \
 ```
 
 ### 4. Password Attack Wordlist
-```bash  
+```bash
 # Password cracking wordlist
 python makewordlistcli.py \
     --name "john" \

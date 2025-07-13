@@ -377,8 +377,8 @@ import json
 
 # Generate plan
 result = subprocess.run([
-    "python", "main.py", "aicli", 
-    "--plan", "example.com", 
+    "python", "main.py", "aicli",
+    "--plan", "example.com",
     "--export-plan", "auto_plan.json"
 ], capture_output=True, text=True)
 

@@ -6,12 +6,13 @@ Advanced port scanning using multiple scanners (naabu, rustscan, nmap) with
 resume functionality, CDN detection, and professional reporting.
 """
 
-import click
-import subprocess
-import os
-import json
 import datetime
 import ipaddress
+import json
+import os
+import subprocess
+
+import click
 
 CDN_RANGES = [
     "104.16.",
@@ -426,7 +427,7 @@ def write_markdown(results, path):
         f.write(f"- **Total Open Ports Found:** {total_ports}\n")
         if total_targets > 0:
             f.write(
-                f"- **Success Rate:** {(targets_with_ports/total_targets*100):.1f}%\n\n"
+                f"- **Success Rate:** {(targets_with_ports / total_targets * 100):.1f}%\n\n"
             )
         else:
             f.write("- **Success Rate:** 0.0%\n\n")
@@ -792,7 +793,7 @@ def portcli(
         # Progress update for large scans
         if not silent and len(to_scan) > 10 and i % 10 == 0:
             click.echo(
-                f"📊 Progress: {i}/{len(to_scan)} ({(i/len(to_scan)*100):.1f}%) - Success: {successful_scans}, Failed: {failed_scans}"
+                f"📊 Progress: {i}/{len(to_scan)} ({(i / len(to_scan) * 100):.1f}%) - Success: {successful_scans}, Failed: {failed_scans}"
             )
 
     # Save results and final summary
@@ -855,7 +856,7 @@ def portcli(
         click.echo(f"   • Total open ports found: {total_open_ports}")
         if successful_scans > 0:
             click.echo(
-                f"   • Success rate: {(successful_scans/(successful_scans+failed_scans)*100):.1f}%"
+                f"   • Success rate: {(successful_scans / (successful_scans + failed_scans) * 100):.1f}%"
             )
 
     if json_out:
@@ -875,7 +876,7 @@ def portcli(
     # Database storage
     if store_db:
         try:
-            from reconcli.db.operations import store_target, store_port_scan
+            from reconcli.db.operations import store_port_scan, store_target
 
             # Auto-detect target domain if not provided
             if not target_domain and filtered_results:

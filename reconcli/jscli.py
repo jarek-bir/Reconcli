@@ -1,22 +1,23 @@
+import json as json_module
 import os
 import re
-import json as json_module
+import shutil
+import subprocess
+import threading
+import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from datetime import datetime
+from pathlib import Path
+from urllib.parse import urlparse
+
 import click
 import requests
-import subprocess
-import shutil
-from urllib.parse import urlparse
-from pathlib import Path
-from datetime import datetime
-import threading
-from concurrent.futures import ThreadPoolExecutor, as_completed
-import time
 
 # Database and AI imports
 try:
-    from reconcli.db.operations import store_target, store_js_findings
     from reconcli.aicli import AIReconAssistant
-    from reconcli.utils.resume import load_resume, save_resume_state, clear_resume
+    from reconcli.db.operations import store_js_findings, store_target
+    from reconcli.utils.resume import clear_resume, load_resume, save_resume_state
 except ImportError:
     store_target = None
     store_js_findings = None
@@ -965,9 +966,9 @@ def analyze_js_with_ai(ai_assistant, results, ai_model, verbose):
 
         prompt = f"""
         Analyze these JavaScript scan results:
-        
+
         {json_module.dumps(sample_findings, indent=2)}
-        
+
         Please provide:
         1. Security assessment of discovered secrets and endpoints
         2. Risk level classification

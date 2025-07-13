@@ -175,7 +175,7 @@ python [csvtkcli|gitcli].py [command]
 
 ---
 
-**Documentation Status**: ✅ Complete  
-**Testing Status**: ✅ Verified  
-**Integration Status**: ✅ Fully Integrated  
+**Documentation Status**: ✅ Complete
+**Testing Status**: ✅ Verified
+**Integration Status**: ✅ Fully Integrated
 **Last Updated**: July 12, 2025
