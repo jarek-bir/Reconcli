@@ -3,7 +3,6 @@ import json
 import re
 import sqlite3
 import time
-import urllib3
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 from pathlib import Path
@@ -257,7 +256,7 @@ def detect_api_technology(url, timeout=3):
                     detected_tech.append("graphql")
                 elif "swagger" in json_data or "openapi" in json_data:
                     detected_tech.append("openapi")
-        except:
+        except Exception:
             pass
 
         return {
@@ -673,7 +672,6 @@ def test_injection_vulnerabilities(url, timeout=3):
         for payload in payloads:
             try:
                 # Test in URL parameters
-                parsed_url = urlparse(url)
                 test_url = f"{url}?test={quote(payload)}"
 
                 response = requests.get(test_url, timeout=timeout, verify=True)
@@ -1709,7 +1707,7 @@ def main(
     rate_limit,
     insecure,
 ):
-    """API security testing and analysis tool"""
+    """API security testing and analysis tool."""
 
     # SSL verification setting
     ssl_verify = not insecure
@@ -1848,7 +1846,7 @@ def main(
                                     f"🎯 [SJ] Auto-discovered Swagger/OpenAPI at: {test_url}"
                                 )
                             break
-                except:
+                except Exception:
                     continue
 
         if not swagger_content:
