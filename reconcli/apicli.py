@@ -3,6 +3,7 @@ import json
 import re
 import sqlite3
 import time
+import urllib3
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 from pathlib import Path
@@ -1126,7 +1127,7 @@ def extract_js_urls_from_html(html_content, base_url):
     return list(js_urls)
 
 
-def scan_javascript_files(url, session, store_db=False, db_path=None):
+def scan_javascript_files(url, session, ssl_verify=True, store_db=False, db_path=None):
     """Scan JavaScript files for secrets and sensitive information."""
     results = {
         "js_files_scanned": 0,
@@ -1139,7 +1140,7 @@ def scan_javascript_files(url, session, store_db=False, db_path=None):
         print("🔍 [JS-SCAN] Scanning JavaScript files for secrets...")
 
         # First, get the main page to extract JS URLs
-        response = session.get(url, timeout=10, verify=False)
+        response = session.get(url, timeout=10, verify=ssl_verify)
         if response.status_code != 200:
             return results
 
@@ -1183,7 +1184,7 @@ def scan_javascript_files(url, session, store_db=False, db_path=None):
                     else:
                         continue
                 else:
-                    js_response = session.get(js_url, timeout=5, verify=False)
+                    js_response = session.get(js_url, timeout=5, verify=ssl_verify)
                     if js_response.status_code != 200:
                         continue
                     js_content = js_response.text
@@ -1313,7 +1314,7 @@ def parse_swagger_openapi(swagger_content, base_url):
         return {"error": f"Failed to parse Swagger/OpenAPI: {str(e)}"}
 
 
-def swagger_brute_force(base_url, session, rate_limit=15):
+def swagger_brute_force(base_url, session, rate_limit=15, ssl_verify=True):
     """Brute force discover Swagger/OpenAPI definition files."""
     import time
 
@@ -1389,7 +1390,7 @@ def swagger_brute_force(base_url, session, rate_limit=15):
             for ext in extensions:
                 url = f"{base_url}{prefix}{path}{ext}"
                 try:
-                    response = session.get(url, timeout=5, verify=False)
+                    response = session.get(url, timeout=5, verify=ssl_verify)
                     total_requests += 1
 
                     if response.status_code == 200:
@@ -1481,7 +1482,9 @@ def generate_swagger_commands(endpoints, prepare_tool="curl", base_url=""):
     return commands
 
 
-def swagger_automate_test(endpoints, session, base_url="", rate_limit=15):
+def swagger_automate_test(
+    endpoints, session, base_url="", rate_limit=15, ssl_verify=True
+):
     """Automate testing of Swagger endpoints (SJ automate mode)."""
     import time
 
@@ -1511,7 +1514,12 @@ def swagger_automate_test(endpoints, session, base_url="", rate_limit=15):
                 data = '{"test": "data"}'
 
             response = session.request(
-                method, full_url, data=data, headers=headers, timeout=5, verify=False
+                method,
+                full_url,
+                data=data,
+                headers=headers,
+                timeout=5,
+                verify=ssl_verify,
             )
 
             result = {
@@ -1658,6 +1666,11 @@ def swagger_automate_test(endpoints, session, base_url="", rate_limit=15):
     type=int,
     help="Requests per second rate limit for SJ operations",
 )
+@click.option(
+    "--insecure",
+    is_flag=True,
+    help="Disable SSL certificate verification (security risk)",
+)
 def main(
     url,
     endpoints_file,
@@ -1694,58 +1707,17 @@ def main(
     swagger_url,
     swagger_file,
     rate_limit,
+    insecure,
 ):
-    """
-    🔍 Advanced API Security Scanner and Analyzer
+    """API security testing and analysis tool"""
 
-    Comprehensive API testing tool with security vulnerability detection:
-    • API endpoint discovery and enumeration
-    • HTTP method testing and analysis
-    • Authentication bypass detection
-    • CORS configuration testing
-    • Injection vulnerability testing (SQL, NoSQL, XSS, Command, LDAP, XML)
-    • Rate limiting implementation testing
-    • HTTP Parameter Pollution testing
-    • JavaScript secret scanning (SJ integration)
-    • Technology stack detection
-    • Database storage for results
-    • Comprehensive security reporting
-
-    Security Testing Features:
-    --security-test              # Full security assessment
-    --method-test                # HTTP method analysis
-    --auth-bypass                # Authentication bypass testing
-    --cors-test                  # CORS configuration testing
-    --injection-test             # Injection vulnerability testing
-    --rate-limit-test            # Rate limiting testing
-    --parameter-pollution        # HTTP Parameter Pollution testing
-    --secret-scan                # JavaScript secret scanning (SJ tool)
-    --store-db path/to/db.sqlite # Store results in SQLite database
-
-    Discovery and Analysis:
-    --discover                   # Auto-discover API endpoints
-    --tech-detect                # Detect API technologies
-    --endpoints-file endpoints.txt # Load endpoints from file
-
-    Examples:
-    # Basic API discovery
-    apicli --url https://api.example.com --discover --tech-detect
-
-    # Comprehensive security testing with secret scanning
-    apicli --url https://api.example.com --security-test --secret-scan --store-db results.db --json-report --markdown-report
-
-    # JavaScript secret scanning only
-    apicli --url https://api.example.com --secret-scan --store-db secrets.db
-
-    # Targeted testing with database storage
-    apicli --url https://api.example.com --method-test --cors-test --auth-bypass --store-db scan_results.db
-
-    # Load endpoints from file with secret scanning
-    apicli --url https://api.example.com --endpoints-file endpoints.txt --injection-test --secret-scan
-
-    # Full security assessment with all features
-    apicli --url https://api.example.com --security-test --secret-scan --discover --store-db full_scan.db --slack-webhook https://hooks.slack.com/... --json-report --markdown-report
-    """
+    # SSL verification setting
+    ssl_verify = not insecure
+    if insecure:
+        click.echo(
+            "⚠️  WARNING: SSL certificate verification is disabled. This is a security risk!"
+        )
+        click.echo("    Use --insecure only for testing against trusted endpoints.")
 
     if verbose:
         print("🚀 [START] APICLI - Advanced API Security Scanner")
@@ -1779,7 +1751,7 @@ def main(
         if verbose:
             print("🔍 [SJ-BRUTE] Starting Swagger/OpenAPI brute force discovery...")
 
-        found_swagger_files = swagger_brute_force(url, session, rate_limit)
+        found_swagger_files = swagger_brute_force(url, session, rate_limit, ssl_verify)
 
         if found_swagger_files:
             print(
@@ -1835,7 +1807,7 @@ def main(
             if verbose:
                 print(f"🌐 [SJ] Loading Swagger/OpenAPI from URL: {swagger_url}")
             try:
-                response = session.get(swagger_url, timeout=10, verify=False)
+                response = session.get(swagger_url, timeout=10, verify=ssl_verify)
                 if response.status_code == 200:
                     swagger_content = response.text
                     swagger_source = swagger_url
@@ -1862,7 +1834,7 @@ def main(
 
             for test_url in swagger_urls:
                 try:
-                    response = session.get(test_url, timeout=5, verify=False)
+                    response = session.get(test_url, timeout=5, verify=ssl_verify)
                     if response.status_code == 200:
                         content = response.text.lower()
                         if any(
@@ -1964,7 +1936,7 @@ def main(
 
             # Test all endpoints automatically
             test_results = swagger_automate_test(
-                api_spec["endpoints"], session, base_url, rate_limit
+                api_spec["endpoints"], session, base_url, rate_limit, ssl_verify
             )
 
             # Store results in database
@@ -2142,6 +2114,7 @@ def main(
             endpoint_results["javascript_secrets"] = scan_javascript_files(
                 endpoint,
                 session,
+                ssl_verify,
                 store_db=(store_db is not None),
                 db_path=store_db if store_db else None,
             )
@@ -2220,81 +2193,41 @@ def main(
             print(f"💾 [SAVE] YAML report saved to {yaml_file}")
 
     if markdown_report:
-        md_file = save_results(security_report, output_dir, "markdown")
-        output_files.append(md_file)
+        markdown_file = save_results(security_report, output_dir, "markdown")
+        output_files.append(markdown_file)
         if verbose:
-            print(f"💾 [SAVE] Markdown report saved to {md_file}")
-
-    # Always save JSON by default
-    if not any([json_report, yaml_report, markdown_report]):
-        json_file = save_results(security_report, output_dir, "json")
-        output_files.append(json_file)
-        if verbose:
-            print(f"💾 [SAVE] Default JSON report saved to {json_file}")
+            print(f"💾 [SAVE] Markdown report saved to {markdown_file}")
 
     # Print summary
-    print("\n" + "=" * 60)
-    print("📊 [SUMMARY] API Security Analysis Results")
-    print("=" * 60)
-    print(f"🎯 Target: {url}")
-    print(f"📝 Endpoints tested: {security_report['summary']['total_endpoints']}")
-    print(
-        f"🔴 Vulnerable endpoints: {security_report['summary']['vulnerable_endpoints']}"
-    )
-    print(f"🚨 High risk issues: {len(security_report['summary']['high_risk_issues'])}")
-    print(
-        f"⚠️ Medium risk issues: {len(security_report['summary']['medium_risk_issues'])}"
-    )
-    print(f"📋 Low risk issues: {len(security_report['summary']['low_risk_issues'])}")
-
-    # Display high-risk issues
-    if security_report["summary"]["high_risk_issues"]:
-        print("\n🚨 [HIGH RISK ISSUES]")
-        for issue in security_report["summary"]["high_risk_issues"][:5]:  # Show top 5
-            print(f"  • {issue['issue']} at {issue['endpoint']}")
-            print(f"    {issue['description']}")
-
-    # Display recommendations
-    if security_report["recommendations"]:
-        print("\n📋 [RECOMMENDATIONS]")
-        for rec in security_report["recommendations"][:5]:  # Show top 5
-            print(f"  {rec}")
+    if verbose:
+        print("\n📊 [SUMMARY] Scan Results:")
+        print(
+            f"   🎯 Total endpoints tested: {security_report['summary']['total_endpoints']}"
+        )
+        print(
+            f"   🚨 High risk issues: {len(security_report['summary']['high_risk_issues'])}"
+        )
+        print(
+            f"   ⚠️  Medium risk issues: {len(security_report['summary']['medium_risk_issues'])}"
+        )
+        print(f"   📁 Reports saved: {len(output_files)}")
 
     # Send notifications
     if slack_webhook or discord_webhook:
-        summary_message = "🔍 API Security Scan Complete\n"
-        summary_message += f"Target: {url}\n"
-        summary_message += (
-            f"Endpoints: {security_report['summary']['total_endpoints']}\n"
-        )
-        summary_message += (
-            f"Vulnerable: {security_report['summary']['vulnerable_endpoints']}\n"
-        )
-        summary_message += (
-            f"High Risk: {len(security_report['summary']['high_risk_issues'])}\n"
-        )
-        summary_message += (
-            f"Medium Risk: {len(security_report['summary']['medium_risk_issues'])}\n"
-        )
+        summary = f"APICLI scan completed for {url}. Found {len(security_report['summary']['high_risk_issues'])} high-risk issues."
 
         if slack_webhook:
-            if send_notification(slack_webhook, summary_message, "slack"):
+            if send_notification(slack_webhook, summary, "slack"):
                 if verbose:
-                    print("✅ [NOTIFY] Slack notification sent")
-            else:
-                if verbose:
-                    print("❌ [NOTIFY] Failed to send Slack notification")
+                    print("📲 [NOTIFY] Slack notification sent")
 
         if discord_webhook:
-            if send_notification(discord_webhook, summary_message, "discord"):
+            if send_notification(discord_webhook, summary, "discord"):
                 if verbose:
-                    print("✅ [NOTIFY] Discord notification sent")
-            else:
-                if verbose:
-                    print("❌ [NOTIFY] Failed to send Discord notification")
+                    print("📲 [NOTIFY] Discord notification sent")
 
-    print(f"\n📂 Results saved in: {output_dir}")
-    print("🎉 [COMPLETE] APICLI scan finished successfully!")
+    if verbose:
+        print("🎉 [COMPLETE] APICLI scan finished successfully!")
 
 
 if __name__ == "__main__":
