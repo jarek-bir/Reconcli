@@ -518,6 +518,12 @@ def ai_generate_executive_summary(stats, scan_results, tech_stack=None):
 @click.option("--run-jaeles", is_flag=True, help="Run Jaeles scan.")
 @click.option("--run-nuclei", is_flag=True, help="Run Nuclei scan.")
 @click.option("--resume", is_flag=True, help="Skip steps if output exists.")
+@click.option(
+    "--resume-stat", is_flag=True, help="Show detailed resume statistics and progress"
+)
+@click.option(
+    "--resume-reset", is_flag=True, help="Reset and clear all resume data completely"
+)
 @click.option("--dedup", is_flag=True, help="Deduplicate URLs.")
 @click.option(
     "--extract-params", is_flag=True, help="Filter URLs with query parameters."
@@ -662,6 +668,8 @@ def vulncli(
     run_jaeles,
     run_nuclei,
     resume,
+    resume_stat,
+    resume_reset,
     dedup,
     extract_params,
     param_filter,
@@ -784,6 +792,15 @@ def vulncli(
         click.echo(f"📂 Output directory: {output_dir}")
 
     os.makedirs(output_dir, exist_ok=True)
+
+    # Handle new resume functionality
+    if resume_stat:
+        show_detailed_resume_stats(output_dir)
+        return
+
+    if resume_reset:
+        reset_all_resume_data(output_dir)
+        return
     patterns = patterns.split(",")
     all_urls = []
 
@@ -1522,7 +1539,7 @@ def vulncli(
     # Database storage
     if store_db:
         try:
-            from urllib.parse import urlparse
+            from urllib.parse import parse_qs, urlparse
 
             from reconcli.db.operations import store_target, store_vulnerability
 
@@ -1605,3 +1622,207 @@ def vulncli(
         except Exception as e:
             if verbose:
                 click.echo(f"❌ Error storing to database: {e}")
+
+
+def create_resume_state(output_dir, scan_config):
+    """Create resume state file for vulnerability scan continuation."""
+    import hashlib
+
+    resume_dir = Path(output_dir) / "resume"
+    resume_dir.mkdir(parents=True, exist_ok=True)
+
+    state = {
+        "scan_id": hashlib.md5(
+            str(datetime.now()).encode(), usedforsecurity=False
+        ).hexdigest()[:8],
+        "created_at": datetime.now().isoformat(),
+        "scan_type": "vulnerability_scan",
+        "config": scan_config,
+        "completed_tools": [],
+        "pending_tools": [],
+        "scan_statistics": {
+            "total_urls": 0,
+            "patterns_matched": 0,
+            "vulnerabilities_found": 0,
+            "technologies": {},
+            "scan_tools": [],
+        },
+        "status": "in_progress",
+    }
+
+    state_file = resume_dir / "vuln_scan_state.json"
+    with open(state_file, "w") as f:
+        json.dump(state, f, indent=2)
+
+    return state_file
+
+
+def load_resume_state(output_dir):
+    """Load existing vulnerability scan resume state."""
+    resume_dir = Path(output_dir) / "resume"
+    state_file = resume_dir / "vuln_scan_state.json"
+
+    if not state_file.exists():
+        return None
+
+    try:
+        with open(state_file, "r") as f:
+            state = json.load(f)
+        return state, state_file
+    except Exception as e:
+        print(f"❌ [RESUME] Failed to load resume state: {e}")
+        return None
+
+
+def update_resume_state(state_file, tool_name, stats_update):
+    """Update resume state with completed tool results."""
+    try:
+        with open(state_file, "r") as f:
+            state = json.load(f)
+
+        # Update completed tools
+        if tool_name not in state["completed_tools"]:
+            state["completed_tools"].append(tool_name)
+
+        # Remove from pending if exists
+        if tool_name in state["pending_tools"]:
+            state["pending_tools"].remove(tool_name)
+
+        # Update statistics
+        state["scan_statistics"].update(stats_update)
+        state["last_updated"] = datetime.now().isoformat()
+
+        with open(state_file, "w") as f:
+            json.dump(state, f, indent=2)
+    except Exception as e:
+        print(f"⚠️ [RESUME] Failed to update state: {e}")
+
+
+def show_detailed_resume_stats(output_dir):
+    """Show detailed resume statistics and progress information for vulnerability scans."""
+    resume_state = load_resume_state(output_dir)
+    if not resume_state:
+        print("📋 [RESUME-STAT] No resume state found")
+        return
+
+    state, _ = resume_state
+
+    print("=" * 70)
+    print("📊 [RESUME-STAT] Detailed Vulnerability Scan Resume Statistics")
+    print("=" * 70)
+
+    # Basic information
+    print(f"🆔 Scan ID: {state.get('scan_id', 'Unknown')}")
+    print(f"📅 Created: {state.get('created_at', 'Unknown')}")
+    print(f"🔄 Status: {state.get('status', 'Unknown')}")
+    print(f"📝 Last Update: {state.get('updated_at', 'Never')}")
+    print(f"🎯 Scan Type: {state.get('scan_type', 'Unknown')}")
+
+    # Scan configuration
+    config = state.get("config", {})
+    print("\n🔧 Scan Configuration:")
+    print(f"   📁 Input file: {config.get('input_file', 'Unknown')}")
+    print(f"   📂 Output directory: {config.get('output_dir', 'Unknown')}")
+    print(f"   🔍 Patterns: {config.get('patterns', 'Unknown')}")
+    print(f"   🔥 Dalfox: {'Yes' if config.get('run_dalfox') else 'No'}")
+    print(f"   🔧 Jaeles: {'Yes' if config.get('run_jaeles') else 'No'}")
+    print(f"   ⚡ Nuclei: {'Yes' if config.get('run_nuclei') else 'No'}")
+    print(f"   🤖 AI Mode: {'Yes' if config.get('ai_mode') else 'No'}")
+
+    # Tool progress
+    completed_tools = state.get("completed_tools", [])
+    pending_tools = state.get("pending_tools", [])
+    total_tools = len(completed_tools) + len(pending_tools)
+
+    print("\n📈 Tool Progress:")
+    print(f"   ✅ Completed tools: {len(completed_tools)}")
+    print(f"   ⏳ Pending tools: {len(pending_tools)}")
+    if total_tools > 0:
+        print(f"   📊 Progress: {len(completed_tools) / total_tools * 100:.1f}%")
+
+    if completed_tools:
+        print(f"   🔧 Completed: {', '.join(completed_tools)}")
+    if pending_tools:
+        print(f"   ⏱️  Pending: {', '.join(pending_tools)}")
+
+    # Scan statistics
+    stats = state.get("scan_statistics", {})
+    print("\n🔍 Scan Statistics:")
+    print(f"   🎯 Total URLs: {stats.get('total_urls', 0)}")
+    print(f"   📊 Patterns matched: {stats.get('patterns_matched', 0)}")
+    print(f"   ⚡ Vulnerabilities found: {stats.get('vulnerabilities_found', 0)}")
+    print(f"   🛠️ Technologies detected: {len(stats.get('technologies', {}))}")
+
+    # Technology breakdown
+    technologies = stats.get("technologies", {})
+    if technologies:
+        print("\n🛠️ Technology Breakdown:")
+        for tech, count in sorted(
+            technologies.items(), key=lambda x: x[1], reverse=True
+        )[:10]:
+            print(f"   • {tech}: {count}")
+        if len(technologies) > 10:
+            print(f"   ... and {len(technologies) - 10} more")
+
+    # Output files status
+    output_dir_path = Path(config.get("output_dir", output_dir))
+    if output_dir_path.exists():
+        print("\n📁 Output Files Status:")
+
+        # Check for common output files
+        output_files = {
+            "all.txt": "Combined URLs",
+            "xss.txt": "XSS patterns",
+            "sqli.txt": "SQLi patterns",
+            "lfi.txt": "LFI patterns",
+            "dalfox.txt": "Dalfox results",
+            "jaeles.txt": "Jaeles results",
+            "nuclei.txt": "Nuclei results",
+            "vulncli_report.json": "JSON report",
+            "vulncli_report.md": "Markdown report",
+            "ai_executive_summary.md": "AI summary",
+        }
+
+        for filename, description in output_files.items():
+            file_path = output_dir_path / filename
+            if file_path.exists():
+                size = file_path.stat().st_size
+                size_str = f"{size} bytes" if size < 1024 else f"{size / 1024:.1f} KB"
+                print(f"   ✅ {filename} ({description}): {size_str}")
+            else:
+                print(f"   ❌ {filename} ({description}): Not found")
+
+    print("\n" + "=" * 70)
+
+
+def reset_all_resume_data(output_dir):
+    """Reset and clear all vulnerability scan resume data completely."""
+    resume_dir = Path(output_dir) / "resume"
+
+    if not resume_dir.exists():
+        print("📋 [RESUME-RESET] No resume data found to reset")
+        return
+
+    try:
+        # Remove all files in resume directory
+        file_count = 0
+        for file_path in resume_dir.glob("*"):
+            if file_path.is_file():
+                file_path.unlink()
+                file_count += 1
+                print(f"🗑️  [RESUME-RESET] Removed: {file_path.name}")
+
+        # Remove the resume directory itself
+        resume_dir.rmdir()
+        print(
+            "✅ [RESUME-RESET] All vulnerability scan resume data has been completely reset"
+        )
+        print(f"🔄 [RESUME-RESET] Removed {file_count} files and resume directory")
+        print("🆕 [RESUME-RESET] You can now start a fresh vulnerability scan")
+
+    except Exception as e:
+        print(f"❌ [RESUME-RESET] Error resetting resume data: {e}")
+
+
+if __name__ == "__main__":
+    vulncli()

@@ -14,36 +14,36 @@ VulnCLI teraz obsługuje zaawansowany wybór sygnatur Jaeles:
 
 #### 1. Tylko sygnatury wrażliwe (sensitive):
 ```bash
-python vulncli.py -i urls.txt -o results --run-jaeles --jaeles-select 'sensitive/.*'
+reconcli vulncli -i urls.txt -o results --run-jaeles --jaeles-select 'sensitive/.*'
 ```
 
 #### 2. Tylko sygnatury SQL injection fuzzing:
 ```bash
-python vulncli.py -i urls.txt -o results --run-jaeles --jaeles-select 'fuzz/sqli/.*'
+reconcli vulncli -i urls.txt -o results --run-jaeles --jaeles-select 'fuzz/sqli/.*'
 ```
 
 #### 3. Tylko wspólne podatności:
 ```bash
-python vulncli.py -i urls.txt -o results --run-jaeles --jaeles-select 'common/.*'
+reconcli vulncli -i urls.txt -o results --run-jaeles --jaeles-select 'common/.*'
 ```
 
 #### 4. Fuzzing i sensitive, ale bez eksperymentalnych:
 ```bash
-python vulncli.py -i urls.txt -o results --run-jaeles \
+reconcli vulncli -i urls.txt -o results --run-jaeles \
   --jaeles-select 'fuzz/.*|sensitive/.*' \
   --jaeles-exclude 'experimental/.*'
 ```
 
 #### 5. Tylko wysokiej jakości sygnatury (level 2+):
 ```bash
-python vulncli.py -i urls.txt -o results --run-jaeles \
+reconcli vulncli -i urls.txt -o results --run-jaeles \
   --jaeles-select 'common/.*' \
   --jaeles-level 2
 ```
 
 #### 6. Użyj niestandardowego katalogu sygnatur:
 ```bash
-python vulncli.py -i urls.txt -o results --run-jaeles \
+reconcli vulncli -i urls.txt -o results --run-jaeles \
   --jaeles-signatures ~/my-custom-signatures/
 ```
 
@@ -66,7 +66,7 @@ Jeśli nie określisz sygnatur, VulnCLI:
 
 ### Przykład pełnego skanowania:
 ```bash
-python vulncli.py -i urls.txt -o full_scan \
+reconcli vulncli -i urls.txt -o full_scan \
   --run-dalfox --run-jaeles --run-nuclei \
   --jaeles-select 'common/.*|sensitive/.*' \
   --jaeles-exclude 'experimental/.*' \

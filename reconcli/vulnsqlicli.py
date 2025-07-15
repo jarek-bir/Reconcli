@@ -1097,6 +1097,12 @@ def save_results(results, output_dir, format_type="json"):
 )
 @click.option("--show-resume", is_flag=True, help="Show previous scan resume status")
 @click.option("--clear-resume", is_flag=True, help="Clear previous scan state")
+@click.option(
+    "--resume-stat", is_flag=True, help="Show detailed resume statistics and progress"
+)
+@click.option(
+    "--resume-reset", is_flag=True, help="Reset and clear all resume data completely"
+)
 def main(
     url,
     urls_file,
@@ -1145,6 +1151,8 @@ def main(
     resume,
     show_resume,
     clear_resume,
+    resume_stat,
+    resume_reset,
 ):
     """
     🔍 Advanced SQL Injection Vulnerability Scanner
@@ -1185,44 +1193,52 @@ def main(
     --resume                     # Resume interrupted scan from previous state
     --show-resume                # Show previous scan resume status
     --clear-resume               # Clear previous scan state
+    --resume-stat                # Show detailed resume statistics and progress
+    --resume-reset               # Reset and clear all resume data completely
     --force-resume               # Force resume even if scan appears running
 
     Examples:
     # Basic SQL injection testing
-    vulnsqlicli --url "http://example.com/page.php?id=1" --basic-test
+    reconcli vulnsqlicli --url "http://example.com/page.php?id=1" --basic-test
 
     # Comprehensive testing with SQLMap
-    vulnsqlicli --url "http://example.com/page.php?id=1" --sqlmap --level 3 --risk 2
+    reconcli vulnsqlicli --url "http://example.com/page.php?id=1" --sqlmap --level 3 --risk 2
 
     # Fast detection with Ghauri
-    vulnsqlicli --url "http://example.com/page.php?id=1" --ghauri --batch
+    reconcli vulnsqlicli --url "http://example.com/page.php?id=1" --ghauri --batch
 
     # Pattern matching with GF
-    vulnsqlicli --url "http://example.com/page.php?id=1" --gf
+    reconcli vulnsqlicli --url "http://example.com/page.php?id=1" --gf
 
     # Full enumeration after finding vulnerability
-    vulnsqlicli --url "http://example.com/page.php?id=1" --sqlmap --dbs --tables --columns --current-user
+    reconcli vulnsqlicli --url "http://example.com/page.php?id=1" --sqlmap --dbs --tables --columns --current-user
 
     # Test multiple URLs from file
-    vulnsqlicli --urls-file urls.txt --tool all --json-report --markdown-report
+    reconcli vulnsqlicli --urls-file urls.txt --tool all --json-report --markdown-report
 
     # Advanced testing with proxy and tamper
-    vulnsqlicli --url "http://example.com/page.php?id=1" --sqlmap --proxy http://127.0.0.1:8080 --tamper space2comment,charencode --level 5 --risk 3
+    reconcli vulnsqlicli --url "http://example.com/page.php?id=1" --sqlmap --proxy http://127.0.0.1:8080 --tamper space2comment,charencode --level 5 --risk 3
 
     # Steganographic testing with Tor
-    vulnsqlicli --url "http://example.com/page.php?id=1" --sqlmap --tor --check-tor --random-agent --level 3
+    reconcli vulnsqlicli --url "http://example.com/page.php?id=1" --sqlmap --tor --check-tor --random-agent --level 3
 
     # Resume interrupted scan
-    vulnsqlicli --resume --verbose
+    reconcli vulnsqlicli --resume --verbose
 
-    # Show previous scan status
-    vulnsqlicli --show-resume
+    # Show detailed resume statistics
+    reconcli vulnsqlicli --resume-stat
+
+    # Show basic resume status
+    reconcli vulnsqlicli --show-resume
 
     # Clear previous scan state
-    vulnsqlicli --clear-resume
+    reconcli vulnsqlicli --clear-resume
+
+    # Reset all resume data completely
+    reconcli vulnsqlicli --resume-reset
 
     # Resume with force (if scan appears to be running)
-    vulnsqlicli --resume --force-resume
+    reconcli vulnsqlicli --resume --force-resume
     """
 
     if verbose:
@@ -1250,6 +1266,14 @@ def main(
 
     if clear_resume:
         cleanup_resume_state(output_dir)
+        return
+
+    if resume_stat:
+        show_detailed_resume_stats(output_dir)
+        return
+
+    if resume_reset:
+        reset_all_resume_data(output_dir)
         return
 
     # Handle resume logic
@@ -1661,41 +1685,179 @@ def finalize_resume_state(state_file):
         print(f"⚠️ [RESUME] Failed to finalize state: {e}")
 
 
+def show_resume_status(output_dir):
+    """Show current resume status."""
+    resume_state = load_resume_state(output_dir)
+    if resume_state:
+        state, _ = resume_state
+        print("📊 [RESUME-STATUS] Current scan state:")
+        print(f"   🆔 Scan ID: {state.get('scan_id', 'Unknown')}")
+        print(f"   📅 Created: {state.get('created_at', 'Unknown')}")
+        print(f"   📊 Status: {state.get('status', 'Unknown')}")
+        print(f"   🎯 Total URLs: {state.get('total_urls', 0)}")
+        print(f"   ✅ Processed: {len(state.get('processed_urls', []))}")
+        print(f"   ⏳ Remaining: {len(state.get('remaining_urls', []))}")
+        print(
+            f"   📈 Progress: {len(state.get('processed_urls', [])) / state.get('total_urls', 1) * 100:.1f}%"
+        )
+    else:
+        print("📋 [RESUME-STATUS] No resume state found")
+
+
+def show_detailed_resume_stats(output_dir):
+    """Show detailed resume statistics and progress information."""
+    resume_state = load_resume_state(output_dir)
+    if not resume_state:
+        print("📋 [RESUME-STAT] No resume state found")
+        return
+
+    state, _ = resume_state
+
+    print("=" * 70)
+    print("📊 [RESUME-STAT] Detailed Resume Statistics")
+    print("=" * 70)
+
+    # Basic information
+    print(f"🆔 Scan ID: {state.get('scan_id', 'Unknown')}")
+    print(f"📅 Created: {state.get('created_at', 'Unknown')}")
+    print(f"🔄 Status: {state.get('status', 'Unknown')}")
+    print(f"📝 Last Update: {state.get('updated_at', 'Never')}")
+
+    # Progress statistics
+    total_urls = state.get("total_urls", 0)
+    processed_urls = state.get("processed_urls", [])
+    remaining_urls = state.get("remaining_urls", [])
+    completed_results = state.get("completed_results", [])
+
+    print("\n📈 Progress Statistics:")
+    print(f"   🎯 Total URLs: {total_urls}")
+    print(f"   ✅ Processed: {len(processed_urls)}")
+    print(f"   ⏳ Remaining: {len(remaining_urls)}")
+    print(
+        f"   📊 Completion: {len(processed_urls) / total_urls * 100:.1f}%"
+        if total_urls > 0
+        else "   📊 Completion: 0%"
+    )
+
+    # Vulnerability statistics from completed results
+    if completed_results:
+        print("\n🔍 Vulnerability Statistics:")
+        critical_count = 0
+        high_count = 0
+        medium_count = 0
+
+        for result in completed_results:
+            # Count basic SQL injection vulnerabilities
+            if result.get("basic_sqli_results"):
+                vuln_count = len(
+                    [r for r in result["basic_sqli_results"] if r.get("vulnerable")]
+                )
+                if vuln_count > 0:
+                    high_count += vuln_count
+
+            # Count SQLMap findings
+            if result.get("sqlmap_findings"):
+                findings = result["sqlmap_findings"]
+                if any("vulnerability confirmed" in str(f).lower() for f in findings):
+                    critical_count += 1
+
+            # Count Ghauri findings
+            if result.get("ghauri_findings"):
+                findings = result["ghauri_findings"]
+                if any("vulnerability confirmed" in str(f).lower() for f in findings):
+                    critical_count += 1
+
+        print(f"   🚨 Critical vulnerabilities: {critical_count}")
+        print(f"   ⚠️  High vulnerabilities: {high_count}")
+        print(f"   📊 Medium vulnerabilities: {medium_count}")
+
+    # Tool usage statistics
+    options = state.get("options", {})
+    print("\n🔧 Scan Configuration:")
+    print(f"   📂 Output directory: {options.get('output_dir', 'default')}")
+    print(f"   📊 Level: {options.get('level', 1)}")
+    print(f"   ⚠️  Risk: {options.get('risk', 1)}")
+    print(f"   🔧 Technique: {options.get('technique', 'auto')}")
+    print(f"   🗃️  DBMS: {options.get('dbms', 'auto-detect')}")
+    print(f"   🧵 Threads: {options.get('threads', 1)}")
+
+    # Remaining URLs preview
+    if remaining_urls:
+        print("\n⏳ Next URLs to process (showing first 10):")
+        for i, url in enumerate(remaining_urls[:10]):
+            print(f"   {i + 1}. {url}")
+        if len(remaining_urls) > 10:
+            print(f"   ... and {len(remaining_urls) - 10} more")
+
+    # Processing history
+    if processed_urls:
+        print("\n✅ Recently processed URLs (last 5):")
+        for i, url in enumerate(processed_urls[-5:]):
+            print(f"   {len(processed_urls) - 4 + i}. {url}")
+
+    print("\n" + "=" * 70)
+
+
+def reset_all_resume_data(output_dir):
+    """Reset and clear all resume data completely."""
+    resume_dir = Path(output_dir) / "resume"
+
+    if not resume_dir.exists():
+        print("📋 [RESUME-RESET] No resume data found to reset")
+        return
+
+    try:
+        # Remove all files in resume directory
+        for file_path in resume_dir.glob("*"):
+            if file_path.is_file():
+                file_path.unlink()
+                print(f"🗑️  [RESUME-RESET] Removed: {file_path.name}")
+
+        # Remove the resume directory itself
+        resume_dir.rmdir()
+        print("✅ [RESUME-RESET] All resume data has been completely reset")
+        print("🔄 [RESUME-RESET] You can now start a fresh scan")
+
+    except Exception as e:
+        print(f"❌ [RESUME-RESET] Error resetting resume data: {e}")
+    """Reset and clear all resume data completely."""
+    resume_dir = Path(output_dir) / "resume"
+
+    if not resume_dir.exists():
+        print("📋 [RESUME-RESET] No resume data found to reset")
+        return
+
+    try:
+        # Remove all files in resume directory
+        for file_path in resume_dir.glob("*"):
+            if file_path.is_file():
+                file_path.unlink()
+                print(f"🗑️  [RESUME-RESET] Removed: {file_path.name}")
+
+        # Remove the resume directory itself
+        resume_dir.rmdir()
+        print("✅ [RESUME-RESET] All resume data has been completely reset")
+        print("🔄 [RESUME-RESET] You can now start a fresh scan")
+
+    except Exception as e:
+        print(f"❌ [RESUME-RESET] Error resetting resume data: {e}")
+
+
 def cleanup_resume_state(output_dir):
     """Clean up resume state files."""
     resume_dir = Path(output_dir) / "resume"
     if resume_dir.exists():
         try:
-            shutil.rmtree(resume_dir)
-            print("✅ [RESUME] Resume state cleaned up")
+            state_file = resume_dir / "scan_state.json"
+            if state_file.exists():
+                state_file.unlink()
+                print("✅ [CLEAR-RESUME] Resume state cleared")
+            else:
+                print("📋 [CLEAR-RESUME] No resume state found")
         except Exception as e:
-            print(f"⚠️ [RESUME] Failed to cleanup: {e}")
-
-
-def show_resume_status(output_dir):
-    """Show current resume status."""
-    resume_state = load_resume_state(output_dir)
-    if not resume_state:
-        print("📋 [RESUME] No previous scan state found")
-        return
-
-    state, _ = resume_state
-    print("📋 [RESUME] Previous Scan Status:")
-    print(f"  • Scan ID: {state.get('scan_id', 'Unknown')}")
-    print(f"  • Created: {state.get('created_at', 'Unknown')}")
-    print(f"  • Status: {state.get('status', 'Unknown')}")
-    print(f"  • Total URLs: {state.get('total_urls', 0)}")
-    print(f"  • Processed: {len(state.get('processed_urls', []))}")
-    print(f"  • Remaining: {len(state.get('remaining_urls', []))}")
-
-    if state.get("last_updated"):
-        print(f"  • Last Updated: {state['last_updated']}")
-
-    if state.get("status") == "completed":
-        print("✅ [RESUME] Previous scan completed successfully")
+            print(f"❌ [CLEAR-RESUME] Error clearing resume state: {e}")
     else:
-        print("⏸️ [RESUME] Previous scan was interrupted")
-        print("  • Resume with: --resume")
+        print("📋 [CLEAR-RESUME] No resume directory found")
 
 
 if __name__ == "__main__":

@@ -1,6 +1,7 @@
 import base64
 import json
 import re
+import shutil
 import sqlite3
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -10,6 +11,7 @@ from urllib.parse import quote, urljoin, urlparse
 
 import click
 import requests
+import urllib3
 import yaml
 
 
@@ -1669,6 +1671,13 @@ def swagger_automate_test(
     is_flag=True,
     help="Disable SSL certificate verification (security risk)",
 )
+@click.option("--resume", is_flag=True, help="Skip steps if output exists.")
+@click.option(
+    "--resume-stat", is_flag=True, help="Show detailed resume statistics and progress"
+)
+@click.option(
+    "--resume-reset", is_flag=True, help="Reset and clear all resume data completely"
+)
 def main(
     url,
     endpoints_file,
@@ -1706,8 +1715,180 @@ def main(
     swagger_file,
     rate_limit,
     insecure,
+    resume,
+    resume_stat,
+    resume_reset,
 ):
     """API security testing and analysis tool."""
+
+    # ========== Resume Functionality ==========
+    def create_resume_state(output_dir, target_url):
+        """Create resume state file for tracking progress."""
+        resume_dir = Path(output_dir) / ".resume"
+        resume_dir.mkdir(parents=True, exist_ok=True)
+        resume_file = resume_dir / "apicli_state.json"
+
+        state = {
+            "start_time": datetime.now().isoformat(),
+            "target_url": target_url,
+            "scan_progress": {
+                "endpoints_scanned": 0,
+                "total_endpoints": 0,
+                "completed_scans": [],
+                "failed_scans": [],
+                "security_tests": {},
+                "swagger_operations": [],
+            },
+            "results_files": [],
+            "last_update": datetime.now().isoformat(),
+        }
+
+        with open(resume_file, "w") as f:
+            json.dump(state, f, indent=2)
+
+        return resume_file
+
+    def load_resume_state(output_dir):
+        """Load resume state from file."""
+        resume_file = Path(output_dir) / ".resume" / "apicli_state.json"
+        if resume_file.exists():
+            try:
+                with open(resume_file, "r") as f:
+                    return json.load(f)
+            except json.JSONDecodeError:
+                return None
+        return None
+
+    def update_resume_state(output_dir, updates):
+        """Update resume state with new progress."""
+        resume_file = Path(output_dir) / ".resume" / "apicli_state.json"
+        if resume_file.exists():
+            try:
+                with open(resume_file, "r") as f:
+                    state = json.load(f)
+
+                # Update fields
+                for key, value in updates.items():
+                    if key in state:
+                        if isinstance(state[key], dict) and isinstance(value, dict):
+                            state[key].update(value)
+                        else:
+                            state[key] = value
+
+                state["last_update"] = datetime.now().isoformat()
+
+                with open(resume_file, "w") as f:
+                    json.dump(state, f, indent=2)
+
+                return True
+            except Exception:
+                return False
+        return False
+
+    def show_detailed_resume_stats(output_dir):
+        """Show detailed resume statistics and progress."""
+        state = load_resume_state(output_dir)
+
+        if not state:
+            print("📋 [RESUME-STAT] No resume state found")
+            return
+
+        print("📊 [RESUME-STAT] APICLI Scan Progress Details")
+        print("=" * 60)
+        print(f"🎯 Target URL: {state.get('target_url', 'Unknown')}")
+        print(f"⏰ Scan Started: {state.get('start_time', 'Unknown')}")
+        print(f"🔄 Last Updated: {state.get('last_update', 'Unknown')}")
+        print()
+
+        progress = state.get("scan_progress", {})
+        total_endpoints = progress.get("total_endpoints", 0)
+        completed = progress.get("endpoints_scanned", 0)
+
+        if total_endpoints > 0:
+            completion_rate = (completed / total_endpoints) * 100
+            print(
+                f"📈 Endpoint Progress: {completed}/{total_endpoints} ({completion_rate:.1f}%)"
+            )
+        else:
+            print(f"📈 Endpoint Progress: {completed} endpoints scanned")
+
+        # Show completed scans
+        completed_scans = progress.get("completed_scans", [])
+        if completed_scans:
+            print(f"✅ Completed Scans ({len(completed_scans)}):")
+            recent_scans = (
+                completed_scans[-5:] if len(completed_scans) > 5 else completed_scans
+            )
+            for scan in recent_scans:  # Show last 5
+                print(f"   • {scan}")
+            if len(completed_scans) > 5:
+                print(f"   ... and {len(completed_scans) - 5} more")
+
+        # Show failed scans
+        failed_scans = progress.get("failed_scans", [])
+        if failed_scans:
+            print(f"❌ Failed Scans ({len(failed_scans)}):")
+            recent_failed = failed_scans[-3:] if len(failed_scans) > 3 else failed_scans
+            for scan in recent_failed:  # Show last 3
+                print(f"   • {scan}")
+            if len(failed_scans) > 3:
+                print(f"   ... and {len(failed_scans) - 3} more")
+
+        # Show security test progress
+        security_tests = progress.get("security_tests", {})
+        if security_tests:
+            print("🛡️ Security Tests Progress:")
+            for test_type, status in security_tests.items():
+                status_icon = "✅" if status else "⏳"
+                print(f"   {status_icon} {test_type.replace('_', ' ').title()}")
+
+        # Show Swagger operations
+        swagger_ops = progress.get("swagger_operations", [])
+        if swagger_ops:
+            print(f"📋 Swagger Operations ({len(swagger_ops)}):")
+            recent_ops = swagger_ops[-3:] if len(swagger_ops) > 3 else swagger_ops
+            for op in recent_ops:  # Show last 3
+                print(f"   • {op}")
+
+        # Show result files
+        result_files = state.get("results_files", [])
+        if result_files:
+            print(f"📁 Generated Reports ({len(result_files)}):")
+            for file in result_files:
+                if Path(file).exists():
+                    size = Path(file).stat().st_size
+                    print(f"   • {file} ({size} bytes)")
+                else:
+                    print(f"   • {file} (missing)")
+
+        print("=" * 60)
+
+    def reset_all_resume_data(output_dir):
+        """Reset and clear all resume data completely."""
+        resume_dir = Path(output_dir) / ".resume"
+
+        if not resume_dir.exists():
+            print("📋 [RESUME-RESET] No resume data found to reset")
+            return
+
+        try:
+            # Remove all resume files
+            shutil.rmtree(resume_dir)
+            print("🔄 [RESUME-RESET] All resume data cleared successfully")
+            print(f"   📁 Removed directory: {resume_dir}")
+        except Exception as e:
+            print(f"❌ [RESUME-RESET] Error clearing resume data: {e}")
+
+    # Handle resume-only operations
+    if resume_stat:
+        show_detailed_resume_stats(output_dir)
+        return
+
+    if resume_reset:
+        reset_all_resume_data(output_dir)
+        return
+
+    # ========== End Resume Functionality ==========
 
     # SSL verification setting
     ssl_verify = not insecure
@@ -1738,8 +1919,6 @@ def main(
         session.proxies = {"http": proxy, "https": proxy}
     if not verify_ssl:
         session.verify = False
-        import urllib3
-
         urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
     # ========== SJ (Swagger Jacker) Integration ==========
@@ -2040,10 +2219,44 @@ def main(
     # Initialize results
     all_results = []
 
+    # ========== Resume State Management ==========
+    resume_state = None
+    if resume:
+        resume_state = load_resume_state(output_dir)
+        if resume_state:
+            if verbose:
+                print("🔄 [RESUME] Loading previous scan state...")
+                print(
+                    f"   📊 Previous progress: {resume_state['scan_progress']['endpoints_scanned']} endpoints"
+                )
+        else:
+            if verbose:
+                print("🔄 [RESUME] No previous state found, starting fresh...")
+            resume_state = create_resume_state(output_dir, url)
+    else:
+        # Create fresh resume state for tracking
+        resume_state = create_resume_state(output_dir, url)
+
+    # Update total endpoints count
+    if resume_state:
+        update_resume_state(
+            output_dir, {"scan_progress": {"total_endpoints": len(endpoints)}}
+        )
+
     # Process each endpoint
     for i, endpoint in enumerate(endpoints):
         if verbose:
             print(f"🔍 [SCAN] Processing endpoint {i + 1}/{len(endpoints)}: {endpoint}")
+
+        # Check if endpoint was already processed (resume logic)
+        if resume and resume_state and isinstance(resume_state, dict):
+            completed_scans = resume_state.get("scan_progress", {}).get(
+                "completed_scans", []
+            )
+            if endpoint in completed_scans:
+                if verbose:
+                    print(f"⏭️ [RESUME] Skipping already processed endpoint: {endpoint}")
+                continue
 
         endpoint_results = {
             "endpoint": endpoint,
@@ -2118,6 +2331,24 @@ def main(
             )
 
         all_results.append(endpoint_results)
+
+        # Update resume state
+        if resume_state and isinstance(resume_state, dict):
+            current_state = load_resume_state(output_dir)
+            if current_state:
+                completed_scans = current_state.get("scan_progress", {}).get(
+                    "completed_scans", []
+                )
+                completed_scans.append(endpoint)
+                update_resume_state(
+                    output_dir,
+                    {
+                        "scan_progress": {
+                            "endpoints_scanned": i + 1,
+                            "completed_scans": completed_scans,
+                        }
+                    },
+                )
 
         # Store results in database if --store-db is specified
         if store_db:
@@ -2195,6 +2426,10 @@ def main(
         output_files.append(markdown_file)
         if verbose:
             print(f"💾 [SAVE] Markdown report saved to {markdown_file}")
+
+    # Update resume state with result files
+    if resume_state and output_files:
+        update_resume_state(output_dir, {"results_files": output_files})
 
     # Print summary
     if verbose:

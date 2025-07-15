@@ -16,10 +16,22 @@ from reconcli.makewordlistcli import (  # ✅ Importing the makewordlist command
     makewordlist,
 )
 from reconcli.mdreport import cli as mdreport_cli  # Advanced Markdown Report Generator
-from reconcli.one_shot import cli as one_shot_cli
+
+# OneShot reconnaissance (optional)
+try:
+    from reconcli.one_shot import cli as one_shot_cli
+
+    ONESHOT_AVAILABLE = True
+except ImportError:
+    ONESHOT_AVAILABLE = False
+from reconcli.codeseccli import (  # Code security analysis with Semgrep and other SAST tools
+    codeseccli,
+)
+from reconcli.doctorcli import doctorcli  # Importing the doctorcli command
 from reconcli.openredirectcli import openredirectcli
 from reconcli.permutcli import permutcli  # Importing the permutcli command
 from reconcli.portcli import portcli
+from reconcli.secretscli import secretscli
 from reconcli.subdocli import subdocli
 from reconcli.tagger import cli as tagger_cli
 from reconcli.takeovercli import takeovercli
@@ -71,6 +83,10 @@ dns_cli.short_help = "Enhanced DNS resolution and subdomain enumeration"
 cli.add_command(url_cli, name="urlcli")
 url_cli.short_help = "Advanced URL discovery using Katana with filtering"
 
+# Doctor Command
+cli.add_command(doctorcli, name="doctorcli")
+doctorcli.short_help = "Diagnose and fix reconcli environment"
+
 # Virtual Host Discovery
 cli.add_command(vhost_cli, name="vhostcli")
 vhost_cli.short_help = "Virtual host discovery and enumeration"
@@ -99,9 +115,11 @@ ipscli.short_help = "IP address analysis and geolocation"
 cli.add_command(graphqlcli, name="graphqlcli")
 graphqlcli.short_help = "GraphQL API testing and analysis"
 
+
 # OneShot Reconnaissance
-cli.add_command(one_shot_cli, name="oneshotcli")
-one_shot_cli.short_help = "Quick oneshot reconnaissance scans"
+if ONESHOT_AVAILABLE:
+    cli.add_command(one_shot_cli, name="oneshotcli")
+    one_shot_cli.short_help = "Quick oneshot reconnaissance scans"
 
 # DNS Zone Walking
 cli.add_command(zonewalk_cli, name="zonewalkcli")
@@ -154,6 +172,18 @@ api_cli.short_help = "API security testing and vulnerability assessment"
 # SQL Injection Vulnerability Scanner
 cli.add_command(vulnsql_cli, name="vulnsqlicli")
 vulnsql_cli.short_help = "SQL injection vulnerability scanner using SQLMap and Ghauri"
+
+# Secret Discovery and Analysis
+cli.add_command(secretscli, name="secretscli")
+secretscli.short_help = (
+    "🔐 Secret discovery using multiple tools (gitleaks, trufflehog, semgrep, etc.)"
+)
+
+# Code Security Analysis
+cli.add_command(codeseccli, name="codeseccli")
+codeseccli.short_help = (
+    "🔍 Code security analysis with Semgrep, Bandit, and other SAST tools"
+)
 
 # Wordlist Generation
 cli.add_command(makewordlist, name="makewordlistcli")

@@ -90,6 +90,29 @@ reconcli csvtkcli security-report test.csv --target-domain example.com
 
 ## 🚀 Latest Updates
 
+### 🔐 **SecretsCLI - Advanced Secret Discovery** (NEW!)
+- **🌐 Git Repository Support**: Automatic Git URL detection with TruffleHog git mode
+- **🔍 Multi-Tool Integration**: TruffleHog, Gitleaks, JSubFinder, Cariddi support
+- **🎯 Advanced Filtering**: Keyword filtering, confidence thresholds, entropy analysis
+- **📊 Professional Reports**: JSON, Markdown, CSV, TXT export formats
+- **⚡ Enterprise Features**: Resume functionality, proxy support, custom headers
+- **🛡️ Smart Detection**: Custom patterns, wordlists, and file extension filtering
+
+```bash
+# Scan Git repository for secrets
+reconcli secretscli --input "https://github.com/target/repo.git" --tool trufflehog --verbose
+
+# Advanced multi-tool scanning with filtering
+reconcli secretscli --input domains.txt --tool gitleaks,trufflehog \
+  --filter-keywords "api,key,secret" --min-confidence 0.7 \
+  --export json,markdown --store-db --verbose
+
+# Enterprise assessment with custom patterns
+reconcli secretscli --input /path/to/source --tool gitleaks \
+  --wordlist custom_patterns.txt --entropy-threshold 5.0 \
+  --proxy http://127.0.0.1:8080 --resume --verbose
+```
+
 ### �️ **WhoisFreaksCLI Database Integration** (New!)
 - **Database Storage**: Store WHOIS findings in ReconCLI database with target classification
 - **Single Domain Support**: Analyze individual domains without creating input files
@@ -960,12 +983,167 @@ reconcli openredirectcli -i domains.txt --use-waybackurls --use-gau \
 - **Nuclei Integration**: Export findings for automated verification workflows
 - **Database Storage**: Persistent storage with program and target classification
 
+### 🔐 **Secret Discovery & Analysis (`secretscli`)**
+- **🔍 Multi-Tool Integration**: TruffleHog, Gitleaks, JSubFinder, Cariddi, Semgrep, and more
+- **🌐 Git Repository Support**: Automatic detection of Git URLs with proper scanning modes
+- **🛡️ Semgrep SAST Integration**: Static Application Security Testing with p/secrets ruleset
+- **🎯 Advanced Filtering**: Keyword filtering, confidence thresholds, and entropy-based detection
+- **📊 Comprehensive Export**: JSON, Markdown, CSV, and TXT report formats
+- **⚡ Resume Functionality**: Continue interrupted scans with state management
+- **🔧 Enterprise Features**: Proxy support, custom headers, rate limiting, and depth control
+- **🛡️ Smart Detection**: Entropy threshold analysis and custom pattern matching
+
+```bash
+# Scan Git repository for secrets
+reconcli secretscli --input "https://github.com/target/repo.git" --tool trufflehog --verbose
+
+# Multi-tool comprehensive scan
+reconcli secretscli --input domains.txt --tool gitleaks,trufflehog,jsubfinder \
+  --export json,markdown --min-confidence 0.7 --verbose
+
+# Advanced filtering and analysis
+reconcli secretscli --input target.com --tool trufflehog --filter-keywords "api,key,secret" \
+  --exclude-keywords "test,demo" --entropy-threshold 5.0 --verbose
+
+# Enterprise security assessment
+reconcli secretscli --input targets.txt --tool gitleaks,trufflehog \
+  --config-file security.json --proxy http://127.0.0.1:8080 \
+  --export json,csv --store-db --resume --verbose
+
+# Custom pattern scanning with wordlist
+reconcli secretscli --input /path/to/files --tool gitleaks \
+  --wordlist custom_patterns.txt --extensions js,py,php \
+  --exclude-paths "test/,node_modules/" --depth 10 --verbose
+
+# Semgrep static analysis for secrets (NEW!)
+reconcli secretscli --input /path/to/source --tool semgrep --verbose
+
+# Multi-tool scan including Semgrep SAST
+reconcli secretscli --input project_files/ --tool gitleaks,trufflehog,semgrep \
+  --export json,markdown --store-db --verbose
+```
+
+#### 📚 Documentation
+
+- **[Complete SecretsCLI Guide](reconcli/SECRETSCLI_GUIDE.md)** - Comprehensive documentation with examples
+- **[Quick Reference](reconcli/SECRETSCLI_QUICK_REFERENCE.md)** - Command reference and troubleshooting
+
+### � **Code Security Analysis (`codeseccli`)** (NEW!)
+
+- **🛡️ Semgrep SAST Integration**: Static Application Security Testing with p/secrets rulesets
+- **🔍 Multi-Tool Support**: Semgrep, Bandit, and Safety security analysis tools
+- **🎯 Severity Filtering**: Configurable severity levels (INFO, WARNING, ERROR)
+- **📊 Multiple Export Formats**: JSON, SARIF, text, and Markdown reports
+- **💾 Database Integration**: Store findings in ReconCLI database with target classification
+- **🚀 Advanced Configuration**: Custom rulesets, include/exclude patterns, timeout control
+- **⚡ Performance Optimized**: Concurrent analysis with progress tracking
+
+```bash
+# Basic code security analysis with Semgrep
+reconcli codeseccli --input /path/to/code --tool semgrep --verbose
+
+# Comprehensive security scan with multiple tools
+reconcli codeseccli --input project/ --tool semgrep,bandit,safety \
+  --severity ERROR --export json,markdown --store-db --verbose
+
+# Custom ruleset analysis
+reconcli codeseccli --input src/ --tool semgrep --config custom-rules.yaml \
+  --include "*.py,*.js" --exclude "test/" --verbose
+
+# Enterprise security assessment
+reconcli codeseccli --input /app/source --tool semgrep \
+  --severity WARNING --export sarif,json --store-db \
+  --target-domain example.com --program "Security Assessment" --verbose
+
+# Quick security check with database storage
+reconcli codeseccli --input . --tool semgrep --store-db \
+  --export json --verbose
+```
+
+#### 🛡️ Semgrep Integration Features
+
+- **🔧 Static Analysis**: Comprehensive code security analysis using Semgrep SAST
+- **📋 Security Rulesets**: Built-in p/secrets ruleset for detecting hardcoded secrets
+- **🚫 Git-ignore Bypass**: Scan all files including those ignored by git (--no-git-ignore)
+- **🎯 Smart Filtering**: Automatic exclusion of common non-security paths
+- **📈 Professional Reports**: Detailed JSON output with vulnerability metadata
+- **⚡ Enterprise Ready**: Database integration for tracking findings across projects
+
+#### 📚 CodeSecCLI Documentation
+
+- **[Complete DoctorCLI Guide](reconcli/DOCTORCLI_GUIDE.md)** - Comprehensive environment diagnostic documentation
+- **[Quick Reference](reconcli/DOCTORCLI_QUICK_REFERENCE.md)** - Command reference and troubleshooting guide
+
+### 🩺 **DoctorCLI - Environment Diagnostic Tool** (NEW!)
+- **🔧 Comprehensive Environment Checking**: Verify 35+ security tools installation and configuration
+- **🐍 Python Package Validation**: Check essential packages for reconnaissance workflows
+- **📁 Directory Structure Analysis**: Ensure proper workspace organization and permissions
+- **🌐 Network Connectivity Testing**: Test connectivity to common reconnaissance targets
+- **🛤️ Programming Environment Paths**: Verify Go, Python, Ruby, Node.js, and other language installations
+- **⚙️ Configuration File Management**: Create and validate tool configuration files
+- **🔒 Security & Permissions Audit**: Check file permissions and system security settings
+- **🩹 Automated Fixes**: Repair common issues with dry-run mode for safe testing
+- **📊 Professional Reports**: Generate JSON, Markdown, and HTML diagnostic reports
+
+```bash
+# Complete environment diagnostic
+reconcli doctorcli --all --fix --verbose
+
+# Check specific components
+reconcli doctorcli --tools --python --env --structure --verbose
+
+# Dry-run mode - check without making changes
+reconcli doctorcli --all --dry-run --verbose
+
+# Check programming environments and paths
+reconcli doctorcli --paths --system --network --verbose
+
+# Security and permissions audit
+reconcli doctorcli --permissions --configs --strict --verbose
+
+# Generate comprehensive report
+reconcli doctorcli --all --export html --output-dir reports/ --verbose
+
+# Check optional tools and advanced features
+reconcli doctorcli --optional --configs --permissions --fix --verbose
+
+# Quick system overview
+reconcli doctorcli --system --network --paths --quiet
+
+# Fix common issues automatically
+reconcli doctorcli --structure --configs --env --fix --verbose
+```
+
+#### 🔍 Diagnostic Features
+- **Tool Installation**: Verify 35+ reconnaissance tools (amass, httpx, nuclei, subfinder, etc.)
+- **Optional Tools**: Check advanced tools (wafw00f, subzy, kxss, openredirex, etc.)
+- **Environment Variables**: Validate API keys and secrets configuration
+- **Directory Structure**: Ensure proper output/, wordlists/, configs/ organization
+- **Network Testing**: Test connectivity to GitHub, Shodan, CRT.sh, Archive.org
+- **Programming Paths**: Check Go, Python, Ruby, Perl, Node.js installations
+- **Configuration Files**: Create default configs for nuclei, httpx, amass
+- **Security Audit**: File permissions, executable verification, hash checking
+
+#### 📊 Report Formats
+- **JSON Reports**: Structured data with detailed diagnostic information
+- **Markdown Reports**: Human-readable documentation with fix suggestions
+- **HTML Reports**: Interactive dashboard with color-coded status indicators
+- **Terminal Output**: Real-time feedback with progress indicators and fix suggestions
+
+#### 🩹 Automated Fixes
+- **Missing Directories**: Create required output and configuration directories
+- **Configuration Files**: Generate default tool configurations
+- **Environment Setup**: Create sample .env_secrets with API key templates
+- **Permissions**: Fix file and directory permissions for security tools
+- **Dry-run Mode**: Preview all changes before applying them
+
 ## 📋 Complete Module List
 
 ### 🔧 **Core Infrastructure & Development Tools**
 - **📊 csvtkcli** - Advanced CSV data analysis and security reporting
 - **🔧 gitcli** - Git operations and repository management for reconnaissance data
 - **🗄️ dbcli** - Database management for reconnaissance data storage
+- **🩺 doctorcli** - Environment diagnostic tool with automated fixes and comprehensive reporting
 
 ### 🔍 **Discovery & Enumeration**
 - **🌐 subdocli** - Enhanced subdomain enumeration using multiple sources
@@ -986,6 +1164,9 @@ reconcli openredirectcli -i domains.txt --use-waybackurls --use-gau \
 - **🛡️ wafdetectcli** - WAF detection, testing and bypass analysis
 - **↗️ openredirectcli** - Advanced open redirect vulnerability scanner with AI
 - **🔄 takeovercli** - Subdomain takeover vulnerability detection
+- **🔐 secretscli** - Multi-tool secret discovery and analysis
+- **🔐 codeseccli** - Code security analysis with Semgrep SAST integration
+- **🔐 apicli** - API security testing with Swagger/OpenAPI support
 
 ### 🔍 **Intelligence & Analysis**
 - **🌐 whoisfreakscli** - WHOIS intelligence and domain analysis
@@ -1000,65 +1181,6 @@ reconcli openredirectcli -i domains.txt --use-waybackurls --use-gau \
 - **📝 makewordlistcli** - Advanced wordlist generator with intelligence and mutations
 - **🌐 httpcli** - HTTP client for web application testing
 
-### 📋 Recent Updates
-
-### v2.2.0 - Advanced Data Analysis & Version Control (Latest!)
-- ✅ **📊 CSVTKCLI**: Advanced CSV data analysis with security-focused reporting
-  - Automatic risk categorization (HIGH/MEDIUM/LOW security levels)
-  - Professional security reports with executive summaries
-  - Advanced search and filtering with regex support
-  - Multi-dataset combination and statistical analysis
-  - Integration with database exports and reconnaissance workflows
-
-- ✅ **🔧 GitCLI**: Professional git operations for reconnaissance data management
-  - Security-focused repository initialization with comprehensive .gitignore
-  - Automated backup system with tagging and timestamps
-  - Team collaboration tools designed for security professionals
-  - Resume-safe operations excluding sensitive data and temporary files
-  - Professional repository templates and workflow automation
-
-- ✅ **Enhanced Integration**: Seamless workflow integration
-  - Database → Export → CSVTK Analysis → Git Commit workflows
-  - Alternative entry points for problematic dependency isolation
-  - Comprehensive documentation with security best practices
-  - Production-ready tools for professional reconnaissance teams
-
-```bash
-# Complete workflow example
-reconcli dbcli export --table subdomains --analysis
-reconcli csvtkcli security-report output/exports/subdomains_export.csv
-reconcli gitcli add reports/ --exclude-output
-reconcli gitcli commit "Add security analysis findings" --push
-reconcli gitcli backup --tag milestone-$(date +%Y%m%d)
-```
-
-### v2.1.0 - WhoisFreaksCLI Database Integration
-- ✅ **Database Storage**: Full integration with ReconCLI database system
-- ✅ **Single Domain Support**: Analyze individual domains without file creation
-- ✅ **Enhanced CLI Structure**: Improved command organization with subcommands
-- ✅ **Target Classification**: Associate WHOIS findings with bug bounty programs
-- ✅ **Risk Correlation**: Link WHOIS intelligence with other reconnaissance data
-- ✅ **Professional Workflows**: Enhanced examples for security professionals
-
-### Database Schema Updates
-- New `whois_findings` table for storing WHOIS intelligence
-- Enhanced target tracking with program classification
-- Risk analysis data integration
-- Timestamp tracking for temporal analysis
-
-### Usage Examples
-```bash
-# Store WHOIS findings in database
-reconcli whoisfreakscli lookup --domain example.com --store-db \
-  --target-domain example.com --program hackerone-program
-
-# Bulk analysis with database integration
-reconcli whoisfreakscli lookup --input domains.txt --store-db \
-  --target-domain example.com --program bug-bounty-2024 --risk-analysis
-```
-
 ---
 
 *ReconCLI - Empowering security professionals with modular reconnaissance capabilities*
-
-# Test GPG commit
