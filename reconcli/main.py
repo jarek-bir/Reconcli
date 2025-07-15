@@ -135,7 +135,9 @@ whoisfreaks_cli.short_help = "Advanced WHOIS data analysis and enrichment"
 
 # Subdomain Enumeration
 cli.add_command(subdocli, name="subdocli")
-subdocli.short_help = "Comprehensive subdomain enumeration using multiple sources"
+subdocli.short_help = (
+    "🤖 Comprehensive subdomain enumeration + BBOT (53+ modules for superior discovery)"
+)
 
 # TLD Reconnaissance
 cli.add_command(tldr_cli, name="tldrcli")

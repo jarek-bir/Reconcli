@@ -11,27 +11,7 @@ from datetime import datetime
 import click
 import requests
 
-# Import resume utilities
-try:
-    from reconcli.utils.resume import clear_resume, load_resume, save_resume_state
-except ImportError:
-
-    def load_resume(output_dir):
-        path = os.path.join(output_dir, "resume.cfg")
-        if os.path.exists(path):
-            with open(path, "r") as f:
-                return json.load(f)
-        return {}
-
-    def save_resume_state(output_dir, state):
-        path = os.path.join(output_dir, "resume.cfg")
-        with open(path, "w") as f:
-            json.dump(state, f, indent=2)
-
-    def clear_resume(output_dir):
-        path = os.path.join(output_dir, "resume.cfg")
-        if os.path.exists(path):
-            os.remove(path)
+from reconcli.utils.resume import load_resume, save_resume_state
 
 
 def resolve_subdomains(subdomains, threads=50, verbose=False):
@@ -280,6 +260,446 @@ def validate_domain(domain):
     return domain
 
 
+def parse_bbot_output(bbot_output_dir, domain, verbose=False):
+    """Parse BBOT output and extract subdomains."""
+    subdomains = set()
+
+    if not os.path.exists(bbot_output_dir):
+        if verbose:
+            click.echo(f"[!] ⚠️  BBOT output directory not found: {bbot_output_dir}")
+        return subdomains
+
+    # Try to find the scan output directory (BBOT creates timestamp-based directories)
+    scan_dirs = [
+        d
+        for d in os.listdir(bbot_output_dir)
+        if os.path.isdir(os.path.join(bbot_output_dir, d))
+    ]
+
+    if not scan_dirs:
+        if verbose:
+            click.echo(f"[!] ⚠️  No BBOT scan directories found in: {bbot_output_dir}")
+        return subdomains
+
+    # Use the most recent scan directory
+    latest_scan = max(
+        scan_dirs, key=lambda x: os.path.getctime(os.path.join(bbot_output_dir, x))
+    )
+    scan_path = os.path.join(bbot_output_dir, latest_scan)
+
+    # Parse different BBOT output formats
+    output_files = [
+        "output.txt",  # Default text output
+        "subdomains.txt",  # Subdomain-specific output
+        "output.json",  # JSON output for more detailed parsing
+    ]
+
+    for output_file in output_files:
+        file_path = os.path.join(scan_path, output_file)
+        if os.path.exists(file_path):
+            try:
+                if output_file == "output.json":
+                    # Parse JSON output for more detailed information
+                    with open(file_path, "r") as f:
+                        for line in f:
+                            if line.strip():
+                                try:
+                                    event = json.loads(line)
+                                    if event.get("type") == "DNS_NAME":
+                                        data = event.get("data", "")
+                                        if data.endswith(domain) and data != domain:
+                                            subdomains.add(data)
+                                except json.JSONDecodeError:
+                                    continue
+                else:
+                    # Parse text output
+                    with open(file_path, "r") as f:
+                        for line in f:
+                            line = line.strip()
+                            # Extract domains that end with our target domain
+                            if line.endswith(domain) and line != domain and "." in line:
+                                # Clean up any prefixes like [DNS_NAME] or similar
+                                domain_part = line.split()[-1] if " " in line else line
+                                if domain_part.endswith(domain):
+                                    subdomains.add(domain_part)
+
+                if verbose and subdomains:
+                    click.echo(
+                        f"[+] 📊 BBOT parsed {len(subdomains)} subdomains from {output_file}"
+                    )
+
+            except Exception as e:
+                if verbose:
+                    click.echo(f"[!] ❌ Error parsing BBOT file {file_path}: {e}")
+
+    return subdomains
+
+
+def run_bbot_enumeration(domain, outpath, tool_name, cmd, timeout, verbose=False):
+    """Run BBOT enumeration with enhanced parsing and error handling."""
+    if verbose:
+        click.echo(f"[+] 🤖 Running BBOT: {tool_name}")
+        click.echo(f"[+] 🔧 Command: {cmd}")
+
+    start_time = time.time()
+    subdomains = set()
+
+    try:
+        # Run BBOT command with enhanced timeout and error handling
+        process = subprocess.Popen(
+            cmd,
+            shell=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            universal_newlines=True,
+        )
+
+        # Wait for completion with timeout
+        try:
+            stdout, stderr = process.communicate(timeout=timeout)
+            elapsed = round(time.time() - start_time, 2)
+
+            if process.returncode == 0:
+                # Parse the BBOT output directory
+                bbot_output_dir = None
+
+                # Extract output directory from command
+                if "-o " in cmd:
+                    bbot_output_dir = cmd.split("-o ")[1].split()[0]
+                    subdomains = parse_bbot_output(bbot_output_dir, domain, verbose)
+
+                if verbose:
+                    click.echo(
+                        f"[+] ✅ {tool_name}: {len(subdomains)} subdomains ({elapsed}s)"
+                    )
+                    if len(subdomains) > 0:
+                        click.echo(
+                            f"[+] 🎯 BBOT found unique subdomains with {len([m for m in ['anubisdb', 'crt', 'chaos', 'hackertarget', 'rapiddns', 'certspotter', 'dnsdumpster'] if m in cmd.lower()])} passive sources"
+                        )
+
+            else:
+                if verbose:
+                    click.echo(
+                        f"[!] ❌ {tool_name} failed (exit code: {process.returncode})"
+                    )
+                    if stderr:
+                        click.echo(f"[!] 💥 Error: {stderr[:200]}...")
+
+        except subprocess.TimeoutExpired:
+            process.kill()
+            if verbose:
+                click.echo(f"[!] ⏰ {tool_name} timeout after {timeout}s")
+
+    except Exception as e:
+        if verbose:
+            click.echo(f"[!] 💥 {tool_name} error: {str(e)}")
+
+    return list(subdomains)
+
+
+def export_results_to_csv(output_dir, domain, comprehensive_data, verbose=False):
+    """Export comprehensive scan results to CSV format."""
+    import csv
+
+    csv_path = os.path.join(output_dir, f"{domain}_subdomains.csv")
+
+    try:
+        with open(csv_path, "w", newline="", encoding="utf-8") as csvfile:
+            fieldnames = [
+                "subdomain",
+                "ip",
+                "ptr",
+                "resolved",
+                "http_status",
+                "https_status",
+                "http_title",
+                "https_title",
+                "http_active",
+                "https_active",
+                "discovery_tool",
+            ]
+            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+            writer.writeheader()
+
+            # Get resolved subdomains data
+            resolved_data = {
+                r["subdomain"]: r
+                for r in comprehensive_data.get("resolved", [])
+                if r.get("resolved")
+            }
+
+            # Get HTTP services data
+            http_data = {
+                h["subdomain"]: h for h in comprehensive_data.get("http_services", [])
+            }
+
+            # Process all subdomains
+            for subdomain in comprehensive_data.get("subdomains", []):
+                resolved_info = resolved_data.get(subdomain, {})
+                http_info = http_data.get(subdomain, {})
+
+                # Determine discovery tool (simplified - could be enhanced)
+                discovery_tool = "multiple"
+                for tool, stats in comprehensive_data.get("tool_stats", {}).items():
+                    if isinstance(stats, int) and stats > 0:
+                        discovery_tool = tool
+                        break
+
+                row = {
+                    "subdomain": subdomain,
+                    "ip": resolved_info.get("ip", ""),
+                    "ptr": resolved_info.get("ptr", ""),
+                    "resolved": resolved_info.get("resolved", False),
+                    "http_status": http_info.get("http_status", ""),
+                    "https_status": http_info.get("https_status", ""),
+                    "http_title": http_info.get("http_title", "")
+                    .replace("\n", " ")
+                    .replace("\r", " ")[:100],
+                    "https_title": http_info.get("https_title", "")
+                    .replace("\n", " ")
+                    .replace("\r", " ")[:100],
+                    "http_active": http_info.get("http", False),
+                    "https_active": http_info.get("https", False),
+                    "discovery_tool": discovery_tool,
+                }
+                writer.writerow(row)
+
+        if verbose:
+            click.echo(f"📊 CSV export saved: {csv_path}")
+
+        return csv_path
+
+    except Exception as e:
+        if verbose:
+            click.echo(f"❌ Error exporting to CSV: {e}")
+        return None
+
+
+def export_results_to_json(output_dir, domain, comprehensive_data, verbose=False):
+    """Export comprehensive scan results to enhanced JSON format."""
+    json_path = os.path.join(output_dir, f"{domain}_export.json")
+
+    try:
+        # Enhanced export data with metadata
+        export_data = {
+            "metadata": {
+                "domain": domain,
+                "scan_time": comprehensive_data.get("scan_time"),
+                "total_subdomains": comprehensive_data.get("total_subdomains", 0),
+                "export_time": datetime.now().isoformat(),
+                "reconcli_version": "2.0.0",
+                "bbot_integration": True,
+            },
+            "scan_summary": comprehensive_data.get("scan_summary", {}),
+            "tool_statistics": comprehensive_data.get("tool_stats", {}),
+            "subdomains": {
+                "list": comprehensive_data.get("subdomains", []),
+                "count": len(comprehensive_data.get("subdomains", [])),
+            },
+            "resolved_subdomains": {
+                "data": comprehensive_data.get("resolved", []),
+                "count": len(
+                    [
+                        r
+                        for r in comprehensive_data.get("resolved", [])
+                        if r.get("resolved")
+                    ]
+                ),
+            },
+            "http_services": {
+                "data": comprehensive_data.get("http_services", []),
+                "http_count": len(
+                    [
+                        h
+                        for h in comprehensive_data.get("http_services", [])
+                        if h.get("http")
+                    ]
+                ),
+                "https_count": len(
+                    [
+                        h
+                        for h in comprehensive_data.get("http_services", [])
+                        if h.get("https")
+                    ]
+                ),
+            },
+            "statistics": {
+                "resolution_rate": 0,
+                "http_service_rate": 0,
+                "https_service_rate": 0,
+            },
+        }
+
+        # Calculate statistics
+        total_subs = export_data["metadata"]["total_subdomains"]
+        if total_subs > 0:
+            resolved_count = export_data["resolved_subdomains"]["count"]
+            http_count = export_data["http_services"]["http_count"]
+            https_count = export_data["http_services"]["https_count"]
+
+            export_data["statistics"]["resolution_rate"] = round(
+                (resolved_count / total_subs) * 100, 2
+            )
+            export_data["statistics"]["http_service_rate"] = round(
+                (http_count / total_subs) * 100, 2
+            )
+            export_data["statistics"]["https_service_rate"] = round(
+                (https_count / total_subs) * 100, 2
+            )
+
+        with open(json_path, "w", encoding="utf-8") as jsonfile:
+            json.dump(export_data, jsonfile, indent=2, ensure_ascii=False)
+
+        if verbose:
+            click.echo(f"📊 JSON export saved: {json_path}")
+            click.echo(
+                f"   • Total subdomains: {export_data['metadata']['total_subdomains']}"
+            )
+            click.echo(
+                f"   • Resolved: {export_data['resolved_subdomains']['count']} ({export_data['statistics']['resolution_rate']}%)"
+            )
+            click.echo(
+                f"   • HTTP services: {export_data['http_services']['http_count']} ({export_data['statistics']['http_service_rate']}%)"
+            )
+            click.echo(
+                f"   • HTTPS services: {export_data['http_services']['https_count']} ({export_data['statistics']['https_service_rate']}%)"
+            )
+
+        return json_path
+
+    except Exception as e:
+        if verbose:
+            click.echo(f"❌ Error exporting to JSON: {e}")
+        return None
+
+
+def export_results_to_txt(output_dir, domain, comprehensive_data, verbose=False):
+    """Export comprehensive scan results to structured TXT format."""
+    txt_path = os.path.join(output_dir, f"{domain}_export.txt")
+
+    try:
+        with open(txt_path, "w", encoding="utf-8") as txtfile:
+            # Header with metadata
+            txtfile.write(f"# Subdomain Enumeration Report for {domain}\n")
+            txtfile.write(f"# Scan Time: {comprehensive_data.get('scan_time')}\n")
+            txtfile.write(
+                f"# Total Subdomains: {comprehensive_data.get('total_subdomains', 0)}\n"
+            )
+            txtfile.write(f"# Export Time: {datetime.now().isoformat()}\n")
+            txtfile.write("# Generated by ReconCLI SubdoCLI with BBOT Integration\n")
+            txtfile.write("\n")
+
+            # Tool Statistics Section
+            if comprehensive_data.get("tool_stats"):
+                txtfile.write("# TOOL STATISTICS\n")
+                txtfile.write("# ================\n")
+                for tool, stats in comprehensive_data["tool_stats"].items():
+                    count = (
+                        stats.get("count", stats) if isinstance(stats, dict) else stats
+                    )
+                    txtfile.write(f"# {tool}: {count} subdomains\n")
+                txtfile.write("\n")
+
+            # All Subdomains Section
+            txtfile.write("# ALL DISCOVERED SUBDOMAINS\n")
+            txtfile.write("# ==========================\n")
+            for subdomain in comprehensive_data.get("subdomains", []):
+                txtfile.write(f"{subdomain}\n")
+            txtfile.write("\n")
+
+            # Resolved Subdomains Section (if available)
+            if comprehensive_data.get("resolved"):
+                resolved_subs = [
+                    r for r in comprehensive_data["resolved"] if r.get("resolved")
+                ]
+                if resolved_subs:
+                    txtfile.write("# RESOLVED SUBDOMAINS WITH IP ADDRESSES\n")
+                    txtfile.write("# ======================================\n")
+                    for result in resolved_subs:
+                        ip = result.get("ip", "N/A")
+                        ptr = result.get("ptr", "")
+                        ptr_info = f" (PTR: {ptr})" if ptr else ""
+                        txtfile.write(f"{result['subdomain']} -> {ip}{ptr_info}\n")
+                    txtfile.write("\n")
+
+            # HTTP Services Section (if available)
+            if comprehensive_data.get("http_services"):
+                active_services = [
+                    h
+                    for h in comprehensive_data["http_services"]
+                    if h.get("http") or h.get("https")
+                ]
+                if active_services:
+                    txtfile.write("# ACTIVE HTTP/HTTPS SERVICES\n")
+                    txtfile.write("# ===========================\n")
+                    for service in active_services:
+                        protocols = []
+                        if service.get("http"):
+                            status = service.get("http_status", "Unknown")
+                            title = service.get("http_title", "")
+                            title_info = f" - {title[:50]}..." if title else ""
+                            protocols.append(f"HTTP({status}){title_info}")
+                        if service.get("https"):
+                            status = service.get("https_status", "Unknown")
+                            title = service.get("https_title", "")
+                            title_info = f" - {title[:50]}..." if title else ""
+                            protocols.append(f"HTTPS({status}){title_info}")
+                        txtfile.write(
+                            f"{service['subdomain']} -> {' | '.join(protocols)}\n"
+                        )
+                    txtfile.write("\n")
+
+            # Statistics Summary
+            total_subs = comprehensive_data.get("total_subdomains", 0)
+            if total_subs > 0:
+                txtfile.write("# SCAN STATISTICS SUMMARY\n")
+                txtfile.write("# =======================\n")
+
+                if comprehensive_data.get("resolved"):
+                    resolved_count = len(
+                        [r for r in comprehensive_data["resolved"] if r.get("resolved")]
+                    )
+                    resolution_rate = round((resolved_count / total_subs) * 100, 2)
+                    txtfile.write(
+                        f"# Resolution Rate: {resolved_count}/{total_subs} ({resolution_rate}%)\n"
+                    )
+
+                if comprehensive_data.get("http_services"):
+                    http_count = len(
+                        [
+                            h
+                            for h in comprehensive_data["http_services"]
+                            if h.get("http")
+                        ]
+                    )
+                    https_count = len(
+                        [
+                            h
+                            for h in comprehensive_data["http_services"]
+                            if h.get("https")
+                        ]
+                    )
+                    http_rate = round((http_count / total_subs) * 100, 2)
+                    https_rate = round((https_count / total_subs) * 100, 2)
+                    txtfile.write(
+                        f"# HTTP Services: {http_count}/{total_subs} ({http_rate}%)\n"
+                    )
+                    txtfile.write(
+                        f"# HTTPS Services: {https_count}/{total_subs} ({https_rate}%)\n"
+                    )
+
+        if verbose:
+            click.echo(f"📊 TXT export saved: {txt_path}")
+
+        return txt_path
+
+    except Exception as e:
+        if verbose:
+            click.echo(f"❌ Error exporting to TXT: {e}")
+        return None
+
+
 @click.command()
 @click.option(
     "--domain", "-d", required=True, help="Target domain for subdomain enumeration"
@@ -300,7 +720,7 @@ def validate_domain(domain):
 )
 @click.option("--verbose", "-v", is_flag=True, help="Enable verbose output")
 @click.option(
-    "--timeout", default=30, help="Timeout for individual operations (seconds)"
+    "--timeout", default=200, help="Timeout for individual operations (seconds)"
 )
 @click.option(
     "--threads", default=50, help="Number of threads for concurrent operations"
@@ -322,6 +742,21 @@ def validate_domain(domain):
     help="Primary target domain for database storage (uses --domain if not provided)",
 )
 @click.option("--program", help="Bug bounty program name for database classification")
+@click.option(
+    "--bbot",
+    is_flag=True,
+    help="Enable BBOT (Bighuge BLS OSINT Tool) for superior subdomain enumeration with 53+ modules",
+)
+@click.option(
+    "--bbot-intensive",
+    is_flag=True,
+    help="Enable BBOT intensive mode with aggressive subdomain bruteforcing and larger wordlists",
+)
+@click.option(
+    "--export",
+    type=click.Choice(["csv", "json", "txt"], case_sensitive=False),
+    help="Export results to CSV, JSON, or TXT format for analysis and reporting",
+)
 def subdocli(
     domain,
     output_dir,
@@ -341,8 +776,29 @@ def subdocli(
     store_db,
     target_domain,
     program,
+    bbot,
+    bbot_intensive,
+    export,
 ):
-    """Enhanced subdomain enumeration using multiple tools with resolution and HTTP probing"""
+    """Enhanced subdomain enumeration using multiple tools with resolution and HTTP probing.
+
+    Now featuring BBOT (Bighuge BLS OSINT Tool) integration for superior subdomain discovery:
+
+    🤖 BBOT Features:
+    • 53+ passive & active subdomain enumeration modules
+    • Advanced sources: anubisdb, crt.sh, chaos, hackertarget, certspotter, dnsdumpster
+    • Certificate transparency monitoring & DNS bruteforcing
+    • Intelligent mutations and target-specific wordlists
+    • Cloud resource enumeration and GitHub code search
+
+    📊 Export Options:
+    • CSV format for spreadsheet analysis and data processing
+    • JSON format for programmatic analysis and API integration
+    • TXT format for readable reports and simple text processing
+
+    Use --bbot for standard BBOT enumeration or --bbot-intensive for maximum coverage.
+    Use --export csv|json|txt for structured data export.
+    """
 
     # Validate domain input to prevent shell injection
     try:
@@ -394,23 +850,58 @@ def subdocli(
         click.echo(f"[+] ⏰ Timeout: {timeout}s")
         click.echo(f"[+] 🧵 Threads: {threads}")
 
-    # Enhanced tool configuration
-    passive_tools = {
+    # Enhanced tool configuration with BBOT integration
+    base_passive_tools = {
         "subfinder": f"subfinder -all -d {domain} -silent",
         "findomain": f"findomain -t {domain} -q",
         "assetfinder": f"assetfinder --subs-only {domain}",
-        "amass": f"amass enum -passive -config {amass_config} -d {domain} -silent",
+        "amass": f"amass enum -config {amass_config} -d {domain} -silent",
         "chaos": f"chaos -d {domain} -silent",
         "rapiddns": f"curl -s 'https://rapiddns.io/subdomain/{domain}?full=1' | grep -oE '[a-zA-Z0-9.-]+\\.{domain}' | sort -u",
         "crtsh": f"curl -s 'https://crt.sh/?q=%.{domain}&output=json' | jq -r '.[].name_value' | sed 's/\\*\\.//g' | sort -u",
         "bufferover": f"curl -s 'https://dns.bufferover.run/dns?q=.{domain}' | jq -r '.FDNS_A[],.RDNS[]' | cut -d',' -f2 | grep -o '[a-zA-Z0-9.-]*\\.{domain}' | sort -u",
     }
 
-    active_tools = {
+    # BBOT tools - separate for conditional inclusion
+    bbot_passive_tools = {
+        "bbot_passive": f"/home/jarek/reconcli_dnscli_full/.venv/bin/bbot -t {domain} -p subdomain-enum -o {outpath}/bbot_passive --force -y",
+        "bbot_comprehensive": f"/home/jarek/reconcli_dnscli_full/.venv/bin/bbot -t {domain} -rf passive,safe,subdomain-enum -o {outpath}/bbot_comprehensive --force -y",
+    }
+
+    base_active_tools = {
         "gobuster": f"gobuster dns -d {domain} -w /usr/share/wordlists/dirb/common.txt -q",
         "ffuf": f"ffuf -w /usr/share/wordlists/dirb/common.txt -u http://FUZZ.{domain} -mc 200,301,302,403 -fs 0 -s",
         "dnsrecon": f"dnsrecon -d {domain} -t brt -D /usr/share/wordlists/dirb/common.txt --xml {outpath}/dnsrecon.xml",
     }
+
+    # BBOT active tools - separate for conditional inclusion
+    bbot_active_tools = {
+        "bbot_active": f"/home/jarek/reconcli_dnscli_full/.venv/bin/bbot -t {domain} -rf active,subdomain-enum -o {outpath}/bbot_active --force -y",
+    }
+
+    # BBOT intensive tools for maximum coverage
+    bbot_intensive_tools = {
+        "bbot_intensive": f"/home/jarek/reconcli_dnscli_full/.venv/bin/bbot -t {domain} -rf active,aggressive,subdomain-enum -c modules.dnsbrute.wordlist=big -o {outpath}/bbot_intensive --force -y",
+        "bbot_kitchen_sink": f"/home/jarek/reconcli_dnscli_full/.venv/bin/bbot -t {domain} -p kitchen-sink -o {outpath}/bbot_kitchen_sink --force -y",
+    }
+
+    # Build tool configuration based on options
+    passive_tools = base_passive_tools.copy()
+    active_tools = base_active_tools.copy()
+
+    # Add BBOT tools based on flags
+    if bbot or all_tools:
+        passive_tools.update(bbot_passive_tools)
+        active_tools.update(bbot_active_tools)
+        if verbose:
+            click.echo("[+] 🤖 BBOT (Bighuge BLS OSINT Tool) enabled with 53+ modules")
+
+    if bbot_intensive or all_tools:
+        active_tools.update(bbot_intensive_tools)
+        if verbose:
+            click.echo(
+                "[+] 🚀 BBOT intensive mode enabled - maximum subdomain coverage"
+            )
 
     # Select tools based on options
     tools = passive_tools.copy()
@@ -445,13 +936,26 @@ def subdocli(
             click.echo(f"[+] 🔧 Running: {tool}")
 
         start_time = time.time()
+        lines = []
+
         try:
-            # NOTE: shell=True is required for complex commands with pipes and redirections
-            # Domain is validated above to prevent shell injection
-            result = subprocess.check_output(  # nosec B602
-                cmd, shell=True, stderr=subprocess.DEVNULL, text=True, timeout=timeout
-            )
-            lines = [line.strip() for line in result.splitlines() if line.strip()]
+            # Special handling for BBOT tools
+            if tool.startswith("bbot_"):
+                lines = run_bbot_enumeration(
+                    domain, outpath, tool, cmd, timeout, verbose
+                )
+            else:
+                # Standard tool execution
+                # NOTE: shell=True is required for complex commands with pipes and redirections
+                # Domain is validated above to prevent shell injection
+                result = subprocess.check_output(  # nosec B602
+                    cmd,
+                    shell=True,
+                    stderr=subprocess.DEVNULL,
+                    text=True,
+                    timeout=timeout,
+                )
+                lines = [line.strip() for line in result.splitlines() if line.strip()]
 
             # Save individual tool results
             with open(os.path.join(outpath, f"{tool}.txt"), "w") as f:
@@ -546,6 +1050,32 @@ def subdocli(
     # Generate enhanced markdown report
     if markdown:
         generate_enhanced_markdown_report(outpath, domain, comprehensive_data, verbose)
+
+    # Export results to CSV or JSON if requested
+    if export:
+        if verbose:
+            click.echo(f"[+] 📊 Exporting results to {export.upper()} format...")
+
+        if export.lower() == "csv":
+            csv_file = export_results_to_csv(
+                outpath, domain, comprehensive_data, verbose
+            )
+            if csv_file and verbose:
+                click.echo(f"[+] ✅ CSV export completed: {csv_file}")
+
+        elif export.lower() == "json":
+            json_file = export_results_to_json(
+                outpath, domain, comprehensive_data, verbose
+            )
+            if json_file and verbose:
+                click.echo(f"[+] ✅ JSON export completed: {json_file}")
+
+        elif export.lower() == "txt":
+            txt_file = export_results_to_txt(
+                outpath, domain, comprehensive_data, verbose
+            )
+            if txt_file and verbose:
+                click.echo(f"[+] ✅ TXT export completed: {txt_file}")
 
     # Show statistics
     if show_stats or verbose:

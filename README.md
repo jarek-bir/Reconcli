@@ -88,6 +88,46 @@ echo "admin.example.com,192.168.1.10,subdocli" > test.csv
 reconcli csvtkcli security-report test.csv --target-domain example.com
 ```
 
+## 🔧 Quick Reference - Core Modules
+
+### 🤖 SubdoCLI - Subdomain Enumeration
+The most advanced subdomain enumeration tool with BBOT integration (53+ modules):
+```bash
+# BBOT-powered discovery with CSV export
+reconcli subdocli --domain example.com --bbot --export csv --verbose
+
+# Intensive mode with full analysis
+reconcli subdocli --domain example.com --bbot-intensive --resolve --probe-http --export json --verbose
+```
+📚 **Full Guide**: See `reconcli/SUBDOCLI_GUIDE.md` for complete documentation
+
+### 🤖 AI-Powered Analysis
+```bash
+# AI vulnerability scanning
+reconcli aicli --vuln-scan data.json --persona pentester --verbose
+
+# Interactive AI assistant
+reconcli aicli --interactive --persona trainer
+```
+
+### 🔐 Secret Discovery
+```bash
+# Git repository secret scanning
+reconcli secretscli --input "https://github.com/target/repo.git" --tool trufflehog --verbose
+```
+
+### 🌐 API Security Testing
+```bash
+# Swagger discovery and testing
+reconcli apicli --url https://api.example.com --swagger-brute --store-db --verbose
+```
+
+### 📊 Data Analysis
+```bash
+# Advanced CSV analysis
+reconcli csvtkcli analyze data.csv --security-report --verbose
+```
+
 ## 🚀 Latest Updates
 
 ### 🔐 **SecretsCLI - Advanced Secret Discovery** (NEW!)
@@ -476,25 +516,39 @@ reconcli portcli \
   --verbose
 ```
 
-### � Enhanced Subdomain Enumeration (`subdocli`)
-- **11 Tools Integration**: Subfinder, Findomain, Assetfinder, Amass, Chaos, RapidDNS, crt.sh, BufferOver, Gobuster, FFuf, DNSRecon
-- **DNS Resolution**: Multi-threaded IP resolution
-- **HTTP Probing**: Automatic HTTP/HTTPS service detection
-- **Resume Support**: Continue interrupted scans
-- **Advanced Analytics**: Tool performance statistics and comprehensive reporting
-- **Professional Reports**: JSON and enhanced Markdown output
+### 🤖 Enhanced Subdomain Enumeration (`subdocli`) - Now with BBOT Integration
+- **🤖 BBOT Integration**: Bighuge BLS OSINT Tool with 53+ advanced subdomain enumeration modules
+- **🔍 Superior Discovery**: anubisdb, crt.sh, chaos, hackertarget, certspotter, dnsdumpster, and 47+ more sources
+- **⚡ Advanced Features**: Certificate transparency monitoring, DNS bruteforcing, intelligent mutations
+- **☁️ Cloud Enumeration**: GitHub code search, cloud resource discovery, postman workspace enumeration
+- **🛠️ Traditional Tools**: Subfinder, Findomain, Assetfinder, Amass, Chaos, RapidDNS, crt.sh, BufferOver, Gobuster, FFuf, DNSRecon
+- **🧠 Smart Processing**: Multi-threaded IP resolution, HTTP/HTTPS service detection with title extraction
+- **📊 Advanced Analytics**: Resume support, tool performance statistics, comprehensive reporting
+- **� Export Formats**: CSV export for spreadsheet analysis, JSON export for programmatic processing
+- **�💾 Database Integration**: Complete SQLite storage with ReconCLI ecosystem integration
 
 ```bash
-# Basic subdomain enumeration
-reconcli subdocli --domain example.com --verbose
+# BBOT-powered subdomain enumeration (53+ modules)
+reconcli subdocli --domain example.com --bbot --verbose
 
-# Full scan with resolution and HTTP probing
-reconcli subdocli --domain example.com --resolve --probe-http \
-  --all-tools --markdown --show-stats --verbose
+# BBOT intensive mode with aggressive bruteforcing
+reconcli subdocli --domain example.com --bbot-intensive --verbose
 
-# Resume interrupted scan
-reconcli subdocli --domain example.com --resume --verbose
+# Full scan with BBOT + traditional tools + HTTP probing + CSV export
+reconcli subdocli --domain example.com --bbot --resolve --probe-http \
+  --all-tools --markdown --store-db --export csv --show-stats --verbose
+
+# JSON export for programmatic analysis and API integration
+reconcli subdocli --domain example.com --bbot-intensive --export json --verbose
+
+# TXT export for human-readable reports
+reconcli subdocli --domain example.com --bbot --export txt --verbose
+
+# Resume BBOT-powered scan
+reconcli subdocli --domain example.com --bbot --resume --verbose
 ```
+
+**📚 Complete Documentation**: See `reconcli/SUBDOCLI_GUIDE.md` for comprehensive usage guide, examples, and best practices.
 
 ### 🌐 DNS Resolution & Analysis (`dns`)
 - **Enhanced DNS Resolution**: Multi-threaded IP resolution with PTR record tagging
@@ -1146,7 +1200,7 @@ reconcli doctorcli --structure --configs --env --fix --verbose
 - **🩺 doctorcli** - Environment diagnostic tool with automated fixes and comprehensive reporting
 
 ### 🔍 **Discovery & Enumeration**
-- **🌐 subdocli** - Enhanced subdomain enumeration using multiple sources
+- **🌐 subdocli** - 🤖 Enhanced subdomain enumeration with BBOT integration (53+ modules for superior discovery)
 - **🔗 urlcli** - URL discovery and analysis with advanced filtering
 - **🕷️ crawlercli** - Advanced web crawler suite with multi-engine support
 - **🎯 vhostcli** - Virtual host discovery with screenshot capabilities
