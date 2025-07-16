@@ -33,7 +33,9 @@ reconcli apicli --url https://api.example.com --secret-scan --store-db secrets.d
 reconcli apicli --url https://api.example.com --security-test --secret-scan --swagger-brute --store-db full_scan.db --json-report --markdown-report
 ```
 
-### ℹ️ **WhoisFreaksCLI Database Integration** (New!)(https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
+### ℹ️ **WhoisFreaksCLI Database Integration** (New!)
+
+[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![GitHub release](https://img.shields.io/github/release/jarek-bir/Reconcli.svg)](https://github.com/jarek-bir/Reconcli/releases)
 [![GitHub stars](https://img.shields.io/github/stars/jarek-bir/Reconcli.svg)](https://github.com/jarek-bir/Reconcli/stargazers)

@@ -33,7 +33,24 @@ reconcli apicli --url https://api.example.com --secret-scan --store-db secrets.d
 reconcli apicli --url https://api.example.com --security-test --secret-scan --swagger-brute --store-db full_scan.db --json-report --markdown-report
 ```
 
-### ℹ️ **WhoisFreaksCLI Database Integration** (New!)(https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
+### ℹ️ **WhoisFreaksCLI Database Integration** (New!)
+
+- **Database Storage**: Store WHOIS findings in ReconCLI database with target classification
+- **Single Domain Support**: Analyze individual domains without creating input files
+- **Enhanced CLI**: Improved command structure with `lookup` subcommand
+- **Target Tracking**: Associate WHOIS data with specific bug bounty programs and targets
+- **Risk Correlation**: Link WHOIS findings with other reconnaissance data
+
+```bash
+# Single domain with database storage
+reconcli whoisfreakscli lookup --domain example.com --store-db \
+  --target-domain example.com --program hackerone-program --verbose
+
+# Bulk analysis with database integration
+reconcli whoisfreakscli lookup --input domains.txt --store-db \
+  --target-domain example.com --program bugcrowd-program --risk-analysis
+```
+
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![GitHub release](https://img.shields.io/github/release/jarek-bir/Reconcli.svg)](https://github.com/jarek-bir/Reconcli/releases)
 [![GitHub stars](https://img.shields.io/github/stars/jarek-bir/Reconcli.svg)](https://github.com/jarek-bir/Reconcli/stargazers)
@@ -1162,7 +1179,7 @@ reconcli doctorcli --structure --configs --env --fix --verbose
 - **💉 vulnsqlicli** - SQL injection vulnerability scanner
 - **🔍 cnamecli** - CNAME record analysis and takeover detection
 - **🛡️ wafdetectcli** - WAF detection, testing and bypass analysis
-- **↗️ openredirectcli** - Advanced open redirect vulnerability scanner with AI
+- **↗️ openredirectcli** - Advanced open redirect vulnerability scanner
 - **🔄 takeovercli** - Subdomain takeover vulnerability detection
 - **🔐 secretscli** - Multi-tool secret discovery and analysis
 - **🔐 codeseccli** - Code security analysis with Semgrep SAST integration
