@@ -3,8 +3,15 @@
 ## 🚀 Basic Usage
 
 ```bash
-# Standard subdomain enumeration
+d
+git# Standard subdomain enumeration (traditional tools)
 reconcli subdocli --domain example.com --verbose
+
+# Traditional passive tools only (no BBOT, no active)
+reconcli subdocli --domain example.com --passive-only --verbose
+
+# Traditional active tools only (no BBOT, no passive)
+reconcli subdocli --domain example.com --active-only --verbose
 
 # BBOT-powered enumeration (recommended)
 reconcli subdocli --domain example.com --bbot --verbose
@@ -51,12 +58,14 @@ reconcli subdocli --domain example.com --bbot \
 
 | Option | Description |
 |--------|-------------|
+| `--passive-only` | Use only traditional passive tools (no BBOT, no active) |
+| `--active-only` | Use only traditional active tools (no BBOT, no passive) |
 | `--bbot` | Enable BBOT with 53+ passive modules |
 | `--bbot-intensive` | Aggressive mode with bruteforcing |
 | `--resolve` | Resolve subdomains to IP addresses |
 | `--probe-http` | Test HTTP/HTTPS services |
 | `--export csv\|json\|txt` | Export results in specified format |
-| `--all-tools` | Use all tools (passive + active) |
+| `--all-tools` | Use all tools (passive + active + BBOT) |
 | `--resume` | Continue interrupted scan |
 | `--store-db` | Save to ReconCLI database |
 

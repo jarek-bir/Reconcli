@@ -729,6 +729,12 @@ def export_results_to_txt(output_dir, domain, comprehensive_data, verbose=False)
     "--all-tools", is_flag=True, help="Use all available tools (including active)"
 )
 @click.option("--active", is_flag=True, help="Include active enumeration tools")
+@click.option(
+    "--passive-only", is_flag=True, help="Use only traditional passive tools (no BBOT, no active)"
+)
+@click.option(
+    "--active-only", is_flag=True, help="Use only traditional active tools (no BBOT, no passive)"
+)
 @click.option("--resume", is_flag=True, help="Resume previous scan")
 @click.option("--clear-resume", is_flag=True, help="Clear previous resume state")
 @click.option("--show-stats", is_flag=True, help="Show detailed statistics")
@@ -770,6 +776,8 @@ def subdocli(
     threads,
     all_tools,
     active,
+    passive_only,
+    active_only,
     resume,
     clear_resume,
     show_stats,
@@ -791,7 +799,13 @@ def subdocli(
     • Intelligent mutations and target-specific wordlists
     • Cloud resource enumeration and GitHub code search
 
-    📊 Export Options:
+    �️ Traditional Tools Control:
+    • --passive-only: Use only traditional passive tools (subfinder, findomain, amass, etc.)
+    • --active-only: Use only traditional active tools (gobuster, ffuf, dnsrecon)
+    • --bbot: Add BBOT integration with traditional tools
+    • --all-tools: Use everything (traditional + BBOT + active)
+
+    �📊 Export Options:
     • CSV format for spreadsheet analysis and data processing
     • JSON format for programmatic analysis and API integration
     • TXT format for readable reports and simple text processing
@@ -889,26 +903,52 @@ def subdocli(
     passive_tools = base_passive_tools.copy()
     active_tools = base_active_tools.copy()
 
-    # Add BBOT tools based on flags
-    if bbot or all_tools:
-        passive_tools.update(bbot_passive_tools)
-        active_tools.update(bbot_active_tools)
-        if verbose:
-            click.echo("[+] 🤖 BBOT (Bighuge BLS OSINT Tool) enabled with 53+ modules")
+    # Handle exclusive modes first
+    if passive_only and active_only:
+        click.echo("❌ Error: Cannot use --passive-only and --active-only together")
+        return
+    
+    if passive_only and (bbot or bbot_intensive):
+        click.echo("❌ Error: --passive-only excludes BBOT tools. Use traditional passive tools only.")
+        return
+        
+    if active_only and (bbot or bbot_intensive):
+        click.echo("❌ Error: --active-only excludes BBOT tools. Use traditional active tools only.")
+        return
 
-    if bbot_intensive or all_tools:
-        active_tools.update(bbot_intensive_tools)
+    # Determine which tools to use
+    if passive_only:
+        # Only traditional passive tools
+        tools = base_passive_tools.copy()
         if verbose:
-            click.echo(
-                "[+] 🚀 BBOT intensive mode enabled - maximum subdomain coverage"
-            )
+            click.echo("[+] 🔵 Using traditional passive tools only (no BBOT, no active)")
+    elif active_only:
+        # Only traditional active tools
+        tools = base_active_tools.copy()
+        if verbose:
+            click.echo("[+] 🔴 Using traditional active tools only (no BBOT, no passive)")
+    else:
+        # Normal logic with BBOT integration
+        # Add BBOT tools based on flags
+        if bbot or all_tools:
+            passive_tools.update(bbot_passive_tools)
+            active_tools.update(bbot_active_tools)
+            if verbose:
+                click.echo("[+] 🤖 BBOT (Bighuge BLS OSINT Tool) enabled with 53+ modules")
 
-    # Select tools based on options
-    tools = passive_tools.copy()
-    if active or all_tools:
-        tools.update(active_tools)
-        if verbose:
-            click.echo("[+] 🔥 Active enumeration enabled")
+        if bbot_intensive or all_tools:
+            active_tools.update(bbot_intensive_tools)
+            if verbose:
+                click.echo(
+                    "[+] 🚀 BBOT intensive mode enabled - maximum subdomain coverage"
+                )
+
+        # Select tools based on options
+        tools = passive_tools.copy()
+        if active or all_tools:
+            tools.update(active_tools)
+            if verbose:
+                click.echo("[+] 🔥 Active enumeration enabled")
 
     current_scan = resume_state[scan_key]
     completed_tools = set(current_scan.get("tools_completed", []))

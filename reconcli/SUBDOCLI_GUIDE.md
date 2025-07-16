@@ -44,8 +44,14 @@ SubdoCLI is ReconCLI's advanced subdomain enumeration module, featuring BBOT (Bi
 
 ### Basic Usage
 ```bash
-# Simple subdomain enumeration
+# Simple subdomain enumeration (traditional passive tools)
 reconcli subdocli --domain example.com --verbose
+
+# Only traditional passive tools (no BBOT, no active)
+reconcli subdocli --domain example.com --passive-only --verbose
+
+# Only traditional active tools (no BBOT, no passive)
+reconcli subdocli --domain example.com --active-only --verbose
 
 # BBOT-powered enumeration (recommended)
 reconcli subdocli --domain example.com --bbot --verbose
@@ -185,6 +191,40 @@ reconcli subdocli --domain target.com --bbot \
 # - Cross-module analysis
 # - Historical tracking
 # - Program organization
+```
+
+### 6. Traditional Tools Only
+
+```bash
+# Use only traditional passive tools (subfinder, findomain, amass, etc.)
+reconcli subdocli --domain example.com --passive-only --export csv --verbose
+
+# Use only traditional active tools (gobuster, ffuf, dnsrecon)
+reconcli subdocli --domain example.com --active-only --resolve --verbose
+
+# Compare traditional vs BBOT results
+reconcli subdocli --domain example.com --passive-only --export txt --verbose
+reconcli subdocli --domain example.com --bbot --export txt --verbose
+```
+
+## 🎯 Tool Selection Strategies
+
+### Pure Traditional Approach
+```bash
+# Fast passive-only scan with traditional tools
+reconcli subdocli --domain target.com --passive-only --timeout 60 --verbose
+
+# Complete active enumeration with bruteforcing
+reconcli subdocli --domain target.com --active-only --threads 20 --verbose
+```
+
+### Hybrid Approaches
+```bash
+# Traditional + BBOT passive
+reconcli subdocli --domain target.com --bbot --verbose
+
+# Everything enabled (maximum coverage)
+reconcli subdocli --domain target.com --all-tools --bbot-intensive --verbose
 ```
 
 ## 📊 Output Formats
