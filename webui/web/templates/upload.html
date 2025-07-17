@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{.title}}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .sidebar {
+            background: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+        }
+        .nav-link {
+            color: rgba(255,255,255,0.8) !important;
+            transition: all 0.3s ease;
+        }
+        .nav-link:hover, .nav-link.active {
+            color: white !important;
+            background: rgba(255,255,255,0.1);
+            border-radius: 8px;
+        }
+        .upload-area {
+            border: 3px dashed #dee2e6;
+            border-radius: 15px;
+            padding: 40px;
+            text-align: center;
+            transition: all 0.3s ease;
+            background: #f8f9fa;
+        }
+        .upload-area.dragover {
+            border-color: #667eea;
+            background: rgba(102, 126, 234, 0.1);
+        }
+        .progress-container {
+            display: none;
+        }
+    </style>
+</head>
+<body class="bg-light">
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar -->
+            <div class="col-md-3 col-lg-2 px-0">
+                <div class="sidebar p-3">
+                    <div class="text-center mb-4">
+                        <h4 class="text-white">
+                            <i class="fas fa-shield-alt me-2"></i>ReconCLI
+                        </h4>
+                        <small class="text-white-50">Web Dashboard</small>
+                    </div>
+                    
+                    <ul class="nav nav-pills flex-column">
+                        <li class="nav-item">
+                            <a class="nav-link" href="/dashboard">
+                                <i class="fas fa-tachometer-alt me-2"></i>Dashboard
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link active" href="/upload">
+                                <i class="fas fa-upload me-2"></i>Upload Files
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/sessions">
+                                <i class="fas fa-folder me-2"></i>Sessions
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#" onclick="viewFiles()">
+                                <i class="fas fa-file-alt me-2"></i>Files
+                            </a>
+                        </li>
+                        <li class="nav-item mt-3">
+                            <a class="nav-link" href="#" onclick="logout()">
+                                <i class="fas fa-sign-out-alt me-2"></i>Logout
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Main Content -->
+            <div class="col-md-9 col-lg-10">
+                <div class="p-4">
+                    <!-- Header -->
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <h2>
+                            <i class="fas fa-upload me-2"></i>Upload Files
+                        </h2>
+                        <nav aria-label="breadcrumb">
+                            <ol class="breadcrumb">
+                                <li class="breadcrumb-item"><a href="/dashboard">Dashboard</a></li>
+                                <li class="breadcrumb-item active">Upload</li>
+                            </ol>
+                        </nav>
+                    </div>
+
+                    <!-- Upload Form -->
+                    <div class="row">
+                        <div class="col-lg-8">
+                            <div class="card">
+                                <div class="card-body">
+                                    <form id="uploadForm" enctype="multipart/form-data">
+                                        <!-- Session Selection -->
+                                        <div class="mb-3">
+                                            <label for="session_id" class="form-label">Session</label>
+                                            <select class="form-select" id="session_id" name="session_id">
+                                                <option value="">Select a session...</option>
+                                            </select>
+                                            <div class="form-text">
+                                                Choose an existing session or create a new one.
+                                            </div>
+                                        </div>
+
+                                        <!-- Tool Selection -->
+                                        <div class="mb-3">
+                                            <label for="tool" class="form-label">ReconCLI Tool</label>
+                                            <select class="form-select" id="tool" name="tool">
+                                                <option value="">Select tool...</option>
+                                                <option value="subdocli">SubdoCLI - Subdomain Enumeration</option>
+                                                <option value="urlcli">URLCLI - URL Discovery</option>
+                                                <option value="portcli">PortCLI - Port Scanning</option>
+                                                <option value="vulncli">VulnCLI - Vulnerability Scanning</option>
+                                                <option value="dnscli">DNSCLI - DNS Resolution</option>
+                                                <option value="httpcli">HttpCLI - HTTP Analysis</option>
+                                                <option value="jscli">JSCLI - JavaScript Analysis</option>
+                                                <option value="secretscli">SecretsCLI - Secret Discovery</option>
+                                                <option value="other">Other</option>
+                                            </select>
+                                        </div>
+
+                                        <!-- File Upload Area -->
+                                        <div class="mb-3">
+                                            <label class="form-label">Upload File</label>
+                                            <div class="upload-area" id="uploadArea">
+                                                <i class="fas fa-cloud-upload-alt fa-3x text-muted mb-3"></i>
+                                                <h5>Drag & Drop Files Here</h5>
+                                                <p class="text-muted">or click to browse</p>
+                                                <input type="file" id="fileInput" name="file" class="d-none" 
+                                                       accept=".json,.html,.htm,.csv,.txt">
+                                                <button type="button" class="btn btn-outline-primary" 
+                                                        onclick="document.getElementById('fileInput').click()">
+                                                    <i class="fas fa-folder-open me-2"></i>Browse Files
+                                                </button>
+                                            </div>
+                                            <div class="form-text">
+                                                Supported formats: JSON, HTML, CSV, TXT (Max size: 50MB)
+                                            </div>
+                                        </div>
+
+                                        <!-- Selected File Info -->
+                                        <div id="fileInfo" class="mb-3" style="display: none;">
+                                            <div class="alert alert-info">
+                                                <i class="fas fa-file me-2"></i>
+                                                <strong>Selected:</strong> <span id="fileName"></span>
+                                                (<span id="fileSize"></span>)
+                                            </div>
+                                        </div>
+
+                                        <!-- Progress Bar -->
+                                        <div class="progress-container mb-3">
+                                            <div class="progress">
+                                                <div class="progress-bar" role="progressbar" style="width: 0%"></div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Upload Button -->
+                                        <button type="submit" class="btn btn-primary" id="uploadBtn" disabled>
+                                            <i class="fas fa-upload me-2"></i>Upload File
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Upload Info -->
+                        <div class="col-lg-4">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h6 class="mb-0">
+                                        <i class="fas fa-info-circle me-2"></i>Upload Guidelines
+                                    </h6>
+                                </div>
+                                <div class="card-body">
+                                    <h6>Supported File Types:</h6>
+                                    <ul class="list-unstyled">
+                                        <li><i class="fas fa-code text-primary me-2"></i>JSON - ReconCLI output</li>
+                                        <li><i class="fas fa-globe text-success me-2"></i>HTML - Web reports</li>
+                                        <li><i class="fas fa-table text-warning me-2"></i>CSV - Data exports</li>
+                                        <li><i class="fas fa-file-alt text-info me-2"></i>TXT - Text reports</li>
+                                    </ul>
+
+                                    <h6 class="mt-3">Best Practices:</h6>
+                                    <ul class="small text-muted">
+                                        <li>Organize files by sessions</li>
+                                        <li>Specify the ReconCLI tool used</li>
+                                        <li>Use descriptive file names</li>
+                                        <li>Maximum file size: 50MB</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <!-- Create New Session -->
+                            <div class="card mt-3">
+                                <div class="card-header">
+                                    <h6 class="mb-0">
+                                        <i class="fas fa-plus me-2"></i>Create New Session
+                                    </h6>
+                                </div>
+                                <div class="card-body">
+                                    <form id="sessionForm">
+                                        <div class="mb-2">
+                                            <input type="text" class="form-control form-control-sm" 
+                                                   id="sessionName" placeholder="Session name" required>
+                                        </div>
+                                        <div class="mb-2">
+                                            <textarea class="form-control form-control-sm" 
+                                                      id="sessionDescription" rows="2" 
+                                                      placeholder="Description (optional)"></textarea>
+                                        </div>
+                                        <button type="submit" class="btn btn-sm btn-success">
+                                            <i class="fas fa-plus me-1"></i>Create
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            loadSessions();
+            setupDragAndDrop();
+            setupFileInput();
+        });
+
+        // Load sessions
+        async function loadSessions() {
+            try {
+                const token = getCookie('auth_token');
+                const response = await fetch('/api/sessions', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    const select = document.getElementById('session_id');
+                    
+                    data.sessions.forEach(session => {
+                        const option = document.createElement('option');
+                        option.value = session.id;
+                        option.textContent = session.name;
+                        select.appendChild(option);
+                    });
+                }
+            } catch (error) {
+                console.error('Failed to load sessions:', error);
+            }
+        }
+
+        // Setup drag and drop
+        function setupDragAndDrop() {
+            const uploadArea = document.getElementById('uploadArea');
+            
+            uploadArea.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                uploadArea.classList.add('dragover');
+            });
+
+            uploadArea.addEventListener('dragleave', () => {
+                uploadArea.classList.remove('dragover');
+            });
+
+            uploadArea.addEventListener('drop', (e) => {
+                e.preventDefault();
+                uploadArea.classList.remove('dragover');
+                
+                const files = e.dataTransfer.files;
+                if (files.length > 0) {
+                    handleFileSelection(files[0]);
+                }
+            });
+        }
+
+        // Setup file input
+        function setupFileInput() {
+            const fileInput = document.getElementById('fileInput');
+            fileInput.addEventListener('change', (e) => {
+                if (e.target.files.length > 0) {
+                    handleFileSelection(e.target.files[0]);
+                }
+            });
+        }
+
+        // Handle file selection
+        function handleFileSelection(file) {
+            const allowedTypes = ['application/json', 'text/html', 'text/csv', 'text/plain'];
+            const allowedExtensions = ['.json', '.html', '.htm', '.csv', '.txt'];
+            
+            const fileExtension = '.' + file.name.split('.').pop().toLowerCase();
+            
+            if (!allowedTypes.includes(file.type) && !allowedExtensions.includes(fileExtension)) {
+                alert('Invalid file type. Please upload JSON, HTML, CSV, or TXT files.');
+                return;
+            }
+
+            if (file.size > 50 * 1024 * 1024) { // 50MB
+                alert('File size exceeds 50MB limit.');
+                return;
+            }
+
+            // Show file info
+            document.getElementById('fileName').textContent = file.name;
+            document.getElementById('fileSize').textContent = formatFileSize(file.size);
+            document.getElementById('fileInfo').style.display = 'block';
+            document.getElementById('uploadBtn').disabled = false;
+
+            // Set file input
+            const fileInput = document.getElementById('fileInput');
+            const dataTransfer = new DataTransfer();
+            dataTransfer.items.add(file);
+            fileInput.files = dataTransfer.files;
+        }
+
+        // Upload form handler
+        document.getElementById('uploadForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const formData = new FormData(e.target);
+            const token = getCookie('auth_token');
+            
+            // Show progress
+            const progressContainer = document.querySelector('.progress-container');
+            const progressBar = document.querySelector('.progress-bar');
+            progressContainer.style.display = 'block';
+            
+            try {
+                const response = await fetch('/api/upload', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    progressBar.style.width = '100%';
+                    progressBar.classList.add('bg-success');
+                    
+                    setTimeout(() => {
+                        alert('File uploaded successfully!');
+                        window.location.href = '/dashboard';
+                    }, 1000);
+                } else {
+                    throw new Error(result.error || 'Upload failed');
+                }
+            } catch (error) {
+                progressBar.classList.add('bg-danger');
+                alert('Upload failed: ' + error.message);
+            }
+        });
+
+        // Session form handler
+        document.getElementById('sessionForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const data = {
+                name: document.getElementById('sessionName').value,
+                description: document.getElementById('sessionDescription').value
+            };
+            
+            const token = getCookie('auth_token');
+            
+            try {
+                const response = await fetch('/api/sessions', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    // Add new session to select
+                    const select = document.getElementById('session_id');
+                    const option = document.createElement('option');
+                    option.value = result.session.id;
+                    option.textContent = result.session.name;
+                    option.selected = true;
+                    select.appendChild(option);
+                    
+                    // Clear form
+                    document.getElementById('sessionForm').reset();
+                    alert('Session created successfully!');
+                } else {
+                    alert('Failed to create session: ' + result.error);
+                }
+            } catch (error) {
+                alert('Failed to create session: ' + error.message);
+            }
+        });
+
+        // Helper functions
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 B';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        function getCookie(name) {
+            const value = `; ${document.cookie}`;
+            const parts = value.split(`; ${name}=`);
+            if (parts.length === 2) return parts.pop().split(';').shift();
+        }
+
+        function logout() {
+            document.cookie = 'auth_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+            window.location.href = '/login';
+        }
+
+        function viewFiles() {
+            alert('Files page coming soon!');
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{.title}}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .hero-section {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 80px 0;
+        }
+        .feature-card {
+            transition: transform 0.3s ease;
+            border: none;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .feature-card:hover {
+            transform: translateY(-5px);
+        }
+        .btn-custom {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            border: none;
+            padding: 12px 30px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="/">
+                <i class="fas fa-shield-alt me-2"></i>ReconCLI Web UI
+            </a>
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link" href="/login">
+                    <i class="fas fa-sign-in-alt me-1"></i>Login
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero-section text-center">
+        <div class="container">
+            <h1 class="display-4 fw-bold mb-4">
+                <i class="fas fa-radar-chart me-3"></i>ReconCLI Web UI
+            </h1>
+            <p class="lead mb-4">
+                Advanced web interface for ReconCLI reconnaissance toolkit.<br>
+                Upload, analyze, and visualize your security research data.
+            </p>
+            <a href="/login" class="btn btn-custom btn-lg text-white">
+                <i class="fas fa-rocket me-2"></i>Get Started
+            </a>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section class="py-5">
+        <div class="container">
+            <h2 class="text-center mb-5">Key Features</h2>
+            <div class="row">
+                <div class="col-md-4 mb-4">
+                    <div class="card feature-card h-100 text-center p-4">
+                        <div class="card-body">
+                            <i class="fas fa-upload fa-3x text-primary mb-3"></i>
+                            <h5 class="card-title">File Upload</h5>
+                            <p class="card-text">
+                                Upload JSON, HTML, CSV, and TXT files from your ReconCLI scans.
+                                Organize files in sessions for better project management.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4 mb-4">
+                    <div class="card feature-card h-100 text-center p-4">
+                        <div class="card-body">
+                            <i class="fas fa-chart-line fa-3x text-success mb-3"></i>
+                            <h5 class="card-title">Data Analysis</h5>
+                            <p class="card-text">
+                                Visualize and analyze your reconnaissance data with interactive charts
+                                and comprehensive reports.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4 mb-4">
+                    <div class="card feature-card h-100 text-center p-4">
+                        <div class="card-body">
+                            <i class="fas fa-lock fa-3x text-warning mb-3"></i>
+                            <h5 class="card-title">Secure Access</h5>
+                            <p class="card-text">
+                                JWT-based authentication ensures your reconnaissance data 
+                                remains secure and accessible only to authorized users.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Supported Tools Section -->
+    <section class="py-5 bg-light">
+        <div class="container">
+            <h2 class="text-center mb-5">Supported ReconCLI Tools</h2>
+            <div class="row text-center">
+                <div class="col-md-3 mb-3">
+                    <div class="p-3">
+                        <i class="fas fa-globe fa-2x text-primary mb-2"></i>
+                        <h6>SubdoCLI</h6>
+                        <small class="text-muted">Subdomain enumeration</small>
+                    </div>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <div class="p-3">
+                        <i class="fas fa-link fa-2x text-success mb-2"></i>
+                        <h6>URLCLI</h6>
+                        <small class="text-muted">URL discovery</small>
+                    </div>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <div class="p-3">
+                        <i class="fas fa-network-wired fa-2x text-warning mb-2"></i>
+                        <h6>PortCLI</h6>
+                        <small class="text-muted">Port scanning</small>
+                    </div>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <div class="p-3">
+                        <i class="fas fa-bug fa-2x text-danger mb-2"></i>
+                        <h6>VulnCLI</h6>
+                        <small class="text-muted">Vulnerability scanning</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-dark text-white py-4">
+        <div class="container text-center">
+            <p class="mb-0">
+                <i class="fas fa-code me-2"></i>
+                ReconCLI Web UI - Advanced Reconnaissance Toolkit Interface
+            </p>
+            <small class="text-muted">Built with Go, Gin, and Bootstrap</small>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
