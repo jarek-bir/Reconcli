@@ -76,7 +76,7 @@
 
                     <div class="text-center mt-4">
                         <small class="text-muted">
-                            Don't have an account? 
+                            Don't have an account?
                             <a href="#" id="registerLink" class="text-decoration-none">Register here</a>
                         </small>
                     </div>
@@ -138,7 +138,7 @@
         // Login form handler
         document.getElementById('loginForm').addEventListener('submit', async (e) => {
             e.preventDefault();
-            
+
             const formData = new FormData(e.target);
             const data = {
                 username: formData.get('username'),
@@ -173,7 +173,7 @@
         // Register form handler
         document.getElementById('registerForm').addEventListener('submit', async (e) => {
             e.preventDefault();
-            
+
             const formData = new FormData(e.target);
             const data = {
                 username: formData.get('username'),

@@ -40,7 +40,7 @@
                         </h4>
                         <small class="text-white-50">Web Dashboard</small>
                     </div>
-                    
+
                     <ul class="nav nav-pills flex-column">
                         <li class="nav-item">
                             <a class="nav-link" href="/dashboard">
@@ -162,7 +162,7 @@
                 if (response.ok) {
                     const data = await response.json();
                     const user = data.user;
-                    
+
                     document.getElementById('profile-username').textContent = user.username;
                     document.getElementById('profile-email').textContent = user.email;
                     document.getElementById('profile-role').textContent = user.role;
@@ -180,7 +180,7 @@
         function setupPasswordForm() {
             document.getElementById('changePasswordForm').addEventListener('submit', async function(e) {
                 e.preventDefault();
-                
+
                 const currentPassword = document.getElementById('currentPassword').value;
                 const newPassword = document.getElementById('newPassword').value;
                 const confirmPassword = document.getElementById('confirmPassword').value;
@@ -236,7 +236,7 @@
                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
             `;
             alertContainer.appendChild(alert);
-            
+
             // Auto-remove after 5 seconds
             setTimeout(() => {
                 if (alert.parentNode) {

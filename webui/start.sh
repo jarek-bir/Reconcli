@@ -49,7 +49,7 @@ check_go() {
         echo "Visit: https://golang.org/doc/install"
         exit 1
     fi
-    
+
     GO_VERSION=$(go version | awk '{print $3}' | sed 's/go//')
     log_success "Go version $GO_VERSION detected"
 }
@@ -57,14 +57,14 @@ check_go() {
 # Check if required directories exist
 check_directories() {
     log_info "Checking directory structure..."
-    
+
     for dir in "data" "uploads" "web/templates"; do
         if [ ! -d "$dir" ]; then
             log_info "Creating directory: $dir"
             mkdir -p "$dir"
         fi
     done
-    
+
     log_success "Directory structure verified"
 }
 
@@ -123,7 +123,7 @@ start_app() {
     echo ""
     echo -e "${YELLOW}Press Ctrl+C to stop the server${NC}"
     echo ""
-    
+
     if go run main.go; then
         log_success "Application started successfully"
     else
@@ -170,13 +170,13 @@ check_only() {
     log_info "Checking system requirements..."
     check_go
     check_directories
-    
+
     if [ -f ".env" ]; then
         log_success ".env file exists"
     else
         log_warning ".env file missing"
     fi
-    
+
     check_database
     log_success "System check complete"
 }
@@ -220,7 +220,7 @@ build_app() {
 # Main execution
 main() {
     print_banner
-    
+
     case "${1:-}" in
         -h|--help)
             show_help

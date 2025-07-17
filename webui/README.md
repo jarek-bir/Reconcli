@@ -154,7 +154,7 @@ For production deployment:
 The web UI supports files from all ReconCLI tools:
 
 - **SubdoCLI** - Subdomain enumeration results
-- **URLCLI** - URL discovery outputs  
+- **URLCLI** - URL discovery outputs
 - **PortCLI** - Port scanning data
 - **VulnCLI** - Vulnerability scan results
 - **DNSCLI** - DNS resolution data

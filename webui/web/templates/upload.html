@@ -50,7 +50,7 @@
                         </h4>
                         <small class="text-white-50">Web Dashboard</small>
                     </div>
-                    
+
                     <ul class="nav nav-pills flex-column">
                         <li class="nav-item">
                             <a class="nav-link" href="/dashboard">
@@ -138,9 +138,9 @@
                                                 <i class="fas fa-cloud-upload-alt fa-3x text-muted mb-3"></i>
                                                 <h5>Drag & Drop Files Here</h5>
                                                 <p class="text-muted">or click to browse</p>
-                                                <input type="file" id="fileInput" name="file" class="d-none" 
+                                                <input type="file" id="fileInput" name="file" class="d-none"
                                                        accept=".json,.html,.htm,.csv,.txt">
-                                                <button type="button" class="btn btn-outline-primary" 
+                                                <button type="button" class="btn btn-outline-primary"
                                                         onclick="document.getElementById('fileInput').click()">
                                                     <i class="fas fa-folder-open me-2"></i>Browse Files
                                                 </button>
@@ -212,12 +212,12 @@
                                 <div class="card-body">
                                     <form id="sessionForm">
                                         <div class="mb-2">
-                                            <input type="text" class="form-control form-control-sm" 
+                                            <input type="text" class="form-control form-control-sm"
                                                    id="sessionName" placeholder="Session name" required>
                                         </div>
                                         <div class="mb-2">
-                                            <textarea class="form-control form-control-sm" 
-                                                      id="sessionDescription" rows="2" 
+                                            <textarea class="form-control form-control-sm"
+                                                      id="sessionDescription" rows="2"
                                                       placeholder="Description (optional)"></textarea>
                                         </div>
                                         <button type="submit" class="btn btn-sm btn-success">
@@ -252,7 +252,7 @@
                 if (response.ok) {
                     const data = await response.json();
                     const select = document.getElementById('session_id');
-                    
+
                     data.sessions.forEach(session => {
                         const option = document.createElement('option');
                         option.value = session.id;
@@ -268,7 +268,7 @@
         // Setup drag and drop
         function setupDragAndDrop() {
             const uploadArea = document.getElementById('uploadArea');
-            
+
             uploadArea.addEventListener('dragover', (e) => {
                 e.preventDefault();
                 uploadArea.classList.add('dragover');
@@ -281,7 +281,7 @@
             uploadArea.addEventListener('drop', (e) => {
                 e.preventDefault();
                 uploadArea.classList.remove('dragover');
-                
+
                 const files = e.dataTransfer.files;
                 if (files.length > 0) {
                     handleFileSelection(files[0]);
@@ -303,9 +303,9 @@
         function handleFileSelection(file) {
             const allowedTypes = ['application/json', 'text/html', 'text/csv', 'text/plain'];
             const allowedExtensions = ['.json', '.html', '.htm', '.csv', '.txt'];
-            
+
             const fileExtension = '.' + file.name.split('.').pop().toLowerCase();
-            
+
             if (!allowedTypes.includes(file.type) && !allowedExtensions.includes(fileExtension)) {
                 alert('Invalid file type. Please upload JSON, HTML, CSV, or TXT files.');
                 return;
@@ -332,15 +332,15 @@
         // Upload form handler
         document.getElementById('uploadForm').addEventListener('submit', async (e) => {
             e.preventDefault();
-            
+
             const formData = new FormData(e.target);
             const token = getCookie('auth_token');
-            
+
             // Show progress
             const progressContainer = document.querySelector('.progress-container');
             const progressBar = document.querySelector('.progress-bar');
             progressContainer.style.display = 'block';
-            
+
             try {
                 const response = await fetch('/api/upload', {
                     method: 'POST',
@@ -355,7 +355,7 @@
                 if (response.ok) {
                     progressBar.style.width = '100%';
                     progressBar.classList.add('bg-success');
-                    
+
                     setTimeout(() => {
                         alert('File uploaded successfully!');
                         window.location.href = '/dashboard';
@@ -372,14 +372,14 @@
         // Session form handler
         document.getElementById('sessionForm').addEventListener('submit', async (e) => {
             e.preventDefault();
-            
+
             const data = {
                 name: document.getElementById('sessionName').value,
                 description: document.getElementById('sessionDescription').value
             };
-            
+
             const token = getCookie('auth_token');
-            
+
             try {
                 const response = await fetch('/api/sessions', {
                     method: 'POST',
@@ -400,7 +400,7 @@
                     option.textContent = result.session.name;
                     option.selected = true;
                     select.appendChild(option);
-                    
+
                     // Clear form
                     document.getElementById('sessionForm').reset();
                     alert('Session created successfully!');

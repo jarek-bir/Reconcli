@@ -52,7 +52,7 @@
                         </h4>
                         <small class="text-white-50">Web Dashboard</small>
                     </div>
-                    
+
                     <ul class="nav nav-pills flex-column">
                         <li class="nav-item">
                             <a class="nav-link active" href="/dashboard">
@@ -256,13 +256,13 @@
         async function loadDashboardData() {
             try {
                 const token = getCookie('auth_token');
-                
+
                 // Load sessions
                 const sessionsResponse = await fetch('/api/sessions', {
                     credentials: 'include',
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
-                
+
                 // Load files
                 const filesResponse = await fetch('/api/files', {
                     credentials: 'include',
@@ -272,7 +272,7 @@
                 if (sessionsResponse.ok && filesResponse.ok) {
                     const sessionsData = await sessionsResponse.json();
                     const filesData = await filesResponse.json();
-                    
+
                     updateStatistics(sessionsData.sessions || [], filesData.files || []);
                     updateCharts(filesData.files || []);
                     updateRecentFiles(filesData.files || []);
@@ -286,12 +286,12 @@
         function updateStatistics(sessions, files) {
             document.getElementById('total-sessions').textContent = sessions.length;
             document.getElementById('total-files').textContent = files.length;
-            
+
             const totalSize = files.reduce((sum, file) => sum + (file.file_size || 0), 0);
             document.getElementById('total-size').textContent = formatFileSize(totalSize);
-            
-            const lastUpload = files.length > 0 ? 
-                new Date(Math.max(...files.map(f => new Date(f.created_at)))).toLocaleDateString() : 
+
+            const lastUpload = files.length > 0 ?
+                new Date(Math.max(...files.map(f => new Date(f.created_at)))).toLocaleDateString() :
                 'Never';
             document.getElementById('last-upload').textContent = lastUpload;
         }
@@ -369,7 +369,7 @@
                 .slice(0, 10);
 
             const tbody = document.getElementById('recent-files');
-            
+
             if (recentFiles.length === 0) {
                 tbody.innerHTML = `
                     <tr>
