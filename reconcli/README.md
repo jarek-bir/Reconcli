@@ -98,7 +98,7 @@ The most comprehensive subdomain enumeration tool with 12 integrated tools + BBO
 # All 12 tools with selective execution
 reconcli subdocli --domain example.com --tools "amass,subfinder,crtsh_alternative" --verbose
 
-# BBOT-powered discovery with CSV export  
+# BBOT-powered discovery with CSV export
 reconcli subdocli --domain example.com --bbot --export csv --verbose
 
 # Intensive mode with full analysis

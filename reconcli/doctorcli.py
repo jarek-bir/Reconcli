@@ -586,13 +586,9 @@ def check_permissions(report, verbose, quiet, fix, dry_run):
                 if fix and not dry_run:
                     try:
                         if path.is_dir():
-                            os.chmod(
-                                path, 0o755
-                            )  # nosec B103 - Standard directory permissions for config dirs
+                            os.chmod(path, 0o755)  # nosec B103 - Standard directory permissions for config dirs
                         else:
-                            os.chmod(
-                                path, 0o644
-                            )  # nosec B103 - Standard file permissions for config files
+                            os.chmod(path, 0o644)  # nosec B103 - Standard file permissions for config files
                         permissions_status[path_str]["fixed"] = True
                         if not quiet:
                             click.secho(

@@ -50,6 +50,7 @@ Export and reporting:
 • CSP policy evaluation
 • Referrer policy assessment
 """
+
 import csv
 import json
 import subprocess
@@ -415,7 +416,7 @@ def httpcli(
     elapsed_time = time.time() - start_time
 
     if verbose:
-        console.print(f"\n[bold green]📊 Scan Summary:[/bold green]")
+        console.print("\n[bold green]📊 Scan Summary:[/bold green]")
         console.print(f"   • Total URLs processed: {len(results)}")
         console.print(
             f"   • Successful responses: {len([r for r in results if r.get('status_code')])}"
@@ -581,7 +582,7 @@ def httpcli(
     # Enhanced markdown report
     if markdown:
         with open(output_path / "http_summary.md", "w") as f:
-            f.write(f"# 🌐 Enhanced HTTP Analysis Report\n\n")
+            f.write("# 🌐 Enhanced HTTP Analysis Report\n\n")
             f.write(f"**Generated:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
             f.write(f"**Total URLs:** {len(urls)}\n")
             f.write(
@@ -687,7 +688,6 @@ def httpcli(
             from reconcli.db.operations import store_target
 
             # Note: store_http_scan function needs to be implemented in db/operations.py
-
             # Auto-detect target domain if not provided
             if not target_domain and results:
                 # Try to extract domain from first URL
@@ -706,7 +706,7 @@ def httpcli(
                     f"[+] 💾 Target {target_domain} prepared for HTTP scan data storage"
                 )
                 console.print(
-                    f"[!] ⚠️  Note: store_http_scan function needs implementation in db/operations.py"
+                    "[!] ⚠️  Note: store_http_scan function needs implementation in db/operations.py"
                 )
             else:
                 console.print(
@@ -721,13 +721,13 @@ def httpcli(
     # Final statistics and summary
     tag_counter = Counter(tag for r in results for tag in r.get("tags", []))
 
-    console.print(f"\n[bold blue]🎯 Final Statistics:[/bold blue]")
+    console.print("\n[bold blue]🎯 Final Statistics:[/bold blue]")
     console.print(f"   • Total scan time: {elapsed_time:.2f}s")
     console.print(
         f"   • Average response time: {sum(r.get('response_time', 0) for r in results if r.get('response_time')) / max(len([r for r in results if r.get('response_time')]), 1):.3f}s"
     )
 
-    console.print(f"\n[bold cyan]🏷️ Top Tags:[/bold cyan]")
+    console.print("\n[bold cyan]🏷️ Top Tags:[/bold cyan]")
     for tag, count in tag_counter.most_common(10):
         console.print(f"   • {tag}: {count}")
 
@@ -744,7 +744,7 @@ def httpcli(
         r.get("status_code") for r in results if r.get("status_code")
     )
     if status_counter:
-        console.print(f"\n[bold green]📊 Status Code Distribution:[/bold green]")
+        console.print("\n[bold green]📊 Status Code Distribution:[/bold green]")
         for status, count in status_counter.most_common():
             console.print(f"   • {status}: {count}")
 
