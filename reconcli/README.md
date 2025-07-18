@@ -35,22 +35,7 @@ reconcli apicli --url https://api.example.com --security-test --secret-scan --sw
 
 ### ℹ️ **WhoisFreaksCLI Database Integration** (New!)
 
-- **Database Storage**: Store WHOIS findings in ReconCLI database with target classification
-- **Single Domain Support**: Analyze individual domains without creating input files
-- **Enhanced CLI**: Improved command structure with `lookup` subcommand
-- **Target Tracking**: Associate WHOIS data with specific bug bounty programs and targets
-- **Risk Correlation**: Link WHOIS findings with other reconnaissance data
-
-```bash
-# Single domain with database storage
-reconcli whoisfreakscli lookup --domain example.com --store-db \
-  --target-domain example.com --program hackerone-program --verbose
-
-# Bulk analysis with database integration
-reconcli whoisfreakscli lookup --input domains.txt --store-db \
-  --target-domain example.com --program bugcrowd-program --risk-analysis
-```
-
+[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![GitHub release](https://img.shields.io/github/release/jarek-bir/Reconcli.svg)](https://github.com/jarek-bir/Reconcli/releases)
 [![GitHub stars](https://img.shields.io/github/stars/jarek-bir/Reconcli.svg)](https://github.com/jarek-bir/Reconcli/stargazers)
@@ -64,13 +49,13 @@ A comprehensive, modular reconnaissance toolkit designed for security profession
 
 ## 👥 Authors
 
-**Jarek + AI + Copilot = cyber-squad z przyszłości** 🚀🤖
+**Jarek + AI + Copilot = cyber-squad from future** 🚀🤖
 
 *A collaborative project combining human expertise, artificial intelligence, and GitHub Copilot to create cutting-edge cybersecurity tools.*
 
 ## 👥 Authors
 
-**🚀 Cyber-Squad z Przyszłości**
+**🚀 Cyber-Squad from Future**
 - **Jarek** 🧑‍💻 - Lead Developer & Security Researcher
 - **AI Assistant** 🤖 - Code Architecture & Advanced Features
 - **GitHub Copilot** ⚡ - Code Generation & Optimization
@@ -105,7 +90,103 @@ echo "admin.example.com,192.168.1.10,subdocli" > test.csv
 reconcli csvtkcli security-report test.csv --target-domain example.com
 ```
 
+## 🔧 Quick Reference - Core Modules
+
+### 🤖 SubdoCLI - Advanced Subdomain Enumeration
+The most comprehensive subdomain enumeration tool with 12 integrated tools + BBOT integration:
+```bash
+# All 12 tools with selective execution
+reconcli subdocli --domain example.com --tools "amass,subfinder,crtsh_alternative" --verbose
+
+# BBOT-powered discovery with CSV export  
+reconcli subdocli --domain example.com --bbot --export csv --verbose
+
+# Intensive mode with full analysis
+reconcli subdocli --domain example.com --bbot-intensive --resolve --probe-http --export json --verbose
+
+# Traditional tools only (no BBOT)
+reconcli subdocli --domain example.com --passive-only --resolve --export txt --verbose
+```
+📚 **Full Guide**: See `reconcli/SUBDOCLI_GUIDE.md` for complete documentation
+
+### 🌐 HTTPCli - Advanced HTTP/HTTPS Analysis
+Enhanced HTTP scanning with comprehensive security analysis, technology detection, and vulnerability assessment:
+```bash
+# Basic HTTP analysis with security scanning
+reconcli httpcli --input urls.txt --security-scan --check-waf --verbose
+
+# Comprehensive security assessment
+reconcli httpcli --input targets.txt --security-scan --check-cors --tech-detection \
+  --screenshot --benchmark --ssl-analysis --export-vulnerabilities --verbose
+
+# Bug bounty workflow with database storage
+reconcli httpcli --input subdomains.txt --nuclei --check-compression \
+  --custom-headers '{"X-Bug-Hunter":"true"}' --store-db --program "hackerone" --verbose
+
+# Performance and technology analysis
+reconcli httpcli --input sites.txt --benchmark --tech-detection --check-compression \
+  --generate-report --jsonout --markdown --threads 20 --verbose
+```
+🔑 **Key Features**:
+- **🛡️ Security Analysis**: Header scoring (A+ to F grades), WAF detection, CORS analysis
+- **🔍 Technology Detection**: Server, CMS, framework identification
+- **📸 Visual Analysis**: Screenshot capture (Selenium integration)
+- **⚡ Performance**: HTTP/2 detection, compression testing, response time benchmarking
+- **🎯 Vulnerability Focus**: Export only vulnerable URLs, Nuclei integration
+- **📊 Rich Reports**: JSON, CSV, HTML, Markdown with charts and statistics
+
+### 🤖 AI-Powered Analysis
+```bash
+# AI vulnerability scanning
+reconcli aicli --vuln-scan data.json --persona pentester --verbose
+
+# Interactive AI assistant
+reconcli aicli --interactive --persona trainer
+```
+
+### 🔐 Secret Discovery
+```bash
+# Git repository secret scanning
+reconcli secretscli --input "https://github.com/target/repo.git" --tool trufflehog --verbose
+```
+
+### 🌐 API Security Testing
+```bash
+# Swagger discovery and testing
+reconcli apicli --url https://api.example.com --swagger-brute --store-db --verbose
+```
+
+### 📊 Data Analysis
+```bash
+# Advanced CSV analysis
+reconcli csvtkcli analyze data.csv --security-report --verbose
+```
+
 ## 🚀 Latest Updates
+
+### 🌐 **HTTPCli - Enhanced HTTP/HTTPS Analysis** (NEW!)
+- **🛡️ Advanced Security Analysis**: Comprehensive security header scoring with A+ to F grades
+- **🔍 WAF & CDN Detection**: Identify Cloudflare, Akamai, AWS WAF, F5, Imperva, and 9+ solutions
+- **🎯 CORS Vulnerability Testing**: Detailed CORS misconfiguration analysis with risk assessment
+- **📸 Visual Analysis**: Screenshot capture with Selenium integration for visual verification
+- **⚡ Performance Benchmarking**: HTTP/2 support detection, compression testing, response time analysis
+- **🔧 Technology Stack Detection**: Server, CMS, framework identification with enhanced fingerprinting
+- **🚨 Vulnerability Export**: Export only vulnerable URLs with security misconfigurations
+- **📊 Rich Reporting**: JSON, CSV, HTML, Markdown reports with charts and statistics
+
+```bash
+# Comprehensive security assessment
+reconcli httpcli --input targets.txt --security-scan --check-waf --check-cors \
+  --tech-detection --screenshot --benchmark --export-vulnerabilities --verbose
+
+# Bug bounty workflow with custom headers
+reconcli httpcli --input subdomains.txt --nuclei --custom-headers '{"X-Bug-Hunter":"true"}' \
+  --store-db --program "hackerone" --generate-report --verbose
+
+# Performance and compression analysis
+reconcli httpcli --input sites.txt --benchmark --check-compression --ssl-analysis \
+  --threads 20 --rate-limit 10/s --jsonout --markdown --verbose
+```
 
 ### 🔐 **SecretsCLI - Advanced Secret Discovery** (NEW!)
 - **🌐 Git Repository Support**: Automatic Git URL detection with TruffleHog git mode
@@ -493,25 +574,63 @@ reconcli portcli \
   --verbose
 ```
 
-### � Enhanced Subdomain Enumeration (`subdocli`)
-- **11 Tools Integration**: Subfinder, Findomain, Assetfinder, Amass, Chaos, RapidDNS, crt.sh, BufferOver, Gobuster, FFuf, DNSRecon
-- **DNS Resolution**: Multi-threaded IP resolution
-- **HTTP Probing**: Automatic HTTP/HTTPS service detection
-- **Resume Support**: Continue interrupted scans
-- **Advanced Analytics**: Tool performance statistics and comprehensive reporting
-- **Professional Reports**: JSON and enhanced Markdown output
+### 🤖 Enhanced Subdomain Enumeration (`subdocli`) - Now with BBOT Integration
+
+**🔥 Latest Updates:**
+- **🎯 Selective Tool Execution**: `--tools` option for running specific tools (e.g., 'amass,subfinder,crtsh')
+- **🛡️ Enhanced Security**: Improved input validation and error handling (bandit security tested)
+- **⚡ Optimized Performance**: Improved timeout handling and process management
+- **🧹 Clean Configuration**: Consolidated duplicate options for better UX
+
+**Core Features:**
+- **🤖 BBOT Integration**: Bighuge BLS OSINT Tool with 53+ advanced subdomain enumeration modules
+- **� 12 Traditional Tools**: subfinder, findomain, assetfinder, chaos, amass, sublist3r, wayback, otx, hackertarget, rapiddns, certspotter, crtsh_alternative
+- **🎯 Selective Execution**: Choose specific tools with `--tools` parameter
+- **�🔍 Superior Discovery**: anubisdb, crt.sh, chaos, hackertarget, certspotter, dnsdumpster, and 47+ more sources
+- **⚡ Advanced Features**: Certificate transparency monitoring, DNS bruteforcing, intelligent mutations
+- **☁️ Cloud Enumeration**: GitHub code search, cloud resource discovery, postman workspace enumeration
+- **🧠 Smart Processing**: Multi-threaded IP resolution, HTTP/HTTPS service detection with title extraction
+- **📊 Advanced Analytics**: Resume support, tool performance statistics, comprehensive reporting
+- **💾 Export Formats**: CSV, JSON, TXT export for analysis and reporting
+- **�️ Database Integration**: Complete SQLite storage with ReconCLI ecosystem integration
 
 ```bash
-# Basic subdomain enumeration
-reconcli subdocli --domain example.com --verbose
+# Selective tool execution - run specific tools only
+reconcli subdocli --domain example.com --tools "amass,subfinder,crtsh_alternative" --verbose
 
-# Full scan with resolution and HTTP probing
-reconcli subdocli --domain example.com --resolve --probe-http \
-  --all-tools --markdown --show-stats --verbose
+# Single tool execution
+reconcli subdocli --domain example.com --tools amass --verbose
 
-# Resume interrupted scan
-reconcli subdocli --domain example.com --resume --verbose
+# BBOT-powered subdomain enumeration (53+ modules)
+reconcli subdocli --domain example.com --bbot --verbose
+
+# BBOT intensive mode with aggressive bruteforcing
+reconcli subdocli --domain example.com --bbot-intensive --verbose
+
+# Full scan with BBOT + traditional tools + HTTP probing + CSV export
+reconcli subdocli --domain example.com --bbot --resolve --probe-http \
+  --all-tools --markdown --store-db --export csv --show-stats --verbose
+
+# Traditional tools only (no BBOT) with resolution and HTTP probing
+reconcli subdocli --domain example.com --passive-only --resolve --probe-http --verbose
+
+# Active enumeration tools only
+reconcli subdocli --domain example.com --active-only --verbose
+
+# JSON export for programmatic analysis and API integration
+reconcli subdocli --domain example.com --bbot-intensive --export json --verbose
+
+# TXT export for human-readable reports
+reconcli subdocli --domain example.com --bbot --export txt --verbose
+
+# Resume BBOT-powered scan
+reconcli subdocli --domain example.com --bbot --resume --verbose
+
+# Custom Amass configuration
+reconcli subdocli --domain example.com --amass-config /path/to/amass.ini --verbose
 ```
+
+**📚 Complete Documentation**: See `reconcli/SUBDOCLI_GUIDE.md` for comprehensive usage guide, examples, and best practices.
 
 ### 🌐 DNS Resolution & Analysis (`dns`)
 - **Enhanced DNS Resolution**: Multi-threaded IP resolution with PTR record tagging
@@ -1163,7 +1282,7 @@ reconcli doctorcli --structure --configs --env --fix --verbose
 - **🩺 doctorcli** - Environment diagnostic tool with automated fixes and comprehensive reporting
 
 ### 🔍 **Discovery & Enumeration**
-- **🌐 subdocli** - Enhanced subdomain enumeration using multiple sources
+- **🌐 subdocli** - 🤖 Enhanced subdomain enumeration with BBOT integration (53+ modules for superior discovery)
 - **🔗 urlcli** - URL discovery and analysis with advanced filtering
 - **🕷️ crawlercli** - Advanced web crawler suite with multi-engine support
 - **🎯 vhostcli** - Virtual host discovery with screenshot capabilities
@@ -1179,7 +1298,7 @@ reconcli doctorcli --structure --configs --env --fix --verbose
 - **💉 vulnsqlicli** - SQL injection vulnerability scanner
 - **🔍 cnamecli** - CNAME record analysis and takeover detection
 - **🛡️ wafdetectcli** - WAF detection, testing and bypass analysis
-- **↗️ openredirectcli** - Advanced open redirect vulnerability scanner
+- **↗️ openredirectcli** - Advanced open redirect vulnerability scanner with AI
 - **🔄 takeovercli** - Subdomain takeover vulnerability detection
 - **🔐 secretscli** - Multi-tool secret discovery and analysis
 - **🔐 codeseccli** - Code security analysis with Semgrep SAST integration
@@ -1196,7 +1315,7 @@ reconcli doctorcli --structure --configs --env --fix --verbose
 - **📝 mdreportcli** - Enhanced markdown reports with templates and security analysis
 - **🔗 urlsortcli** - URL sorting and organization with advanced patterns
 - **📝 makewordlistcli** - Advanced wordlist generator with intelligence and mutations
-- **🌐 httpcli** - HTTP client for web application testing
+- **🌐 httpcli** - Advanced HTTP/HTTPS analysis with security assessment, WAF detection, technology fingerprinting, CORS testing, performance benchmarking, and vulnerability export
 
 ---
 

@@ -49,13 +49,13 @@ A comprehensive, modular reconnaissance toolkit designed for security profession
 
 ## 👥 Authors
 
-**Jarek + AI + Copilot = cyber-squad z przyszłości** 🚀🤖
+**Jarek + AI + Copilot = cyber-squad from future** 🚀🤖
 
 *A collaborative project combining human expertise, artificial intelligence, and GitHub Copilot to create cutting-edge cybersecurity tools.*
 
 ## 👥 Authors
 
-**🚀 Cyber-Squad z Przyszłości**
+**🚀 Cyber-Squad from Future**
 - **Jarek** 🧑‍💻 - Lead Developer & Security Researcher
 - **AI Assistant** 🤖 - Code Architecture & Advanced Features
 - **GitHub Copilot** ⚡ - Code Generation & Optimization
@@ -109,6 +109,32 @@ reconcli subdocli --domain example.com --passive-only --resolve --export txt --v
 ```
 📚 **Full Guide**: See `reconcli/SUBDOCLI_GUIDE.md` for complete documentation
 
+### 🌐 HTTPCli - Advanced HTTP/HTTPS Analysis
+Enhanced HTTP scanning with comprehensive security analysis, technology detection, and vulnerability assessment:
+```bash
+# Basic HTTP analysis with security scanning
+reconcli httpcli --input urls.txt --security-scan --check-waf --verbose
+
+# Comprehensive security assessment
+reconcli httpcli --input targets.txt --security-scan --check-cors --tech-detection \
+  --screenshot --benchmark --ssl-analysis --export-vulnerabilities --verbose
+
+# Bug bounty workflow with database storage
+reconcli httpcli --input subdomains.txt --nuclei --check-compression \
+  --custom-headers '{"X-Bug-Hunter":"true"}' --store-db --program "hackerone" --verbose
+
+# Performance and technology analysis
+reconcli httpcli --input sites.txt --benchmark --tech-detection --check-compression \
+  --generate-report --jsonout --markdown --threads 20 --verbose
+```
+🔑 **Key Features**:
+- **🛡️ Security Analysis**: Header scoring (A+ to F grades), WAF detection, CORS analysis
+- **🔍 Technology Detection**: Server, CMS, framework identification
+- **📸 Visual Analysis**: Screenshot capture (Selenium integration)
+- **⚡ Performance**: HTTP/2 detection, compression testing, response time benchmarking
+- **🎯 Vulnerability Focus**: Export only vulnerable URLs, Nuclei integration
+- **📊 Rich Reports**: JSON, CSV, HTML, Markdown with charts and statistics
+
 ### 🤖 AI-Powered Analysis
 ```bash
 # AI vulnerability scanning
@@ -137,6 +163,30 @@ reconcli csvtkcli analyze data.csv --security-report --verbose
 ```
 
 ## 🚀 Latest Updates
+
+### 🌐 **HTTPCli - Enhanced HTTP/HTTPS Analysis** (NEW!)
+- **🛡️ Advanced Security Analysis**: Comprehensive security header scoring with A+ to F grades
+- **🔍 WAF & CDN Detection**: Identify Cloudflare, Akamai, AWS WAF, F5, Imperva, and 9+ solutions
+- **🎯 CORS Vulnerability Testing**: Detailed CORS misconfiguration analysis with risk assessment
+- **📸 Visual Analysis**: Screenshot capture with Selenium integration for visual verification
+- **⚡ Performance Benchmarking**: HTTP/2 support detection, compression testing, response time analysis
+- **🔧 Technology Stack Detection**: Server, CMS, framework identification with enhanced fingerprinting
+- **🚨 Vulnerability Export**: Export only vulnerable URLs with security misconfigurations
+- **📊 Rich Reporting**: JSON, CSV, HTML, Markdown reports with charts and statistics
+
+```bash
+# Comprehensive security assessment
+reconcli httpcli --input targets.txt --security-scan --check-waf --check-cors \
+  --tech-detection --screenshot --benchmark --export-vulnerabilities --verbose
+
+# Bug bounty workflow with custom headers
+reconcli httpcli --input subdomains.txt --nuclei --custom-headers '{"X-Bug-Hunter":"true"}' \
+  --store-db --program "hackerone" --generate-report --verbose
+
+# Performance and compression analysis
+reconcli httpcli --input sites.txt --benchmark --check-compression --ssl-analysis \
+  --threads 20 --rate-limit 10/s --jsonout --markdown --verbose
+```
 
 ### 🔐 **SecretsCLI - Advanced Secret Discovery** (NEW!)
 - **🌐 Git Repository Support**: Automatic Git URL detection with TruffleHog git mode
@@ -1265,7 +1315,7 @@ reconcli doctorcli --structure --configs --env --fix --verbose
 - **📝 mdreportcli** - Enhanced markdown reports with templates and security analysis
 - **🔗 urlsortcli** - URL sorting and organization with advanced patterns
 - **📝 makewordlistcli** - Advanced wordlist generator with intelligence and mutations
-- **🌐 httpcli** - HTTP client for web application testing
+- **🌐 httpcli** - Advanced HTTP/HTTPS analysis with security assessment, WAF detection, technology fingerprinting, CORS testing, performance benchmarking, and vulnerability export
 
 ---
 
