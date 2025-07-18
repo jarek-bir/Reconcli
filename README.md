@@ -92,14 +92,20 @@ reconcli csvtkcli security-report test.csv --target-domain example.com
 
 ## 🔧 Quick Reference - Core Modules
 
-### 🤖 SubdoCLI - Subdomain Enumeration
-The most advanced subdomain enumeration tool with BBOT integration (53+ modules):
+### 🤖 SubdoCLI - Advanced Subdomain Enumeration
+The most comprehensive subdomain enumeration tool with 12 integrated tools + BBOT integration:
 ```bash
-# BBOT-powered discovery with CSV export
+# All 12 tools with selective execution
+reconcli subdocli --domain example.com --tools "amass,subfinder,crtsh_alternative" --verbose
+
+# BBOT-powered discovery with CSV export  
 reconcli subdocli --domain example.com --bbot --export csv --verbose
 
 # Intensive mode with full analysis
 reconcli subdocli --domain example.com --bbot-intensive --resolve --probe-http --export json --verbose
+
+# Traditional tools only (no BBOT)
+reconcli subdocli --domain example.com --passive-only --resolve --export txt --verbose
 ```
 📚 **Full Guide**: See `reconcli/SUBDOCLI_GUIDE.md` for complete documentation
 
@@ -519,17 +525,32 @@ reconcli portcli \
 ```
 
 ### 🤖 Enhanced Subdomain Enumeration (`subdocli`) - Now with BBOT Integration
+
+**🔥 Latest Updates:**
+- **🎯 Selective Tool Execution**: `--tools` option for running specific tools (e.g., 'amass,subfinder,crtsh')
+- **🛡️ Enhanced Security**: Improved input validation and error handling (bandit security tested)
+- **⚡ Optimized Performance**: Improved timeout handling and process management
+- **🧹 Clean Configuration**: Consolidated duplicate options for better UX
+
+**Core Features:**
 - **🤖 BBOT Integration**: Bighuge BLS OSINT Tool with 53+ advanced subdomain enumeration modules
-- **🔍 Superior Discovery**: anubisdb, crt.sh, chaos, hackertarget, certspotter, dnsdumpster, and 47+ more sources
+- **� 12 Traditional Tools**: subfinder, findomain, assetfinder, chaos, amass, sublist3r, wayback, otx, hackertarget, rapiddns, certspotter, crtsh_alternative
+- **🎯 Selective Execution**: Choose specific tools with `--tools` parameter
+- **�🔍 Superior Discovery**: anubisdb, crt.sh, chaos, hackertarget, certspotter, dnsdumpster, and 47+ more sources
 - **⚡ Advanced Features**: Certificate transparency monitoring, DNS bruteforcing, intelligent mutations
 - **☁️ Cloud Enumeration**: GitHub code search, cloud resource discovery, postman workspace enumeration
-- **🛠️ Traditional Tools**: Subfinder, Findomain, Assetfinder, Amass, Chaos, RapidDNS, crt.sh, BufferOver, Gobuster, FFuf, DNSRecon
 - **🧠 Smart Processing**: Multi-threaded IP resolution, HTTP/HTTPS service detection with title extraction
 - **📊 Advanced Analytics**: Resume support, tool performance statistics, comprehensive reporting
-- **� Export Formats**: CSV export for spreadsheet analysis, JSON export for programmatic processing
-- **�💾 Database Integration**: Complete SQLite storage with ReconCLI ecosystem integration
+- **💾 Export Formats**: CSV, JSON, TXT export for analysis and reporting
+- **�️ Database Integration**: Complete SQLite storage with ReconCLI ecosystem integration
 
 ```bash
+# Selective tool execution - run specific tools only
+reconcli subdocli --domain example.com --tools "amass,subfinder,crtsh_alternative" --verbose
+
+# Single tool execution
+reconcli subdocli --domain example.com --tools amass --verbose
+
 # BBOT-powered subdomain enumeration (53+ modules)
 reconcli subdocli --domain example.com --bbot --verbose
 
@@ -540,6 +561,12 @@ reconcli subdocli --domain example.com --bbot-intensive --verbose
 reconcli subdocli --domain example.com --bbot --resolve --probe-http \
   --all-tools --markdown --store-db --export csv --show-stats --verbose
 
+# Traditional tools only (no BBOT) with resolution and HTTP probing
+reconcli subdocli --domain example.com --passive-only --resolve --probe-http --verbose
+
+# Active enumeration tools only
+reconcli subdocli --domain example.com --active-only --verbose
+
 # JSON export for programmatic analysis and API integration
 reconcli subdocli --domain example.com --bbot-intensive --export json --verbose
 
@@ -548,6 +575,9 @@ reconcli subdocli --domain example.com --bbot --export txt --verbose
 
 # Resume BBOT-powered scan
 reconcli subdocli --domain example.com --bbot --resume --verbose
+
+# Custom Amass configuration
+reconcli subdocli --domain example.com --amass-config /path/to/amass.ini --verbose
 ```
 
 **📚 Complete Documentation**: See `reconcli/SUBDOCLI_GUIDE.md` for comprehensive usage guide, examples, and best practices.

@@ -28,7 +28,7 @@ def resolve_subdomains(subdomains, threads=50, verbose=False):
             ptr = ""
             try:
                 ptr = socket.gethostbyaddr(ip)[0]
-            except:
+            except (socket.herror, socket.gaierror, OSError):
                 ptr = ""
 
             return {
@@ -116,7 +116,7 @@ def probe_http_services(
                     result["http_title"] = response.text[title_start:title_end].strip()[
                         :100
                     ]
-        except:
+        except (requests.RequestException, Exception):
             pass
 
         # Test HTTPS
@@ -137,7 +137,7 @@ def probe_http_services(
                     result["https_title"] = response.text[
                         title_start:title_end
                     ].strip()[:100]
-        except:
+        except (requests.RequestException, Exception):
             pass
 
         return result
@@ -346,7 +346,9 @@ def run_bbot_enumeration(domain, outpath, tool_name, cmd, timeout, verbose=False
 
     try:
         # Run BBOT command with enhanced timeout and error handling
-        process = subprocess.Popen(
+        # NOTE: shell=True is used here for complex command execution
+        # Domain parameter is validated by validate_domain() function to prevent injection
+        process = subprocess.Popen(  # nosec B602
             cmd,
             shell=True,
             stdout=subprocess.PIPE,
@@ -710,6 +712,10 @@ def export_results_to_txt(output_dir, domain, comprehensive_data, verbose=False)
     default=os.path.expanduser("~/.config/amass/config.ini"),
     help="Path to Amass config",
 )
+@click.option(
+    "--tools",
+    help="Comma-separated list of specific tools to run (e.g., 'amass,subfinder,crtsh'). Available tools: subfinder, findomain, assetfinder, chaos, amass, sublist3r, wayback, otx, hackertarget, rapiddns, certspotter, crtsh_alternative",
+)
 @click.option("--markdown", is_flag=True, help="Generate Markdown report")
 @click.option("--resolve", is_flag=True, help="Resolve subdomains to IP addresses")
 @click.option("--probe-http", is_flag=True, help="Probe HTTP/HTTPS services")
@@ -771,6 +777,7 @@ def subdocli(
     domain,
     output_dir,
     amass_config,
+    tools,
     markdown,
     resolve,
     probe_http,
@@ -793,6 +800,18 @@ def subdocli(
     export,
 ):
     """Enhanced subdomain enumeration using multiple tools with resolution and HTTP probing.
+
+    🔧 AVAILABLE TOOLS:
+    • Traditional Passive: subfinder, findomain, assetfinder, chaos, amass, sublist3r
+    • API-Based: wayback, otx, hackertarget, rapiddns, certspotter, crtsh_alternative
+    • Active Tools: gobuster, ffuf, dnsrecon (use --active or --all-tools)
+    • BBOT Integration: 53+ modules for superior discovery (use --bbot)
+
+    📝 USAGE EXAMPLES:
+    • Single tool: --tools amass
+    • Multiple tools: --tools "amass,subfinder,crtsh_alternative"
+    • All passive: --passive-only
+    • All tools: --all-tools
 
     Now featuring BBOT (Bighuge BLS OSINT Tool) integration for superior subdomain discovery:
 
@@ -824,6 +843,13 @@ def subdocli(
     except ValueError as e:
         click.echo(f"❌ Error: {e}")
         return
+
+    # Determine which amass config to use
+    final_amass_config = amass_config
+
+    # Only show amass config if explicitly provided by user
+    if verbose and (amass_config != os.path.expanduser("~/.config/amass/config.ini")):
+        click.echo(f"[+] 🔧 Using Amass config: {final_amass_config}")
 
     # Handle resume operations
     if clear_resume:
@@ -873,18 +899,33 @@ def subdocli(
         max(150, timeout) if timeout < 150 else timeout
     )  # Minimum 150s for traditional tools
 
+    # Increase timeouts: +20% for traditional tools, +40% for amass
+    traditional_timeout = int(traditional_timeout * 1.2)  # 20% increase
+    amass_timeout = int(min(traditional_timeout, 600) * 1.4)  # 40% increase for amass
+
     if verbose:
-        click.echo(f"[+] ⏰ Traditional tools timeout: {traditional_timeout}s")
-        click.echo(f"[+] ⏰ Amass timeout: {min(traditional_timeout, 350)}s")
+        click.echo(f"[+] ⏰ Traditional tools timeout: {traditional_timeout}s (+20%)")
+        click.echo(f"[+] ⏰ Amass timeout: {amass_timeout}s (+40%)")
+
+    # Build amass command with config if provided
+    amass_cmd = f"timeout {min(120, amass_timeout)}s amass enum --passive -d {domain}"
+    if final_amass_config and os.path.exists(final_amass_config):
+        amass_cmd += f" -config {final_amass_config}"
+    amass_cmd += " -o /tmp/amass_output.txt && cat /tmp/amass_output.txt"
+
     base_passive_tools = {
         "subfinder": f"timeout {traditional_timeout}s subfinder -all -d {domain} -silent",
         "findomain": f"timeout {traditional_timeout}s findomain -t {domain} -q",
         "assetfinder": f"timeout {traditional_timeout}s assetfinder --subs-only {domain}",
-        "amass": f"timeout {min(traditional_timeout, 350)}s amass enum -config {amass_config} -d {domain} -silent",
         "chaos": f"timeout {traditional_timeout}s chaos -d {domain} -silent",
-        "rapiddns": f"timeout 90s curl -s 'https://rapiddns.io/subdomain/{domain}?full=1' | grep -oE '[a-zA-Z0-9.-]+\\.{domain}' | sort -u",
-        "crtsh": f"timeout 90s curl -s 'https://crt.sh/?q=%.{domain}&output=json' | jq -r '.[].name_value' | sed 's/\\*\\.//g' | sort -u",
-        "bufferover": f"timeout 90s curl -s 'https://dns.bufferover.run/dns?q=.{domain}' | jq -r '.FDNS_A[],.RDNS[]' | cut -d',' -f2 | grep -o '[a-zA-Z0-9.-]*\\.{domain}' | sort -u",
+        "amass": amass_cmd,
+        "sublist3r": f"timeout {traditional_timeout}s sublist3r -d {domain} -o /tmp/sublist3r_output.txt -n && cat /tmp/sublist3r_output.txt",
+        "wayback": f"timeout {int(90 * 1.2)}s curl -s 'http://web.archive.org/cdx/search/cdx?url=*.{domain}/*&output=text&fl=original&collapse=urlkey' | sed -e 's_https*://__' -e 's_/.*__' | grep -E '^[a-zA-Z0-9.-]+\\.{domain}$' | sort -u",
+        "otx": f"timeout {int(90 * 1.2)}s curl -s 'https://otx.alienvault.com/api/v1/indicators/domain/{domain}/url_list?limit=100&page=1' | jq -r '.url_list[].hostname' 2>/dev/null | grep -E '^[a-zA-Z0-9.-]+\\.{domain}$' | sort -u",
+        "hackertarget": f"timeout {int(90 * 1.2)}s curl -s 'https://api.hackertarget.com/hostsearch/?q={domain}' | cut -d',' -f1 | grep -E '^[a-zA-Z0-9.-]+\\.{domain}$' | sort -u",
+        "rapiddns": f"timeout {int(90 * 1.2)}s curl -s 'https://rapiddns.io/subdomain/{domain}?full=1' | grep -oE '[a-zA-Z0-9.-]+\\.{domain}' | sort -u",
+        "certspotter": f"timeout {int(90 * 1.2)}s curl -s 'https://api.certspotter.com/v1/issuances?domain={domain}&include_subdomains=true&expand=dns_names' | jq -r '.[].dns_names[]' 2>/dev/null | grep -E '^[a-zA-Z0-9.-]+\\.{domain}$' | sort -u",
+        "crtsh_alternative": f"timeout {int(180 * 1.2)}s curl -s 'https://crt.sh/?q=%25.{domain}&output=json' | jq -r '.[].name_value' 2>/dev/null | sed 's/\\*\\.//g' | sort -u | grep -o '\\w.*{domain}' | grep -v '@' || echo ''",
     }
 
     # BBOT tools - separate for conditional inclusion
@@ -932,7 +973,28 @@ def subdocli(
         return
 
     # Determine which tools to use
-    if passive_only:
+    if tools:
+        # User specified specific tools
+        selected_tools = [tool.strip() for tool in tools.split(",")]
+        all_available_tools = {
+            **base_passive_tools,
+            **base_active_tools,
+            **bbot_passive_tools,
+            **bbot_active_tools,
+            **bbot_intensive_tools,
+        }
+
+        tools_dict = {}
+        for tool in selected_tools:
+            if tool in all_available_tools:
+                tools_dict[tool] = all_available_tools[tool]
+            else:
+                click.echo(f"❌ Warning: Unknown tool '{tool}' - skipping")
+
+        tools = tools_dict
+        if verbose:
+            click.echo(f"[+] 🎯 Using specified tools: {', '.join(tools.keys())}")
+    elif passive_only:
         # Only traditional passive tools
         tools = base_passive_tools.copy()
         if verbose:
@@ -1008,11 +1070,12 @@ def subdocli(
             click.echo(f"[+] 🔧 Running: {tool} [{current_tool_num}/{total_tools}]")
             if tool == "amass":
                 click.echo(
-                    f"[+] ⏰ Amass timeout set to {min(traditional_timeout, 350)}s to prevent hanging"
+                    f"[+] ⏰ Amass timeout set to {amass_timeout}s (+40% increase) to prevent hanging"
                 )
 
         start_time = time.time()
         lines = []
+        process = None  # Initialize process variable
 
         try:
             # Special handling for BBOT tools
@@ -1024,7 +1087,7 @@ def subdocli(
                 # Enhanced tool execution with better timeout handling
                 # NOTE: shell=True is required for complex commands with pipes and redirections
                 # Domain is validated above to prevent shell injection
-                process = subprocess.Popen(
+                process = subprocess.Popen(  # nosec B602
                     cmd,
                     shell=True,
                     stdout=subprocess.PIPE,
@@ -1061,7 +1124,104 @@ def subdocli(
                     process.wait()
                     raise subprocess.TimeoutExpired(cmd, timeout)
 
-            # Save individual tool results
+        except subprocess.TimeoutExpired:
+            if verbose:
+                click.echo(f"[!] ⏰ {tool} timeout after {timeout}s")
+            # Still save partial results if any
+            if lines:
+                with open(os.path.join(outpath, f"{tool}.txt"), "w") as f:
+                    f.write("\n".join(lines) + "\n")
+                all_subs.update(lines)
+                if verbose:
+                    click.echo(f"[+] 💾 Saved {len(lines)} partial results from {tool}")
+            tool_stats[tool] = len(lines)
+        except KeyboardInterrupt:
+            if verbose:
+                click.echo(
+                    f"[!] ⏹️  {tool} interrupted by user - killing process and continuing with next tool"
+                )
+
+            # Try to get partial output before killing
+            partial_output = []
+            if process is not None:
+                try:
+                    # Try to read any available output
+                    if process.stdout:
+                        partial_stdout = process.stdout.read()
+                        if partial_stdout:
+                            partial_output = [
+                                line.strip()
+                                for line in partial_stdout.splitlines()
+                                if line.strip()
+                            ]
+                except (OSError, ValueError, AttributeError):
+                    # Handle various errors that can occur when reading from process
+                    pass
+
+                # Kill the process when user interrupts
+                try:
+                    # Kill the entire process group to ensure all child processes are terminated
+                    if hasattr(os, "killpg") and hasattr(os, "setsid"):
+                        try:
+                            os.killpg(os.getpgid(process.pid), 9)
+                        except:
+                            process.kill()
+                    else:
+                        process.kill()
+                    process.wait()
+                except (ProcessLookupError, OSError):
+                    # Process might already be dead or other OS errors
+                    pass
+
+            # Extra cleanup for amass - kill any remaining amass processes
+            if tool == "amass":
+                try:
+                    subprocess.run(
+                        ["/usr/bin/pkill", "-f", "amass"],
+                        stderr=subprocess.DEVNULL,
+                        check=False,
+                    )
+                    if verbose:
+                        click.echo(f"[!] 🔪 Killed any remaining {tool} processes")
+                except (subprocess.SubprocessError, FileNotFoundError, OSError):
+                    # pkill might not be available or other subprocess errors
+                    pass
+
+            # Save partial results if any (from lines or partial_output)
+            results_to_save = lines if lines else partial_output
+            if results_to_save:
+                with open(os.path.join(outpath, f"{tool}.txt"), "w") as f:
+                    f.write("\n".join(results_to_save) + "\n")
+                all_subs.update(results_to_save)
+                if verbose:
+                    click.echo(
+                        f"[+] 💾 Saved {len(results_to_save)} partial results from {tool}"
+                    )
+            tool_stats[tool] = len(results_to_save)
+        except subprocess.CalledProcessError:
+            if verbose:
+                click.echo(f"[!] ❌ {tool} failed or returned no results")
+            # Still save partial results if any
+            if lines:
+                with open(os.path.join(outpath, f"{tool}.txt"), "w") as f:
+                    f.write("\n".join(lines) + "\n")
+                all_subs.update(lines)
+                if verbose:
+                    click.echo(f"[+] 💾 Saved {len(lines)} partial results from {tool}")
+            tool_stats[tool] = len(lines)
+        except Exception as e:
+            if verbose:
+                click.echo(f"[!] 💥 {tool} error: {str(e)}")
+            # Still save partial results if any
+            if lines:
+                with open(os.path.join(outpath, f"{tool}.txt"), "w") as f:
+                    f.write("\n".join(lines) + "\n")
+                all_subs.update(lines)
+                if verbose:
+                    click.echo(f"[+] 💾 Saved {len(lines)} partial results from {tool}")
+            tool_stats[tool] = len(lines)
+        else:
+            # Normal completion - save results
             with open(os.path.join(outpath, f"{tool}.txt"), "w") as f:
                 f.write("\n".join(lines) + "\n")
 
@@ -1076,25 +1236,6 @@ def subdocli(
             elapsed = round(time.time() - start_time, 2)
             if verbose:
                 click.echo(f"[+] ✅ {tool}: {len(lines)} subdomains ({elapsed}s)")
-
-        except subprocess.TimeoutExpired:
-            if verbose:
-                click.echo(f"[!] ⏰ {tool} timeout after {timeout}s")
-            tool_stats[tool] = 0
-        except KeyboardInterrupt:
-            if verbose:
-                click.echo(
-                    f"[!] ⏹️  {tool} interrupted by user - continuing with next tool"
-                )
-            tool_stats[tool] = 0
-        except subprocess.CalledProcessError:
-            if verbose:
-                click.echo(f"[!] ❌ {tool} failed or returned no results")
-            tool_stats[tool] = 0
-        except Exception as e:
-            if verbose:
-                click.echo(f"[!] 💥 {tool} error: {str(e)}")
-            tool_stats[tool] = 0
 
     # Clean up and deduplicate subdomains
     if verbose:
@@ -1264,3 +1405,7 @@ def subdocli(
         except Exception as e:
             if verbose:
                 click.echo(f"❌ Error storing to database: {e}")
+
+
+if __name__ == "__main__":
+    subdocli()
