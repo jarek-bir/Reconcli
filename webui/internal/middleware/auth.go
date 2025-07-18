@@ -40,22 +40,33 @@ func CORS(allowedOrigins []string) gin.HandlerFunc {
 
 func AuthRequired(jwtSecret string) gin.HandlerFunc {
 	return gin.HandlerFunc(func(c *gin.Context) {
+		var tokenString string
+
+		// First try Authorization header
 		authHeader := c.GetHeader("Authorization")
+		if authHeader != "" {
+			bearerToken := strings.Split(authHeader, " ")
+			if len(bearerToken) == 2 && bearerToken[0] == "Bearer" {
+				tokenString = bearerToken[1]
+			}
+		}
 
-		if authHeader == "" {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Authorization header required"})
+		// If no Authorization header, try cookie as fallback
+		if tokenString == "" {
+			cookieToken, err := c.Cookie("auth_token")
+			if err == nil {
+				tokenString = cookieToken
+			}
+		}
+
+		// If still no token found, return error
+		if tokenString == "" {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Authorization header or auth cookie required"})
 			c.Abort()
 			return
 		}
 
-		bearerToken := strings.Split(authHeader, " ")
-		if len(bearerToken) != 2 || bearerToken[0] != "Bearer" {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid authorization format"})
-			c.Abort()
-			return
-		}
-
-		token, err := jwt.Parse(bearerToken[1], func(token *jwt.Token) (interface{}, error) {
+		token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 				return nil, jwt.ErrInvalidKeyType
 			}

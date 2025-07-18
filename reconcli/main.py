@@ -46,6 +46,8 @@ from reconcli.vulnsqlicli import main as vulnsql_cli
 from reconcli.wafdetectcli import wafdetectcli  # Importing the wafdetectcli command
 from reconcli.whoisfreakscli import cli as whoisfreaks_cli
 from reconcli.zonewalkcli import cli as zonewalk_cli
+from reconcli.xsscli import cli as xsscli  # Importing the XSS CLI command
+
 
 # Git Operations
 try:
@@ -154,6 +156,10 @@ cloudcli.short_help = "Cloud service discovery and enumeration"
 # Port Scanning and Service Enumeration
 cli.add_command(portcli, name="portcli")
 portcli.short_help = "Port scanning and service enumeration"
+
+# XSS Vulnerability Detection
+cli.add_command(xsscli, name="xsscli")
+xsscli.short_help = "Cross-site scripting (XSS) vulnerability detection"
 
 # CNAME Record Analysis and Takeover Detection
 cli.add_command(cnamecli, name="cnamecli")

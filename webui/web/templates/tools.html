@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{.title}}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .sidebar {
+            background: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+            position: static;
+        }
+        .nav-link {
+            color: rgba(255,255,255,0.8) !important;
+        }
+        .nav-link:hover, .nav-link.active {
+            color: white !important;
+            background: rgba(255,255,255,0.1);
+            border-radius: 8px;
+        }
+        .tool-card {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            border: none;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .tool-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 15px rgba(0,0,0,0.2);
+        }
+        .tool-icon {
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 24px;
+            margin: 0 auto 15px;
+        }
+        .command-code {
+            background: #f8f9fa;
+            border-left: 4px solid #667eea;
+            padding: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            border-radius: 4px;
+        }
+        .category-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        .tool-runner {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 15px;
+            margin-top: 15px;
+            display: none;
+        }
+        .btn-gradient {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            color: white;
+        }
+        .btn-gradient:hover {
+            background: linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%);
+            color: white;
+        }
+        * {
+            scroll-behavior: smooth;
+        }
+        body {
+            overflow-x: hidden;
+        }
+    </style>
+</head>
+<body class="bg-light">
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar -->
+            <div class="col-md-3 col-lg-2 p-0 sidebar">
+                <div class="p-3">
+                    <h4 class="text-white mb-4">
+                        <i class="fas fa-shield-alt me-2"></i>
+                        ReconCLI
+                    </h4>
+                    <nav class="nav flex-column">
+                        <li class="nav-item">
+                            <a class="nav-link" href="/dashboard">
+                                <i class="fas fa-tachometer-alt me-2"></i>Dashboard
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link active" href="/tools">
+                                <i class="fas fa-tools me-2"></i>Tools
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/files">
+                                <i class="fas fa-file-alt me-2"></i>Files
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/viewer">
+                                <i class="fas fa-eye me-2"></i>File Viewer
+                            </a>
+                        </li>
+                        <li class="nav-item mt-3">
+                            <a class="nav-link" href="/upload">
+                                <i class="fas fa-upload me-2"></i>Upload
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/profile">
+                                <i class="fas fa-user me-2"></i>Profile
+                            </a>
+                        </li>
+                        <li class="nav-item mt-3">
+                            <a class="nav-link" href="/logout">
+                                <i class="fas fa-sign-out-alt me-2"></i>Logout
+                            </a>
+                        </li>
+                    </nav>
+                </div>
+            </div>
+
+            <!-- Main Content -->
+            <div class="col-md-9 col-lg-10 p-4">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h2><i class="fas fa-tools me-2"></i>ReconCLI Tools</h2>
+                    <button class="btn btn-gradient" onclick="runAllBasic()">
+                        <i class="fas fa-play-circle me-2"></i>Quick Scan
+                    </button>
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <div class="card tool-card">
+                            <div class="card-body">
+                                <h5 class="card-title"><i class="fas fa-bolt me-2"></i>Quick Actions</h5>
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        <input type="text" class="form-control" id="quickTarget" placeholder="Enter domain (e.g. example.com)">
+                                    </div>
+                                    <div class="col-md-8">
+                                        <button class="btn btn-outline-primary btn-sm me-2" onclick="quickSubdomain()">
+                                            <i class="fas fa-search me-1"></i>Subdomain Scan
+                                        </button>
+                                        <button class="btn btn-outline-success btn-sm me-2" onclick="quickPort()">
+                                            <i class="fas fa-network-wired me-1"></i>Port Scan
+                                        </button>
+                                        <button class="btn btn-outline-warning btn-sm me-2" onclick="quickSecrets()">
+                                            <i class="fas fa-key me-1"></i>Secrets Scan
+                                        </button>
+                                        <button class="btn btn-outline-danger btn-sm" onclick="quickVuln()">
+                                            <i class="fas fa-bug me-1"></i>Quick Vuln
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Reconnaissance Tools -->
+                <div class="category-header">
+                    <h4><i class="fas fa-search me-2"></i>Reconnaissance Tools</h4>
+                    <p class="mb-0">Discover and enumerate target information</p>
+                </div>
+
+                <div class="row mb-4">
+                    <!-- SubdoCLI -->
+                    <div class="col-md-6 col-lg-4 mb-3">
+                        <div class="card tool-card h-100">
+                            <div class="card-body text-center">
+                                <div class="tool-icon">
+                                    <i class="fas fa-sitemap"></i>
+                                </div>
+                                <h5 class="card-title">SubdoCLI</h5>
+                                <p class="card-text">Advanced subdomain enumeration with multiple methods</p>
+                                <button class="btn btn-gradient btn-sm" onclick="toggleRunner('subdocli')">
+                                    <i class="fas fa-play me-1"></i>Run Tool
+                                </button>
+                                
+                                <div id="subdocli-runner" class="tool-runner">
+                                    <form onsubmit="runSubdoCLI(event)">
+                                        <div class="mb-2">
+                                            <input type="text" class="form-control form-control-sm" 
+                                                   placeholder="Target domain" required name="domain">
+                                        </div>
+                                        <div class="mb-2">
+                                            <select class="form-select form-select-sm" name="method">
+                                                <option value="all">All Methods</option>
+                                                <option value="passive">Passive Only</option>
+                                                <option value="active">Active Only</option>
+                                                <option value="bruteforce">Bruteforce</option>
+                                            </select>
+                                        </div>
+                                        <button type="submit" class="btn btn-primary btn-sm">Execute</button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- DNSCLI -->
+                    <div class="col-md-6 col-lg-4 mb-3">
+                        <div class="card tool-card h-100">
+                            <div class="card-body text-center">
+                                <div class="tool-icon">
+                                    <i class="fas fa-globe"></i>
+                                </div>
+                                <h5 class="card-title">DNSCLI</h5>
+                                <p class="card-text">DNS enumeration and analysis toolkit</p>
+                                <button class="btn btn-gradient btn-sm" onclick="toggleRunner('dnscli')">
+                                    <i class="fas fa-play me-1"></i>Run Tool
+                                </button>
+                                
+                                <div id="dnscli-runner" class="tool-runner">
+                                    <form onsubmit="runDNSCLI(event)">
+                                        <div class="mb-2">
+                                            <input type="text" class="form-control form-control-sm" 
+                                                   placeholder="Target domain" required name="domain">
+                                        </div>
+                                        <div class="mb-2">
+                                            <select class="form-select form-select-sm" name="record">
+                                                <option value="all">All Records</option>
+                                                <option value="A">A Records</option>
+                                                <option value="AAAA">AAAA Records</option>
+                                                <option value="MX">MX Records</option>
+                                                <option value="TXT">TXT Records</option>
+                                                <option value="CNAME">CNAME Records</option>
+                                            </select>
+                                        </div>
+                                        <button type="submit" class="btn btn-primary btn-sm">Execute</button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- PermutCLI -->
+                    <div class="col-md-6 col-lg-4 mb-3">
+                        <div class="card tool-card h-100">
+                            <div class="card-body text-center">
+                                <div class="tool-icon">
+                                    <i class="fas fa-random"></i>
+                                </div>
+                                <h5 class="card-title">PermutCLI</h5>
+                                <p class="card-text">Domain permutation and generation</p>
+                                <button class="btn btn-gradient btn-sm" onclick="toggleRunner('permutcli')">
+                                    <i class="fas fa-play me-1"></i>Run Tool
+                                </button>
+                                
+                                <div id="permutcli-runner" class="tool-runner">
+                                    <form onsubmit="runPermutCLI(event)">
+                                        <div class="mb-2">
+                                            <input type="text" class="form-control form-control-sm" 
+                                                   placeholder="Base domain" required name="domain">
+                                        </div>
+                                        <div class="mb-2">
+                                            <input type="text" class="form-control form-control-sm" 
+                                                   placeholder="Keywords (comma separated)" name="keywords">
+                                        </div>
+                                        <button type="submit" class="btn btn-primary btn-sm">Execute</button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Network & Web Tools -->
+                <div class="category-header">
+                    <h4><i class="fas fa-network-wired me-2"></i>Network & Web Tools</h4>
+                    <p class="mb-0">Network scanning and web application testing</p>
+                </div>
+
+                <div class="row mb-4">
+                    <!-- PortCLI -->
+                    <div class="col-md-6 col-lg-4 mb-3">
+                        <div class="card tool-card h-100">
+                            <div class="card-body text-center">
+                                <div class="tool-icon">
+                                    <i class="fas fa-network-wired"></i>
+                                </div>
+                                <h5 class="card-title">PortCLI</h5>
+                                <p class="card-text">Advanced port scanning and service detection</p>
+                                <button class="btn btn-gradient btn-sm" onclick="toggleRunner('portcli')">
+                                    <i class="fas fa-play me-1"></i>Run Tool
+                                </button>
+                                
+                                <div id="portcli-runner" class="tool-runner">
+                                    <form onsubmit="runPortCLI(event)">
+                                        <div class="mb-2">
+                                            <input type="text" class="form-control form-control-sm" 
+                                                   placeholder="Target IP/domain" required name="target">
+                                        </div>
+                                        <div class="mb-2">
+                                            <input type="text" class="form-control form-control-sm" 
+                                                   placeholder="Port range (e.g. 1-1000)" name="ports">
+                                        </div>
+                                        <div class="mb-2">
+                                            <select class="form-select form-select-sm" name="scan_type">
+                                                <option value="syn">SYN Scan</option>
+                                                <option value="tcp">TCP Connect</option>
+                                                <option value="udp">UDP Scan</option>
+                                                <option value="comprehensive">Comprehensive</option>
+                                            </select>
+                                        </div>
+                                        <button type="submit" class="btn btn-primary btn-sm">Execute</button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- HttpCLI -->
+                    <div class="col-md-6 col-lg-4 mb-3">
+                        <div class="card tool-card h-100">
+                            <div class="card-body text-center">
+                                <div class="tool-icon">
+                                    <i class="fas fa-globe-americas"></i>
+                                </div>
+                                <h5 class="card-title">HttpCLI</h5>
+                                <p class="card-text">HTTP/HTTPS probing and analysis</p>
+                                <button class="btn btn-gradient btn-sm" onclick="toggleRunner('httpcli')">
+                                    <i class="fas fa-play me-1"></i>Run Tool
+                                </button>
+                                
+                                <div id="httpcli-runner" class="tool-runner">
+                                    <form onsubmit="runHttpCLI(event)">
+                                        <div class="mb-2">
+                                            <input type="text" class="form-control form-control-sm" 
+                                                   placeholder="Target URL" required name="url">
+                                        </div>
+                                        <div class="mb-2">
+                                            <select class="form-select form-select-sm" name="method">
+                                                <option value="GET">GET</option>
+                                                <option value="POST">POST</option>
+                                                <option value="HEAD">HEAD</option>
+                                                <option value="OPTIONS">OPTIONS</option>
+                                            </select>
+                                        </div>
+                                        <button type="submit" class="btn btn-primary btn-sm">Execute</button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- JSCLI -->
+                    <div class="col-md-6 col-lg-4 mb-3">
+                        <div class="card tool-card h-100">
+                            <div class="card-body text-center">
+                                <div class="tool-icon">
+                                    <i class="fab fa-js-square"></i>
+                                </div>
+                                <h5 class="card-title">JSCLI</h5>
+                                <p class="card-text">JavaScript analysis and endpoint discovery</p>
+                                <button class="btn btn-gradient btn-sm" onclick="toggleRunner('jscli')">
+                                    <i class="fas fa-play me-1"></i>Run Tool
+                                </button>
+                                
+                                <div id="jscli-runner" class="tool-runner">
+                                    <form onsubmit="runJSCLI(event)">
+                                        <div class="mb-2">
+                                            <input type="text" class="form-control form-control-sm" 
+                                                   placeholder="Target URL" required name="url">
+                                        </div>
+                                        <div class="mb-2">
+                                            <div class="form-check form-check-inline">
+                                                <input class="form-check-input" type="checkbox" name="endpoints" id="endpoints">
+                                                <label class="form-check-label" for="endpoints">Find Endpoints</label>
+                                            </div>
+                                            <div class="form-check form-check-inline">
+                                                <input class="form-check-input" type="checkbox" name="secrets" id="secrets">
+                                                <label class="form-check-label" for="secrets">Find Secrets</label>
+                                            </div>
+                                        </div>
+                                        <button type="submit" class="btn btn-primary btn-sm">Execute</button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Vulnerability Assessment -->
+                <div class="category-header">
+                    <h4><i class="fas fa-shield-alt me-2"></i>Vulnerability Assessment</h4>
+                    <p class="mb-0">Security testing and vulnerability detection</p>
+                </div>
+
+                <div class="row mb-4">
+                    <!-- SecretsCLI -->
+                    <div class="col-md-6 col-lg-4 mb-3">
+                        <div class="card tool-card h-100">
+                            <div class="card-body text-center">
+                                <div class="tool-icon">
+                                    <i class="fas fa-key"></i>
+                                </div>
+                                <h5 class="card-title">SecretsCLI</h5>
+                                <p class="card-text">API keys and secrets detection</p>
+                                <button class="btn btn-gradient btn-sm" onclick="toggleRunner('secretscli')">
+                                    <i class="fas fa-play me-1"></i>Run Tool
+                                </button>
+                                
+                                <div id="secretscli-runner" class="tool-runner">
+                                    <form onsubmit="runSecretsCLI(event)">
+                                        <div class="mb-2">
+                                            <input type="text" class="form-control form-control-sm" 
+                                                   placeholder="Target URL or file path" required name="target">
+                                        </div>
+                                        <div class="mb-2">
+                                            <select class="form-select form-select-sm" name="mode">
+                                                <option value="all">All Secrets</option>
+                                                <option value="api_keys">API Keys</option>
+                                                <option value="passwords">Passwords</option>
+                                                <option value="tokens">Tokens</option>
+                                            </select>
+                                        </div>
+                                        <button type="submit" class="btn btn-primary btn-sm">Execute</button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- TakeoverCLI -->
+                    <div class="col-md-6 col-lg-4 mb-3">
+                        <div class="card tool-card h-100">
+                            <div class="card-body text-center">
+                                <div class="tool-icon">
+                                    <i class="fas fa-exchange-alt"></i>
+                                </div>
+                                <h5 class="card-title">TakeoverCLI</h5>
+                                <p class="card-text">Subdomain takeover detection</p>
+                                <button class="btn btn-gradient btn-sm" onclick="toggleRunner('takeovercli')">
+                                    <i class="fas fa-play me-1"></i>Run Tool
+                                </button>
+                                
+                                <div id="takeovercli-runner" class="tool-runner">
+                                    <form onsubmit="runTakeoverCLI(event)">
+                                        <div class="mb-2">
+                                            <input type="text" class="form-control form-control-sm" 
+                                                   placeholder="Subdomain list file" required name="file">
+                                        </div>
+                                        <button type="submit" class="btn btn-primary btn-sm">Execute</button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- DirBCLI -->
+                    <div class="col-md-6 col-lg-4 mb-3">
+                        <div class="card tool-card h-100">
+                            <div class="card-body text-center">
+                                <div class="tool-icon">
+                                    <i class="fas fa-folder-open"></i>
+                                </div>
+                                <h5 class="card-title">DirBCLI</h5>
+                                <p class="card-text">Directory and file bruteforcing</p>
+                                <button class="btn btn-gradient btn-sm" onclick="toggleRunner('dirbcli')">
+                                    <i class="fas fa-play me-1"></i>Run Tool
+                                </button>
+                                
+                                <div id="dirbcli-runner" class="tool-runner">
+                                    <form onsubmit="runDirBCLI(event)">
+                                        <div class="mb-2">
+                                            <input type="text" class="form-control form-control-sm" 
+                                                   placeholder="Target URL" required name="url">
+                                        </div>
+                                        <div class="mb-2">
+                                            <input type="text" class="form-control form-control-sm" 
+                                                   placeholder="Wordlist path" name="wordlist">
+                                        </div>
+                                        <button type="submit" class="btn btn-primary btn-sm">Execute</button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Command Output Area -->
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-terminal me-2"></i>Command Output</h5>
+                        <button class="btn btn-sm btn-outline-secondary float-end" onclick="clearOutput()">
+                            <i class="fas fa-trash me-1"></i>Clear
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <div id="command-output" class="command-code" style="height: 300px; overflow-y: auto; white-space: pre-wrap;">
+                            Ready to execute commands...
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Prevent infinite scrolling
+        function preventScrolling() {
+            document.body.style.overflow = 'auto';
+            document.documentElement.style.overflow = 'auto';
+            window.scrollTo = function(x, y) { return; };
+            Element.prototype.scrollIntoView = function() { return; };
+        }
+
+        // Tool runner toggle
+        function toggleRunner(toolId) {
+            const runner = document.getElementById(toolId + '-runner');
+            if (runner.style.display === 'none' || !runner.style.display) {
+                // Hide all other runners
+                document.querySelectorAll('.tool-runner').forEach(r => r.style.display = 'none');
+                runner.style.display = 'block';
+            } else {
+                runner.style.display = 'none';
+            }
+        }
+
+        // Quick Actions
+        function quickSubdomain() {
+            const target = document.getElementById('quickTarget').value;
+            if (target) {
+                executeCommand('subdocli', `python -m reconcli.subdocli -d ${target} --passive`);
+            }
+        }
+
+        function quickPort() {
+            const target = document.getElementById('quickTarget').value;
+            if (target) {
+                executeCommand('portcli', `python -m reconcli.portcli -t ${target} --top-ports 1000`);
+            }
+        }
+
+        function quickSecrets() {
+            const target = document.getElementById('quickTarget').value;
+            if (target) {
+                executeCommand('secretscli', `python -m reconcli.secretscli -u ${target}`);
+            }
+        }
+
+        function quickVuln() {
+            const target = document.getElementById('quickTarget').value;
+            if (target) {
+                executeCommand('multi', `python -m reconcli.subdocli -d ${target} --passive | python -m reconcli.secretscli`);
+            }
+        }
+
+        // Tool execution functions
+        function runSubdoCLI(event) {
+            event.preventDefault();
+            const form = event.target;
+            const domain = form.domain.value;
+            const method = form.method.value;
+            let cmd = `python -m reconcli.subdocli -d ${domain}`;
+            
+            if (method === 'passive') cmd += ' --passive';
+            else if (method === 'active') cmd += ' --active';
+            else if (method === 'bruteforce') cmd += ' --bruteforce';
+            
+            executeCommand('subdocli', cmd);
+        }
+
+        function runDNSCLI(event) {
+            event.preventDefault();
+            const form = event.target;
+            const domain = form.domain.value;
+            const record = form.record.value;
+            let cmd = `python -m reconcli.dnscli -d ${domain}`;
+            
+            if (record !== 'all') cmd += ` --type ${record}`;
+            
+            executeCommand('dnscli', cmd);
+        }
+
+        function runPermutCLI(event) {
+            event.preventDefault();
+            const form = event.target;
+            const domain = form.domain.value;
+            const keywords = form.keywords.value;
+            let cmd = `python -m reconcli.permutcli -d ${domain}`;
+            
+            if (keywords) cmd += ` --keywords "${keywords}"`;
+            
+            executeCommand('permutcli', cmd);
+        }
+
+        function runPortCLI(event) {
+            event.preventDefault();
+            const form = event.target;
+            const target = form.target.value;
+            const ports = form.ports.value;
+            const scanType = form.scan_type.value;
+            let cmd = `python -m reconcli.portcli -t ${target}`;
+            
+            if (ports) cmd += ` --ports ${ports}`;
+            if (scanType !== 'syn') cmd += ` --scan-type ${scanType}`;
+            
+            executeCommand('portcli', cmd);
+        }
+
+        function runHttpCLI(event) {
+            event.preventDefault();
+            const form = event.target;
+            const url = form.url.value;
+            const method = form.method.value;
+            let cmd = `python -m reconcli.httpcli -u ${url}`;
+            
+            if (method !== 'GET') cmd += ` --method ${method}`;
+            
+            executeCommand('httpcli', cmd);
+        }
+
+        function runJSCLI(event) {
+            event.preventDefault();
+            const form = event.target;
+            const url = form.url.value;
+            const endpoints = form.endpoints.checked;
+            const secrets = form.secrets.checked;
+            let cmd = `python -m reconcli.jscli -u ${url}`;
+            
+            if (endpoints) cmd += ' --endpoints';
+            if (secrets) cmd += ' --secrets';
+            
+            executeCommand('jscli', cmd);
+        }
+
+        function runSecretsCLI(event) {
+            event.preventDefault();
+            const form = event.target;
+            const target = form.target.value;
+            const mode = form.mode.value;
+            let cmd = `python -m reconcli.secretscli -u ${target}`;
+            
+            if (mode !== 'all') cmd += ` --mode ${mode}`;
+            
+            executeCommand('secretscli', cmd);
+        }
+
+        function runTakeoverCLI(event) {
+            event.preventDefault();
+            const form = event.target;
+            const file = form.file.value;
+            const cmd = `python -m reconcli.takeovercli -f ${file}`;
+            
+            executeCommand('takeovercli', cmd);
+        }
+
+        function runDirBCLI(event) {
+            event.preventDefault();
+            const form = event.target;
+            const url = form.url.value;
+            const wordlist = form.wordlist.value;
+            let cmd = `python -m reconcli.dirbcli -u ${url}`;
+            
+            if (wordlist) cmd += ` --wordlist ${wordlist}`;
+            
+            executeCommand('dirbcli', cmd);
+        }
+
+        function executeCommand(tool, command) {
+            const output = document.getElementById('command-output');
+            output.innerHTML += `\n[${new Date().toLocaleTimeString()}] Executing: ${command}\n`;
+            output.innerHTML += `Running ${tool}...\n`;
+            
+            // Simulate command execution (replace with actual API call)
+            setTimeout(() => {
+                output.innerHTML += `${tool} execution completed.\n`;
+                output.innerHTML += `Results saved to output/${tool}_results.txt\n`;
+                output.scrollTop = output.scrollHeight;
+            }, 2000);
+        }
+
+        function clearOutput() {
+            document.getElementById('command-output').innerHTML = 'Ready to execute commands...';
+        }
+
+        function runAllBasic() {
+            const target = prompt('Enter target domain for quick scan:');
+            if (target) {
+                executeCommand('quick-scan', `python -m reconcli.subdocli -d ${target} --passive && python -m reconcli.portcli -t ${target} --top-ports 100`);
+            }
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            preventScrolling();
+        });
+    </script>
+</body>
+</html>

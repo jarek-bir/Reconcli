@@ -1,0 +1,1347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{.title}}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+    <style>
+        .metric-card {
+            transition: transform 0.3s ease;
+        }
+        .metric-card:hover {
+            transform: translateY(-5px);
+        }
+        .vulnerability-high { background-color: #dc3545; }
+        .vulnerability-medium { background-color: #fd7e14; }
+        .vulnerability-low { background-color: #ffc107; }
+        .vulnerability-info { background-color: #17a2b8; }
+        .status-indicator {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 8px;
+        }
+        .status-online { background-color: #28a745; }
+        .status-offline { background-color: #dc3545; }
+        .chart-container {
+            position: relative;
+            height: 300px;
+        }
+        .sidebar {
+            background: linear-gradient(180deg, #f8f9fa 0%, #e9ecef 100%);
+            min-height: 100vh;
+            box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar -->
+            <nav class="col-md-3 col-lg-2 d-md-block sidebar collapse">
+                <div class="position-sticky pt-3">
+                    <ul class="nav flex-column">
+                        <li class="nav-item">
+                            <a class="nav-link active" href="/dashboard">
+                                <i class="fas fa-tachometer-alt"></i> Dashboard
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/files">
+                                <i class="fas fa-folder"></i> Files
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/tools">
+                                <i class="fas fa-tools"></i> Tools
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/upload">
+                                <i class="fas fa-upload"></i> Upload
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/profile">
+                                <i class="fas fa-user"></i> Profile
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/logout">
+                                <i class="fas fa-sign-out-alt"></i> Logout
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </nav>
+
+            <!-- Main content -->
+            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+                <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                    <h1 class="h2">Dashboard</h1>
+                    <div class="btn-toolbar mb-2 mb-md-0">
+                        <div class="btn-group me-2">
+                            <button type="button" class="btn btn-sm btn-outline-secondary">Share</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary">Export</button>
+                        </div>
+                    </div>
+                </div>
+
+                    <!-- Advanced Analytics -->
+                    <div class="row mb-4">
+                        <div class="col-lg-8">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5 class="mb-0">
+                                        <i class="fas fa-chart-line me-2"></i>Scan Activity Timeline
+                                    </h5>
+                                </div>
+                                <div class="card-body">
+                                    <canvas id="timelineChart" height="100"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-4">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5 class="mb-0">
+                                        <i class="fas fa-chart-pie me-2"></i>Tool Usage
+                                    </h5>
+                                </div>
+                                <div class="card-body">
+                                    <canvas id="toolsChart" height="200"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Vulnerability Heatmap -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5 class="mb-0">
+                                        <i class="fas fa-fire me-2"></i>Vulnerability Heatmap
+                                    </h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row" id="vulnerability-heatmap">
+                                        <!-- Heatmap will be generated here -->
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Stats Row -->
+                    <div class="row mb-4">
+        }
+        .nav-link {
+            color: rgba(255,255,255,0.8) !important;
+            transition: all 0.3s ease;
+        }
+        .nav-link:hover, .nav-link.active {
+            color: white !important;
+            background: rgba(255,255,255,0.1);
+            border-radius: 8px;
+        }
+        .stat-card {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+        }
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+        .chart-container {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            padding: 20px;
+        }
+        
+        /* Complete scroll prevention */
+        * {
+            scroll-behavior: auto !important;
+        }
+        
+        /* Prevent Chart.js from causing scroll */
+        canvas {
+            max-height: 200px !important;
+            overflow: hidden !important;
+        }
+        
+        .chart-container canvas {
+            position: relative !important;
+            overflow: hidden !important;
+        }
+        
+        /* Disable all smooth scrolling and animations globally */
+        /* Stop infinite loading animations */
+        *, *::before, *::after {
+            animation: none !important;
+            animation-duration: 0s !important;
+            animation-delay: 0s !important;
+            transition: none !important;
+            transition-duration: 0s !important;
+        }
+
+        /* Real-time monitoring styles */
+        .vuln-cell {
+            transition: all 0.3s ease;
+            cursor: pointer;
+            min-height: 60px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .vuln-cell:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+
+        .vulnerability-column {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .progress {
+            background-color: rgba(0,0,0,0.1);
+        }
+
+        .connection-status {
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.7; }
+            100% { opacity: 1; }
+        }
+
+        .scan-card {
+            border-left: 4px solid #667eea;
+            background: linear-gradient(90deg, rgba(102, 126, 234, 0.05) 0%, rgba(255,255,255,1) 100%);
+        }
+
+        .real-time-indicator {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            background: #28a745;
+            border-radius: 50%;
+            animation: pulse 1s infinite;
+        }
+        
+        /* Block automatic scrolling */
+        html, body {
+            scroll-behavior: auto !important;
+            overflow-x: hidden;
+        }
+    </style>
+</head>
+<body class="bg-light">
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar -->
+            <div class="col-md-3 col-lg-2 px-0">
+                <div class="sidebar p-3">
+                    <div class="text-center mb-4">
+                        <h4 class="text-white">
+                            <i class="fas fa-shield-alt me-2"></i>ReconCLI
+                        </h4>
+                        <small class="text-white-50">Web Dashboard</small>
+                    </div>
+
+                    <ul class="nav nav-pills flex-column">
+                        <li class="nav-item">
+                            <a class="nav-link active" href="/dashboard">
+                                <i class="fas fa-tachometer-alt me-2"></i>Dashboard
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/upload">
+                                <i class="fas fa-upload me-2"></i>Upload Files
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/sessions">
+                                <i class="fas fa-folder me-2"></i>Sessions
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/tools">
+                                <i class="fas fa-tools me-2"></i>Tools
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/files">
+                                <i class="fas fa-file-alt me-2"></i>Files
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/viewer">
+                                <i class="fas fa-eye me-2"></i>File Viewer
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/profile">
+                                <i class="fas fa-user me-2"></i>Profile
+                            </a>
+                        </li>
+                        <li class="nav-item mt-3">
+                            <a class="nav-link" href="#" onclick="logout()">
+                                <i class="fas fa-sign-out-alt me-2"></i>Logout
+                            </a>
+                        </li>
+                    </ul>
+
+                    <!-- User Info -->
+                    <div class="mt-auto pt-4">
+                        <div class="text-center">
+                            <div class="text-white-50 small" id="user-info">
+                                <i class="fas fa-user me-1"></i>
+                                <span id="username">Loading...</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Content -->
+            <div class="col-md-9 col-lg-10">
+                <div class="p-4">
+                    <!-- Header -->
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <h2>
+                            <i class="fas fa-tachometer-alt me-2"></i>Dashboard
+                        </h2>
+                        <div class="text-muted">
+                            <i class="fas fa-clock me-1"></i>
+                            <span id="current-time"></span>
+                        </div>
+                    </div>
+
+                    <!-- Statistics Cards -->
+                    <div class="row mb-4">
+                        <div class="col-xl-3 col-md-6 mb-3">
+                            <div class="card stat-card h-100">
+                                <div class="card-body text-center">
+                                    <i class="fas fa-folder fa-2x text-primary mb-2"></i>
+                                    <h4 class="mb-1" id="total-sessions">0</h4>
+                                    <small class="text-muted">Total Sessions</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-xl-3 col-md-6 mb-3">
+                            <div class="card stat-card h-100">
+                                <div class="card-body text-center">
+                                    <i class="fas fa-file-alt fa-2x text-success mb-2"></i>
+                                    <h4 class="mb-1" id="total-files">0</h4>
+                                    <small class="text-muted">Uploaded Files</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-xl-3 col-md-6 mb-3">
+                            <div class="card stat-card h-100">
+                                <div class="card-body text-center">
+                                    <i class="fas fa-hard-drive fa-2x text-warning mb-2"></i>
+                                    <h4 class="mb-1" id="total-size">0 MB</h4>
+                                    <small class="text-muted">Storage Used</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-xl-3 col-md-6 mb-3">
+                            <div class="card stat-card h-100">
+                                <div class="card-body text-center">
+                                    <i class="fas fa-clock fa-2x text-info mb-2"></i>
+                                    <h4 class="mb-1" id="last-upload">Never</h4>
+                                    <small class="text-muted">Last Upload</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Quick Actions Section -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5 class="mb-0">
+                                        <i class="fas fa-bolt me-2"></i>Quick Actions
+                                    </h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-3 mb-3">
+                                            <button class="btn btn-primary btn-lg w-100" onclick="quickSubdomainScan()">
+                                                <i class="fas fa-sitemap me-2"></i>
+                                                <div>Subdomain Scan</div>
+                                                <small class="d-block">SubdoCLI</small>
+                                            </button>
+                                        </div>
+                                        <div class="col-md-3 mb-3">
+                                            <button class="btn btn-warning btn-lg w-100" onclick="quickSecretScan()">
+                                                <i class="fas fa-key me-2"></i>
+                                                <div>Secret Discovery</div>
+                                                <small class="d-block">SecretsCLI</small>
+                                            </button>
+                                        </div>
+                                        <div class="col-md-3 mb-3">
+                                            <button class="btn btn-info btn-lg w-100" onclick="quickPortScan()">
+                                                <i class="fas fa-network-wired me-2"></i>
+                                                <div>Port Scan</div>
+                                                <small class="d-block">PortCLI</small>
+                                            </button>
+                                        </div>
+                                        <div class="col-md-3 mb-3">
+                                            <button class="btn btn-success btn-lg w-100" onclick="viewAllTools()">
+                                                <i class="fas fa-tools me-2"></i>
+                                                <div>All Tools</div>
+                                                <small class="d-block">View All</small>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Second row of Quick Actions -->
+                                    <div class="row">
+                                        <div class="col-md-3 mb-3">
+                                            <button class="btn btn-outline-primary btn-lg w-100" onclick="quickFileViewer()">
+                                                <i class="fas fa-eye me-2"></i>
+                                                <div>File Viewer</div>
+                                                <small class="d-block">View Files</small>
+                                            </button>
+                                        </div>
+                                        <div class="col-md-3 mb-3">
+                                            <button class="btn btn-outline-secondary btn-lg w-100" onclick="quickFileManager()">
+                                                <i class="fas fa-file-alt me-2"></i>
+                                                <div>File Manager</div>
+                                                <small class="d-block">Manage Files</small>
+                                            </button>
+                                        </div>
+                                        <div class="col-md-3 mb-3">
+                                            <button class="btn btn-outline-info btn-lg w-100" onclick="quickSessions()">
+                                                <i class="fas fa-folder me-2"></i>
+                                                <div>Sessions</div>
+                                                <small class="d-block">Manage Sessions</small>
+                                            </button>
+                                        </div>
+                                        <div class="col-md-3 mb-3">
+                                            <button class="btn btn-outline-warning btn-lg w-100" onclick="quickUpload()">
+                                                <i class="fas fa-upload me-2"></i>
+                                                <div>Upload Files</div>
+                                                <small class="d-block">Add New Files</small>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Quick Scan Form -->
+                                    <div id="quickScanForm" style="display: none;" class="mt-3">
+                                        <div class="border-top pt-3">
+                                            <h6><i class="fas fa-play me-2"></i>Quick Scan</h6>
+                                            <form id="scanForm">
+                                                <div class="row">
+                                                    <div class="col-md-4">
+                                                        <label class="form-label">Tool:</label>
+                                                        <input type="text" class="form-control" id="quickTool" readonly>
+                                                    </div>
+                                                    <div class="col-md-4">
+                                                        <label class="form-label">Target:</label>
+                                                        <input type="text" class="form-control" id="quickTarget" placeholder="example.com" required>
+                                                    </div>
+                                                    <div class="col-md-4">
+                                                        <label class="form-label">Session:</label>
+                                                        <select class="form-select" id="quickSession">
+                                                            <option value="">Default session</option>
+                                                        </select>
+                                                    </div>
+                                                </div>
+                                                <div class="mt-3">
+                                                    <button type="submit" class="btn btn-primary">
+                                                        <i class="fas fa-play me-2"></i>Start Scan
+                                                    </button>
+                                                    <button type="button" class="btn btn-secondary ms-2" onclick="hideQuickScan()">
+                                                        <i class="fas fa-times me-2"></i>Cancel
+                                                    </button>
+                                                </div>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Charts Row -->
+                    <div class="row mb-4">
+                        <div class="col-lg-6 mb-3">
+                            <div class="chart-container">
+                                <h5 class="mb-3">
+                                    <i class="fas fa-chart-pie me-2"></i>File Types Distribution
+                                </h5>
+                                <canvas id="fileTypesChart" width="400" height="200"></canvas>
+                            </div>
+                        </div>
+                        <div class="col-lg-6 mb-3">
+                            <div class="chart-container">
+                                <h5 class="mb-3">
+                                    <i class="fas fa-chart-bar me-2"></i>Tools Usage
+                                </h5>
+                                <canvas id="toolsChart" width="400" height="200"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Recent Files -->
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5 class="mb-0">
+                                        <i class="fas fa-history me-2"></i>Recent Files
+                                    </h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="table-responsive">
+                                        <table class="table table-hover">
+                                            <thead>
+                                                <tr>
+                                                    <th>File Name</th>
+                                                    <th>Type</th>
+                                                    <th>Tool</th>
+                                                    <th>Size</th>
+                                                    <th>Uploaded</th>
+                                                    <th>Actions</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="recent-files">
+                                                <tr>
+                                                    <td colspan="6" class="text-center text-muted">
+                                                        <i class="fas fa-spinner fa-spin me-2"></i>Loading...
+                                                    </td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+    <script>
+        // Complete scroll prevention
+        function preventScrolling() {
+            // Block all scroll events
+            window.addEventListener('scroll', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                return false;
+            }, { passive: false });
+            
+            // Block scroll into view
+            const originalScrollIntoView = Element.prototype.scrollIntoView;
+            Element.prototype.scrollIntoView = function() {
+                // Do nothing - block all scrollIntoView calls
+                return;
+            };
+            
+            // Block window.scrollTo
+            const originalScrollTo = window.scrollTo;
+            window.scrollTo = function() {
+                // Do nothing - block all scrollTo calls
+                return;
+            };
+            
+            // Block automatic Canvas focus scroll
+            document.addEventListener('focus', function(e) {
+                if (e.target.tagName === 'CANVAS') {
+                    e.preventDefault();
+                    e.stopPropagation();
+                }
+            }, true);
+        }
+        
+        // Initialize scroll prevention immediately
+        preventScrolling();
+        
+        // Initialize dashboard
+        document.addEventListener('DOMContentLoaded', function() {
+            // Reinforce scroll prevention after DOM load
+            preventScrolling();
+            
+            updateTime();
+            setInterval(updateTime, 1000);
+            loadUserProfile();
+            loadDashboardData();
+        });
+
+        // Update current time
+        function updateTime() {
+            const now = new Date();
+            document.getElementById('current-time').textContent = now.toLocaleString();
+        }
+
+        // Load user profile
+        async function loadUserProfile() {
+            try {
+                const token = getCookie('auth_token');
+                const response = await fetch('/api/auth/me', {
+                    credentials: 'include',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    document.getElementById('username').textContent = data.user.username;
+                } else {
+                    window.location.href = '/login';
+                }
+            } catch (error) {
+                console.error('Failed to load user profile:', error);
+                window.location.href = '/login';
+            }
+        }
+
+        // Load dashboard data
+        async function loadDashboardData() {
+            try {
+                const token = getCookie('auth_token');
+
+                // Load sessions
+                const sessionsResponse = await fetch('/api/sessions', {
+                    credentials: 'include',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                // Load files
+                const filesResponse = await fetch('/api/files', {
+                    credentials: 'include',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (sessionsResponse.ok && filesResponse.ok) {
+                    const sessionsData = await sessionsResponse.json();
+                    const filesData = await filesResponse.json();
+
+                    updateStatistics(sessionsData.sessions || [], filesData.files || []);
+                    updateCharts(filesData.files || []);
+                    updateRecentFiles(filesData.files || []);
+                }
+            } catch (error) {
+                console.error('Failed to load dashboard data:', error);
+            }
+        }
+
+        // Update statistics
+        function updateStatistics(sessions, files) {
+            document.getElementById('total-sessions').textContent = sessions.length;
+            document.getElementById('total-files').textContent = files.length;
+
+            const totalSize = files.reduce((sum, file) => sum + (file.file_size || 0), 0);
+            document.getElementById('total-size').textContent = formatFileSize(totalSize);
+
+            const lastUpload = files.length > 0 ?
+                new Date(Math.max(...files.map(f => new Date(f.created_at)))).toLocaleDateString() :
+                'Never';
+            document.getElementById('last-upload').textContent = lastUpload;
+        }
+
+        // Update charts
+        function updateCharts(files) {
+            updateFileTypesChart(files);
+            updateToolsChart(files);
+        }
+
+        // File types chart
+        function updateFileTypesChart(files) {
+            const fileTypes = files.reduce((acc, file) => {
+                acc[file.file_type] = (acc[file.file_type] || 0) + 1;
+                return acc;
+            }, {});
+
+            const canvas = document.getElementById('fileTypesChart');
+            const ctx = canvas.getContext('2d');
+            
+            // Prevent canvas from causing scroll
+            canvas.style.position = 'relative';
+            canvas.style.overflow = 'hidden';
+            
+            new Chart(ctx, {
+                type: 'pie',
+                data: {
+                    labels: Object.keys(fileTypes),
+                    datasets: [{
+                        data: Object.values(fileTypes),
+                        backgroundColor: ['#667eea', '#764ba2', '#f093fb', '#f5576c', '#4facfe']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    },
+                    // Disable animations that could cause scrolling
+                    animation: false,
+                    interaction: {
+                        intersect: false
+                    }
+                }
+            });
+        }
+
+        // Tools chart
+        function updateToolsChart(files) {
+            const tools = files.reduce((acc, file) => {
+                const tool = file.tool || 'Unknown';
+                acc[tool] = (acc[tool] || 0) + 1;
+                return acc;
+            }, {});
+
+            const canvas = document.getElementById('toolsChart');
+            const ctx = canvas.getContext('2d');
+            
+            // Prevent canvas from causing scroll
+            canvas.style.position = 'relative';
+            canvas.style.overflow = 'hidden';
+
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: Object.keys(tools),
+                    datasets: [{
+                        label: 'Files',
+                        data: Object.values(tools),
+                        backgroundColor: '#667eea'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    },
+                    // Disable animations that could cause scrolling
+                    animation: false,
+                    interaction: {
+                        intersect: false
+                    }
+                }
+            });
+        }
+
+        // Update recent files table
+        function updateRecentFiles(files) {
+            const recentFiles = files
+                .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+                .slice(0, 10);
+
+            const tbody = document.getElementById('recent-files');
+
+            if (recentFiles.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="6" class="text-center text-muted">
+                            <i class="fas fa-inbox me-2"></i>No files uploaded yet
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            tbody.innerHTML = recentFiles.map(file => `
+                <tr>
+                    <td>
+                        <i class="fas fa-file-${getFileIcon(file.file_type)} me-2"></i>
+                        ${file.original_name}
+                    </td>
+                    <td><span class="badge bg-primary">${file.file_type}</span></td>
+                    <td><span class="badge bg-success">${file.tool || 'N/A'}</span></td>
+                    <td>${formatFileSize(file.file_size)}</td>
+                    <td>${new Date(file.created_at).toLocaleDateString()}</td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-primary" onclick="viewFile(${file.id})">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-success" onclick="downloadFile(${file.id})">
+                            <i class="fas fa-download"></i>
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        // Helper functions
+        function getFileIcon(type) {
+            const icons = {
+                'json': 'code',
+                'html': 'globe',
+                'csv': 'table',
+                'txt': 'file-alt'
+            };
+            return icons[type] || 'file';
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 B';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        function getCookie(name) {
+            const value = `; ${document.cookie}`;
+            const parts = value.split(`; ${name}=`);
+            const result = parts.length === 2 ? parts.pop().split(';').shift() : null;
+            return result;
+        }
+
+        function logout() {
+            document.cookie = 'auth_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+            window.location.href = '/login';
+        }
+
+        function viewFile(fileId) {
+            window.open(`/api/files/${fileId}/view`, '_blank');
+        }
+
+        function downloadFile(fileId) {
+            window.open(`/api/files/${fileId}/download`, '_blank');
+        }
+
+        // Quick Actions functions
+        function quickSubdomainScan() {
+            showQuickScan('SubdoCLI - Subdomain Enumeration');
+        }
+
+        function quickSecretScan() {
+            showQuickScan('SecretsCLI - Secret Discovery');
+        }
+
+        function quickPortScan() {
+            showQuickScan('PortCLI - Port Scanning');
+        }
+
+        function viewAllTools() {
+            window.location.href = '/tools';
+        }
+
+        // New Quick Actions functions
+        function quickFileViewer() {
+            window.location.href = '/viewer';
+        }
+
+        function quickFileManager() {
+            window.location.href = '/files';
+        }
+
+        function quickSessions() {
+            window.location.href = '/sessions';
+        }
+
+        function quickUpload() {
+            window.location.href = '/upload';
+        }
+
+        function showQuickScan(toolName) {
+            document.getElementById('quickTool').value = toolName;
+            document.getElementById('quickScanForm').style.display = 'block';
+            document.getElementById('quickTarget').focus();
+        }
+
+        function hideQuickScan() {
+            document.getElementById('quickScanForm').style.display = 'none';
+            document.getElementById('scanForm').reset();
+        }
+
+        // Handle quick scan form submission
+        document.getElementById('scanForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const tool = document.getElementById('quickTool').value;
+            const target = document.getElementById('quickTarget').value;
+            const session = document.getElementById('quickSession').value;
+            
+            if (!target) {
+                alert('Please enter a target domain or URL');
+                return;
+            }
+
+            // Show loading message
+            const submitBtn = e.target.querySelector('button[type="submit"]');
+            const originalText = submitBtn.innerHTML;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Starting...';
+            submitBtn.disabled = true;
+
+            // Simulate scan start (replace with actual API call)
+            setTimeout(() => {
+                alert(`Quick scan started!\n\nTool: ${tool}\nTarget: ${target}\nSession: ${session || 'Default'}\n\nThis feature will be fully implemented soon.`);
+                
+                // Reset button
+                submitBtn.innerHTML = originalText;
+                submitBtn.disabled = false;
+                hideQuickScan();
+            }, 1500);
+        });
+
+        // Load sessions for quick actions
+        async function loadQuickSessions() {
+            try {
+                const token = getCookie('auth_token');
+                if (!token) return;
+                
+                const response = await fetch('/api/sessions', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    const select = document.getElementById('quickSession');
+
+                    data.sessions.forEach(session => {
+                        const option = document.createElement('option');
+                        option.value = session.id;
+                        option.textContent = session.name;
+                        select.appendChild(option);
+                    });
+                }
+            } catch (error) {
+                console.error('Failed to load sessions for quick actions:', error);
+            }
+        }
+
+        // Load quick sessions on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            loadQuickSessions();
+            initTimelineChart();
+            initToolsChart();
+            generateVulnerabilityHeatmap();
+            
+            // Request notification permission
+            if ('Notification' in window) {
+                Notification.requestPermission();
+            }
+        });
+
+                });
+
+        // Charts variables  
+        let timelineChart = null;
+        let toolsChart = null;
+        let scanData = [];
+        let toolUsageData = {};
+
+        // Initialize timeline chart
+
+        // Initialize WebSocket connection
+        function initWebSocket() {
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${protocol}//${window.location.host}/ws`;
+            
+            // Simulate WebSocket for demo (replace with actual WebSocket)
+            console.log('WebSocket would connect to:', wsUrl);
+            updateConnectionStatus('connected');
+            
+            // Simulate some real-time data
+            simulateRealTimeData();
+        }
+
+        // Simulate real-time data for demo
+        function simulateRealTimeData() {
+            // Simulate system stats updates every 3 seconds
+            setInterval(() => {
+                const cpu = Math.floor(Math.random() * 100);
+                const memory = Math.floor(Math.random() * 100);
+                updateSystemStats({ cpu, memory });
+            }, 3000);
+
+            // Simulate occasional scans
+            setInterval(() => {
+                if (Math.random() > 0.7) { // 30% chance
+                    const tools = ['SubdoCLI', 'SecretsCLI', 'PortCLI', 'JSCLI', 'XSSCLI'];
+                    const tool = tools[Math.floor(Math.random() * tools.length)];
+                    const id = Date.now();
+                    
+                    addActiveScan({
+                        id: id,
+                        tool: tool,
+                        target: 'example.com'
+                    });
+
+                    // Simulate progress updates
+                    let progress = 0;
+                    const progressInterval = setInterval(() => {
+                        progress += Math.floor(Math.random() * 20) + 10;
+                        if (progress >= 100) {
+                            progress = 100;
+                            clearInterval(progressInterval);
+                            
+                            setTimeout(() => {
+                                completeScan({
+                                    id: id,
+                                    tool: tool,
+                                    target: 'example.com',
+                                    duration: Math.floor(Math.random() * 120) + 30,
+                                    findings: Math.floor(Math.random() * 50)
+                                });
+                            }, 1000);
+                        }
+                        
+                        updateScanProgress({
+                            id: id,
+                            progress: progress,
+                            status: progress < 100 ? 'Scanning...' : 'Completed'
+                        });
+                    }, 1000);
+                }
+            }, 10000);
+        }
+
+        // Update connection status
+        function updateConnectionStatus(status) {
+            const statusElement = document.getElementById('connection-status');
+            const statusMap = {
+                'connecting': { class: 'bg-secondary', text: 'Connecting...', icon: 'circle' },
+                'connected': { class: 'bg-success', text: 'Connected', icon: 'circle' },
+                'disconnected': { class: 'bg-danger', text: 'Disconnected', icon: 'circle' },
+                'error': { class: 'bg-warning', text: 'Error', icon: 'exclamation-triangle' }
+            };
+            
+            const config = statusMap[status];
+            if (statusElement && config) {
+                statusElement.className = `badge ${config.class} me-2`;
+                statusElement.innerHTML = `<i class="fas fa-${config.icon}"></i> ${config.text}`;
+            }
+        }
+
+        // Toggle monitoring
+        function toggleMonitoring() {
+            isMonitoring = !isMonitoring;
+            const icon = document.getElementById('monitor-icon');
+            
+            if (isMonitoring) {
+                icon.className = 'fas fa-pause';
+                console.log('Monitoring started');
+            } else {
+                icon.className = 'fas fa-play';
+                console.log('Monitoring stopped');
+            }
+        }
+
+        // Add active scan
+        function addActiveScan(scan) {
+            const container = document.getElementById('active-scans');
+            if (container && container.querySelector('.text-muted')) {
+                container.innerHTML = '';
+            }
+            
+            const scanElement = document.createElement('div');
+            scanElement.id = `scan-${scan.id}`;
+            scanElement.className = 'mb-2 p-2 border rounded bg-light';
+            scanElement.innerHTML = `
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <strong>${scan.tool}</strong> - ${scan.target}
+                    </div>
+                    <div class="text-end">
+                        <div class="progress" style="width: 100px; height: 8px;">
+                            <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                                 id="progress-${scan.id}" style="width: 0%"></div>
+                        </div>
+                        <small class="text-muted" id="status-${scan.id}">Starting...</small>
+                    </div>
+                </div>
+            `;
+            
+            if (container) {
+                container.appendChild(scanElement);
+            }
+        }
+
+        // Update scan progress
+        function updateScanProgress(scan) {
+            const progressBar = document.getElementById(`progress-${scan.id}`);
+            const statusText = document.getElementById(`status-${scan.id}`);
+            
+            if (progressBar) {
+                progressBar.style.width = `${scan.progress}%`;
+                if (scan.progress >= 100) {
+                    progressBar.classList.remove('progress-bar-animated');
+                    progressBar.classList.add('bg-success');
+                }
+            }
+            
+            if (statusText) {
+                statusText.textContent = scan.status;
+            }
+        }
+
+        // Complete scan
+        function completeScan(scan) {
+            setTimeout(() => {
+                const scanElement = document.getElementById(`scan-${scan.id}`);
+                if (scanElement) {
+                    scanElement.remove();
+                }
+                
+                // Check if no active scans
+                const container = document.getElementById('active-scans');
+                if (container && container.children.length === 0) {
+                    container.innerHTML = '<div class="text-muted">No active scans</div>';
+                }
+            }, 2000);
+            
+            // Add to scan data for charts
+            scanData.push({
+                timestamp: new Date(),
+                tool: scan.tool,
+                target: scan.target,
+                duration: scan.duration,
+                findings: scan.findings
+            });
+            
+            // Update tool usage
+            toolUsageData[scan.tool] = (toolUsageData[scan.tool] || 0) + 1;
+            
+            updateCharts();
+            showNotification(`${scan.tool} scan completed`, `Found ${scan.findings} items`);
+        }
+
+        // Update system stats
+        function updateSystemStats(stats) {
+            const cpuElement = document.getElementById('cpu-usage');
+            const memoryElement = document.getElementById('memory-usage');
+            
+            if (cpuElement) {
+                cpuElement.textContent = `${stats.cpu}%`;
+                cpuElement.className = stats.cpu > 80 ? 'h4 text-danger' : 
+                                      stats.cpu > 60 ? 'h4 text-warning' : 'h4 text-success';
+            }
+            
+            if (memoryElement) {
+                memoryElement.textContent = `${stats.memory}%`;
+                memoryElement.className = stats.memory > 80 ? 'h4 text-danger' : 
+                                         stats.memory > 60 ? 'h4 text-warning' : 'h4 text-info';
+            }
+        }
+
+        // Initialize timeline chart
+        function initTimelineChart() {
+            const ctx = document.getElementById('timelineChart');
+            if (!ctx) return;
+            
+            timelineChart = new Chart(ctx.getContext('2d'), {
+                type: 'line',
+                data: {
+                    datasets: [{
+                        label: 'Scans per Hour',
+                        data: [],
+                        borderColor: 'rgba(102, 126, 234, 1)',
+                        backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            type: 'time',
+                            time: {
+                                unit: 'hour',
+                                displayFormats: {
+                                    hour: 'HH:mm'
+                                }
+                            }
+                        },
+                        y: {
+                            beginAtZero: true
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    animation: false
+                }
+            });
+        }
+
+        // Initialize tools chart
+        function initToolsChart() {
+            const ctx = document.getElementById('toolsChart');
+            if (!ctx) return;
+            
+            toolsChart = new Chart(ctx.getContext('2d'), {
+                type: 'doughnut',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        data: [],
+                        backgroundColor: [
+                            '#667eea',
+                            '#764ba2',
+                            '#f093fb',
+                            '#f5576c',
+                            '#4facfe',
+                            '#00f2fe'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    },
+                    animation: false
+                }
+            });
+        }
+
+        // Update charts
+        function updateCharts() {
+            if (timelineChart && scanData.length > 0) {
+                const hourlyData = groupScansByHour(scanData);
+                timelineChart.data.datasets[0].data = hourlyData;
+                timelineChart.update('none');
+            }
+            
+            if (toolsChart && Object.keys(toolUsageData).length > 0) {
+                toolsChart.data.labels = Object.keys(toolUsageData);
+                toolsChart.data.datasets[0].data = Object.values(toolUsageData);
+                toolsChart.update('none');
+            }
+        }
+
+        // Group scans by hour
+        function groupScansByHour(scans) {
+            const groups = {};
+            const now = new Date();
+            
+            // Initialize last 24 hours
+            for (let i = 23; i >= 0; i--) {
+                const hour = new Date(now.getTime() - i * 60 * 60 * 1000);
+                hour.setMinutes(0, 0, 0);
+                groups[hour.toISOString()] = 0;
+            }
+            
+            // Count scans
+            scans.forEach(scan => {
+                const hour = new Date(scan.timestamp);
+                hour.setMinutes(0, 0, 0);
+                const key = hour.toISOString();
+                if (groups.hasOwnProperty(key)) {
+                    groups[key]++;
+                }
+            });
+            
+            return Object.entries(groups).map(([time, count]) => ({
+                x: new Date(time),
+                y: count
+            }));
+        }
+
+        // Generate vulnerability heatmap
+        function generateVulnerabilityHeatmap() {
+            const container = document.getElementById('vulnerability-heatmap');
+            if (!container) return;
+            
+            const vulnerabilityTypes = ['XSS', 'SQL Injection', 'Open Redirect', 'CSRF', 'Info Disclosure'];
+            const severityLevels = ['Low', 'Medium', 'High', 'Critical'];
+            
+            container.innerHTML = '';
+            
+            severityLevels.forEach(severity => {
+                const col = document.createElement('div');
+                col.className = 'col-md-3 mb-3';
+                
+                const cells = vulnerabilityTypes.map(type => {
+                    const count = Math.floor(Math.random() * 15);
+                    const cellClass = count > 10 ? 'danger' : count > 5 ? 'warning' : count > 0 ? 'success' : 'light';
+                    
+                    return `
+                        <div class="vuln-cell bg-${cellClass} text-${cellClass === 'light' ? 'dark' : 'white'} 
+                             p-2 mb-1 rounded text-center" 
+                             data-bs-toggle="tooltip" 
+                             title="${type} - ${severity}: ${count} found">
+                            <div class="fw-bold">${count}</div>
+                            <small>${type}</small>
+                        </div>
+                    `;
+                }).join('');
+                
+                col.innerHTML = `
+                    <h6 class="text-center mb-2">${severity}</h6>
+                    <div class="vulnerability-column">
+                        ${cells}
+                    </div>
+                `;
+                
+                container.appendChild(col);
+            });
+            
+            // Initialize tooltips
+            const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+            tooltipTriggerList.map(function (tooltipTriggerEl) {
+                return new bootstrap.Tooltip(tooltipTriggerEl);
+            });
+        }
+
+        // Show notification
+        function showNotification(title, message) {
+            // Browser notification
+            if ('Notification' in window && Notification.permission === 'granted') {
+                new Notification(title, {
+                    body: message,
+                    icon: '/static/favicon.ico'
+                });
+            }
+            
+            // In-app notification
+            const alertDiv = document.createElement('div');
+            alertDiv.className = 'alert alert-success alert-dismissible fade show position-fixed';
+            alertDiv.style.top = '20px';
+            alertDiv.style.right = '20px';
+            alertDiv.style.zIndex = '9999';
+            alertDiv.innerHTML = `
+                <strong>${title}</strong><br>
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            
+            document.body.appendChild(alertDiv);
+            
+            setTimeout(() => {
+                alertDiv.remove();
+            }, 5000);
+        }
+    </script>
+</body>
+</html>

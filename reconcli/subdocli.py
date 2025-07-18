@@ -11,7 +11,7 @@ from datetime import datetime
 import click
 import requests
 
-from reconcli.utils.resume import load_resume, save_resume_state
+from reconcli.utils.resume import load_resume, save_resume_state, clear_resume
 
 
 def resolve_subdomains(subdomains, threads=50, verbose=False):
@@ -730,10 +730,14 @@ def export_results_to_txt(output_dir, domain, comprehensive_data, verbose=False)
 )
 @click.option("--active", is_flag=True, help="Include active enumeration tools")
 @click.option(
-    "--passive-only", is_flag=True, help="Use only traditional passive tools (no BBOT, no active)"
+    "--passive-only",
+    is_flag=True,
+    help="Use only traditional passive tools (no BBOT, no active)",
 )
 @click.option(
-    "--active-only", is_flag=True, help="Use only traditional active tools (no BBOT, no passive)"
+    "--active-only",
+    is_flag=True,
+    help="Use only traditional active tools (no BBOT, no passive)",
 )
 @click.option("--resume", is_flag=True, help="Resume previous scan")
 @click.option("--clear-resume", is_flag=True, help="Clear previous resume state")
@@ -861,19 +865,26 @@ def subdocli(
     if verbose:
         click.echo(f"[+] 🚀 Starting subdomain enumeration for {domain}")
         click.echo(f"[+] 📁 Output directory: {outpath}")
-        click.echo(f"[+] ⏰ Timeout: {timeout}s")
+        click.echo(f"[+] ⏰ Base timeout: {timeout}s")
         click.echo(f"[+] 🧵 Threads: {threads}")
 
-    # Enhanced tool configuration with BBOT integration
+    # Enhanced tool configuration with optimized timeouts for better results
+    traditional_timeout = (
+        max(150, timeout) if timeout < 150 else timeout
+    )  # Minimum 150s for traditional tools
+
+    if verbose:
+        click.echo(f"[+] ⏰ Traditional tools timeout: {traditional_timeout}s")
+        click.echo(f"[+] ⏰ Amass timeout: {min(traditional_timeout, 350)}s")
     base_passive_tools = {
-        "subfinder": f"subfinder -all -d {domain} -silent",
-        "findomain": f"findomain -t {domain} -q",
-        "assetfinder": f"assetfinder --subs-only {domain}",
-        "amass": f"amass enum -config {amass_config} -d {domain} -silent",
-        "chaos": f"chaos -d {domain} -silent",
-        "rapiddns": f"curl -s 'https://rapiddns.io/subdomain/{domain}?full=1' | grep -oE '[a-zA-Z0-9.-]+\\.{domain}' | sort -u",
-        "crtsh": f"curl -s 'https://crt.sh/?q=%.{domain}&output=json' | jq -r '.[].name_value' | sed 's/\\*\\.//g' | sort -u",
-        "bufferover": f"curl -s 'https://dns.bufferover.run/dns?q=.{domain}' | jq -r '.FDNS_A[],.RDNS[]' | cut -d',' -f2 | grep -o '[a-zA-Z0-9.-]*\\.{domain}' | sort -u",
+        "subfinder": f"timeout {traditional_timeout}s subfinder -all -d {domain} -silent",
+        "findomain": f"timeout {traditional_timeout}s findomain -t {domain} -q",
+        "assetfinder": f"timeout {traditional_timeout}s assetfinder --subs-only {domain}",
+        "amass": f"timeout {min(traditional_timeout, 350)}s amass enum -config {amass_config} -d {domain} -silent",
+        "chaos": f"timeout {traditional_timeout}s chaos -d {domain} -silent",
+        "rapiddns": f"timeout 90s curl -s 'https://rapiddns.io/subdomain/{domain}?full=1' | grep -oE '[a-zA-Z0-9.-]+\\.{domain}' | sort -u",
+        "crtsh": f"timeout 90s curl -s 'https://crt.sh/?q=%.{domain}&output=json' | jq -r '.[].name_value' | sed 's/\\*\\.//g' | sort -u",
+        "bufferover": f"timeout 90s curl -s 'https://dns.bufferover.run/dns?q=.{domain}' | jq -r '.FDNS_A[],.RDNS[]' | cut -d',' -f2 | grep -o '[a-zA-Z0-9.-]*\\.{domain}' | sort -u",
     }
 
     # BBOT tools - separate for conditional inclusion
@@ -907,13 +918,17 @@ def subdocli(
     if passive_only and active_only:
         click.echo("❌ Error: Cannot use --passive-only and --active-only together")
         return
-    
+
     if passive_only and (bbot or bbot_intensive):
-        click.echo("❌ Error: --passive-only excludes BBOT tools. Use traditional passive tools only.")
+        click.echo(
+            "❌ Error: --passive-only excludes BBOT tools. Use traditional passive tools only."
+        )
         return
-        
+
     if active_only and (bbot or bbot_intensive):
-        click.echo("❌ Error: --active-only excludes BBOT tools. Use traditional active tools only.")
+        click.echo(
+            "❌ Error: --active-only excludes BBOT tools. Use traditional active tools only."
+        )
         return
 
     # Determine which tools to use
@@ -921,12 +936,16 @@ def subdocli(
         # Only traditional passive tools
         tools = base_passive_tools.copy()
         if verbose:
-            click.echo("[+] 🔵 Using traditional passive tools only (no BBOT, no active)")
+            click.echo(
+                "[+] 🔵 Using traditional passive tools only (no BBOT, no active)"
+            )
     elif active_only:
         # Only traditional active tools
         tools = base_active_tools.copy()
         if verbose:
-            click.echo("[+] 🔴 Using traditional active tools only (no BBOT, no passive)")
+            click.echo(
+                "[+] 🔴 Using traditional active tools only (no BBOT, no passive)"
+            )
     else:
         # Normal logic with BBOT integration
         # Add BBOT tools based on flags
@@ -934,7 +953,9 @@ def subdocli(
             passive_tools.update(bbot_passive_tools)
             active_tools.update(bbot_active_tools)
             if verbose:
-                click.echo("[+] 🤖 BBOT (Bighuge BLS OSINT Tool) enabled with 53+ modules")
+                click.echo(
+                    "[+] 🤖 BBOT (Bighuge BLS OSINT Tool) enabled with 53+ modules"
+                )
 
         if bbot_intensive or all_tools:
             active_tools.update(bbot_intensive_tools)
@@ -957,12 +978,23 @@ def subdocli(
 
     if verbose:
         click.echo(f"[+] 🛠️  Using {len(tools)} enumeration tools")
+        click.echo(f"[+] ⌨️  Press Ctrl+C to stop current tool and continue with next")
 
-    # Run enumeration tools
+    # Run enumeration tools with enhanced error handling
+    total_tools = len(tools)
+    current_tool_num = 0
+
+    # Run enumeration tools with enhanced error handling
+    total_tools = len(tools)
+    current_tool_num = 0
     for tool, cmd in tools.items():
+        current_tool_num += 1
+
         if tool in completed_tools:
             if verbose:
-                click.echo(f"[=] ⏭️  Skipping {tool} (already completed)")
+                click.echo(
+                    f"[=] ⏭️  Skipping {tool} (already completed) [{current_tool_num}/{total_tools}]"
+                )
             # Load previous results
             tool_file = os.path.join(outpath, f"{tool}.txt")
             if os.path.exists(tool_file):
@@ -973,7 +1005,11 @@ def subdocli(
             continue
 
         if verbose:
-            click.echo(f"[+] 🔧 Running: {tool}")
+            click.echo(f"[+] 🔧 Running: {tool} [{current_tool_num}/{total_tools}]")
+            if tool == "amass":
+                click.echo(
+                    f"[+] ⏰ Amass timeout set to {min(traditional_timeout, 350)}s to prevent hanging"
+                )
 
         start_time = time.time()
         lines = []
@@ -985,17 +1021,45 @@ def subdocli(
                     domain, outpath, tool, cmd, timeout, verbose
                 )
             else:
-                # Standard tool execution
+                # Enhanced tool execution with better timeout handling
                 # NOTE: shell=True is required for complex commands with pipes and redirections
                 # Domain is validated above to prevent shell injection
-                result = subprocess.check_output(  # nosec B602
+                process = subprocess.Popen(
                     cmd,
                     shell=True,
-                    stderr=subprocess.DEVNULL,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
                     text=True,
-                    timeout=timeout,
+                    preexec_fn=os.setsid if hasattr(os, "setsid") else None,
                 )
-                lines = [line.strip() for line in result.splitlines() if line.strip()]
+
+                try:
+                    stdout, stderr = process.communicate(timeout=timeout)
+                    if process.returncode == 0:
+                        lines = [
+                            line.strip() for line in stdout.splitlines() if line.strip()
+                        ]
+                    else:
+                        if verbose:
+                            click.echo(
+                                f"[!] ⚠️  {tool} returned exit code {process.returncode}"
+                            )
+                        lines = []
+                except subprocess.TimeoutExpired:
+                    if verbose:
+                        click.echo(f"[!] ⏰ {tool} timeout - killing process...")
+
+                    # Kill the entire process group to ensure all child processes are terminated
+                    if hasattr(os, "killpg") and hasattr(os, "setsid"):
+                        try:
+                            os.killpg(os.getpgid(process.pid), 9)
+                        except:
+                            process.kill()
+                    else:
+                        process.kill()
+
+                    process.wait()
+                    raise subprocess.TimeoutExpired(cmd, timeout)
 
             # Save individual tool results
             with open(os.path.join(outpath, f"{tool}.txt"), "w") as f:
@@ -1016,6 +1080,12 @@ def subdocli(
         except subprocess.TimeoutExpired:
             if verbose:
                 click.echo(f"[!] ⏰ {tool} timeout after {timeout}s")
+            tool_stats[tool] = 0
+        except KeyboardInterrupt:
+            if verbose:
+                click.echo(
+                    f"[!] ⏹️  {tool} interrupted by user - continuing with next tool"
+                )
             tool_stats[tool] = 0
         except subprocess.CalledProcessError:
             if verbose:

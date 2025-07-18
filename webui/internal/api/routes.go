@@ -97,5 +97,20 @@ func SetupRoutes(router *gin.Engine, db *gorm.DB, cfg *config.Config) {
 				"title": "Profile - ReconCLI",
 			})
 		})
+		protectedWeb.GET("/tools", func(c *gin.Context) {
+			c.HTML(200, "tools.html", gin.H{
+				"title": "Tools - ReconCLI",
+			})
+		})
+		protectedWeb.GET("/files", func(c *gin.Context) {
+			c.HTML(200, "files.html", gin.H{
+				"title": "Files - ReconCLI",
+			})
+		})
+		protectedWeb.GET("/viewer", func(c *gin.Context) {
+			c.HTML(200, "viewer.html", gin.H{
+				"title": "File Viewer - ReconCLI",
+			})
+		})
 	}
 }

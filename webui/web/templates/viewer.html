@@ -1,0 +1,725 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{.title}}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet">
+    <style>
+        .sidebar {
+            background: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+            position: static;
+        }
+        .nav-link {
+            color: rgba(255,255,255,0.8) !important;
+        }
+        .nav-link:hover, .nav-link.active {
+            color: white !important;
+            background: rgba(255,255,255,0.1);
+            border-radius: 8px;
+        }
+        .file-content {
+            background: #f8f9fa;
+            border-radius: 10px;
+            border: 1px solid #e9ecef;
+            max-height: 600px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+        .file-info-card {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            border: none;
+        }
+        .file-stats {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 10px;
+            padding: 15px;
+        }
+        .search-highlight {
+            background-color: yellow;
+            padding: 1px 3px;
+            border-radius: 3px;
+        }
+        .line-numbers {
+            background: #e9ecef;
+            border-right: 1px solid #dee2e6;
+            padding: 10px 8px;
+            text-align: right;
+            user-select: none;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            color: #6c757d;
+            width: 60px;
+            min-width: 60px;
+        }
+        .content-area {
+            padding: 10px 15px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        .json-viewer {
+            background: #2d3748;
+            color: #e2e8f0;
+            border-radius: 8px;
+            padding: 15px;
+            font-family: 'Courier New', monospace;
+            overflow-x: auto;
+        }
+        /* JSON syntax highlighting */
+        .json-key { color: #fbb6ce; }
+        .json-string { color: #9ae6b4; }
+        .json-number { color: #90cdf4; }
+        .json-boolean { color: #f6ad55; }
+        .json-null { color: #fc8181; }
+        
+        /* Stop infinite loading animations */
+        *, *::before, *::after {
+            animation: none !important;
+            animation-duration: 0s !important;
+            animation-delay: 0s !important;
+            transition: transform 0.2s ease, box-shadow 0.2s ease !important;
+            transition-duration: 0.2s !important;
+            scroll-behavior: auto !important;
+        }
+    </style>
+</head>
+<body class="bg-light">
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar -->
+            <div class="col-md-3 col-lg-2 px-0">
+                <div class="sidebar p-3">
+                    <div class="text-center mb-4">
+                        <h4 class="text-white">
+                            <i class="fas fa-shield-alt me-2"></i>ReconCLI
+                        </h4>
+                        <small class="text-white-50">Web Dashboard</small>
+                    </div>
+
+                    <ul class="nav nav-pills flex-column">
+                        <li class="nav-item">
+                            <a class="nav-link" href="/dashboard">
+                                <i class="fas fa-tachometer-alt me-2"></i>Dashboard
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/upload">
+                                <i class="fas fa-upload me-2"></i>Upload Files
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/sessions">
+                                <i class="fas fa-folder me-2"></i>Sessions
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/tools">
+                                <i class="fas fa-tools me-2"></i>Tools
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/files">
+                                <i class="fas fa-file-alt me-2"></i>Files
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link active" href="/viewer">
+                                <i class="fas fa-eye me-2"></i>File Viewer
+                            </a>
+                        </li>
+                        <li class="nav-item mt-3">
+                            <a class="nav-link" href="#" onclick="logout()">
+                                <i class="fas fa-sign-out-alt me-2"></i>Logout
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Main Content -->
+            <div class="col-md-9 col-lg-10">
+                <div class="p-4">
+                    <!-- Header -->
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <h2>
+                            <i class="fas fa-eye me-2"></i>File Viewer
+                        </h2>
+                        <nav aria-label="breadcrumb">
+                            <ol class="breadcrumb">
+                                <li class="breadcrumb-item"><a href="/dashboard">Dashboard</a></li>
+                                <li class="breadcrumb-item"><a href="/files">Files</a></li>
+                                <li class="breadcrumb-item active">Viewer</li>
+                            </ol>
+                        </nav>
+                    </div>
+
+                    <!-- File Selection -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <div class="card file-info-card">
+                                <div class="card-header">
+                                    <h5 class="mb-0">
+                                        <i class="fas fa-folder-open me-2"></i>Select File to View
+                                    </h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <label class="form-label">Available Files:</label>
+                                            <select class="form-select" id="fileSelect" onchange="loadFileContent()">
+                                                <option value="">Select a file...</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <label class="form-label">Filter by Type:</label>
+                                            <select class="form-select" id="typeFilter" onchange="filterFiles()">
+                                                <option value="">All Types</option>
+                                                <option value="json">JSON</option>
+                                                <option value="html">HTML</option>
+                                                <option value="csv">CSV</option>
+                                                <option value="txt">TXT</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <label class="form-label">Actions:</label>
+                                            <div>
+                                                <button class="btn btn-primary btn-sm" onclick="refreshFiles()">
+                                                    <i class="fas fa-sync me-1"></i>Refresh
+                                                </button>
+                                                <button class="btn btn-success btn-sm ms-2" onclick="downloadCurrentFile()" id="downloadBtn" disabled>
+                                                    <i class="fas fa-download me-1"></i>Download
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- File Information -->
+                    <div id="fileInfoSection" style="display: none;">
+                        <div class="row mb-4">
+                            <div class="col-md-8">
+                                <div class="card file-info-card">
+                                    <div class="card-body">
+                                        <h6><i class="fas fa-info-circle me-2"></i>File Information</h6>
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <p><strong>Name:</strong> <span id="fileName">-</span></p>
+                                                <p><strong>Type:</strong> <span id="fileType">-</span></p>
+                                                <p><strong>Tool:</strong> <span id="fileTool">-</span></p>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <p><strong>Size:</strong> <span id="fileSize">-</span></p>
+                                                <p><strong>Uploaded:</strong> <span id="fileDate">-</span></p>
+                                                <p><strong>Session:</strong> <span id="fileSession">-</span></p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="file-stats">
+                                    <h6><i class="fas fa-chart-bar me-2"></i>Content Stats</h6>
+                                    <p class="mb-1"><strong>Lines:</strong> <span id="lineCount">0</span></p>
+                                    <p class="mb-1"><strong>Characters:</strong> <span id="charCount">0</span></p>
+                                    <p class="mb-0"><strong>Words:</strong> <span id="wordCount">0</span></p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Search and Tools -->
+                    <div id="searchSection" style="display: none;">
+                        <div class="row mb-3">
+                            <div class="col-12">
+                                <div class="card">
+                                    <div class="card-body">
+                                        <div class="row">
+                                            <div class="col-md-4">
+                                                <div class="input-group">
+                                                    <input type="text" class="form-control" id="searchInput" placeholder="Search in file...">
+                                                    <button class="btn btn-outline-primary" onclick="searchInFile()">
+                                                        <i class="fas fa-search"></i>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <div class="btn-group" role="group">
+                                                    <button class="btn btn-outline-secondary btn-sm" onclick="toggleLineNumbers()" id="lineNumBtn">
+                                                        <i class="fas fa-list-ol me-1"></i>Lines
+                                                    </button>
+                                                    <button class="btn btn-outline-secondary btn-sm" onclick="toggleWordWrap()" id="wrapBtn">
+                                                        <i class="fas fa-text-width me-1"></i>Wrap
+                                                    </button>
+                                                    <button class="btn btn-outline-secondary btn-sm" onclick="toggleFullscreen()" id="fullscreenBtn">
+                                                        <i class="fas fa-expand me-1"></i>Full
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <div class="small text-muted" id="searchResults"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- File Content -->
+                    <div id="contentSection" style="display: none;">
+                        <div class="row">
+                            <div class="col-12">
+                                <div class="card">
+                                    <div class="card-header d-flex justify-content-between align-items-center">
+                                        <span><i class="fas fa-file-code me-2"></i>File Content</span>
+                                        <div class="btn-group btn-group-sm" role="group">
+                                            <button class="btn btn-outline-primary" onclick="copyToClipboard()" id="copyBtn">
+                                                <i class="fas fa-copy me-1"></i>Copy
+                                            </button>
+                                            <button class="btn btn-outline-success" onclick="formatContent()" id="formatBtn">
+                                                <i class="fas fa-magic me-1"></i>Format
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="card-body p-0">
+                                        <div class="file-content d-flex" id="fileContentContainer">
+                                            <div class="line-numbers" id="lineNumbers" style="display: none;"></div>
+                                            <div class="content-area flex-grow-1" id="fileContent">
+                                                <div class="text-center p-5 text-muted">
+                                                    <i class="fas fa-file-alt fa-3x mb-3"></i>
+                                                    <p>Select a file to view its content</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-json.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-markup.min.js"></script>
+    <script>
+        let allFiles = [];
+        let currentFile = null;
+        let searchMatches = [];
+        let currentMatchIndex = 0;
+
+        document.addEventListener('DOMContentLoaded', function() {
+            loadFiles();
+            
+            // Check if file ID is provided in URL
+            const urlParams = new URLSearchParams(window.location.search);
+            const fileId = urlParams.get('file');
+            if (fileId) {
+                // Wait for files to load, then select the file
+                setTimeout(() => {
+                    const fileSelect = document.getElementById('fileSelect');
+                    fileSelect.value = fileId;
+                    loadFileContent();
+                }, 1000);
+            }
+        });
+
+        // Load all files
+        async function loadFiles() {
+            try {
+                const token = getCookie('auth_token');
+                if (!token) {
+                    window.location.href = '/login';
+                    return;
+                }
+
+                const response = await fetch('/api/files', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    allFiles = data.files || [];
+                    populateFileSelect();
+                } else {
+                    throw new Error('Failed to load files');
+                }
+            } catch (error) {
+                console.error('Error loading files:', error);
+                alert('Failed to load files');
+            }
+        }
+
+        // Populate file select dropdown
+        function populateFileSelect() {
+            const select = document.getElementById('fileSelect');
+            const typeFilter = document.getElementById('typeFilter').value;
+            
+            // Clear current options
+            select.innerHTML = '<option value="">Select a file...</option>';
+            
+            // Filter files by type if selected
+            const filteredFiles = typeFilter ? 
+                allFiles.filter(file => file.file_type === typeFilter) : 
+                allFiles;
+            
+            filteredFiles.forEach(file => {
+                const option = document.createElement('option');
+                option.value = file.id;
+                option.textContent = `${file.original_name} (${file.file_type.toUpperCase()})`;
+                option.dataset.file = JSON.stringify(file);
+                select.appendChild(option);
+            });
+        }
+
+        // Filter files by type
+        function filterFiles() {
+            populateFileSelect();
+        }
+
+        // Refresh files list
+        function refreshFiles() {
+            loadFiles();
+        }
+
+        // Load file content
+        async function loadFileContent() {
+            const select = document.getElementById('fileSelect');
+            const fileId = select.value;
+            
+            if (!fileId) {
+                hideFileContent();
+                return;
+            }
+
+            const fileData = JSON.parse(select.options[select.selectedIndex].dataset.file);
+            currentFile = fileData;
+            
+            try {
+                const token = getCookie('auth_token');
+                const response = await fetch(`/api/files/${fileId}/view`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (response.ok) {
+                    const content = await response.text();
+                    displayFileContent(fileData, content);
+                } else {
+                    throw new Error('Failed to load file content');
+                }
+            } catch (error) {
+                console.error('Error loading file content:', error);
+                alert('Failed to load file content');
+            }
+        }
+
+        // Display file content
+        function displayFileContent(fileData, content) {
+            // Show sections
+            document.getElementById('fileInfoSection').style.display = 'block';
+            document.getElementById('searchSection').style.display = 'block';
+            document.getElementById('contentSection').style.display = 'block';
+            
+            // Update file information
+            document.getElementById('fileName').textContent = fileData.original_name;
+            document.getElementById('fileType').textContent = fileData.file_type.toUpperCase();
+            document.getElementById('fileTool').textContent = fileData.tool || 'Unknown';
+            document.getElementById('fileSize').textContent = formatFileSize(fileData.file_size);
+            document.getElementById('fileDate').textContent = new Date(fileData.created_at).toLocaleString();
+            document.getElementById('fileSession').textContent = fileData.session_name || 'Default';
+            
+            // Update content stats
+            const lines = content.split('\n').length;
+            const chars = content.length;
+            const words = content.trim().split(/\s+/).length;
+            
+            document.getElementById('lineCount').textContent = lines;
+            document.getElementById('charCount').textContent = chars;
+            document.getElementById('wordCount').textContent = words;
+            
+            // Display content based on file type
+            const contentDiv = document.getElementById('fileContent');
+            
+            if (fileData.file_type === 'json') {
+                try {
+                    const jsonData = JSON.parse(content);
+                    contentDiv.innerHTML = `<div class="json-viewer">${syntaxHighlightJSON(jsonData)}</div>`;
+                } catch (e) {
+                    contentDiv.textContent = content;
+                }
+            } else if (fileData.file_type === 'html') {
+                contentDiv.innerHTML = `<pre><code class="language-markup">${escapeHtml(content)}</code></pre>`;
+            } else {
+                contentDiv.textContent = content;
+            }
+            
+            // Generate line numbers
+            generateLineNumbers(lines);
+            
+            // Enable download button
+            document.getElementById('downloadBtn').disabled = false;
+            
+            // Clear search
+            clearSearch();
+        }
+
+        // Hide file content
+        function hideFileContent() {
+            document.getElementById('fileInfoSection').style.display = 'none';
+            document.getElementById('searchSection').style.display = 'none';
+            document.getElementById('contentSection').style.display = 'none';
+            document.getElementById('downloadBtn').disabled = true;
+            currentFile = null;
+        }
+
+        // Generate line numbers
+        function generateLineNumbers(lineCount) {
+            const lineNumbers = document.getElementById('lineNumbers');
+            let numbersHTML = '';
+            for (let i = 1; i <= lineCount; i++) {
+                numbersHTML += `${i}\n`;
+            }
+            lineNumbers.textContent = numbersHTML;
+        }
+
+        // Search in file
+        function searchInFile() {
+            const searchTerm = document.getElementById('searchInput').value.trim();
+            const contentDiv = document.getElementById('fileContent');
+            
+            if (!searchTerm) {
+                clearSearch();
+                return;
+            }
+            
+            clearSearch();
+            
+            const content = contentDiv.textContent;
+            const regex = new RegExp(searchTerm, 'gi');
+            const matches = [...content.matchAll(regex)];
+            
+            if (matches.length > 0) {
+                searchMatches = matches;
+                currentMatchIndex = 0;
+                highlightSearchResults(content, searchTerm);
+                updateSearchStatus();
+            } else {
+                document.getElementById('searchResults').textContent = 'No matches found';
+            }
+        }
+
+        // Highlight search results
+        function highlightSearchResults(content, searchTerm) {
+            const contentDiv = document.getElementById('fileContent');
+            const highlightedContent = content.replace(
+                new RegExp(searchTerm, 'gi'),
+                `<span class="search-highlight">$&</span>`
+            );
+            
+            if (currentFile.file_type === 'json') {
+                // For JSON, we need to be more careful with highlighting
+                contentDiv.innerHTML = `<div class="json-viewer">${highlightedContent}</div>`;
+            } else {
+                contentDiv.innerHTML = `<pre>${highlightedContent}</pre>`;
+            }
+        }
+
+        // Update search status
+        function updateSearchStatus() {
+            if (searchMatches.length > 0) {
+                document.getElementById('searchResults').innerHTML = `
+                    ${currentMatchIndex + 1} of ${searchMatches.length} matches
+                    <button class="btn btn-sm btn-outline-primary ms-2" onclick="previousMatch()">
+                        <i class="fas fa-chevron-up"></i>
+                    </button>
+                    <button class="btn btn-sm btn-outline-primary" onclick="nextMatch()">
+                        <i class="fas fa-chevron-down"></i>
+                    </button>
+                `;
+            }
+        }
+
+        // Navigate search matches
+        function nextMatch() {
+            if (searchMatches.length > 0) {
+                currentMatchIndex = (currentMatchIndex + 1) % searchMatches.length;
+                updateSearchStatus();
+            }
+        }
+
+        function previousMatch() {
+            if (searchMatches.length > 0) {
+                currentMatchIndex = currentMatchIndex === 0 ? searchMatches.length - 1 : currentMatchIndex - 1;
+                updateSearchStatus();
+            }
+        }
+
+        // Clear search
+        function clearSearch() {
+            searchMatches = [];
+            currentMatchIndex = 0;
+            document.getElementById('searchResults').textContent = '';
+        }
+
+        // Toggle line numbers
+        function toggleLineNumbers() {
+            const lineNumbers = document.getElementById('lineNumbers');
+            const btn = document.getElementById('lineNumBtn');
+            
+            if (lineNumbers.style.display === 'none') {
+                lineNumbers.style.display = 'block';
+                btn.classList.add('active');
+            } else {
+                lineNumbers.style.display = 'none';
+                btn.classList.remove('active');
+            }
+        }
+
+        // Toggle word wrap
+        function toggleWordWrap() {
+            const contentArea = document.getElementById('fileContent');
+            const btn = document.getElementById('wrapBtn');
+            
+            if (contentArea.style.whiteSpace === 'pre') {
+                contentArea.style.whiteSpace = 'pre-wrap';
+                btn.classList.add('active');
+            } else {
+                contentArea.style.whiteSpace = 'pre';
+                btn.classList.remove('active');
+            }
+        }
+
+        // Toggle fullscreen
+        function toggleFullscreen() {
+            const container = document.getElementById('fileContentContainer');
+            const btn = document.getElementById('fullscreenBtn');
+            
+            if (container.classList.contains('position-fixed')) {
+                container.classList.remove('position-fixed', 'top-0', 'start-0', 'w-100', 'h-100');
+                container.style.zIndex = '';
+                btn.innerHTML = '<i class="fas fa-expand me-1"></i>Full';
+            } else {
+                container.classList.add('position-fixed', 'top-0', 'start-0', 'w-100', 'h-100');
+                container.style.zIndex = '9999';
+                btn.innerHTML = '<i class="fas fa-compress me-1"></i>Exit';
+            }
+        }
+
+        // Copy to clipboard
+        async function copyToClipboard() {
+            const content = document.getElementById('fileContent').textContent;
+            try {
+                await navigator.clipboard.writeText(content);
+                const btn = document.getElementById('copyBtn');
+                const originalText = btn.innerHTML;
+                btn.innerHTML = '<i class="fas fa-check me-1"></i>Copied!';
+                btn.classList.replace('btn-outline-primary', 'btn-success');
+                
+                setTimeout(() => {
+                    btn.innerHTML = originalText;
+                    btn.classList.replace('btn-success', 'btn-outline-primary');
+                }, 2000);
+            } catch (error) {
+                alert('Failed to copy to clipboard');
+            }
+        }
+
+        // Format content (for JSON)
+        function formatContent() {
+            if (!currentFile || currentFile.file_type !== 'json') {
+                alert('Formatting is only available for JSON files');
+                return;
+            }
+            
+            try {
+                const content = document.getElementById('fileContent').textContent;
+                const jsonData = JSON.parse(content);
+                const formatted = JSON.stringify(jsonData, null, 2);
+                
+                document.getElementById('fileContent').innerHTML = 
+                    `<div class="json-viewer">${syntaxHighlightJSON(jsonData)}</div>`;
+            } catch (error) {
+                alert('Invalid JSON format');
+            }
+        }
+
+        // Download current file
+        function downloadCurrentFile() {
+            if (currentFile) {
+                window.open(`/api/files/${currentFile.id}/download`, '_blank');
+            }
+        }
+
+        // Helper functions
+        function syntaxHighlightJSON(obj) {
+            const json = JSON.stringify(obj, null, 2);
+            return json
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, function (match) {
+                    let cls = 'json-number';
+                    if (/^"/.test(match)) {
+                        if (/:$/.test(match)) {
+                            cls = 'json-key';
+                        } else {
+                            cls = 'json-string';
+                        }
+                    } else if (/true|false/.test(match)) {
+                        cls = 'json-boolean';
+                    } else if (/null/.test(match)) {
+                        cls = 'json-null';
+                    }
+                    return '<span class="' + cls + '">' + match + '</span>';
+                });
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 B';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        function getCookie(name) {
+            const value = `; ${document.cookie}`;
+            const parts = value.split(`; ${name}=`);
+            if (parts.length === 2) return parts.pop().split(';').shift();
+        }
+
+        function logout() {
+            document.cookie = 'auth_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+            window.location.href = '/login';
+        }
+
+        // Handle search on Enter key
+        document.getElementById('searchInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                searchInFile();
+            }
+        });
+    </script>
+</body>
+</html>
