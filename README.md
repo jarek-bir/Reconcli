@@ -52,7 +52,39 @@ reconcli vulnsqlicli --url "https://target.com/page.php?id=1" --dry-run --ai --p
 reconcli vulnsqlicli --url "https://target.com/page.php?id=1" --tool all --ai --store-db assessment.db --markdown-report
 ```
 
-### 🔥 **APICLI - SJ (Swagger Jacker) Integration** (NEW!)
+### � **JSCli - Advanced JavaScript Analysis with SourceMapper Integration** (NEW!)
+- **🗺️ SourceMapper Integration**: Complete integration with denandz/sourcemapper for source map analysis
+- **🔍 Enhanced Secret Detection**: 21+ patterns including JWT, Firebase, Stripe, PayPal, Twilio, SendGrid
+- **📱 Framework Detection**: Automatic detection of React, Vue, Angular, jQuery, Lodash, Webpack
+- **🌐 DOM Analysis**: Detect DOM manipulation patterns (innerHTML, eval, addEventListener)
+- **✨ Code Beautification**: Automatic beautification of minified JavaScript using jsbeautifier
+- **📦 Webpack Analysis**: Advanced Webpack bundle analysis and module extraction
+- **🔧 External Tool Integration**: Support for JSLuice, JSLeak, SubJS, Cariddi, GetJS, Mantra
+- **💬 Comment Extraction**: Extract and analyze JavaScript comments for sensitive information
+- **⚠️ Sensitive Function Detection**: Identify dangerous functions like eval, innerHTML, crypto usage
+- **📊 File Deduplication**: Hash generation for duplicate file detection
+
+```bash
+# Basic JavaScript analysis with framework detection
+reconcli jscli -i js_urls.txt -o js_results --framework-detection --dom-analysis --verbose
+
+# Enhanced analysis with SourceMapper integration
+reconcli jscli -i js_urls.txt -o js_results --engine sourcemapper --source-maps --beautify --json --markdown
+
+# Advanced security analysis with all features
+reconcli jscli -i js_urls.txt -o js_results --framework-detection --dom-analysis --sensitive-functions --extract-comments --webpack-analysis --hash-files
+
+# Custom secret detection with external patterns
+reconcli jscli -i js_urls.txt -o js_results --secret-detection --custom-patterns my_patterns.txt --url-extraction api --min-file-size 1000
+
+# Multiple analysis engines for comprehensive coverage
+reconcli jscli -i js_urls.txt -o js_results --engine jsluice --timeout 30 --concurrency 5 --retry 3 --verbose
+
+# Enterprise workflow with AI analysis and database storage
+reconcli jscli -i js_urls.txt -o js_results --ai-mode --store-db --framework-detection --source-maps --beautify --json --markdown --verbose
+```
+
+### �🔥 **APICLI - SJ (Swagger Jacker) Integration** (NEW!)
 - **🎯 Complete SJ Tool Integration**: Full BishopFox Swagger Jacker functionality integrated into APICLI
 - **🔍 Swagger/OpenAPI Discovery**: Brute force discovery of 600+ Swagger definition file patterns
 - **📋 Endpoint Extraction**: Extract and analyze all API endpoints from Swagger/OpenAPI files
@@ -144,9 +176,37 @@ reconcli csvtkcli security-report test.csv --target-domain example.com
 
 ### 🤖 SubdoCLI - Advanced Subdomain Enumeration
 The most comprehensive subdomain enumeration tool with 12 integrated tools + BBOT integration:
+
 ```bash
 # All 12 tools with selective execution
 reconcli subdocli --domain example.com --tools "amass,subfinder,crtsh_alternative" --verbose
+
+# BBOT integration for advanced passive reconnaissance  
+reconcli subdocli --domain example.com --bbot-integration --bbot-targets targets.txt --verbose
+
+# Mass subdomain discovery with database storage
+reconcli subdocli --domain-list domains.txt --store-db --json --markdown --threads 10
+```
+
+### 🚀 JSCli - Advanced JavaScript Analysis & SourceMapper Integration
+Enhanced JavaScript analysis with multiple engines and advanced security features:
+
+```bash
+# Framework detection and DOM analysis
+reconcli jscli -i js_urls.txt -o js_results --framework-detection --dom-analysis --verbose
+
+# SourceMapper integration for source map analysis
+reconcli jscli -i js_urls.txt -o js_results --engine sourcemapper --source-maps --beautify --json
+
+# Advanced security analysis with all features
+reconcli jscli -i js_urls.txt -o js_results --framework-detection --sensitive-functions --extract-comments --webpack-analysis
+
+# External tool integration (JSLuice, JSLeak, SubJS, Cariddi)
+reconcli jscli -i js_urls.txt -o js_results --engine jsluice --timeout 30 --concurrency 5 --verbose
+
+# Enterprise workflow with AI analysis
+reconcli jscli -i js_urls.txt -o js_results --ai-mode --store-db --custom-patterns patterns.txt --json --markdown
+```
 
 # BBOT-powered discovery with CSV export
 reconcli subdocli --domain example.com --bbot --export csv --verbose
@@ -210,6 +270,70 @@ reconcli apicli --url https://api.example.com --swagger-brute --store-db --verbo
 ```bash
 # Advanced CSV analysis
 reconcli csvtkcli analyze data.csv --security-report --verbose
+```
+
+### 🚀 JavaScript Security Analysis
+```bash
+# Complete JavaScript security assessment workflow
+echo "https://cdn.jquery.com/jquery.min.js" > js_targets.txt
+echo "https://unpkg.com/react@18/umd/react.production.min.js" >> js_targets.txt
+
+# Basic framework and security analysis
+reconcli jscli -i js_targets.txt -o js_analysis --framework-detection --dom-analysis --verbose
+
+# Advanced SourceMapper analysis for source maps
+reconcli jscli -i js_targets.txt -o js_analysis --engine sourcemapper --source-maps --beautify --json
+
+# Enterprise security workflow with custom patterns
+echo "api_token=([a-zA-Z0-9]{32})" > custom_patterns.txt
+reconcli jscli -i js_targets.txt -o js_analysis --custom-patterns custom_patterns.txt --sensitive-functions --webpack-analysis --hash-files
+
+# External tool integration for comprehensive analysis
+reconcli jscli -i js_targets.txt -o js_analysis --engine jsluice --concurrency 10 --timeout 30 --json --markdown
+
+# AI-powered analysis with database storage
+reconcli jscli -i js_targets.txt -o js_analysis --ai-mode --store-db --target-domain example.com --program "security-audit" --verbose
+```
+
+## 💡 Real-World Security Testing Workflows
+
+### 🎯 Bug Bounty Hunter Workflow
+```bash
+# Step 1: Subdomain enumeration
+reconcli subdocli --domain target.com --tools "amass,subfinder,crtsh_alternative" --store-db --json
+
+# Step 2: HTTP analysis with screenshots
+reconcli httpcli --input subdomains.txt --security-scan --screenshot --store-db --export-vulnerabilities
+
+# Step 3: JavaScript security analysis
+reconcli jscli -i js_urls.txt -o js_analysis --framework-detection --sensitive-functions --ai-mode --store-db
+
+# Step 4: API discovery and testing
+reconcli apicli --url https://api.target.com --swagger-brute --security-test --store-db
+
+# Step 5: Secret scanning in repositories
+reconcli secretscli --input "https://github.com/target/repo.git" --tool trufflehog --store-db
+```
+
+### 🏢 Enterprise Security Assessment
+```bash
+# Comprehensive domain analysis
+reconcli subdocli --domain-list corporate_domains.txt --bbot-integration --store-db assessment.db --threads 20
+
+# Infrastructure analysis with Shodan
+python -m reconcli shodancli --query "org:\"Target Corp\"" --ai --store-db assessment.db --verbose
+
+# Web application security testing
+reconcli httpcli --input corporate_apps.txt --security-scan --nuclei --benchmark --store-db assessment.db
+
+# JavaScript security audit
+reconcli jscli -i corporate_js.txt -o js_audit --engine sourcemapper --ai-mode --store-db assessment.db --custom-patterns corp_patterns.txt
+
+# API security assessment
+reconcli apicli --urls-file api_endpoints.txt --swagger-brute --security-test --store-db assessment.db
+
+# Generate comprehensive report
+reconcli csvtkcli generate-report assessment.db --security-focus --executive-summary
 ```
 
 ## 🚀 Latest Updates
