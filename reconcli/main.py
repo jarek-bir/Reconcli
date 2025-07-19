@@ -47,7 +47,7 @@ from reconcli.wafdetectcli import wafdetectcli  # Importing the wafdetectcli com
 from reconcli.whoisfreakscli import cli as whoisfreaks_cli
 from reconcli.zonewalkcli import cli as zonewalk_cli
 from reconcli.xsscli import cli as xsscli  # Importing the XSS CLI command
-
+from reconcli.shodancli import shodancli  # Importing the Shodan CLI command
 
 # Git Operations
 try:
@@ -176,6 +176,10 @@ dirbcli.short_help = "Directory bruteforcing and enumeration"
 # API Security Testing
 cli.add_command(api_cli, name="apicli")
 api_cli.short_help = "API security testing and vulnerability assessment"
+
+# Shodan API Integration
+cli.add_command(shodancli, name="shodancli")
+shodancli.short_help = "Shodan API integration for IoT and device reconnaissance"
 
 # SQL Injection Vulnerability Scanner
 cli.add_command(vulnsql_cli, name="vulnsqlicli")

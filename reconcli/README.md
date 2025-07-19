@@ -164,6 +164,49 @@ reconcli csvtkcli analyze data.csv --security-report --verbose
 
 ## 🚀 Latest Updates
 
+### 🔍 **ShodanCLI - AI-Enhanced Network Intelligence** (NEW!)
+
+- **🧠 AI-Powered Analysis**: Comprehensive vulnerability analysis with geographical insights
+- **🌍 Geographic Intelligence**: Country-based risk assessment and threat landscape analysis
+- **🎯 Vulnerability Assessment**: Automated detection of critical security misconfigurations
+- **📊 Rich Reporting**: Beautiful terminal output with Rich library integration
+- **💾 Database Storage**: SQLite integration for persistent result storage
+- **🔧 Module Usage**: Run as `python -m reconcli shodancli` for improved module compatibility
+
+```bash
+# Basic Shodan search with AI analysis
+python -m reconcli shodancli --query "apache" --ai --store-db --verbose
+
+# Advanced search with geographic filtering
+python -m reconcli shodancli --query "nginx" --country US --ai --limit 100 --jsonout
+
+# Vulnerability-focused analysis
+python -m reconcli shodancli --query "port:443 ssl" --ai --store-db results.db --verbose
+```
+
+### 🛡️ **XSS CLI - AI & Tor Enhanced Testing** (NEW!)
+
+- **🧠 AI-Powered Analysis**: Advanced pattern recognition for XSS vulnerability assessment
+- **🔍 Intelligent Detection**: Script execution, DOM manipulation, and data exfiltration analysis
+- **🕵️ Tor Proxy Support**: Anonymous testing with automatic Tor integration
+- **📊 Comprehensive Reports**: Detailed vulnerability analysis with remediation guidance
+- **💾 SQLite Storage**: Persistent storage with full result management
+- **🔧 Security Testing**: Context-aware payload testing with WAF bypass capabilities
+
+```bash
+# Basic XSS testing with AI analysis
+python -m reconcli xsscli test --url "https://example.com/search?q=test" --ai --verbose
+
+# Anonymous testing with Tor proxy
+python -m reconcli xsscli test --url "https://target.com" --tor --ai --store-db
+
+# Tor connectivity check
+python -m reconcli xsscli tor-check
+
+# Tor setup instructions
+python -m reconcli xsscli tor-setup
+```
+
 ### 🌐 **HTTPCli - Enhanced HTTP/HTTPS Analysis** (NEW!)
 - **🛡️ Advanced Security Analysis**: Comprehensive security header scoring with A+ to F grades
 - **🔍 WAF & CDN Detection**: Identify Cloudflare, Akamai, AWS WAF, F5, Imperva, and 9+ solutions
@@ -1296,7 +1339,8 @@ reconcli doctorcli --structure --configs --env --fix --verbose
 - **🧠 aicli** - AI-powered reconnaissance assistant with multi-persona system
 - **🔐 vulncli** - Vulnerability scanning with Jaeles and Nuclei
 - **💉 vulnsqlicli** - SQL injection vulnerability scanner
-- **🔍 cnamecli** - CNAME record analysis and takeover detection
+- **�️ xsscli** - AI-enhanced XSS testing with Tor proxy support for anonymous vulnerability assessment
+- **�🔍 cnamecli** - CNAME record analysis and takeover detection
 - **🛡️ wafdetectcli** - WAF detection, testing and bypass analysis
 - **↗️ openredirectcli** - Advanced open redirect vulnerability scanner with AI
 - **🔄 takeovercli** - Subdomain takeover vulnerability detection
@@ -1306,6 +1350,7 @@ reconcli doctorcli --structure --configs --env --fix --verbose
 
 ### 🔍 **Intelligence & Analysis**
 - **🌐 whoisfreakscli** - WHOIS intelligence and domain analysis
+- **🔍 shodancli** - AI-enhanced network intelligence with geographic analysis and vulnerability assessment
 - **☁️ cloudcli** - Cloud provider detection and S3 enumeration
 - **🔄 permutcli** - Advanced permutation generation for domains and paths
 - **🔍 jscli** - JavaScript file discovery and analysis with multi-engine support
