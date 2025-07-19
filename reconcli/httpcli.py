@@ -29,6 +29,11 @@ Export and reporting:
 Advanced technology detection with Wappalyzer:
     reconcli httpcli -i urls.txt --tech-detection --wappalyzer --jsonout
 
+Headers extraction and analysis:
+    reconcli httpcli -i urls.txt --headers
+    reconcli httpcli -i urls.txt --headers --header-filter "Server,Content-Type" --headers-format json
+    reconcli httpcli -i urls.txt --headers --headers-format csv
+
 🚀 FEATURES:
 • Security header analysis and scoring
 • CDN and WAF detection
@@ -44,6 +49,8 @@ Advanced technology detection with Wappalyzer:
 • Database storage for persistent analysis
 • Multiple export formats (JSON, CSV, HTML, Markdown)
 • Advanced filtering and tagging system
+• HTTP headers extraction and export (text, JSON, CSV, table formats)
+• Header filtering and custom analysis
 
 🛡️ SECURITY CHECKS:
 • Missing security headers detection
@@ -259,6 +266,21 @@ TECH_SIGNATURES = {
     is_flag=True,
     help="Use Wappalyzer for enhanced technology detection",
 )
+@click.option(
+    "--headers",
+    is_flag=True,
+    help="Export HTTP headers in clean format (supports filtering and multiple formats)",
+)
+@click.option(
+    "--header-filter",
+    help="Filter specific headers (comma-separated, e.g. 'Server,Content-Type,X-Powered-By')",
+)
+@click.option(
+    "--headers-format",
+    type=click.Choice(["text", "json", "csv", "table"]),
+    default="text",
+    help="Output format for headers export (default: text)",
+)
 def httpcli(
     input,
     timeout,
@@ -293,6 +315,9 @@ def httpcli(
     rate_limit,
     verbose,
     wappalyzer,
+    headers,
+    header_filter,
+    headers_format,
 ):
     """Enhanced HTTP/HTTPS service analysis with advanced security and technology detection.
 
@@ -766,6 +791,13 @@ def httpcli(
             console.print(f"   • {status}: {count}")
 
     console.print(f"\n[bold magenta]📁 Results saved to: {output_path}/[/bold magenta]")
+
+    # Export headers if requested
+    if headers and results:
+        export_headers_data(
+            results, output_path, header_filter, headers_format, verbose
+        )
+
     console.rule("[bold cyan]🎉 HTTPCli Analysis Complete!")
 
 
@@ -1481,6 +1513,201 @@ def detect_http2(url, proxies=None, timeout=10):
             return r.http_version == "HTTP/2"
     except Exception:
         return False
+
+
+def export_headers_data(
+    results, output_path, header_filter=None, headers_format="text", verbose=False
+):
+    """Export HTTP headers in various formats with optional filtering."""
+
+    # Filter results that have headers
+    results_with_headers = [
+        r for r in results if r.get("headers") and not r.get("error")
+    ]
+
+    if not results_with_headers:
+        console.print("[yellow]⚠️ No headers data found to export[/yellow]")
+        return
+
+    # Parse header filter
+    filtered_headers = None
+    if header_filter:
+        filtered_headers = [h.strip() for h in header_filter.split(",")]
+        if verbose:
+            console.print(
+                f"[blue]🔍 Filtering headers: {', '.join(filtered_headers)}[/blue]"
+            )
+
+    console.print(
+        f"[green]📋 Exporting headers for {len(results_with_headers)} URLs in {headers_format} format[/green]"
+    )
+
+    if headers_format == "text":
+        export_headers_text(results_with_headers, output_path, filtered_headers)
+    elif headers_format == "json":
+        export_headers_json(results_with_headers, output_path, filtered_headers)
+    elif headers_format == "csv":
+        export_headers_csv(results_with_headers, output_path, filtered_headers)
+    elif headers_format == "table":
+        export_headers_table(results_with_headers, output_path, filtered_headers)
+
+
+def export_headers_text(results, output_path, filtered_headers=None):
+    """Export headers in plain text format."""
+    with open(output_path / "headers.txt", "w", encoding="utf-8") as f:
+        for result in results:
+            url = result["url"]
+            headers = result["headers"]
+
+            f.write(f"\n{'='*80}\n")
+            f.write(f"URL: {url}\n")
+            f.write(f"Status: {result.get('status_code', 'N/A')}\n")
+            f.write(f"{'='*80}\n")
+
+            if filtered_headers:
+                # Show only filtered headers
+                for header in filtered_headers:
+                    value = None
+                    # Case-insensitive header lookup
+                    for h_key, h_value in headers.items():
+                        if h_key.lower() == header.lower():
+                            value = h_value
+                            break
+
+                    if value:
+                        f.write(f"{header}: {value}\n")
+                    else:
+                        f.write(f"{header}: [NOT FOUND]\n")
+            else:
+                # Show all headers
+                for header, value in headers.items():
+                    f.write(f"{header}: {value}\n")
+
+            f.write("\n")
+
+    console.print(f"[green]✅ Headers exported to: {output_path}/headers.txt[/green]")
+
+
+def export_headers_json(results, output_path, filtered_headers=None):
+    """Export headers in JSON format."""
+    headers_data = []
+
+    for result in results:
+        url = result["url"]
+        headers = result["headers"]
+
+        if filtered_headers:
+            # Filter headers
+            filtered = {}
+            for header in filtered_headers:
+                value = None
+                for h_key, h_value in headers.items():
+                    if h_key.lower() == header.lower():
+                        value = h_value
+                        break
+                filtered[header] = value
+            headers = filtered
+
+        headers_data.append(
+            {"url": url, "status_code": result.get("status_code"), "headers": headers}
+        )
+
+    with open(output_path / "headers.json", "w", encoding="utf-8") as f:
+        json.dump(headers_data, f, indent=2, ensure_ascii=False)
+
+    console.print(f"[green]✅ Headers exported to: {output_path}/headers.json[/green]")
+
+
+def export_headers_csv(results, output_path, filtered_headers=None):
+    """Export headers in CSV format."""
+    if not filtered_headers:
+        # Get all unique headers
+        all_headers = set()
+        for result in results:
+            all_headers.update(result["headers"].keys())
+        filtered_headers = sorted(all_headers)
+
+    with open(
+        output_path / "headers.csv", "w", newline="", encoding="utf-8"
+    ) as csvfile:
+        writer = csv.writer(csvfile)
+
+        # Write header row
+        writer.writerow(["url", "status_code"] + filtered_headers)
+
+        # Write data rows
+        for result in results:
+            url = result["url"]
+            status = result.get("status_code", "")
+            headers = result["headers"]
+
+            row = [url, status]
+
+            for header in filtered_headers:
+                value = ""
+                # Case-insensitive header lookup
+                for h_key, h_value in headers.items():
+                    if h_key.lower() == header.lower():
+                        value = h_value
+                        break
+                row.append(value)
+
+            writer.writerow(row)
+
+    console.print(f"[green]✅ Headers exported to: {output_path}/headers.csv[/green]")
+
+
+def export_headers_table(results, output_path, filtered_headers=None):
+    """Export headers in table format using rich."""
+    from rich.table import Table
+    from rich.console import Console
+
+    if not filtered_headers:
+        # Get most common headers for table display
+        header_counts = Counter()
+        for result in results:
+            header_counts.update(result["headers"].keys())
+        filtered_headers = [h for h, _ in header_counts.most_common(10)]
+
+    table = Table(title="🌐 HTTP Headers Summary")
+    table.add_column("URL", style="cyan", no_wrap=True, max_width=40)
+    table.add_column("Status", style="green", width=8)
+
+    for header in filtered_headers:
+        table.add_column(header, style="yellow", max_width=30)
+
+    for result in results[:50]:  # Limit to first 50 for readability
+        url = result["url"]
+        status = str(result.get("status_code", ""))
+        headers = result["headers"]
+
+        row_data = [url, status]
+
+        for header in filtered_headers:
+            value = ""
+            # Case-insensitive header lookup
+            for h_key, h_value in headers.items():
+                if h_key.lower() == header.lower():
+                    value = h_value[:50] + "..." if len(h_value) > 50 else h_value
+                    break
+            row_data.append(value or "-")
+
+        table.add_row(*row_data)
+
+    # Create console with record enabled for HTML export
+    table_console = Console(record=True, width=120)
+    table_console.print(table)
+
+    # Save table as HTML
+    html_content = table_console.export_html()
+    with open(output_path / "headers_table.html", "w", encoding="utf-8") as f:
+        f.write(html_content)
+
+    # Print table to main console
+    console.print(table)
+    console.print(
+        f"[green]✅ Headers table saved to: {output_path}/headers_table.html[/green]"
+    )
 
 
 if __name__ == "__main__":
