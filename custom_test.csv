@@ -1,2 +1,0 @@
-target,url,param,payload,reflected,vulnerable,method,status_code,timestamp
-https://httpbin.org/get,https://httpbin.org/get?search=%3Cscript%3Ealert%28%27Custom%20XSS%201%27%29%3C/script%3E,search,<script>alert('Custom XSS 1')</script>,True,True,GET,200,2025-07-19T12:35:36.534698
