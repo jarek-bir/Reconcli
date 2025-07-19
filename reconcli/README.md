@@ -1,8 +1,61 @@
 # ReconCLI - Modular Reconnaissance Toolkit
 
-[![Python 3.## 🚀 Latest Updates
+[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![GitHub release](https://img.shields.io/github/release/jarek-bir/Reconcli.svg)](https://github.com/jarek-bir/Reconcli/releases)
+[![GitHub stars](https://img.shields.io/github/stars/jarek-bir/Reconcli.svg)](https://github.com/jarek-bir/Reconcli/stargazers)
+[![GitHub forks](https://img.shields.io/github/forks/jarek-bir/Reconcli.svg)](https://github.com/jarek-bir/Reconcli/network)
+[![GitHub issues](https://img.shields.io/github/issues/jarek-bir/Reconcli.svg)](https://github.com/jarek-bir/Reconcli/issues)
+[![GitHub last commit](https://img.shields.io/github/last-commit/jarek-bir/Reconcli.svg)](https://github.com/jarek-bir/Reconcli/commits/main)
+
+A comprehensive, modular reconnaissance toolkit designed for security professionals and bug bounty hunters.
+
+🔗 **GitHub Repository**: [https://github.com/jarek-bir/Reconcli](https://github.com/jarek-bir/Reconcli)
+
+## 👥 Authors
+
+**🚀 Cyber-Squad from Future**
+
+- **Jarek** 🧑‍💻 - Lead Developer & Security Researcher
+- **AI Assistant** 🤖 - Code Architecture & Advanced Features
+- **GitHub Copilot** ⚡ - Code Generation & Optimization
+
+*Collaboration between human expertise and AI innovation to create cutting-edge security tools.*
+
+## 🚀 Latest Updates
+
+### 🧠 **VulnSQLiCLI - Enterprise AI-Enhanced SQL Injection Scanner** (NEW!)
+
+- **🤖 AI-Powered Analysis**: Advanced vulnerability assessment with risk scoring, attack vector analysis, and executive summaries
+- **🎯 Custom Payloads**: Load custom SQL injection payloads from external files for targeted testing
+- **🔧 Tool Integration**: Support for custom arguments for SQLMap (`--sqlmap-args`) and Ghauri (`--ghauri-args`)
+- **🗄️ Database Storage**: Complete SQLite integration with 4-table schema for persistent result storage
+- **⚡ Concurrent Processing**: Multi-threaded scanning with configurable concurrency levels
+- **🔄 Retry Mechanisms**: Exponential backoff retry system for reliable network operations
+- **🧪 Dry-Run Mode**: Simulate scans without executing actual tests for planning and validation
+- **📊 Risk Assessment**: AI-driven risk scoring with CRITICAL/HIGH/MEDIUM/LOW classifications
+- **🎯 Attack Vectors**: Detailed analysis of potential attack vectors and exploitation methods
+- **📋 Executive Reports**: Business-ready summaries with actionable recommendations
+
+```bash
+# AI-enhanced SQL injection testing with custom payloads
+reconcli vulnsqlicli --url "https://target.com/page.php?id=1" --ai --payloads custom_sqli.txt --basic-test --verbose
+
+# Enterprise-grade assessment with database storage
+reconcli vulnsqlicli --urls-file targets.txt --ai --store-db results.db --concurrency 5 --retry 3 --json-report
+
+# Advanced SQLMap integration with custom arguments
+reconcli vulnsqlicli --url "https://target.com/page.php?id=1" --sqlmap --sqlmap-args "--level 5 --risk 3 --tamper space2comment" --ai
+
+# Dry-run mode for scan planning
+reconcli vulnsqlicli --url "https://target.com/page.php?id=1" --dry-run --ai --payloads advanced_payloads.txt --verbose
+
+# Full security assessment with AI analysis
+reconcli vulnsqlicli --url "https://target.com/page.php?id=1" --tool all --ai --store-db assessment.db --markdown-report
+```
 
 ### 🔥 **APICLI - SJ (Swagger Jacker) Integration** (NEW!)
+
 - **🎯 Complete SJ Tool Integration**: Full BishopFox Swagger Jacker functionality integrated into APICLI
 - **🔍 Swagger/OpenAPI Discovery**: Brute force discovery of 600+ Swagger definition file patterns
 - **📋 Endpoint Extraction**: Extract and analyze all API endpoints from Swagger/OpenAPI files
@@ -1031,6 +1084,7 @@ reconcli vulncli --input urls.txt --output-dir results
 reconcli vulncli --input targets.txt --ai-template-selection \
   --ai-false-positive-filter --confidence-threshold 0.8
 
+ten gluwny 
 # Advanced Nuclei scan with custom templates and severity filtering
 reconcli vulncli --input urls.txt --engine nuclei \
   --templates custom-templates/ --severity critical,high \

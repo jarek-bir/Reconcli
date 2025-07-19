@@ -1,6 +1,27 @@
 # ReconCLI - Modular Reconnaissance Toolkit
 
-[![Python 3.## 🚀 Latest Updates
+[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![GitHub release](https://img.shields.io/github/release/jarek-bir/Reconcli.svg)](https://github.com/jarek-bir/Reconcli/releases)
+[![GitHub stars](https://img.shields.io/github/stars/jarek-bir/Reconcli.svg)](https://github.com/jarek-bir/Reconcli/stargazers)
+[![GitHub forks](https://img.shields.io/github/forks/jarek-bir/Reconcli.svg)](https://github.com/jarek-bir/Reconcli/network)
+[![GitHub issues](https://img.shields.io/github/issues/jarek-bir/Reconcli.svg)](https://github.com/jarek-bir/Reconcli/issues)
+[![GitHub last commit](https://img.shields.io/github/last-commit/jarek-bir/Reconcli.svg)](https://github.com/jarek-bir/Reconcli/commits/main)
+
+A comprehensive, modular reconnaissance toolkit designed for security professionals and bug bounty hunters.
+
+🔗 **GitHub Repository**: [https://github.com/jarek-bir/Reconcli](https://github.com/jarek-bir/Reconcli)
+
+## 👥 Authors
+
+**🚀 Cyber-Squad from Future**
+- **Jarek** 🧑‍💻 - Lead Developer & Security Researcher
+- **AI Assistant** 🤖 - Code Architecture & Advanced Features
+- **GitHub Copilot** ⚡ - Code Generation & Optimization
+
+*Collaboration between human expertise and AI innovation to create cutting-edge security tools.*
+
+## 🚀 Latest Updates
 
 ### 🧠 **VulnSQLiCLI - Enterprise AI-Enhanced SQL Injection Scanner** (NEW!)
 - **🤖 AI-Powered Analysis**: Advanced vulnerability assessment with risk scoring, attack vector analysis, and executive summaries
