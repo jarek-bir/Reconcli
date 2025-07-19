@@ -26,6 +26,9 @@ Performance analysis:
 Export and reporting:
     reconcli httpcli -i targets.txt --export json,csv,html --generate-report
 
+Advanced technology detection with Wappalyzer:
+    reconcli httpcli -i urls.txt --tech-detection --wappalyzer --jsonout
+
 🚀 FEATURES:
 • Security header analysis and scoring
 • CDN and WAF detection
@@ -33,6 +36,7 @@ Export and reporting:
 • Custom User-Agent and header injection
 • Screenshot capture for visual analysis
 • Technology stack fingerprinting
+• Wappalyzer integration for enhanced technology detection
 • CORS misconfiguration detection
 • SSL/TLS certificate analysis
 • Response time benchmarking
@@ -250,6 +254,11 @@ TECH_SIGNATURES = {
     is_flag=True,
     help="Enable verbose output with detailed progress information",
 )
+@click.option(
+    "--wappalyzer",
+    is_flag=True,
+    help="Use Wappalyzer for enhanced technology detection",
+)
 def httpcli(
     input,
     timeout,
@@ -283,6 +292,7 @@ def httpcli(
     threads,
     rate_limit,
     verbose,
+    wappalyzer,
 ):
     """Enhanced HTTP/HTTPS service analysis with advanced security and technology detection.
 
@@ -381,6 +391,7 @@ def httpcli(
                 ssl_analysis,
                 output_dir,
                 verbose,
+                wappalyzer,
             ): url
             for url in urls
         }
@@ -466,6 +477,7 @@ def httpcli(
                     "tags",
                     "error",
                     "screenshot",
+                    "wappalyzer_tech_count",
                 ]
             )
             for r in results:
@@ -493,6 +505,11 @@ def httpcli(
                         ",".join(r.get("tags", [])),
                         r.get("error", ""),
                         r.get("screenshot", ""),
+                        (
+                            len(r.get("wappalyzer", {}).get("technologies", []))
+                            if r.get("wappalyzer")
+                            else 0
+                        ),
                     ]
                 )
 
@@ -1102,16 +1119,50 @@ def run_nuclei(url, nuclei_templates=None):
         return [f"nuclei error: {e}"]
 
 
-def run_wappalyzer(url):
+def run_wappalyzer(url, scan_type="fast"):
+    """Run Wappalyzer for technology detection."""
     try:
-        cmd = ["wappalyzer", url, "-o", "json"]
-        result = subprocess.run(cmd, capture_output=True, text=True)
-        try:
-            return json.loads(result.stdout)
-        except Exception:
-            return result.stdout.strip()
+        # Use temporary file instead of /dev/stdout to avoid seekable stream issues
+        with tempfile.NamedTemporaryFile(
+            mode="w+", suffix=".json", delete=False
+        ) as temp_file:
+            temp_path = temp_file.name
+
+        cmd = ["wappalyzer", "-i", url, "--scan-type", scan_type, "-oJ", temp_path]
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+
+        if result.returncode == 0:
+            try:
+                # Read the JSON output from temporary file
+                with open(temp_path, "r") as f:
+                    content = f.read().strip()
+
+                # Clean up temp file
+                Path(temp_path).unlink(missing_ok=True)
+
+                if content:
+                    # Try to parse as JSON
+                    lines = content.split("\n")
+                    for line in lines:
+                        if line.strip():
+                            try:
+                                data = json.loads(line)
+                                return data
+                            except json.JSONDecodeError:
+                                continue
+                    return {"technologies": [], "error": "no valid JSON output"}
+                else:
+                    return {"technologies": [], "error": "empty wappalyzer output"}
+            except Exception as e:
+                Path(temp_path).unlink(missing_ok=True)
+                return {"technologies": [], "error": f"parsing error: {e}"}
+        else:
+            Path(temp_path).unlink(missing_ok=True)
+            return {"technologies": [], "error": f"wappalyzer failed: {result.stderr}"}
+    except subprocess.TimeoutExpired:
+        return {"technologies": [], "error": "wappalyzer timeout"}
     except Exception as e:
-        return f"wappalyzer error: {e}"
+        return {"technologies": [], "error": f"wappalyzer error: {e}"}
 
 
 def tag_http_result(data):
@@ -1211,6 +1262,7 @@ def process_url(
     ssl_analysis=False,
     output_dir="httpcli_output",
     verbose=False,
+    wappalyzer=False,
 ):
     data = {"url": url}
     attempt = 0
@@ -1315,7 +1367,75 @@ def process_url(
                         data["tags"].append("nuclei-match")
 
                 # Wappalyzer detection
-                data["wappalyzer"] = run_wappalyzer(url)
+                if wappalyzer:
+                    wappalyzer_result = run_wappalyzer(url)
+                    data["wappalyzer"] = wappalyzer_result
+
+                    # Merge wappalyzer technologies with existing tech detection
+                    if not wappalyzer_result.get("error") and url in wappalyzer_result:
+                        if "technologies" not in data:
+                            data["technologies"] = {
+                                "servers": [],
+                                "frameworks": [],
+                                "languages": [],
+                                "cms": [],
+                                "libraries": [],
+                            }
+
+                        # Parse Wappalyzer results - new format
+                        wapp_tech = wappalyzer_result[url]
+                        if isinstance(wapp_tech, dict):
+                            for tech_name, tech_info in wapp_tech.items():
+                                categories = tech_info.get("categories", [])
+
+                                # Categorize based on Wappalyzer categories
+                                if any(
+                                    "Web server" in cat or "CDN" in cat
+                                    for cat in categories
+                                ):
+                                    data["technologies"]["servers"].append(tech_name)
+                                elif any(
+                                    "CMS" in cat or "Blog" in cat for cat in categories
+                                ):
+                                    data["technologies"]["cms"].append(tech_name)
+                                elif any(
+                                    "framework" in cat.lower()
+                                    or "React" in tech_name
+                                    or "Next.js" in tech_name
+                                    for cat in categories
+                                ):
+                                    data["technologies"]["frameworks"].append(tech_name)
+                                elif any(
+                                    "JavaScript" in cat or "Language" in cat
+                                    for cat in categories
+                                ):
+                                    data["technologies"]["languages"].append(tech_name)
+                                elif any(
+                                    "Analytics" in cat or "Video" in cat
+                                    for cat in categories
+                                ):
+                                    data["technologies"]["libraries"].append(tech_name)
+                                else:
+                                    # Default to libraries for other technologies
+                                    data["technologies"]["libraries"].append(tech_name)
+
+                        # Remove duplicates
+                        for category in data["technologies"]:
+                            data["technologies"][category] = list(
+                                set(data["technologies"][category])
+                            )
+
+                        data["tags"].append("wappalyzer-detected")
+
+                        # Add specific technology tags
+                        if "React" in wapp_tech or "Next.js" in wapp_tech:
+                            data["tags"].append("react-app")
+                        if "Amazon CloudFront" in wapp_tech:
+                            data["tags"].append("cloudfront-cdn")
+                        if "PWA" in wapp_tech:
+                            data["tags"].append("pwa-enabled")
+                else:
+                    data["wappalyzer"] = None
 
                 # Tagging
                 if data.get("favicon_hash") == "not found":
