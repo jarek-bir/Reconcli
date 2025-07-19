@@ -2,6 +2,35 @@
 
 [![Python 3.## 🚀 Latest Updates
 
+### 🧠 **VulnSQLiCLI - Enterprise AI-Enhanced SQL Injection Scanner** (NEW!)
+- **🤖 AI-Powered Analysis**: Advanced vulnerability assessment with risk scoring, attack vector analysis, and executive summaries
+- **🎯 Custom Payloads**: Load custom SQL injection payloads from external files for targeted testing
+- **🔧 Tool Integration**: Support for custom arguments for SQLMap (`--sqlmap-args`) and Ghauri (`--ghauri-args`)
+- **🗄️ Database Storage**: Complete SQLite integration with 4-table schema for persistent result storage
+- **⚡ Concurrent Processing**: Multi-threaded scanning with configurable concurrency levels
+- **🔄 Retry Mechanisms**: Exponential backoff retry system for reliable network operations
+- **🧪 Dry-Run Mode**: Simulate scans without executing actual tests for planning and validation
+- **📊 Risk Assessment**: AI-driven risk scoring with CRITICAL/HIGH/MEDIUM/LOW classifications
+- **🎯 Attack Vectors**: Detailed analysis of potential attack vectors and exploitation methods
+- **📋 Executive Reports**: Business-ready summaries with actionable recommendations
+
+```bash
+# AI-enhanced SQL injection testing with custom payloads
+reconcli vulnsqlicli --url "https://target.com/page.php?id=1" --ai --payloads custom_sqli.txt --basic-test --verbose
+
+# Enterprise-grade assessment with database storage
+reconcli vulnsqlicli --urls-file targets.txt --ai --store-db results.db --concurrency 5 --retry 3 --json-report
+
+# Advanced SQLMap integration with custom arguments
+reconcli vulnsqlicli --url "https://target.com/page.php?id=1" --sqlmap --sqlmap-args "--level 5 --risk 3 --tamper space2comment" --ai
+
+# Dry-run mode for scan planning
+reconcli vulnsqlicli --url "https://target.com/page.php?id=1" --dry-run --ai --payloads advanced_payloads.txt --verbose
+
+# Full security assessment with AI analysis
+reconcli vulnsqlicli --url "https://target.com/page.php?id=1" --tool all --ai --store-db assessment.db --markdown-report
+```
+
 ### 🔥 **APICLI - SJ (Swagger Jacker) Integration** (NEW!)
 - **🎯 Complete SJ Tool Integration**: Full BishopFox Swagger Jacker functionality integrated into APICLI
 - **🔍 Swagger/OpenAPI Discovery**: Brute force discovery of 600+ Swagger definition file patterns
@@ -267,6 +296,44 @@ reconcli whoisfreakscli lookup --domain example.com --store-db \
 # Bulk analysis with database integration
 reconcli whoisfreakscli lookup --input domains.txt --store-db \
   --target-domain example.com --program bugcrowd-program --risk-analysis
+```
+
+### 💉 **VulnSQLiCLI - Enterprise AI SQL Injection Scanner** (ENHANCED!)
+- **🤖 AI-Powered Analysis**: Comprehensive vulnerability assessment with risk scoring and executive summaries
+- **🗄️ Database Storage**: SQLite integration with 4-table schema for persistent result storage
+- **⚡ Concurrent Processing**: Multi-threaded scanning with configurable concurrency levels
+- **🔄 Retry Mechanisms**: Exponential backoff retry system for reliable network operations
+- **🎯 Custom Payloads**: Load external payload files for targeted testing
+- **🔧 Tool Integration**: Custom arguments support for SQLMap and Ghauri
+- **🧪 Dry-Run Mode**: Simulate scans without executing actual tests
+
+```bash
+# AI-enhanced SQL injection testing with custom payloads
+reconcli vulnsqlicli --url "https://target.com/page.php?id=1" \
+  --ai --payloads custom_sqli.txt --basic-test --verbose
+
+# Enterprise assessment with database storage and concurrency
+reconcli vulnsqlicli --urls-file targets.txt --ai --store-db results.db \
+  --concurrency 5 --retry 3 --json-report --markdown-report
+
+# Advanced SQLMap integration with custom arguments
+reconcli vulnsqlicli --url "https://target.com/page.php?id=1" \
+  --sqlmap --sqlmap-args "--level 5 --risk 3 --tamper space2comment" --ai
+
+# Ghauri testing with custom arguments and database storage
+reconcli vulnsqlicli --url "https://target.com/page.php?id=1" \
+  --ghauri --ghauri-args "--threads 15 --level 4 --batch" \
+  --store-db vuln_results.db --ai --verbose
+
+# Dry-run mode for scan planning and validation
+reconcli vulnsqlicli --url "https://target.com/page.php?id=1" \
+  --dry-run --ai --payloads advanced_payloads.txt --concurrency 3 --verbose
+
+# Complete security assessment with all tools and AI
+reconcli vulnsqlicli --url "https://target.com/page.php?id=1" \
+  --tool all --ai --store-db assessment.db --retry 3 \
+  --sqlmap-args "--level 4 --risk 2" --ghauri-args "--level 3" \
+  --markdown-report --json-report --verbose
 ```
 
 ### �📸 **VhostCLI Screenshot Functionality** (New!)
@@ -1337,7 +1404,7 @@ reconcli doctorcli --structure --configs --env --fix --verbose
 ### 🛡️ **Security Testing & Analysis**
 - **🧠 aicli** - AI-powered reconnaissance assistant with multi-persona system
 - **🔐 vulncli** - Vulnerability scanning with Jaeles and Nuclei
-- **💉 vulnsqlicli** - SQL injection vulnerability scanner
+- **💉 vulnsqlicli** - Enterprise AI-enhanced SQL injection scanner with custom payloads, concurrent processing, database storage, and advanced risk assessment
 - **�️ xsscli** - AI-enhanced XSS testing with Tor proxy support for anonymous vulnerability assessment
 - **�🔍 cnamecli** - CNAME record analysis and takeover detection
 - **🛡️ wafdetectcli** - WAF detection, testing and bypass analysis
