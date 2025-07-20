@@ -96,6 +96,20 @@ class WAFConfig:
 
 
 @dataclass
+class ChatlogConfig:
+    """Configuration for chatlog-driven recon"""
+
+    enabled: bool = False
+    auto_analyze_results: bool = True
+    suggest_next_steps: bool = True
+    min_results_for_analysis: int = 3
+    max_suggestions: int = 5
+    confidence_threshold: float = 0.7
+    recon_depth: str = "adaptive"  # shallow, normal, deep, adaptive
+    tool_preference: str = "comprehensive"  # fast, balanced, comprehensive
+
+
+@dataclass
 class ReconCLIConfig:
     """Main configuration class for advanced AICLI features"""
 
@@ -108,6 +122,7 @@ class ReconCLIConfig:
     cache: CacheConfig = field(default_factory=CacheConfig)
     parallel: ParallelConfig = field(default_factory=ParallelConfig)
     waf: WAFConfig = field(default_factory=WAFConfig)
+    chatlog: ChatlogConfig = field(default_factory=ChatlogConfig)
 
     # Local LLM settings
     local_llm_enabled: bool = False
@@ -125,8 +140,25 @@ class ReconCLIConfig:
 
 
 @dataclass
+class ReconStep:
+    """Individual reconnaissance step with results"""
+
+    step_id: str
+    tool: str
+    command: str
+    timestamp: datetime
+    execution_time: float
+    results: Dict[str, Any]
+    success: bool
+    findings_count: int
+    findings_quality: str  # low, medium, high, critical
+    ai_analysis: Optional[str] = None
+    next_suggestions: List[Dict[str, Any]] = field(default_factory=list)
+
+
+@dataclass
 class ReconSession:
-    """Reconnaissance session tracking"""
+    """Enhanced reconnaissance session tracking with chatlog functionality"""
 
     session_id: str
     target: str
@@ -134,6 +166,12 @@ class ReconSession:
     queries: List[Dict]
     results: List[Dict]
     plan: Optional[Dict] = None
+    recon_steps: List[ReconStep] = field(default_factory=list)
+    ai_suggestions: List[Dict] = field(default_factory=list)
+    current_phase: str = "initial"
+    completion_percentage: float = 0.0
+    discovered_assets: Dict[str, List] = field(default_factory=dict)
+    vulnerability_summary: Dict = field(default_factory=dict)
 
 
 class AIReconAssistant:
@@ -594,16 +632,48 @@ class AIReconAssistant:
             },
         }
 
+    def _clean_api_key(self, raw_key: Optional[str]) -> str:
+        """Clean and normalize API key from environment variable"""
+        if not raw_key:
+            return ""
+
+        key = raw_key.strip()
+
+        # Handle keys that are malformed like "OPENAI_API_KEY=sk-..."
+        if "=" in key and key.count("=") >= 1:
+            parts = key.split("=")
+            # Take the last part which should be the actual key
+            key = parts[-1].strip()
+
+        # Additional cleaning - remove any remaining prefixes
+        if key.startswith("OPENAI_API_KEY"):
+            key = key.replace("OPENAI_API_KEY", "").strip()
+
+        # Remove any leading/trailing quotes, spaces, or invisible characters
+        key = key.strip("\"'").strip()
+
+        # Remove any non-printable characters except allowed OpenAI key characters
+        import re
+
+        key = re.sub(r"[^\w\-_]", "", key)
+
+        # Validate that it looks like a proper OpenAI key
+        if key.startswith("sk") and len(key) > 20:
+            return key
+
+        return ""
+
     def _initialize_providers(self) -> List[AIProviderConfig]:
         """Initialize available AI providers including local LLMs"""
         providers = []
 
         # OpenAI GPT
-        if HAS_OPENAI and os.getenv("OPENAI_API_KEY"):
+        openai_key = self._clean_api_key(os.getenv("OPENAI_API_KEY"))
+        if HAS_OPENAI and openai_key:
             providers.append(
                 AIProviderConfig(
                     name="openai",
-                    api_key=os.getenv("OPENAI_API_KEY") or "",
+                    api_key=openai_key,
                     model="gpt-4",
                     available=True,
                     timeout=(
@@ -617,11 +687,12 @@ class AIReconAssistant:
             )
 
         # Anthropic Claude
-        if HAS_ANTHROPIC and os.getenv("ANTHROPIC_API_KEY"):
+        anthropic_key = self._clean_api_key(os.getenv("ANTHROPIC_API_KEY"))
+        if HAS_ANTHROPIC and anthropic_key:
             providers.append(
                 AIProviderConfig(
                     name="anthropic",
-                    api_key=os.getenv("ANTHROPIC_API_KEY") or "",
+                    api_key=anthropic_key,
                     model="claude-3-opus-20240229",
                     available=True,
                     timeout=30,
@@ -631,11 +702,12 @@ class AIReconAssistant:
             )
 
         # Google Gemini
-        if HAS_GEMINI and os.getenv("GOOGLE_API_KEY"):
+        gemini_key = self._clean_api_key(os.getenv("GOOGLE_API_KEY"))
+        if HAS_GEMINI and gemini_key:
             providers.append(
                 AIProviderConfig(
                     name="gemini",
-                    api_key=os.getenv("GOOGLE_API_KEY") or "",
+                    api_key=gemini_key,
                     model="gemini-pro",
                     available=True,
                     timeout=30,
@@ -1610,6 +1682,698 @@ Provide structured, phase-based reconnaissance plans with specific tools and tec
                     self.current_session.queries, self.current_session.results
                 )
             ],
+            "recon_steps": [
+                {
+                    "step_id": step.step_id,
+                    "tool": step.tool,
+                    "command": step.command,
+                    "timestamp": step.timestamp.isoformat(),
+                    "execution_time": step.execution_time,
+                    "results": step.results,
+                    "success": step.success,
+                    "findings_count": step.findings_count,
+                    "findings_quality": step.findings_quality,
+                    "ai_analysis": step.ai_analysis,
+                    "next_suggestions": step.next_suggestions,
+                }
+                for step in self.current_session.recon_steps
+            ],
+            "ai_suggestions": self.current_session.ai_suggestions,
+            "current_phase": self.current_session.current_phase,
+            "completion_percentage": self.current_session.completion_percentage,
+            "discovered_assets": self.current_session.discovered_assets,
+            "vulnerability_summary": self.current_session.vulnerability_summary,
+        }
+
+        try:
+            with open(chat_file, "w") as f:
+                json.dump(chat_data, f, indent=2)
+            return True
+        except Exception as e:
+            if self.config.verbose_logging:
+                print(f"Error saving chat history: {e}")
+            return False
+
+    def add_recon_step(
+        self,
+        tool: str,
+        command: str,
+        results: Dict[str, Any],
+        execution_time: float = 0.0,
+        success: bool = True,
+    ) -> str:
+        """Add reconnaissance step and trigger AI analysis if chatlog mode enabled"""
+        if not self.current_session:
+            return ""
+
+        step_id = hashlib.md5(
+            f"{tool}_{command}_{datetime.now().isoformat()}".encode(),
+            usedforsecurity=False,
+        ).hexdigest()[:8]
+
+        # Analyze results and determine quality
+        findings_count = self._count_findings(results)
+        findings_quality = self._assess_findings_quality(results, findings_count)
+
+        recon_step = ReconStep(
+            step_id=step_id,
+            tool=tool,
+            command=command,
+            timestamp=datetime.now(),
+            execution_time=execution_time,
+            results=results,
+            success=success,
+            findings_count=findings_count,
+            findings_quality=findings_quality,
+        )
+
+        # Add AI analysis if chatlog mode is enabled
+        if self.config.chatlog.enabled and self.config.chatlog.auto_analyze_results:
+            recon_step.ai_analysis = self._analyze_recon_step(recon_step)
+
+        self.current_session.recon_steps.append(recon_step)
+
+        # Update discovered assets
+        self._update_discovered_assets(results, tool)
+
+        # Update session completion and phase
+        self._update_session_progress()
+
+        # Generate next step suggestions if enabled
+        if (
+            self.config.chatlog.enabled
+            and self.config.chatlog.suggest_next_steps
+            and len(self.current_session.recon_steps)
+            >= self.config.chatlog.min_results_for_analysis
+        ):
+            suggestions = self._generate_next_step_suggestions()
+            recon_step.next_suggestions = suggestions
+            self._add_ai_suggestions(suggestions)
+
+        # Save session automatically
+        self.save_session()
+
+        return step_id
+
+    def _count_findings(self, results: Dict[str, Any]) -> int:
+        """Count significant findings in recon results"""
+        count = 0
+
+        # Count based on common result structures
+        if isinstance(results, dict):
+            # Subdomain results
+            if "subdomains" in results:
+                count += len(results.get("subdomains", []))
+
+            # Port scan results
+            if "open_ports" in results:
+                count += len(results.get("open_ports", []))
+
+            # Vulnerability results
+            if "vulnerabilities" in results:
+                count += len(results.get("vulnerabilities", []))
+
+            # Directory enumeration
+            if "directories" in results or "files" in results:
+                count += len(results.get("directories", []))
+                count += len(results.get("files", []))
+
+            # JavaScript analysis
+            if "secrets" in results or "endpoints" in results:
+                count += len(results.get("secrets", []))
+                count += len(results.get("endpoints", []))
+
+            # CDN/Cloud findings
+            if "cdn_detected" in results and results["cdn_detected"]:
+                count += 1
+            if "cloud_buckets" in results:
+                count += len(results.get("cloud_buckets", []))
+
+            # Generic findings
+            if "findings" in results:
+                count += len(results.get("findings", []))
+
+        return count
+
+    def _assess_findings_quality(self, results: Dict[str, Any], count: int) -> str:
+        """Assess quality of findings based on count and content"""
+        if count == 0:
+            return "low"
+        elif count <= 5:
+            return "medium"
+        elif count <= 20:
+            return "high"
+        else:
+            # Check for critical findings
+            critical_indicators = [
+                "vulnerabilities",
+                "exposed_secrets",
+                "admin_panels",
+                "backup_files",
+                "config_files",
+                "database_files",
+            ]
+
+            if any(
+                indicator in str(results).lower() for indicator in critical_indicators
+            ):
+                return "critical"
+
+            return "high"
+
+    def _analyze_recon_step(self, step: ReconStep) -> str:
+        """Generate AI analysis of reconnaissance step"""
+        analysis_prompt = f"""
+        Analyze the following reconnaissance step results:
+
+        **Tool Used:** {step.tool}
+        **Command:** {step.command}
+        **Execution Time:** {step.execution_time:.2f}s
+        **Success:** {step.success}
+        **Findings Count:** {step.findings_count}
+        **Quality Assessment:** {step.findings_quality}
+
+        **Results Summary:**
+        {json.dumps(step.results, indent=2)[:2000]}...
+
+        Please provide:
+        1. Key insights from these results
+        2. Notable security findings or concerns
+        3. Patterns or anomalies detected
+        4. Attack surface implications
+        5. Recommendations for further investigation
+
+        Focus on actionable intelligence and potential security implications.
+        """
+
+        analysis = self.ask_ai(
+            analysis_prompt, context="recon", persona="pentester", use_cache=True
+        )
+
+        return analysis or "AI analysis unavailable"
+
+    def _update_discovered_assets(self, results: Dict[str, Any], tool: str):
+        """Update session's discovered assets tracker"""
+        if not self.current_session:
+            return
+
+        assets = self.current_session.discovered_assets
+
+        # Initialize asset categories if needed
+        asset_categories = [
+            "subdomains",
+            "ips",
+            "ports",
+            "directories",
+            "files",
+            "vulnerabilities",
+            "secrets",
+            "technologies",
+            "certificates",
+            "cloud_resources",
+        ]
+
+        for category in asset_categories:
+            if category not in assets:
+                assets[category] = []
+
+        # Extract and categorize findings based on tool and results
+        if tool in ["subdocli", "dnscli", "permutcli"]:
+            if "subdomains" in results:
+                assets["subdomains"].extend(results["subdomains"])
+
+        elif tool in ["portcli", "ipscli"]:
+            if "open_ports" in results:
+                assets["ports"].extend(results["open_ports"])
+            if "ips" in results:
+                assets["ips"].extend(results["ips"])
+
+        elif tool in ["dirbcli", "urlcli"]:
+            if "directories" in results:
+                assets["directories"].extend(results["directories"])
+            if "files" in results:
+                assets["files"].extend(results["files"])
+
+        elif tool in ["vulncli", "vulnsqlicli"]:
+            if "vulnerabilities" in results:
+                assets["vulnerabilities"].extend(results["vulnerabilities"])
+
+        elif tool in ["jscli", "secretscli"]:
+            if "secrets" in results:
+                assets["secrets"].extend(results["secrets"])
+
+        elif tool in ["httpcli", "cdncli"]:
+            if "technologies" in results:
+                assets["technologies"].extend(results["technologies"])
+
+        elif tool in ["cloudcli"]:
+            if "cloud_buckets" in results:
+                assets["cloud_resources"].extend(results["cloud_buckets"])
+
+        # Remove duplicates
+        for category in assets:
+            if isinstance(assets[category], list):
+                assets[category] = list(set(assets[category]))
+
+    def _update_session_progress(self):
+        """Update session completion percentage and current phase"""
+        if not self.current_session:
+            return
+
+        total_steps = len(self.current_session.recon_steps)
+        successful_steps = sum(
+            1 for step in self.current_session.recon_steps if step.success
+        )
+
+        # Basic completion calculation
+        if total_steps > 0:
+            self.current_session.completion_percentage = (
+                successful_steps / total_steps
+            ) * 100
+
+        # Determine current phase based on tools used
+        tools_used = [step.tool for step in self.current_session.recon_steps]
+
+        if any(tool in tools_used for tool in ["vulncli", "vulnsqlicli", "nuclei"]):
+            self.current_session.current_phase = "vulnerability_assessment"
+        elif any(tool in tools_used for tool in ["dirbcli", "jscli", "httpcli"]):
+            self.current_session.current_phase = "active_enumeration"
+        elif any(tool in tools_used for tool in ["subdocli", "dnscli", "permutcli"]):
+            self.current_session.current_phase = "discovery"
+        else:
+            self.current_session.current_phase = "initial"
+
+    def _generate_next_step_suggestions(self) -> List[Dict[str, Any]]:
+        """Generate AI-powered suggestions for next reconnaissance steps"""
+        if not self.current_session or len(self.current_session.recon_steps) == 0:
+            return []
+
+        # Build context from recent steps
+        recent_steps = self.current_session.recon_steps[-5:]  # Last 5 steps
+        context_summary = self._build_context_summary(recent_steps)
+
+        suggestion_prompt = f"""
+        Based on the reconnaissance session progress for target: {self.current_session.target}
+
+        **Current Phase:** {self.current_session.current_phase}
+        **Completion:** {self.current_session.completion_percentage:.1f}%
+        **Assets Discovered:** {len(self.current_session.discovered_assets.get('subdomains', []))} subdomains, {len(self.current_session.discovered_assets.get('ports', []))} ports, {len(self.current_session.discovered_assets.get('vulnerabilities', []))} vulnerabilities
+
+        **Recent Steps Summary:**
+        {context_summary}
+
+        **Available Tools:** subdocli, dnscli, permutcli, httpcli, dirbcli, jscli, vulncli, vulnsqlicli, portcli, cdncli, cloudcli, secretscli
+
+        Please suggest the next {self.config.chatlog.max_suggestions} most valuable reconnaissance steps:
+
+        1. Consider what has already been discovered
+        2. Identify gaps in current reconnaissance coverage
+        3. Prioritize high-impact, logical next steps
+        4. Focus on deepening analysis of promising findings
+        5. Consider tool synergy and workflow efficiency
+
+        Format each suggestion as:
+        COMMAND: [specific reconcli command]
+        REASONING: [brief explanation why this step is valuable]
+        PRIORITY: [high/medium/low]
+        CONFIDENCE: [0.0-1.0 confidence score]
+        """
+
+        ai_response = self.ask_ai(
+            suggestion_prompt, context="planning", persona="pentester", use_cache=True
+        )
+
+        if not ai_response:
+            return self._get_fallback_suggestions()
+
+        # Extract and structure command suggestions from AI response
+        suggestions = self._extract_structured_suggestions(ai_response)
+
+        return suggestions[: self.config.chatlog.max_suggestions]
+
+    def _build_context_summary(self, steps: List[ReconStep]) -> str:
+        """Build context summary from recent reconnaissance steps"""
+        summary_parts = []
+
+        for step in steps:
+            status = "✅" if step.success else "❌"
+            summary_parts.append(
+                f"{status} {step.tool}: {step.findings_count} findings ({step.findings_quality} quality)"
+            )
+
+        return "\n".join(summary_parts)
+
+    def _extract_command_suggestions(self, ai_response: str) -> List[str]:
+        """Extract specific command suggestions from AI response"""
+        suggestions = []
+        lines = ai_response.split("\n")
+
+        for line in lines:
+            line = line.strip()
+            # Look for lines that contain reconcli commands
+            if "reconcli" in line.lower() or any(
+                tool in line.lower()
+                for tool in [
+                    "subdocli",
+                    "dnscli",
+                    "permutcli",
+                    "httpcli",
+                    "dirbcli",
+                    "jscli",
+                    "vulncli",
+                    "vulnsqlicli",
+                    "portcli",
+                    "cdncli",
+                    "cloudcli",
+                ]
+            ):
+                # Clean up the suggestion
+                if ":" in line:
+                    suggestion = line.split(":", 1)[1].strip()
+                else:
+                    suggestion = line
+
+                if suggestion and len(suggestion) > 10:
+                    suggestions.append(suggestion)
+
+        return suggestions
+
+    def _extract_structured_suggestions(self, ai_response: str) -> List[Dict[str, Any]]:
+        """Extract structured command suggestions from AI response"""
+        suggestions = []
+        lines = ai_response.split("\n")
+
+        current_suggestion = {}
+
+        for line in lines:
+            line = line.strip()
+
+            if line.startswith("COMMAND:"):
+                if current_suggestion and "command" in current_suggestion:
+                    suggestions.append(current_suggestion)
+                    current_suggestion = {}
+                current_suggestion["command"] = line.replace("COMMAND:", "").strip()
+
+            elif line.startswith("REASONING:"):
+                current_suggestion["reasoning"] = line.replace("REASONING:", "").strip()
+
+            elif line.startswith("PRIORITY:"):
+                priority = line.replace("PRIORITY:", "").strip().lower()
+                current_suggestion["priority"] = priority
+
+            elif line.startswith("CONFIDENCE:"):
+                try:
+                    confidence_str = line.replace("CONFIDENCE:", "").strip()
+                    current_suggestion["confidence"] = float(confidence_str)
+                except ValueError:
+                    current_suggestion["confidence"] = 0.7  # default
+
+        # Add the last suggestion if it exists
+        if current_suggestion and "command" in current_suggestion:
+            suggestions.append(current_suggestion)
+
+        # Ensure all suggestions have required fields
+        structured_suggestions = []
+        for suggestion in suggestions:
+            if "command" not in suggestion:
+                continue
+
+            structured_suggestion = {
+                "command": suggestion.get("command", ""),
+                "reasoning": suggestion.get("reasoning", "AI-recommended next step"),
+                "priority": suggestion.get("priority", "medium"),
+                "confidence": suggestion.get("confidence", 0.7),
+            }
+            structured_suggestions.append(structured_suggestion)
+
+        return structured_suggestions
+
+    def _get_fallback_suggestions(self) -> List[Dict[str, Any]]:
+        """Get fallback suggestions when AI is unavailable"""
+        if not self.current_session:
+            return []
+
+        current_tools = [step.tool for step in self.current_session.recon_steps]
+        target = self.current_session.target
+
+        fallback_suggestions = []
+
+        # Basic progression logic
+        if "subdocli" not in current_tools:
+            fallback_suggestions.append(
+                {
+                    "command": f"reconcli subdocli --domain {target} --bbot --export json",
+                    "reasoning": "Start with comprehensive subdomain enumeration",
+                    "priority": "high",
+                    "confidence": 0.9,
+                }
+            )
+
+        if "httpcli" not in current_tools and "subdocli" in current_tools:
+            fallback_suggestions.append(
+                {
+                    "command": f"reconcli httpcli --input subdomains.txt --tech-detect --security-scan",
+                    "reasoning": "Analyze discovered subdomains for technologies and vulnerabilities",
+                    "priority": "high",
+                    "confidence": 0.8,
+                }
+            )
+
+        if "dirbcli" not in current_tools and "httpcli" in current_tools:
+            fallback_suggestions.append(
+                {
+                    "command": f"reconcli dirbcli --target {target} --wordlist-size large",
+                    "reasoning": "Enumerate directories and files for attack surface expansion",
+                    "priority": "medium",
+                    "confidence": 0.7,
+                }
+            )
+
+        if "jscli" not in current_tools:
+            fallback_suggestions.append(
+                {
+                    "command": f"reconcli jscli --target {target} --secret-detection --ai-mode",
+                    "reasoning": "Analyze JavaScript files for secrets and vulnerabilities",
+                    "priority": "medium",
+                    "confidence": 0.6,
+                }
+            )
+
+        if "vulncli" not in current_tools:
+            fallback_suggestions.append(
+                {
+                    "command": f"reconcli vulncli --target {target} --comprehensive",
+                    "reasoning": "Perform comprehensive vulnerability scanning",
+                    "priority": "high",
+                    "confidence": 0.8,
+                }
+            )
+
+        return fallback_suggestions[: self.config.chatlog.max_suggestions]
+
+    def _add_ai_suggestions(self, suggestions: List[Dict[str, Any]]):
+        """Add AI suggestions to session tracking"""
+        if not self.current_session:
+            return
+
+        suggestion_entry = {
+            "timestamp": datetime.now().isoformat(),
+            "suggestions": suggestions,
+            "context": f"After {len(self.current_session.recon_steps)} steps",
+            "phase": self.current_session.current_phase,
+        }
+
+        self.current_session.ai_suggestions.append(suggestion_entry)
+
+    def get_chatlog_driven_recommendations(
+        self, max_suggestions: int = 5
+    ) -> Dict[str, Any]:
+        """Get comprehensive chatlog-driven reconnaissance recommendations"""
+        if not self.current_session or not self.config.chatlog.enabled:
+            return {"error": "Chatlog mode not enabled or no active session"}
+
+        # Generate comprehensive analysis
+        analysis_prompt = f"""
+        Perform comprehensive analysis of the reconnaissance session for: {self.current_session.target}
+
+        **Session Overview:**
+        - Duration: {(datetime.now() - self.current_session.start_time).total_seconds() / 60:.1f} minutes
+        - Steps Completed: {len(self.current_session.recon_steps)}
+        - Current Phase: {self.current_session.current_phase}
+        - Completion: {self.current_session.completion_percentage:.1f}%
+
+        **Assets Discovered:**
+        - Subdomains: {len(self.current_session.discovered_assets.get('subdomains', []))}
+        - IPs: {len(self.current_session.discovered_assets.get('ips', []))}
+        - Open Ports: {len(self.current_session.discovered_assets.get('ports', []))}
+        - Directories: {len(self.current_session.discovered_assets.get('directories', []))}
+        - Vulnerabilities: {len(self.current_session.discovered_assets.get('vulnerabilities', []))}
+        - Secrets: {len(self.current_session.discovered_assets.get('secrets', []))}
+
+        **Recent Steps:**
+        {self._build_detailed_steps_summary()}
+
+        Based on this comprehensive analysis, provide:
+
+        1. **Strategic Assessment:** Overall reconnaissance quality and coverage gaps
+        2. **Priority Recommendations:** Top {max_suggestions} next steps with specific tools and rationale
+        3. **Attack Surface Analysis:** Key areas of potential vulnerability
+        4. **Efficiency Insights:** Workflow optimization suggestions
+        5. **Risk Assessment:** Current security posture evaluation
+
+        Focus on actionable, high-impact recommendations that advance the reconnaissance goals.
+        """
+
+        ai_analysis = self.ask_ai(
+            analysis_prompt, context="planning", persona="pentester", use_cache=False
+        )
+
+        # Generate specific next steps
+        next_suggestions = self._generate_next_step_suggestions()
+
+        return {
+            "session_id": self.current_session.session_id,
+            "target": self.current_session.target,
+            "analysis_timestamp": datetime.now().isoformat(),
+            "comprehensive_analysis": ai_analysis,
+            "next_step_suggestions": next_suggestions[:max_suggestions],
+            "session_metrics": {
+                "total_steps": len(self.current_session.recon_steps),
+                "successful_steps": sum(
+                    1 for step in self.current_session.recon_steps if step.success
+                ),
+                "current_phase": self.current_session.current_phase,
+                "completion_percentage": self.current_session.completion_percentage,
+                "session_duration_minutes": (
+                    datetime.now() - self.current_session.start_time
+                ).total_seconds()
+                / 60,
+            },
+            "discovered_assets_summary": {
+                category: len(assets)
+                for category, assets in self.current_session.discovered_assets.items()
+            },
+            "recommendations_confidence": (
+                "high"
+                if len(self.current_session.recon_steps)
+                >= self.config.chatlog.min_results_for_analysis
+                else "medium"
+            ),
+        }
+
+    def _build_detailed_steps_summary(self) -> str:
+        """Build detailed summary of all reconnaissance steps"""
+        if not self.current_session:
+            return ""
+
+        summary_parts = []
+        for i, step in enumerate(
+            self.current_session.recon_steps[-10:], 1
+        ):  # Last 10 steps
+            status = "✅" if step.success else "❌"
+            summary_parts.append(
+                f"{i}. {status} {step.tool} ({step.execution_time:.1f}s): "
+                f"{step.findings_count} findings ({step.findings_quality})"
+            )
+            if step.ai_analysis:
+                # Include brief AI analysis
+                summary_parts.append(f"   AI: {step.ai_analysis[:100]}...")
+
+        return "\n".join(summary_parts)
+
+    def enable_chatlog_mode(
+        self,
+        auto_analyze: bool = True,
+        suggest_next: bool = True,
+        min_results: int = 3,
+        max_suggestions: int = 5,
+    ) -> bool:
+        """Enable chatlog-driven reconnaissance mode"""
+        self.config.chatlog.enabled = True
+        self.config.chatlog.auto_analyze_results = auto_analyze
+        self.config.chatlog.suggest_next_steps = suggest_next
+        self.config.chatlog.min_results_for_analysis = min_results
+        self.config.chatlog.max_suggestions = max_suggestions
+
+        if self.config.verbose_logging:
+            print("🧠 Chatlog-driven recon mode enabled")
+            print(f"   Auto-analyze: {auto_analyze}")
+            print(f"   Auto-suggest: {suggest_next}")
+            print(f"   Min results: {min_results}")
+            print(f"   Max suggestions: {max_suggestions}")
+
+        return True
+
+    def disable_chatlog_mode(self) -> bool:
+        """Disable chatlog-driven reconnaissance mode"""
+        self.config.chatlog.enabled = False
+
+        if self.config.verbose_logging:
+            print("🧠 Chatlog-driven recon mode disabled")
+
+        return True
+
+    def get_session_insights(self) -> Dict[str, Any]:
+        """Get comprehensive insights about the current reconnaissance session"""
+        if not self.current_session:
+            return {"error": "No active session"}
+
+        # Calculate metrics
+        total_steps = len(self.current_session.recon_steps)
+        successful_steps = sum(
+            1 for step in self.current_session.recon_steps if step.success
+        )
+        total_findings = sum(
+            step.findings_count for step in self.current_session.recon_steps
+        )
+
+        # Tool usage analysis
+        tool_usage = {}
+        for step in self.current_session.recon_steps:
+            tool_usage[step.tool] = tool_usage.get(step.tool, 0) + 1
+
+        # Quality distribution
+        quality_distribution = {"low": 0, "medium": 0, "high": 0, "critical": 0}
+        for step in self.current_session.recon_steps:
+            quality_distribution[step.findings_quality] += 1
+
+        # Performance metrics
+        avg_execution_time = (
+            sum(step.execution_time for step in self.current_session.recon_steps)
+            / total_steps
+            if total_steps > 0
+            else 0
+        )
+
+        return {
+            "session_overview": {
+                "session_id": self.current_session.session_id,
+                "target": self.current_session.target,
+                "start_time": self.current_session.start_time.isoformat(),
+                "duration_minutes": (
+                    datetime.now() - self.current_session.start_time
+                ).total_seconds()
+                / 60,
+                "current_phase": self.current_session.current_phase,
+                "completion_percentage": self.current_session.completion_percentage,
+            },
+            "execution_metrics": {
+                "total_steps": total_steps,
+                "successful_steps": successful_steps,
+                "success_rate": (
+                    (successful_steps / total_steps * 100) if total_steps > 0 else 0
+                ),
+                "total_findings": total_findings,
+                "avg_execution_time": avg_execution_time,
+            },
+            "tool_usage": tool_usage,
+            "quality_distribution": quality_distribution,
+            "discovered_assets": {
+                category: len(assets)
+                for category, assets in self.current_session.discovered_assets.items()
+            },
+            "ai_suggestions_count": len(self.current_session.ai_suggestions),
+            "chatlog_enabled": self.config.chatlog.enabled,
         }
 
         try:
@@ -3106,6 +3870,38 @@ ai_assistant = AIReconAssistant()
     "--simulation-scenarios",
     help="Comma-separated attack scenarios (apt,redteam,insider,supply_chain)",
 )
+@click.option(
+    "--enable-chatlog",
+    is_flag=True,
+    help="Enable chatlog-driven recon mode - AI analyzes previous results and suggests next steps",
+)
+@click.option(
+    "--auto-analyze",
+    is_flag=True,
+    help="Automatically analyze recon results and provide insights",
+)
+@click.option(
+    "--suggest-next",
+    is_flag=True,
+    help="AI suggests next reconnaissance steps based on current findings",
+)
+@click.option(
+    "--chatlog-insights",
+    is_flag=True,
+    help="Show detailed session insights and progress analysis",
+)
+@click.option(
+    "--chatlog-threshold",
+    default=0.7,
+    type=float,
+    help="Confidence threshold for AI suggestions (0.0-1.0)",
+)
+@click.option(
+    "--max-suggestions",
+    default=5,
+    type=int,
+    help="Maximum number of next-step suggestions to generate",
+)
 def aicli(
     prompt,
     payload,
@@ -3154,6 +3950,12 @@ def aicli(
     attack_simulation,
     environment_config,
     simulation_scenarios,
+    enable_chatlog,
+    auto_analyze,
+    suggest_next,
+    chatlog_insights,
+    chatlog_threshold,
+    max_suggestions,
 ):
     """🧠 Enterprise AI-Powered Reconnaissance Assistant
 
@@ -3206,14 +4008,27 @@ def aicli(
         # Load previous chat and continue analysis
         reconcli aicli --load-chat osint_session_2025 --interactive
 
+        # Chatlog-driven reconnaissance with AI suggestions
+        reconcli aicli --plan target.com --enable-chatlog --auto-analyze --suggest-next
+
+        # View detailed session insights and AI recommendations
+        reconcli aicli --chatlog-insights --session existing_session_id
+
+        # Auto-analyze results with custom confidence threshold
+        reconcli aicli --vuln-scan endpoints.txt --enable-chatlog --auto-analyze --chatlog-threshold 0.8
+
     Advanced Features:
-        --attack-flow    - Multi-vulnerability attack chains (ssrf,xss,lfi,sqli)
-        --report         - Generate professional reports from attack flow JSON files
-        --vuln-scan      - AI-powered vulnerability scanner with ReconCLI integration
-        --scan-type      - Vulnerability scan depth (quick/comprehensive/focused/deep/compliance)
-        --integration    - Enable ReconCLI integration mode for enhanced context
-        --prompt-mode    - Advanced prompt templates for specialized scenarios
-        --save-chat      - Persistent chat history management
+        --attack-flow       - Multi-vulnerability attack chains (ssrf,xss,lfi,sqli)
+        --report            - Generate professional reports from attack flow JSON files
+        --vuln-scan         - AI-powered vulnerability scanner with ReconCLI integration
+        --scan-type         - Vulnerability scan depth (quick/comprehensive/focused/deep/compliance)
+        --integration       - Enable ReconCLI integration mode for enhanced context
+        --prompt-mode       - Advanced prompt templates for specialized scenarios
+        --save-chat         - Persistent chat history management
+        --enable-chatlog    - Enable chatlog-driven recon mode with AI analysis
+        --auto-analyze      - Automatically analyze recon results and provide insights
+        --suggest-next      - AI suggests next reconnaissance steps based on findings
+        --chatlog-insights  - Show detailed session progress and AI recommendations
         --load-chat      - Resume previous analysis sessions
         --technique      - Specific techniques like gopher, reflection, union, etc.
 
@@ -3264,6 +4079,16 @@ def aicli(
         # Performance monitoring
         if performance_monitoring:
             config_updates.performance_monitoring = True
+
+        # Chatlog-driven recon configuration
+        if enable_chatlog or auto_analyze or suggest_next:
+            config_updates.chatlog.enabled = True
+            if auto_analyze:
+                config_updates.chatlog.auto_analyze_results = True
+            if suggest_next:
+                config_updates.chatlog.suggest_next_steps = True
+            config_updates.chatlog.confidence_threshold = chatlog_threshold
+            config_updates.chatlog.max_suggestions = max_suggestions
 
         # Advanced features
         config_updates.payload_scoring = effectiveness_scoring
@@ -3438,9 +4263,7 @@ def aicli(
                 trend_color = (
                     "green"
                     if kpi["trend"] == "improving"
-                    else "yellow"
-                    if kpi["trend"] == "stable"
-                    else "red"
+                    else "yellow" if kpi["trend"] == "stable" else "red"
                 )
                 click.secho(
                     f"  {kpi['kpi']}: {kpi['current']} (target: {kpi['target']}) [{kpi['trend']}]",
@@ -4397,6 +5220,83 @@ Available commands:
                     continue
         else:
             click.secho("No sessions found.", fg="yellow")
+        return
+
+    # Show chatlog insights
+    if chatlog_insights:
+        if ai_assistant.current_session:
+            insights = ai_assistant.get_session_insights()
+            click.secho(
+                "\n📊 Chatlog-Driven Recon Session Insights", fg="cyan", bold=True
+            )
+
+            session_overview = insights.get("session_overview", {})
+            click.secho(
+                f"Session ID: {session_overview.get('session_id', 'N/A')}", fg="white"
+            )
+            click.secho(f"Target: {session_overview.get('target', 'N/A')}", fg="white")
+            click.secho(
+                f"Current Phase: {session_overview.get('current_phase', 'N/A')}",
+                fg="yellow",
+            )
+            click.secho(
+                f"Completion: {session_overview.get('completion_percentage', 0):.1f}%",
+                fg="green",
+            )
+
+            execution_metrics = insights.get("execution_metrics", {})
+            click.secho(
+                f"Total Steps: {execution_metrics.get('total_steps', 0)}", fg="white"
+            )
+            click.secho(
+                f"Successful Steps: {execution_metrics.get('successful_steps', 0)}",
+                fg="green",
+            )
+            click.secho(
+                f"Failed Steps: {execution_metrics.get('total_steps', 0) - execution_metrics.get('successful_steps', 0)}",
+                fg="red",
+            )
+
+            discovered_assets = insights.get("discovered_assets", {})
+            if any(discovered_assets.values()):
+                click.secho("\n🎯 Discovered Assets:", fg="cyan")
+                for asset_type, count in discovered_assets.items():
+                    if count > 0:
+                        click.secho(f"  {asset_type}: {count}", fg="white")
+
+            vulnerability_summary = insights.get("vulnerability_summary", {})
+            if any(vulnerability_summary.values()):
+                click.secho("\n🔍 Vulnerability Summary:", fg="red")
+                for vuln_type, count in vulnerability_summary.items():
+                    if count > 0:
+                        click.secho(f"  {vuln_type}: {count}", fg="white")
+
+            # Show AI recommendations if available
+            recommendations = ai_assistant.get_chatlog_driven_recommendations()
+            if (
+                recommendations
+                and "next_step_suggestions" in recommendations
+                and recommendations["next_step_suggestions"]
+            ):
+                click.secho(
+                    "\n🤖 AI-Powered Next Step Recommendations:", fg="green", bold=True
+                )
+                for i, rec in enumerate(recommendations["next_step_suggestions"], 1):
+                    click.secho(
+                        f"{i}. {rec['command']} (confidence: {rec['confidence']:.1%})",
+                        fg="white",
+                    )
+                    click.secho(f"   Reason: {rec['reasoning']}", fg="yellow")
+            else:
+                click.secho(
+                    "\n🤖 No AI recommendations available yet. Add some recon steps first.",
+                    fg="yellow",
+                )
+        else:
+            click.secho(
+                "❌ No active session found. Create a session first with --new-session",
+                fg="red",
+            )
         return
 
     # Show usage if no options provided
