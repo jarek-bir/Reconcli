@@ -2,7 +2,8 @@ import click
 
 from reconcli.aicli import aicli  # Importing the aicli command
 from reconcli.apicli import main as api_cli
-from reconcli.cloudcli import cloudcli
+from reconcli.cloudcli import cloudcli  # Cloud service discovery and enumeration
+from reconcli.cdncli import cdncli  # CDN Fingerprinting & Bypass Tool
 from reconcli.cnamecli import cnamecli  # CNAME Record Analysis and Takeover Detection
 from reconcli.crawlercli import crawlercli
 from reconcli.csvtkcli import csvtkcli  # CSV data analysis and manipulation with csvtk
@@ -88,6 +89,10 @@ url_cli.short_help = "Advanced URL discovery using Katana with filtering"
 # Doctor Command
 cli.add_command(doctorcli, name="doctorcli")
 doctorcli.short_help = "Diagnose and fix reconcli environment"
+
+# CDN Fingerprinting and Bypass Tool
+cli.add_command(cdncli, name="cdncli")
+cdncli.short_help = "CDN Fingerprinting & Bypass Tool for reconcli"
 
 # Virtual Host Discovery
 cli.add_command(vhost_cli, name="vhostcli")

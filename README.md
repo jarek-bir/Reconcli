@@ -52,7 +52,28 @@ reconcli vulnsqlicli --url "https://target.com/page.php?id=1" --dry-run --ai --p
 reconcli vulnsqlicli --url "https://target.com/page.php?id=1" --tool all --ai --store-db assessment.db --markdown-report
 ```
 
-### � **JSCli - Advanced JavaScript Analysis with SourceMapper Integration** (NEW!)
+### 🌐 **CDNCli - Advanced CDN Fingerprinting & Cloud Storage Discovery** (NEW!)
+- **🔍 CDN Detection**: Multi-method CDN fingerprinting for Cloudflare, Akamai, AWS CloudFront, Fastly, MaxCDN
+- **☁️ Cloud Storage Discovery**: Comprehensive AWS S3, Google Cloud, Azure Blob, Alibaba Cloud hunting with CloudHunter integration
+- **🔄 Resume Functionality**: Advanced state persistence with secure pickle management for long-running scans
+- **🧠 AI Analysis**: Risk assessment with attack vector identification and security recommendations
+- **🌐 Threat Intelligence**: Shodan and FOFA API integration for comprehensive reconnaissance
+- **🔧 Tool Integration**: CDNCheck, Subfinder, DNSX, Nuclei, Metabigor support with safe subprocess execution
+- **🎯 Bypass Methods**: Active and passive CDN bypass techniques with direct IP discovery
+- **🔐 Security Features**: Input validation, command injection prevention, secure state management
+
+```bash
+# Enterprise CDN fingerprinting with cloud storage discovery
+reconcli cdncli --domain example.com --passive-all --cloudhunter --ai --shodan --fofa --store-db
+
+# Resume functionality for long-running assessments
+reconcli cdncli --domain example.com --passive-all --nuclei --resume --verbose
+
+# Active bypass testing with comprehensive analysis
+reconcli cdncli --domain example.com --bypass-all --cloudhunter --ai --format rich --save results.json
+```
+
+### 🚀 **JSCli - Advanced JavaScript Analysis with SourceMapper Integration** (NEW!)
 - **🗺️ SourceMapper Integration**: Complete integration with denandz/sourcemapper for source map analysis
 - **🔍 Enhanced Secret Detection**: 21+ patterns including JWT, Firebase, Stripe, PayPal, Twilio, SendGrid
 - **📱 Framework Detection**: Automatic detection of React, Vue, Angular, jQuery, Lodash, Webpack
@@ -208,42 +229,69 @@ reconcli jscli -i js_urls.txt -o js_results --engine jsluice --timeout 30 --conc
 reconcli jscli -i js_urls.txt -o js_results --ai-mode --store-db --custom-patterns patterns.txt --json --markdown
 ```
 
-# BBOT-powered discovery with CSV export
-reconcli subdocli --domain example.com --bbot --export csv --verbose
+### 🌐 CDNCli - Advanced CDN Fingerprinting & Cloud Storage Discovery
 
-# Intensive mode with full analysis
-reconcli subdocli --domain example.com --bbot-intensive --resolve --probe-http --export json --verbose
+Enterprise-grade CDN detection and cloud storage discovery tool with AI analysis, resume functionality, and threat intelligence integration:
 
-# Traditional tools only (no BBOT)
-reconcli subdocli --domain example.com --passive-only --resolve --export txt --verbose
-```
-📚 **Full Guide**: See `reconcli/SUBDOCLI_GUIDE.md` for complete documentation
-
-### 🌐 HTTPCli - Advanced HTTP/HTTPS Analysis
-Enhanced HTTP scanning with comprehensive security analysis, technology detection, and vulnerability assessment:
 ```bash
-# Basic HTTP analysis with security scanning
-reconcli httpcli --input urls.txt --security-scan --check-waf --verbose
+# Basic CDN detection and fingerprinting
+reconcli cdncli --domain example.com --check-cdn --verbose
 
-# Comprehensive security assessment
-reconcli httpcli --input targets.txt --security-scan --check-cors --tech-detection \
-  --screenshot --benchmark --ssl-analysis --export-vulnerabilities --verbose
+# Full passive reconnaissance with cloud storage discovery
+reconcli cdncli --domain example.com --passive-all --cloudhunter --ai --verbose
 
-# Bug bounty workflow with database storage
-reconcli httpcli --input subdomains.txt --nuclei --check-compression \
-  --custom-headers '{"X-Bug-Hunter":"true"}' --store-db --program "hackerone" --verbose
+# Active bypass attempts with nuclei scanning
+reconcli cdncli --domain example.com --bypass-active --nuclei --store-db --program "bug-bounty-2024"
 
-# Performance and technology analysis
-reconcli httpcli --input sites.txt --benchmark --tech-detection --check-compression \
-  --generate-report --jsonout --markdown --threads 20 --verbose
+# Cloud storage hunting with custom wordlist
+reconcli cdncli --domain example.com --cloudhunter --permutations-file custom.txt \
+  --services aws,azure,google,alibaba --write-test --verbose
+
+# Multi-engine analysis with threat intelligence
+reconcli cdncli --domain example.com --subfinder --dnsx --shodan --fofa --ai \
+  --format rich --store-db --program "enterprise-assessment"
+
+# Resume functionality for long-running scans
+reconcli cdncli --domain example.com --passive-all --cloudhunter --nuclei --resume
+
+# Enterprise workflow with comprehensive analysis
+reconcli cdncli --domain example.com --passive-all --bypass-all --cloudhunter \
+  --nuclei --ai --shodan --fofa --store-db --format json --save results.json
 ```
+
 🔑 **Key Features**:
-- **🛡️ Security Analysis**: Header scoring (A+ to F grades), WAF detection, CORS analysis
-- **🔍 Technology Detection**: Server, CMS, framework identification
-- **📸 Visual Analysis**: Screenshot capture (Selenium integration)
-- **⚡ Performance**: HTTP/2 detection, compression testing, response time benchmarking
-- **🎯 Vulnerability Focus**: Export only vulnerable URLs, Nuclei integration
-- **📊 Rich Reports**: JSON, CSV, HTML, Markdown with charts and statistics
+
+- **🔍 CDN Detection**: Cloudflare, Akamai, AWS CloudFront, Fastly, MaxCDN identification
+- **☁️ Cloud Storage Discovery**: AWS S3, Google Cloud, Azure Blob, Alibaba Cloud hunting
+- **🔄 Resume Functionality**: Pause and resume long-running scans with state persistence
+- **🧠 AI Analysis**: Risk assessment, attack vector identification, security recommendations
+- **🌐 Threat Intelligence**: Shodan and FOFA API integration for comprehensive reconnaissance
+- **🔧 Tool Integration**: CDNCheck, Subfinder, DNSX, Nuclei, Metabigor support
+- **🎯 Bypass Methods**: Active and passive CDN bypass techniques
+- **📊 Multiple Formats**: Rich console output, JSON, table formats with database storage
+
+🔐 **Security Features**:
+
+- Input validation and command injection prevention
+- Secure pickle state management with file path validation
+- Resume state encryption and size limits
+- Proxy support (HTTP, Tor, Burp Suite integration)
+
+📚 **Advanced Options**:
+
+```bash
+# Resume operations
+reconcli cdncli --domain example.com --resume-stats              # Show statistics
+reconcli cdncli --domain example.com --resume-clear             # Clear resume state
+
+# Proxy configurations
+reconcli cdncli --domain example.com --tor --passive-all        # Use Tor proxy
+reconcli cdncli --domain example.com --burp --bypass-active     # Use Burp Suite proxy
+reconcli cdncli --domain example.com --proxy http://127.0.0.1:8080 --cloudhunter
+
+# CloudHunter specific options
+reconcli cdncli --domain example.com --cloudhunter --base-only --open-only --crawl-deep 3
+```
 
 ### 🤖 AI-Powered Analysis
 ```bash
