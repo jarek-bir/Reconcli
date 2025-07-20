@@ -9,6 +9,7 @@ import base64
 import hashlib
 import json
 import os
+import re
 import threading
 import time
 import urllib.parse
@@ -178,13 +179,15 @@ class AIReconAssistant:
     """Enterprise AI-powered reconnaissance assistant with advanced features"""
 
     def __init__(self, config_file: Optional[str] = None):
+        # Initialize session directory first
+        self.session_dir = Path.home() / ".reconcli" / "ai_sessions"
+        self.session_dir.mkdir(parents=True, exist_ok=True)
+
         # Load configuration
         self.config = self._load_config(config_file)
 
         # Initialize core components
         self.providers = self._initialize_providers()
-        self.session_dir = Path.home() / ".reconcli" / "ai_sessions"
-        self.session_dir.mkdir(parents=True, exist_ok=True)
         self.current_session: Optional[ReconSession] = None
 
         # Initialize cache system
@@ -273,6 +276,15 @@ class AIReconAssistant:
             },
         }
 
+    def update_cache_config(self):
+        """Update cache configuration after config changes"""
+        # Re-initialize cache manager if cache is now enabled
+        if self.config.cache.enabled and not self.cache_manager:
+            self.cache_manager = self._initialize_cache()
+        # Disable cache manager if cache is now disabled
+        elif not self.config.cache.enabled and self.cache_manager:
+            self.cache_manager = None
+
     def _load_config(self, config_file: Optional[str] = None) -> ReconCLIConfig:
         """Load configuration from file or use defaults"""
         config = ReconCLIConfig()
@@ -312,7 +324,7 @@ class AIReconAssistant:
                     print(f"Warning: Could not load config file {config_file}: {e}")
 
         # Set default cache directory if not specified
-        if config.cache.enabled and not config.cache.cache_dir:
+        if not config.cache.cache_dir:
             config.cache.cache_dir = str(self.session_dir / "cache")
 
         return config
@@ -398,6 +410,8 @@ class AIReconAssistant:
             def __init__(self, config: CacheConfig):
                 self.config = config
                 self.cache_dir = Path(config.cache_dir)
+                # Ensure cache directory exists
+                self.cache_dir.mkdir(parents=True, exist_ok=True)
                 self.cache_index_file = self.cache_dir / "cache_index.json"
                 self.cache_index = self._load_cache_index()
 
@@ -472,6 +486,9 @@ class AIReconAssistant:
                     "created": datetime.now().isoformat(),
                     "access_count": 1,
                 }
+
+                # Ensure cache directory exists
+                self.cache_dir.mkdir(parents=True, exist_ok=True)
 
                 # Save cache file
                 cache_file = self.cache_dir / f"{cache_key}.json"
@@ -653,8 +670,6 @@ class AIReconAssistant:
         key = key.strip("\"'").strip()
 
         # Remove any non-printable characters except allowed OpenAI key characters
-        import re
-
         key = re.sub(r"[^\w\-_]", "", key)
 
         # Validate that it looks like a proper OpenAI key
@@ -904,18 +919,6 @@ reconcli vulncli --target {message}
         if self.config.performance_monitoring:
             self.performance_metrics["total_requests"] += 1
 
-        # Check cache first
-        if use_cache and self.cache_manager:
-            cached_response = self.cache_manager.get(
-                message, context, persona or "default", provider or "auto"
-            )
-            if cached_response:
-                if self.config.performance_monitoring:
-                    self.performance_metrics["cache_hits"] += 1
-                return cached_response
-            elif self.config.performance_monitoring:
-                self.performance_metrics["cache_misses"] += 1
-
         # Fallback to mock if no providers available
         if not self.providers:
             response = self.ask_ai_mock(message, context)
@@ -928,6 +931,18 @@ reconcli vulncli --target {message}
             response = self.ask_ai_mock(message, context)
             self._update_performance_metrics(start_time, True, "mock")
             return response
+
+        # Check cache first (after provider selection)
+        if use_cache and self.cache_manager:
+            cached_response = self.cache_manager.get(
+                message, context, persona or "default", selected_provider.name
+            )
+            if cached_response:
+                if self.config.performance_monitoring:
+                    self.performance_metrics["cache_hits"] += 1
+                return cached_response
+            elif self.config.performance_monitoring:
+                self.performance_metrics["cache_misses"] += 1
 
         # Get persona-specific system prompt
         if persona:
@@ -3815,6 +3830,9 @@ ai_assistant = AIReconAssistant()
 @click.option("--config", help="Configuration file path")
 @click.option("--cache", is_flag=True, help="Enable AI response caching")
 @click.option("--cache-dir", help="Cache directory path")
+@click.option("--cache-max-age", default=24, type=int, help="Cache max age in hours")
+@click.option("--clear-cache", is_flag=True, help="Clear all cached AI responses")
+@click.option("--cache-stats", is_flag=True, help="Show cache statistics")
 @click.option("--parallel", is_flag=True, help="Enable parallel processing")
 @click.option("--max-workers", default=4, type=int, help="Maximum parallel workers")
 @click.option("--local-llm", is_flag=True, help="Enable local LLM support (Ollama)")
@@ -3932,6 +3950,9 @@ def aicli(
     config,
     cache,
     cache_dir,
+    cache_max_age,
+    clear_cache,
+    cache_stats,
     parallel,
     max_workers,
     local_llm,
@@ -4017,6 +4038,18 @@ def aicli(
         # Auto-analyze results with custom confidence threshold
         reconcli aicli --vuln-scan endpoints.txt --enable-chatlog --auto-analyze --chatlog-threshold 0.8
 
+        # Enable caching to save tokens and speed up repeated queries
+        reconcli aicli --prompt "Generate XSS payloads" --cache --cache-dir /tmp/ai_cache
+
+        # Use cache with custom max age (12 hours instead of default 24)
+        reconcli aicli --payload sqli --context mysql --cache --cache-max-age 12
+
+        # Clear all cached responses
+        reconcli aicli --clear-cache
+
+        # Show cache statistics
+        reconcli aicli --cache-stats
+
     Advanced Features:
         --attack-flow       - Multi-vulnerability attack chains (ssrf,xss,lfi,sqli)
         --report            - Generate professional reports from attack flow JSON files
@@ -4031,6 +4064,11 @@ def aicli(
         --chatlog-insights  - Show detailed session progress and AI recommendations
         --load-chat      - Resume previous analysis sessions
         --technique      - Specific techniques like gopher, reflection, union, etc.
+        --cache          - Enable AI response caching to save tokens and improve performance
+        --cache-dir      - Custom cache directory path (default: ~/.reconcli/ai_sessions/cache)
+        --cache-max-age  - Cache expiration time in hours (default: 24)
+        --clear-cache    - Clear all cached AI responses
+        --cache-stats    - Show cache statistics and usage information
 
     Personas:
         redteam    - Stealth operations, evasion techniques, APT-style tactics
@@ -4059,6 +4097,12 @@ def aicli(
             config_updates.cache.enabled = True
             if cache_dir:
                 config_updates.cache.cache_dir = cache_dir
+            else:
+                # Use default cache directory
+                config_updates.cache.cache_dir = str(
+                    Path.home() / ".reconcli" / "ai_sessions" / "cache"
+                )
+            config_updates.cache.max_age_hours = cache_max_age
 
         # Parallel processing configuration
         if parallel:
@@ -4107,6 +4151,9 @@ def aicli(
                     ai_assistant.config, attr_name, getattr(config_updates, attr_name)
                 )
 
+        # Update cache configuration after config changes
+        ai_assistant.update_cache_config()
+
         # Reinitialize components if needed
         if cache and not ai_assistant.cache_manager:
             ai_assistant.cache_manager = ai_assistant._initialize_cache()
@@ -4120,6 +4167,70 @@ def aicli(
 
         if performance_monitoring and not ai_assistant.performance_metrics:
             ai_assistant._initialize_performance_monitoring()
+
+    # Handle cache operations
+    if clear_cache:
+        # Try to clear cache even if cache manager is not initialized
+        if ai_assistant.cache_manager:
+            cache_dir_path = Path(ai_assistant.config.cache.cache_dir)
+        else:
+            # Use default cache directory
+            cache_dir_path = Path.home() / ".reconcli" / "ai_sessions" / "cache"
+
+        try:
+            count = 0
+            if cache_dir_path.exists():
+                for cache_file in cache_dir_path.glob("*.json"):
+                    try:
+                        cache_file.unlink()
+                        count += 1
+                    except Exception:
+                        pass
+            click.secho(
+                f"🗑️  Cleared {count} cached responses from {cache_dir_path}",
+                fg="green",
+            )
+        except Exception as e:
+            click.secho(f"❌ Failed to clear cache: {e}", fg="red")
+        return
+
+    if cache_stats:
+        # Initialize cache manager for stats even if cache flag is not set
+        if not ai_assistant.cache_manager:
+            # Try to get default cache directory
+            cache_dir_path = Path.home() / ".reconcli" / "ai_sessions" / "cache"
+        else:
+            cache_dir_path = Path(ai_assistant.config.cache.cache_dir)
+
+        try:
+            if cache_dir_path.exists():
+                cache_files = list(cache_dir_path.glob("*.json"))
+                total_size = (
+                    sum(f.stat().st_size for f in cache_files) if cache_files else 0
+                )
+                click.secho("📊 Cache Statistics", fg="cyan", bold=True)
+                click.secho(f"Cache directory: {cache_dir_path}", fg="blue")
+                click.secho(f"Cached responses: {len(cache_files)}", fg="blue")
+                click.secho(f"Total size: {total_size / 1024:.1f} KB", fg="blue")
+
+                if ai_assistant.cache_manager:
+                    click.secho(
+                        f"Max age: {ai_assistant.config.cache.max_age_hours} hours",
+                        fg="blue",
+                    )
+                else:
+                    click.secho("Max age: 24 hours (default)", fg="blue")
+
+                click.secho("Cache status: Available", fg="green")
+            else:
+                click.secho("📊 Cache Statistics", fg="cyan", bold=True)
+                click.secho(f"Cache directory: {cache_dir_path}", fg="blue")
+                click.secho("Cached responses: 0", fg="blue")
+                click.secho("Total size: 0.0 KB", fg="blue")
+                click.secho("Cache status: No cache directory found", fg="yellow")
+        except Exception as e:
+            click.secho(f"❌ Failed to get cache stats: {e}", fg="red")
+        return
 
     # Save configuration if requested
     if save_config:
@@ -4972,7 +5083,10 @@ Available commands:
 
             # Process AI request
             response = ai_assistant.ask_ai(
-                user_input, provider=provider, persona=persona
+                user_input,
+                provider=provider,
+                persona=persona,
+                use_cache=(ai_assistant.cache_manager is not None),
             )
             if response:
                 click.secho(f"\n🧠 AI Assistant:\n{response}", fg="green")
@@ -5188,7 +5302,12 @@ Available commands:
         if verbose:
             click.secho("[*] Processing prompt...", fg="cyan")
 
-        response = ai_assistant.ask_ai(prompt, provider=provider, persona=persona)
+        response = ai_assistant.ask_ai(
+            prompt,
+            provider=provider,
+            persona=persona,
+            use_cache=(ai_assistant.cache_manager is not None),
+        )
 
         if response:
             click.secho(f"\n🧠 AI Assistant:\n{response}", fg="green")
