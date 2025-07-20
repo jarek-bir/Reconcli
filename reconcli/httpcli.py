@@ -63,6 +63,7 @@ Headers extraction and analysis:
 """
 
 import csv
+import hashlib
 import json
 import subprocess
 import tempfile
@@ -72,6 +73,7 @@ from collections import Counter
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 from pathlib import Path
+from typing import Dict, List, Optional
 from urllib.parse import urlparse
 
 import click
@@ -138,11 +140,211 @@ TECH_SIGNATURES = {
 }
 
 
+class HTTPCacheManager:
+    """HTTP Cache Manager for storing and retrieving HTTP response results"""
+
+    def __init__(self, cache_dir: str, max_age_hours: int = 24):
+        self.cache_dir = Path(cache_dir)
+        self.cache_dir.mkdir(parents=True, exist_ok=True)
+        self.max_age_hours = max_age_hours
+        self.cache_index_file = self.cache_dir / "http_cache_index.json"
+        self.cache_index = self._load_cache_index()
+
+    def _load_cache_index(self) -> dict:
+        """Load cache index from file"""
+        if self.cache_index_file.exists():
+            try:
+                with open(self.cache_index_file, "r") as f:
+                    return json.load(f)
+            except Exception:
+                return {}
+        return {}
+
+    def _save_cache_index(self):
+        """Save cache index to file"""
+        try:
+            with open(self.cache_index_file, "w") as f:
+                json.dump(self.cache_index, f, indent=2)
+        except Exception:
+            pass
+
+    def _generate_cache_key(
+        self, url: str, method: str = "GET", headers: Optional[Dict] = None
+    ) -> str:
+        """Generate cache key from URL, method, and headers"""
+        # Create a normalized cache string
+        cache_string = f"{method}:{url}"
+
+        # Add relevant headers to cache key for unique identification
+        if headers:
+            # Only include headers that affect the response
+            cache_headers = {}
+            relevant_headers = ["user-agent", "accept", "authorization", "cookie"]
+            for header in relevant_headers:
+                if header in headers:
+                    cache_headers[header] = headers[header]
+            if cache_headers:
+                import json
+
+                cache_string += f":{json.dumps(cache_headers, sort_keys=True)}"
+
+        return hashlib.sha256(cache_string.encode()).hexdigest()
+
+    def _is_cache_valid(self, timestamp: float) -> bool:
+        """Check if cache entry is still valid"""
+        age_hours = (time.time() - timestamp) / 3600
+        return age_hours < self.max_age_hours
+
+    def get(
+        self, url: str, method: str = "GET", headers: Optional[Dict] = None
+    ) -> Optional[dict]:
+        """Get cached HTTP result for URL"""
+        cache_key = self._generate_cache_key(url, method, headers)
+
+        if cache_key in self.cache_index:
+            cache_info = self.cache_index[cache_key]
+
+            # Check if cache is still valid
+            if self._is_cache_valid(cache_info["timestamp"]):
+                cache_file = self.cache_dir / f"{cache_key}.json"
+                if cache_file.exists():
+                    try:
+                        with open(cache_file, "r") as f:
+                            data = json.load(f)
+
+                        # Update access count and last access
+                        cache_info["access_count"] += 1
+                        cache_info["last_access"] = time.time()
+                        self.cache_index[cache_key] = cache_info
+                        self._save_cache_index()
+
+                        return data
+                    except Exception:
+                        # Remove invalid cache entry
+                        del self.cache_index[cache_key]
+                        self._save_cache_index()
+            else:
+                # Remove expired cache entry
+                cache_file = self.cache_dir / f"{cache_key}.json"
+                if cache_file.exists():
+                    cache_file.unlink()
+                del self.cache_index[cache_key]
+                self._save_cache_index()
+
+        return None
+
+    def set(
+        self,
+        url: str,
+        result: dict,
+        method: str = "GET",
+        headers: Optional[Dict] = None,
+    ):
+        """Cache HTTP result for URL"""
+        cache_key = self._generate_cache_key(url, method, headers)
+
+        # Update cache index
+        self.cache_index[cache_key] = {
+            "url": url,
+            "method": method,
+            "timestamp": time.time(),
+            "last_access": time.time(),
+            "access_count": 1,
+            "status_code": result.get("status_code"),
+        }
+
+        # Ensure cache directory exists
+        self.cache_dir.mkdir(parents=True, exist_ok=True)
+
+        # Save cache file
+        cache_file = self.cache_dir / f"{cache_key}.json"
+        try:
+            with open(cache_file, "w") as f:
+                json.dump(result, f, indent=2)
+
+            self._save_cache_index()
+        except Exception:
+            # If save fails, remove from index
+            if cache_key in self.cache_index:
+                del self.cache_index[cache_key]
+
+    def cleanup_expired(self) -> int:
+        """Remove expired cache entries and return count"""
+        removed_count = 0
+        expired_keys = []
+
+        for cache_key, cache_info in self.cache_index.items():
+            if not self._is_cache_valid(cache_info["timestamp"]):
+                expired_keys.append(cache_key)
+
+        for cache_key in expired_keys:
+            cache_file = self.cache_dir / f"{cache_key}.json"
+            if cache_file.exists():
+                cache_file.unlink()
+            del self.cache_index[cache_key]
+            removed_count += 1
+
+        if removed_count > 0:
+            self._save_cache_index()
+
+        return removed_count
+
+    def clear_all(self) -> int:
+        """Clear all cache entries and return count"""
+        count = len(self.cache_index)
+
+        # Remove all cache files
+        for cache_file in self.cache_dir.glob("*.json"):
+            cache_file.unlink()
+
+        # Clear index
+        self.cache_index = {}
+        self._save_cache_index()
+
+        return count
+
+    def get_stats(self) -> dict:
+        """Get cache statistics"""
+        if not self.cache_dir.exists():
+            return {
+                "total_entries": 0,
+                "total_size_kb": 0,
+                "expired_entries": 0,
+                "valid_entries": 0,
+            }
+
+        cache_files = list(self.cache_dir.glob("*.json"))
+        if not cache_files:
+            return {
+                "total_entries": 0,
+                "total_size_kb": 0,
+                "expired_entries": 0,
+                "valid_entries": 0,
+            }
+
+        total_size = sum(f.stat().st_size for f in cache_files)
+        expired_count = 0
+        valid_count = 0
+
+        for cache_info in self.cache_index.values():
+            if self._is_cache_valid(cache_info["timestamp"]):
+                valid_count += 1
+            else:
+                expired_count += 1
+
+        return {
+            "total_entries": len(cache_files),
+            "total_size_kb": total_size / 1024,
+            "expired_entries": expired_count,
+            "valid_entries": valid_count,
+        }
+
+
 @click.command("httpcli")
 @click.option(
     "--input",
     "-i",
-    required=True,
+    required=False,
     type=click.Path(exists=True),
     help="Path to URLs or hostnames",
 )
@@ -281,6 +483,11 @@ TECH_SIGNATURES = {
     default="text",
     help="Output format for headers export (default: text)",
 )
+@click.option("--cache", is_flag=True, help="Enable HTTP response caching")
+@click.option("--cache-dir", help="Cache directory path")
+@click.option("--cache-max-age", default=24, type=int, help="Cache max age in hours")
+@click.option("--clear-cache", is_flag=True, help="Clear all cached HTTP responses")
+@click.option("--cache-stats", is_flag=True, help="Show cache statistics")
 def httpcli(
     input,
     timeout,
@@ -318,6 +525,11 @@ def httpcli(
     headers,
     header_filter,
     headers_format,
+    cache,
+    cache_dir,
+    cache_max_age,
+    clear_cache,
+    cache_stats,
 ):
     """Enhanced HTTP/HTTPS service analysis with advanced security and technology detection.
 
@@ -344,7 +556,57 @@ def httpcli(
     • Retry mechanism for unstable connections
     • Compression testing
     • HTTP/2 support detection
+
+    🗄️ HTTP CACHE EXAMPLES:
+    • Enable HTTP caching: --cache
+    • Custom cache directory: --cache --cache-dir /tmp/http_cache
+    • Set cache expiry: --cache --cache-max-age 12
+    • Clear cache: --clear-cache
+    • Show cache stats: --cache-stats
     """
+
+    # Initialize cache manager if cache is enabled
+    cache_manager = None
+    if cache:
+        cache_directory = cache_dir or str(Path.home() / ".reconcli" / "http_cache")
+        cache_manager = HTTPCacheManager(cache_directory, cache_max_age)
+        if verbose:
+            console.print(
+                f"[bold cyan]🗄️ HTTP caching enabled:[/bold cyan] {cache_directory}"
+            )
+
+    # Handle cache operations
+    if clear_cache:
+        cache_directory = cache_dir or str(Path.home() / ".reconcli" / "http_cache")
+        temp_cache_manager = HTTPCacheManager(cache_directory, cache_max_age)
+        count = temp_cache_manager.clear_all()
+        console.print(
+            f"[bold green]🗑️ Cleared {count} cached HTTP responses from {cache_directory}[/bold green]"
+        )
+        return
+
+    if cache_stats:
+        cache_directory = cache_dir or str(Path.home() / ".reconcli" / "http_cache")
+        temp_cache_manager = HTTPCacheManager(cache_directory, cache_max_age)
+        stats = temp_cache_manager.get_stats()
+
+        console.print("[bold cyan]📊 HTTP Cache Statistics[/bold cyan]")
+        console.print(f"Cache directory: {cache_directory}")
+        console.print(f"Total entries: {stats['total_entries']}")
+        console.print(f"[green]Valid entries: {stats['valid_entries']}[/green]")
+        console.print(f"[yellow]Expired entries: {stats['expired_entries']}[/yellow]")
+        console.print(f"Total size: {stats['total_size_kb']:.1f} KB")
+        console.print(f"Max age: {cache_max_age} hours")
+        return
+
+    # Check if input is provided for scanning operations
+    if not input:
+        console.print(
+            "[red]❌ Error: --input is required for scanning operations[/red]"
+        )
+        console.print("Use --cache-stats or --clear-cache for cache management.")
+        return
+
     console.rule("[bold cyan]🌐 ReconCLI : HTTPCli Enhanced Analysis Module")
 
     if verbose:
@@ -417,6 +679,7 @@ def httpcli(
                 output_dir,
                 verbose,
                 wappalyzer,
+                cache_manager,
             ): url
             for url in urls
         }
@@ -1295,7 +1558,21 @@ def process_url(
     output_dir="httpcli_output",
     verbose=False,
     wappalyzer=False,
+    cache_manager=None,
 ):
+    # Check cache first
+    if cache_manager and not fastmode:  # Skip cache for fastmode (HEAD requests)
+        method = "HEAD" if fastmode else "GET"
+        cached_result = cache_manager.get(url, method, headers_base)
+        if cached_result:
+            # Add cache indicator to result
+            cached_result["cached"] = True
+            if verbose:
+                cached_result["status"] = (
+                    f"{cached_result.get('status', 'cached')} (cached)"
+                )
+            return cached_result
+
     data = {"url": url}
     attempt = 0
     while attempt <= retries:
@@ -1477,6 +1754,12 @@ def process_url(
 
                 data["tags"] += tag_http_result(data)
             data["response_time"] = round(time.time() - start, 3)
+
+            # Cache successful result
+            if cache_manager and data.get("status_code") and data["status_code"] < 500:
+                method = "HEAD" if fastmode else "GET"
+                cache_manager.set(url, data, method, headers_base)
+
             return data
         except Exception as e:
             attempt += 1

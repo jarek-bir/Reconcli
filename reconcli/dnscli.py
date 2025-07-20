@@ -1,10 +1,12 @@
 import concurrent.futures
+import hashlib
 import json
 import os
 import socket
 import sys
 import time
 from datetime import datetime
+from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 import click
@@ -64,6 +66,180 @@ PTR_PATTERNS = {
     "load_balancer": ["lb", "load", "balancer", "haproxy", "nginx"],
     "security": ["firewall", "waf", "security", "guard"],
 }
+
+
+class DNSCacheManager:
+    """DNS Cache Manager for storing and retrieving DNS resolution results"""
+
+    def __init__(self, cache_dir: str, max_age_hours: int = 24):
+        self.cache_dir = Path(cache_dir)
+        self.cache_dir.mkdir(parents=True, exist_ok=True)
+        self.max_age_hours = max_age_hours
+        self.cache_index_file = self.cache_dir / "dns_cache_index.json"
+        self.cache_index = self._load_cache_index()
+
+    def _load_cache_index(self) -> dict:
+        """Load cache index from file"""
+        if self.cache_index_file.exists():
+            try:
+                with open(self.cache_index_file, "r") as f:
+                    return json.load(f)
+            except Exception:
+                return {}
+        return {}
+
+    def _save_cache_index(self):
+        """Save cache index to file"""
+        try:
+            with open(self.cache_index_file, "w") as f:
+                json.dump(self.cache_index, f, indent=2)
+        except Exception:
+            pass
+
+    def _generate_cache_key(self, domain: str, query_type: str = "A") -> str:
+        """Generate cache key from domain and query type"""
+        cache_string = f"{domain}:{query_type}"
+        return hashlib.sha256(cache_string.encode()).hexdigest()
+
+    def _is_cache_valid(self, timestamp: float) -> bool:
+        """Check if cache entry is still valid"""
+        age_hours = (time.time() - timestamp) / 3600
+        return age_hours < self.max_age_hours
+
+    def get(self, domain: str, query_type: str = "A") -> Optional[dict]:
+        """Get cached DNS result for domain"""
+        cache_key = self._generate_cache_key(domain, query_type)
+
+        if cache_key in self.cache_index:
+            cache_info = self.cache_index[cache_key]
+
+            # Check if cache is still valid
+            if self._is_cache_valid(cache_info["timestamp"]):
+                cache_file = self.cache_dir / f"{cache_key}.json"
+                if cache_file.exists():
+                    try:
+                        with open(cache_file, "r") as f:
+                            data = json.load(f)
+
+                        # Update access count and last access
+                        cache_info["access_count"] += 1
+                        cache_info["last_access"] = time.time()
+                        self.cache_index[cache_key] = cache_info
+                        self._save_cache_index()
+
+                        return data
+                    except Exception:
+                        # Remove invalid cache entry
+                        del self.cache_index[cache_key]
+                        self._save_cache_index()
+            else:
+                # Remove expired cache entry
+                cache_file = self.cache_dir / f"{cache_key}.json"
+                if cache_file.exists():
+                    cache_file.unlink()
+                del self.cache_index[cache_key]
+                self._save_cache_index()
+
+        return None
+
+    def set(self, domain: str, result: dict, query_type: str = "A"):
+        """Cache DNS result for domain"""
+        cache_key = self._generate_cache_key(domain, query_type)
+
+        # Update cache index
+        self.cache_index[cache_key] = {
+            "domain": domain,
+            "query_type": query_type,
+            "timestamp": time.time(),
+            "last_access": time.time(),
+            "access_count": 1,
+        }
+
+        # Ensure cache directory exists
+        self.cache_dir.mkdir(parents=True, exist_ok=True)
+
+        # Save cache file
+        cache_file = self.cache_dir / f"{cache_key}.json"
+        try:
+            with open(cache_file, "w") as f:
+                json.dump(result, f, indent=2)
+
+            self._save_cache_index()
+        except Exception:
+            # If save fails, remove from index
+            if cache_key in self.cache_index:
+                del self.cache_index[cache_key]
+
+    def cleanup_expired(self) -> int:
+        """Remove expired cache entries and return count"""
+        removed_count = 0
+        expired_keys = []
+
+        for cache_key, cache_info in self.cache_index.items():
+            if not self._is_cache_valid(cache_info["timestamp"]):
+                expired_keys.append(cache_key)
+
+        for cache_key in expired_keys:
+            cache_file = self.cache_dir / f"{cache_key}.json"
+            if cache_file.exists():
+                cache_file.unlink()
+            del self.cache_index[cache_key]
+            removed_count += 1
+
+        if removed_count > 0:
+            self._save_cache_index()
+
+        return removed_count
+
+    def clear_all(self) -> int:
+        """Clear all cache entries and return count"""
+        count = len(self.cache_index)
+
+        # Remove all cache files
+        for cache_file in self.cache_dir.glob("*.json"):
+            cache_file.unlink()
+
+        # Clear index
+        self.cache_index = {}
+        self._save_cache_index()
+
+        return count
+
+    def get_stats(self) -> dict:
+        """Get cache statistics"""
+        if not self.cache_dir.exists():
+            return {
+                "total_entries": 0,
+                "total_size_kb": 0,
+                "expired_entries": 0,
+                "valid_entries": 0,
+            }
+
+        cache_files = list(self.cache_dir.glob("*.json"))
+        if not cache_files:
+            return {
+                "total_entries": 0,
+                "total_size_kb": 0,
+                "expired_entries": 0,
+                "valid_entries": 0,
+            }
+
+        total_size = sum(f.stat().st_size for f in cache_files)
+        expired_count = 0
+        valid_count = 0
+
+        for cache_info in self.cache_index.values():
+            if self._is_cache_valid(cache_info["timestamp"]):
+                valid_count += 1
+            else:
+                expired_count += 1
+
+        return {
+            "total_entries": len(cache_files),
+            "total_size_kb": total_size / 1024,
+            "expired_entries": expired_count,
+            "valid_entries": valid_count,
+        }
 
 
 @click.command()
@@ -157,6 +333,11 @@ PTR_PATTERNS = {
     "--program",
     help="Bug bounty program name for database classification",
 )
+@click.option("--cache", is_flag=True, help="Enable DNS response caching")
+@click.option("--cache-dir", help="Cache directory path")
+@click.option("--cache-max-age", default=24, type=int, help="Cache max age in hours")
+@click.option("--clear-cache", is_flag=True, help="Clear all cached DNS responses")
+@click.option("--cache-stats", is_flag=True, help="Show cache statistics")
 def cli(
     input,
     output_dir,
@@ -186,6 +367,11 @@ def cli(
     store_db,
     target_domain,
     program,
+    cache,
+    cache_dir,
+    cache_max_age,
+    clear_cache,
+    cache_stats,
 ):
     """Enhanced DNS resolution and tagging for subdomains with professional features
 
@@ -203,7 +389,47 @@ def cli(
     • Custom wordlist: --use-scilla --scilla-target example.com --scilla-wordlist /path/to/wordlist.txt
     • Custom ports: --use-scilla --scilla-target example.com --scilla-ports 80,443,8080
     • Custom DNS: --use-scilla --scilla-target example.com --scilla-dns-servers 8.8.8.8,1.1.1.1
+
+    DNS Cache Examples:
+    • Enable DNS caching: --cache
+    • Custom cache directory: --cache --cache-dir /tmp/dns_cache
+    • Set cache expiry: --cache --cache-max-age 12
+    • Clear cache: --clear-cache
+    • Show cache stats: --cache-stats
     """
+
+    # Initialize cache manager if cache is enabled
+    cache_manager = None
+    if cache:
+        cache_directory = cache_dir or str(Path.home() / ".reconcli" / "dns_cache")
+        cache_manager = DNSCacheManager(cache_directory, cache_max_age)
+        if verbose:
+            click.echo(f"[+] 🗄️  DNS caching enabled: {cache_directory}")
+
+    # Handle cache operations
+    if clear_cache:
+        cache_directory = cache_dir or str(Path.home() / ".reconcli" / "dns_cache")
+        temp_cache_manager = DNSCacheManager(cache_directory, cache_max_age)
+        count = temp_cache_manager.clear_all()
+        click.secho(
+            f"🗑️  Cleared {count} cached DNS responses from {cache_directory}",
+            fg="green",
+        )
+        return
+
+    if cache_stats:
+        cache_directory = cache_dir or str(Path.home() / ".reconcli" / "dns_cache")
+        temp_cache_manager = DNSCacheManager(cache_directory, cache_max_age)
+        stats = temp_cache_manager.get_stats()
+
+        click.secho("📊 DNS Cache Statistics", fg="cyan", bold=True)
+        click.secho(f"Cache directory: {cache_directory}", fg="blue")
+        click.secho(f"Total entries: {stats['total_entries']}", fg="blue")
+        click.secho(f"Valid entries: {stats['valid_entries']}", fg="green")
+        click.secho(f"Expired entries: {stats['expired_entries']}", fg="yellow")
+        click.secho(f"Total size: {stats['total_size_kb']:.1f} KB", fg="blue")
+        click.secho(f"Max age: {cache_max_age} hours", fg="blue")
+        return
 
     # Handle special resume operations
     if show_resume:
@@ -394,6 +620,7 @@ def cli(
         retries,
         custom_resolvers,
         verbose,
+        cache_manager,
     )
 
     # Update counts
@@ -480,11 +707,14 @@ def cli(
     # Send notifications if configured
     if (slack_webhook or discord_webhook) and send_notification:
         try:
+            notification_message = f"Resolved {resolved_count}/{len(subdomains)} subdomains in {elapsed:.1f}s"
             send_notification(
-                "DNS Resolution Complete",
-                f"Resolved {resolved_count}/{len(subdomains)} subdomains in {elapsed:.1f}s",
+                "dns",
+                title="DNS Resolution Complete",
+                message=notification_message,
                 slack_webhook=slack_webhook,
                 discord_webhook=discord_webhook,
+                verbose=verbose,
             )
         except Exception as e:
             if verbose:
@@ -501,12 +731,32 @@ def enhanced_dns_resolution(
     retries: int,
     custom_resolvers: List[str],
     verbose: bool,
+    cache_manager: Optional[DNSCacheManager] = None,
 ) -> List[Dict]:
-    """Enhanced concurrent DNS resolution with retry logic and custom resolvers"""
+    """Enhanced concurrent DNS resolution with retry logic, custom resolvers, and caching"""
     results = []
+    cache_hits = 0
+    cache_misses = 0
 
     def resolve_subdomain(subdomain: str) -> Dict:
-        """Resolve a single subdomain with retry logic and custom resolvers"""
+        """Resolve a single subdomain with retry logic, custom resolvers, and caching"""
+        nonlocal cache_hits, cache_misses
+
+        # Check cache first
+        if cache_manager:
+            cached_result = cache_manager.get(subdomain, "A")
+            if cached_result:
+                cache_hits += 1
+                if verbose:
+                    # Add cache indicator to status
+                    cached_result["status"] = (
+                        f"{cached_result.get('status', 'resolved')} (cached)"
+                    )
+                return cached_result
+            else:
+                cache_misses += 1
+
+        # Perform DNS resolution
         for attempt in range(retries + 1):
             try:
                 # Use custom resolver if available
@@ -529,7 +779,7 @@ def enhanced_dns_resolution(
                 # Enhanced tagging
                 tags = classify_ptr_record(ptr)
 
-                return {
+                result = {
                     "subdomain": subdomain,
                     "ip": ip,
                     "ptr": ptr,
@@ -537,29 +787,39 @@ def enhanced_dns_resolution(
                     "status": "resolved",
                 }
 
+                # Cache the successful result
+                if cache_manager and ip != "unresolved":
+                    cache_manager.set(subdomain, result, "A")
+
+                return result
+
             except socket.gaierror:
                 if attempt == retries:
                     break
             except Exception as e:
                 if attempt == retries:
-                    return {
+                    error_result = {
                         "subdomain": subdomain,
                         "ip": "unresolved",
                         "ptr": "",
                         "tags": [],
                         "status": f"error: {str(e)}",
                     }
+                    # Don't cache error results
+                    return error_result
 
             time.sleep(0.1)  # Short delay between retries
 
         # Return unresolved result if all attempts failed
-        return {
+        unresolved_result = {
             "subdomain": subdomain,
             "ip": "unresolved",
             "ptr": "",
             "tags": [],
             "status": "failed",
         }
+        # Don't cache failed results
+        return unresolved_result
 
     # Use ThreadPoolExecutor for concurrent resolution
     with concurrent.futures.ThreadPoolExecutor(max_workers=threads) as executor:
@@ -583,7 +843,20 @@ def enhanced_dns_resolution(
 
                 # Update progress bar description with stats
                 resolved = len([r for r in results if r["ip"] != "unresolved"])
-                pbar.set_postfix(resolved=resolved, failed=len(results) - resolved)
+                cache_status = (
+                    f", cache: {cache_hits}h/{cache_misses}m" if cache_manager else ""
+                )
+                pbar.set_postfix_str(
+                    f"resolved: {resolved}, failed: {len(results) - resolved}{cache_status}"
+                )
+
+    # Print cache statistics if cache was used
+    if cache_manager and verbose:
+        total_queries = cache_hits + cache_misses
+        hit_rate = (cache_hits / total_queries * 100) if total_queries > 0 else 0
+        click.echo(
+            f"[+] 📊 Cache statistics: {cache_hits} hits, {cache_misses} misses, {hit_rate:.1f}% hit rate"
+        )
 
     return results
 

@@ -49,6 +49,16 @@ test_nuclei_cves/
 resume.cfg
 wyniki/
 
+# Cache directories (ReconCLI cache system)
+*_cache/
+subdomain_cache/
+dns_cache/
+http_cache/
+port_cache/
+*.cache
+cache/
+.cache/
+
 # Temporary test files
 *_perms.txt
 *_urlcrazy.txt

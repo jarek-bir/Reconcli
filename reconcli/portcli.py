@@ -7,10 +7,14 @@ resume functionality, CDN detection, and professional reporting.
 """
 
 import datetime
+import hashlib
 import ipaddress
 import json
 import os
 import subprocess
+import time
+from pathlib import Path
+from typing import Dict, List, Optional
 
 import click
 
@@ -479,6 +483,217 @@ def write_markdown(results, path):
             f.write("\n---\n\n")
 
 
+class PortCacheManager:
+    """Port Scanning Cache Manager for storing and retrieving port scan results"""
+
+    def __init__(self, cache_dir: str, max_age_hours: int = 24):
+        self.cache_dir = Path(cache_dir)
+        self.cache_dir.mkdir(parents=True, exist_ok=True)
+        self.max_age_hours = max_age_hours
+        self.cache_index_file = self.cache_dir / "port_cache_index.json"
+        self.cache_index = self._load_cache_index()
+
+    def _load_cache_index(self) -> dict:
+        """Load cache index from file"""
+        if self.cache_index_file.exists():
+            try:
+                with open(self.cache_index_file, "r") as f:
+                    return json.load(f)
+            except Exception:
+                return {}
+        return {}
+
+    def _save_cache_index(self):
+        """Save cache index to file"""
+        try:
+            with open(self.cache_index_file, "w") as f:
+                json.dump(self.cache_index, f, indent=2)
+        except Exception:
+            pass
+
+    def _generate_cache_key(
+        self,
+        ip: str,
+        scanner: str,
+        ports: Optional[str] = None,
+        options: Optional[Dict] = None,
+    ) -> str:
+        """Generate cache key from IP, scanner, ports, and options"""
+        # Create a normalized cache string
+        cache_string = f"{scanner}:{ip}"
+
+        # Add ports to cache key if specified
+        if ports:
+            cache_string += f":ports={ports}"
+
+        # Add relevant options that affect scan results
+        if options:
+            relevant_opts = ["top_ports", "full", "rate", "timeout"]
+            cache_opts = {}
+            for opt in relevant_opts:
+                if opt in options and options[opt] is not None:
+                    cache_opts[opt] = options[opt]
+            if cache_opts:
+                cache_string += f":opts={json.dumps(cache_opts, sort_keys=True)}"
+
+        return hashlib.sha256(cache_string.encode()).hexdigest()
+
+    def _is_cache_valid(self, timestamp: float) -> bool:
+        """Check if cache entry is still valid"""
+        age_hours = (time.time() - timestamp) / 3600
+        return age_hours < self.max_age_hours
+
+    def get(
+        self,
+        ip: str,
+        scanner: str,
+        ports: Optional[str] = None,
+        options: Optional[Dict] = None,
+    ) -> Optional[dict]:
+        """Get cached port scan result for IP"""
+        cache_key = self._generate_cache_key(ip, scanner, ports, options)
+
+        if cache_key in self.cache_index:
+            cache_info = self.cache_index[cache_key]
+
+            # Check if cache is still valid
+            if self._is_cache_valid(cache_info["timestamp"]):
+                cache_file = self.cache_dir / f"{cache_key}.json"
+                if cache_file.exists():
+                    try:
+                        with open(cache_file, "r") as f:
+                            data = json.load(f)
+
+                        # Update access count and last access
+                        cache_info["access_count"] += 1
+                        cache_info["last_access"] = time.time()
+                        self.cache_index[cache_key] = cache_info
+                        self._save_cache_index()
+
+                        return data
+                    except Exception:
+                        # Remove invalid cache entry
+                        del self.cache_index[cache_key]
+                        self._save_cache_index()
+            else:
+                # Remove expired cache entry
+                cache_file = self.cache_dir / f"{cache_key}.json"
+                if cache_file.exists():
+                    cache_file.unlink()
+                del self.cache_index[cache_key]
+                self._save_cache_index()
+
+        return None
+
+    def set(
+        self,
+        ip: str,
+        result: dict,
+        scanner: str,
+        ports: Optional[str] = None,
+        options: Optional[Dict] = None,
+    ):
+        """Cache port scan result for IP"""
+        cache_key = self._generate_cache_key(ip, scanner, ports, options)
+
+        # Update cache index
+        self.cache_index[cache_key] = {
+            "ip": ip,
+            "scanner": scanner,
+            "ports": ports,
+            "timestamp": time.time(),
+            "last_access": time.time(),
+            "access_count": 1,
+            "open_ports": len(result.get("open_ports", [])),
+        }
+
+        # Ensure cache directory exists
+        self.cache_dir.mkdir(parents=True, exist_ok=True)
+
+        # Save cache file
+        cache_file = self.cache_dir / f"{cache_key}.json"
+        try:
+            with open(cache_file, "w") as f:
+                json.dump(result, f, indent=2)
+
+            self._save_cache_index()
+        except Exception:
+            # If save fails, remove from index
+            if cache_key in self.cache_index:
+                del self.cache_index[cache_key]
+
+    def cleanup_expired(self) -> int:
+        """Remove expired cache entries and return count"""
+        removed_count = 0
+        expired_keys = []
+
+        for cache_key, cache_info in self.cache_index.items():
+            if not self._is_cache_valid(cache_info["timestamp"]):
+                expired_keys.append(cache_key)
+
+        for cache_key in expired_keys:
+            cache_file = self.cache_dir / f"{cache_key}.json"
+            if cache_file.exists():
+                cache_file.unlink()
+            del self.cache_index[cache_key]
+            removed_count += 1
+
+        if removed_count > 0:
+            self._save_cache_index()
+
+        return removed_count
+
+    def clear_all(self) -> int:
+        """Clear all cache entries and return count"""
+        count = len(self.cache_index)
+
+        # Remove all cache files
+        for cache_file in self.cache_dir.glob("*.json"):
+            cache_file.unlink()
+
+        # Clear index
+        self.cache_index = {}
+        self._save_cache_index()
+
+        return count
+
+    def get_stats(self) -> dict:
+        """Get cache statistics"""
+        if not self.cache_dir.exists():
+            return {
+                "total_entries": 0,
+                "total_size_kb": 0,
+                "expired_entries": 0,
+                "valid_entries": 0,
+            }
+
+        cache_files = list(self.cache_dir.glob("*.json"))
+        if not cache_files:
+            return {
+                "total_entries": 0,
+                "total_size_kb": 0,
+                "expired_entries": 0,
+                "valid_entries": 0,
+            }
+
+        total_size = sum(f.stat().st_size for f in cache_files)
+        expired_count = 0
+        valid_count = 0
+
+        for cache_info in self.cache_index.values():
+            if self._is_cache_valid(cache_info["timestamp"]):
+                valid_count += 1
+            else:
+                expired_count += 1
+
+        return {
+            "total_entries": len(cache_files),
+            "total_size_kb": total_size / 1024,
+            "expired_entries": expired_count,
+            "valid_entries": valid_count,
+        }
+
+
 @click.command()
 @click.option(
     "--ip", help="Single IP address to scan (e.g., 192.168.1.1 or 192.168.1.1:8080)"
@@ -542,6 +757,11 @@ def write_markdown(results, path):
     help="Primary target domain for database storage (auto-detected if not provided)",
 )
 @click.option("--program", help="Bug bounty program name for database classification")
+@click.option("--cache", is_flag=True, help="Enable port scan result caching")
+@click.option("--cache-dir", help="Cache directory path")
+@click.option("--cache-max-age", default=24, type=int, help="Cache max age in hours")
+@click.option("--clear-cache", is_flag=True, help="Clear all cached port scan results")
+@click.option("--cache-stats", is_flag=True, help="Show cache statistics")
 def portcli(
     ip,
     cidr,
@@ -569,6 +789,11 @@ def portcli(
     store_db,
     target_domain,
     program,
+    cache,
+    cache_dir,
+    cache_max_age,
+    clear_cache,
+    cache_stats,
 ):
     """
     Advanced Port Scanning and Service Enumeration
@@ -598,7 +823,53 @@ def portcli(
 
         # Resume previous scan and generate tagged report
         reconcli portcli --resume --markdown --verbose
+
+    Port Cache Examples:
+        # Enable port scan caching
+        reconcli portcli --ip 192.168.1.100 --cache
+
+        # Custom cache directory
+        reconcli portcli --ip 192.168.1.100 --cache --cache-dir /tmp/port_cache
+
+        # Set cache expiry
+        reconcli portcli --ip 192.168.1.100 --cache --cache-max-age 12
+
+        # Clear cache
+        reconcli portcli --clear-cache
+
+        # Show cache stats
+        reconcli portcli --cache-stats
     """
+
+    # Initialize cache manager if cache is enabled
+    cache_manager = None
+    if cache:
+        cache_directory = cache_dir or str(Path.home() / ".reconcli" / "port_cache")
+        cache_manager = PortCacheManager(cache_directory, cache_max_age)
+        if verbose:
+            print(f"[+] 🗄️ Port scan caching enabled: {cache_directory}")
+
+    # Handle cache operations
+    if clear_cache:
+        cache_directory = cache_dir or str(Path.home() / ".reconcli" / "port_cache")
+        temp_cache_manager = PortCacheManager(cache_directory, cache_max_age)
+        count = temp_cache_manager.clear_all()
+        print(f"🗑️ Cleared {count} cached port scan results from {cache_directory}")
+        return
+
+    if cache_stats:
+        cache_directory = cache_dir or str(Path.home() / ".reconcli" / "port_cache")
+        temp_cache_manager = PortCacheManager(cache_directory, cache_max_age)
+        stats = temp_cache_manager.get_stats()
+
+        print("📊 Port Scan Cache Statistics")
+        print(f"Cache directory: {cache_directory}")
+        print(f"Total entries: {stats['total_entries']}")
+        print(f"Valid entries: {stats['valid_entries']}")
+        print(f"Expired entries: {stats['expired_entries']}")
+        print(f"Total size: {stats['total_size_kb']:.1f} KB")
+        print(f"Max age: {cache_max_age} hours")
+        return
 
     os.makedirs(output_dir, exist_ok=True)
     resume_path = os.path.join(output_dir, "portcli_resume.json")
@@ -649,6 +920,28 @@ def portcli(
     failed_scans = 0
 
     for i, target in enumerate(to_scan, 1):
+        # Check cache first
+        scan_options = {
+            "top_ports": top_ports,
+            "full": full,
+            "rate": rate,
+            "timeout": timeout,
+            "only_web": only_web,
+        }
+
+        if cache_manager:
+            cached_result = cache_manager.get(target, scanner, ports, scan_options)
+            if cached_result:
+                results.append(cached_result)
+                successful_scans += 1
+                if not silent:
+                    port_count = len(cached_result.get("open_ports", []))
+                    if verbose:
+                        click.echo(f"    ✓ Found {port_count} open ports (cached)")
+                    else:
+                        click.echo(f"    ✓ Found {port_count} open ports")
+                continue
+
         if not silent:
             if len(to_scan) > 1:
                 click.echo(
@@ -748,6 +1041,10 @@ def portcli(
                 "scan_time": datetime.datetime.now().isoformat(),
                 "command_used": " ".join(cmd),
             }
+
+            # Cache successful result
+            if cache_manager:
+                cache_manager.set(target, result, scanner, ports, scan_options)
 
             results.append(result)
             successful_scans += 1

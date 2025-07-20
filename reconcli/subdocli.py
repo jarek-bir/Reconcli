@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import concurrent.futures
+import hashlib
 import json
 import os
 import re
@@ -7,6 +8,8 @@ import socket
 import subprocess
 import time
 from datetime import datetime
+from pathlib import Path
+from typing import Dict, List, Optional
 
 import click
 import requests
@@ -702,10 +705,227 @@ def export_results_to_txt(output_dir, domain, comprehensive_data, verbose=False)
         return None
 
 
+class SubdomainCacheManager:
+    """Subdomain Enumeration Cache Manager for storing and retrieving subdomain enumeration results"""
+
+    def __init__(self, cache_dir: str, max_age_hours: int = 24):
+        self.cache_dir = Path(cache_dir)
+        self.cache_dir.mkdir(parents=True, exist_ok=True)
+        self.max_age_hours = max_age_hours
+        self.cache_index_file = self.cache_dir / "subdomain_cache_index.json"
+        self.cache_index = self._load_cache_index()
+
+    def _load_cache_index(self) -> dict:
+        """Load cache index from file"""
+        if self.cache_index_file.exists():
+            try:
+                with open(self.cache_index_file, "r") as f:
+                    return json.load(f)
+            except Exception:
+                return {}
+        return {}
+
+    def _save_cache_index(self):
+        """Save cache index to file"""
+        try:
+            with open(self.cache_index_file, "w") as f:
+                json.dump(self.cache_index, f, indent=2)
+        except Exception:
+            pass
+
+    def _generate_cache_key(
+        self, domain: str, tools: List[str], options: Optional[Dict] = None
+    ) -> str:
+        """Generate cache key from domain, tools, and options"""
+        # Create a normalized cache string
+        cache_string = f"subdomain:{domain}:tools={','.join(sorted(tools))}"
+
+        # Add relevant options that affect enumeration results
+        if options:
+            relevant_opts = [
+                "wordlist",
+                "resolver",
+                "recursive",
+                "passive_only",
+                "active_only",
+            ]
+            cache_opts = {}
+            for opt in relevant_opts:
+                if opt in options and options[opt] is not None:
+                    cache_opts[opt] = options[opt]
+            if cache_opts:
+                cache_string += f":opts={json.dumps(cache_opts, sort_keys=True)}"
+
+        return hashlib.sha256(cache_string.encode()).hexdigest()
+
+    def _is_cache_valid(self, timestamp: float) -> bool:
+        """Check if cache entry is still valid"""
+        age_hours = (time.time() - timestamp) / 3600
+        return age_hours < self.max_age_hours
+
+    def get(
+        self, domain: str, tools: List[str], options: Optional[Dict] = None
+    ) -> Optional[dict]:
+        """Get cached subdomain enumeration result for domain"""
+        cache_key = self._generate_cache_key(domain, tools, options)
+
+        if cache_key in self.cache_index:
+            cache_info = self.cache_index[cache_key]
+
+            # Check if cache is still valid
+            if self._is_cache_valid(cache_info["timestamp"]):
+                cache_file = self.cache_dir / f"{cache_key}.json"
+                if cache_file.exists():
+                    try:
+                        with open(cache_file, "r") as f:
+                            data = json.load(f)
+
+                        # Update access count and last access
+                        cache_info["access_count"] += 1
+                        cache_info["last_access"] = time.time()
+                        self.cache_index[cache_key] = cache_info
+                        self._save_cache_index()
+
+                        return data
+                    except Exception:
+                        # Remove invalid cache entry
+                        del self.cache_index[cache_key]
+                        self._save_cache_index()
+            else:
+                # Remove expired cache entry
+                cache_file = self.cache_dir / f"{cache_key}.json"
+                if cache_file.exists():
+                    cache_file.unlink()
+                del self.cache_index[cache_key]
+                self._save_cache_index()
+
+        return None
+
+    def set(
+        self,
+        domain: str,
+        result: dict,
+        tools: List[str],
+        options: Optional[Dict] = None,
+    ):
+        """Cache subdomain enumeration result for domain"""
+        cache_key = self._generate_cache_key(domain, tools, options)
+
+        # Update cache index
+        self.cache_index[cache_key] = {
+            "domain": domain,
+            "tools": tools,
+            "timestamp": time.time(),
+            "last_access": time.time(),
+            "access_count": 1,
+            "subdomain_count": len(result.get("subdomains", [])),
+        }
+
+        # Ensure cache directory exists
+        self.cache_dir.mkdir(parents=True, exist_ok=True)
+
+        # Save cache file
+        cache_file = self.cache_dir / f"{cache_key}.json"
+        try:
+            with open(cache_file, "w") as f:
+                json.dump(result, f, indent=2)
+
+            self._save_cache_index()
+        except Exception:
+            # If save fails, remove from index
+            if cache_key in self.cache_index:
+                del self.cache_index[cache_key]
+
+    def cleanup_expired(self) -> int:
+        """Remove expired cache entries and return count"""
+        removed_count = 0
+        expired_keys = []
+
+        for cache_key, cache_info in self.cache_index.items():
+            if not self._is_cache_valid(cache_info["timestamp"]):
+                expired_keys.append(cache_key)
+
+        for cache_key in expired_keys:
+            cache_file = self.cache_dir / f"{cache_key}.json"
+            if cache_file.exists():
+                cache_file.unlink()
+            del self.cache_index[cache_key]
+            removed_count += 1
+
+        if removed_count > 0:
+            self._save_cache_index()
+
+        return removed_count
+
+    def clear_all(self) -> int:
+        """Clear all cache entries and return count"""
+        count = len(self.cache_index)
+
+        # Remove all cache files
+        for cache_file in self.cache_dir.glob("*.json"):
+            cache_file.unlink()
+
+        # Clear index
+        self.cache_index = {}
+        self._save_cache_index()
+
+        return count
+
+    def get_stats(self) -> dict:
+        """Get cache statistics"""
+        if not self.cache_dir.exists():
+            return {
+                "total_entries": 0,
+                "total_size_kb": 0,
+                "expired_entries": 0,
+                "valid_entries": 0,
+            }
+
+        cache_files = list(self.cache_dir.glob("*.json"))
+        if not cache_files:
+            return {
+                "total_entries": 0,
+                "total_size_kb": 0,
+                "expired_entries": 0,
+                "valid_entries": 0,
+            }
+
+        total_size = sum(f.stat().st_size for f in cache_files)
+        expired_count = 0
+        valid_count = 0
+
+        for cache_info in self.cache_index.values():
+            if self._is_cache_valid(cache_info["timestamp"]):
+                valid_count += 1
+            else:
+                expired_count += 1
+
+        return {
+            "total_entries": len(cache_files),
+            "total_size_kb": total_size / 1024,
+            "expired_entries": expired_count,
+            "valid_entries": valid_count,
+        }
+
+
 @click.command()
 @click.option(
-    "--domain", "-d", required=True, help="Target domain for subdomain enumeration"
+    "--cache", is_flag=True, help="Enable caching of subdomain enumeration results"
 )
+@click.option(
+    "--cache-dir",
+    default="subdomain_cache",
+    help="Directory for cache storage (default: subdomain_cache)",
+)
+@click.option(
+    "--cache-max-age",
+    type=int,
+    default=86400,
+    help="Maximum cache age in seconds (default: 86400 = 24 hours)",
+)
+@click.option("--clear-cache", is_flag=True, help="Clear all cached subdomain results")
+@click.option("--cache-stats", is_flag=True, help="Show cache statistics and exit")
+@click.option("--domain", "-d", help="Target domain for subdomain enumeration")
 @click.option("--output-dir", "-o", default="output", help="Directory to save results")
 @click.option(
     "--amass-config",
@@ -774,6 +994,11 @@ def export_results_to_txt(output_dir, domain, comprehensive_data, verbose=False)
     help="Export results to CSV, JSON, or TXT format for analysis and reporting",
 )
 def subdocli(
+    cache,
+    cache_dir,
+    cache_max_age,
+    clear_cache,
+    cache_stats,
     domain,
     output_dir,
     amass_config,
@@ -837,12 +1062,82 @@ def subdocli(
     Use --export csv|json|txt for structured data export.
     """
 
-    # Validate domain input to prevent shell injection
+    # Initialize cache manager
+    cache_manager = SubdomainCacheManager(cache_dir, cache_max_age)
+
+    # Handle cache operations that don't require domain
+    if clear_cache:
+        count = cache_manager.clear_all()
+        click.echo(f"✅ Cache cleared successfully ({count} entries removed)")
+        return
+
+    if cache_stats:
+        stats = cache_manager.get_stats()
+        click.echo("\n📊 Cache Statistics:")
+        click.echo(f"  Total entries: {stats['total_entries']}")
+        click.echo(f"  Total size: {stats['total_size_kb']:.2f} KB")
+        click.echo(f"  Valid entries: {stats['valid_entries']}")
+        click.echo(f"  Expired entries: {stats['expired_entries']}")
+        return
+
+    # Validate domain input (required for actual scanning)
+    if not domain:
+        click.echo("❌ Error: --domain is required for subdomain enumeration")
+        return
+
     try:
         domain = validate_domain(domain)
     except ValueError as e:
         click.echo(f"❌ Error: {e}")
         return
+
+    # Determine tools list for caching (available for both cache check and storage)
+    cache_tools = []
+    if tools:
+        cache_tools = [t.strip() for t in tools.split(",")]
+    elif all_tools:
+        cache_tools = ["all_tools"]
+    elif active:
+        cache_tools = ["active"]
+    elif passive_only:
+        cache_tools = ["passive_only"]
+    elif active_only:
+        cache_tools = ["active_only"]
+    elif bbot:
+        cache_tools = ["bbot"]
+    elif bbot_intensive:
+        cache_tools = ["bbot_intensive"]
+    else:
+        cache_tools = ["default"]
+
+    # Check cache if enabled
+    if cache:
+        cached_result = cache_manager.get(
+            domain,
+            cache_tools,
+            {
+                "resolve": resolve,
+                "probe_http": probe_http,
+                "timeout": timeout,
+                "threads": threads,
+                "all_tools": all_tools,
+                "active": active,
+                "passive_only": passive_only,
+                "active_only": active_only,
+                "bbot": bbot,
+                "bbot_intensive": bbot_intensive,
+            },
+        )
+
+        if cached_result:
+            click.echo("🎯 Found cached subdomain results!")
+            subdomains = cached_result.get("subdomains", [])
+            click.echo(f"✅ Loaded {len(subdomains)} subdomains from cache")
+
+            # Display results and exit if cache hit
+            for subdomain in subdomains:
+                click.echo(subdomain)
+            return
 
     # Determine which amass config to use
     final_amass_config = amass_config
@@ -1297,6 +1592,28 @@ def subdocli(
 
     with open(os.path.join(outpath, "comprehensive_report.json"), "w") as f:
         json.dump(comprehensive_data, f, indent=2)
+
+    # Store results in cache if caching is enabled
+    if cache:
+        if verbose:
+            click.echo("[+] 💾 Storing results in cache...")
+        cache_manager.set(
+            domain,
+            comprehensive_data,
+            cache_tools,
+            {
+                "resolve": resolve,
+                "probe_http": probe_http,
+                "timeout": timeout,
+                "threads": threads,
+                "all_tools": all_tools,
+                "active": active,
+                "passive_only": passive_only,
+                "active_only": active_only,
+                "bbot": bbot,
+                "bbot_intensive": bbot_intensive,
+            },
+        )
 
     # Generate enhanced markdown report
     if markdown:
