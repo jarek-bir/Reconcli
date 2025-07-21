@@ -3,6 +3,7 @@ import os
 import shutil
 import subprocess
 import time
+import hashlib
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 from os.path import exists as path_exists
@@ -176,6 +177,18 @@ def generate_markdown_report(output_dir, stats, scan_results):
 - **Signatures Used**: {scan_results["jaeles"].get("signatures", "Default")}
 - **Findings**: {scan_results["jaeles"].get("findings", 0)}
 - **Output File**: `jaeles.txt`
+
+"""
+
+    if scan_results.get("shef"):
+        shef_data = scan_results["shef"]
+        md_content += f"""### 🔍 Shef (Shodan-based Reconnaissance)
+- **Status**: ✅ Completed
+- **Query**: {shef_data.get("query", "N/A")}
+- **Facet**: {shef_data.get("facet", "domain")}
+- **Format**: {shef_data.get("format", "text")}
+- **Findings**: {shef_data.get("findings", 0)}
+- **Output File**: `shef.txt`
 
 """
 
@@ -356,6 +369,75 @@ def ai_reduce_false_positives(findings, tech_stack=None, url_context=None):
     return filtered_findings
 
 
+def ai_smart_template_selection_cached(url_list, tech_stack=None, target_types=None, ai_cache_manager=None, max_age_seconds=86400):
+    """AI-powered smart template selection with caching support"""
+    
+    # Try to get cached result if cache is enabled
+    if ai_cache_manager:
+        cache_input = {"urls": url_list[:100], "tech_stack": tech_stack or [], "target_types": target_types or []}
+        cached_result = ai_cache_manager.get_cached_analysis(
+            "smart_template_selection", cache_input, "", max_age_seconds
+        )
+        
+        if cached_result:
+            return cached_result['result']
+    
+    # If no cache hit, run actual AI analysis
+    result = ai_smart_template_selection(url_list, tech_stack, target_types)
+    
+    # Store result in cache if cache is enabled
+    if ai_cache_manager:
+        ai_cache_manager.store_analysis("smart_template_selection", cache_input, result)
+    
+    return result
+
+
+def ai_reduce_false_positives_cached(findings, tech_stack=None, url_context=None, ai_cache_manager=None, max_age_seconds=86400):
+    """AI-powered false positive reduction with caching support"""
+    
+    # Try to get cached result if cache is enabled
+    if ai_cache_manager:
+        cache_input = {"findings": findings[:500], "tech_stack": tech_stack or [], "url_context": url_context or ""}
+        cached_result = ai_cache_manager.get_cached_analysis(
+            "false_positive_reduction", cache_input, "", max_age_seconds
+        )
+        
+        if cached_result:
+            return cached_result['result']
+    
+    # If no cache hit, run actual AI analysis
+    result = ai_reduce_false_positives(findings, tech_stack, url_context)
+    
+    # Store result in cache if cache is enabled
+    if ai_cache_manager:
+        ai_cache_manager.store_analysis("false_positive_reduction", cache_input, result)
+    
+    return result
+
+
+def ai_classify_vulnerability_cached(finding, tech_stack=None, ai_cache_manager=None, max_age_seconds=86400):
+    """AI-powered vulnerability classification with caching support"""
+    
+    # Try to get cached result if cache is enabled
+    if ai_cache_manager:
+        cache_input = {"finding": finding, "tech_stack": tech_stack or []}
+        cached_result = ai_cache_manager.get_cached_analysis(
+            "vulnerability_classification", cache_input, "", max_age_seconds
+        )
+        
+        if cached_result:
+            return cached_result['result']
+    
+    # If no cache hit, run actual AI analysis
+    result = ai_classify_vulnerability(finding, tech_stack)
+    
+    # Store result in cache if cache is enabled
+    if ai_cache_manager:
+        ai_cache_manager.store_analysis("vulnerability_classification", cache_input, result)
+    
+    return result
+
+
 def ai_smart_template_selection(url_list, tech_stack=None, target_types=None):
     """AI-powered smart template selection based on target analysis."""
     recommended_templates = []
@@ -497,6 +579,599 @@ def ai_generate_executive_summary(stats, scan_results, tech_stack=None):
     return summary
 
 
+class ShefCacheManager:
+    """Cache manager for Shef reconnaissance results"""
+    
+    def __init__(self, cache_dir="shef_cache"):
+        self.cache_dir = Path(cache_dir)
+        self.cache_dir.mkdir(exist_ok=True)
+        self.index_file = self.cache_dir / "shef_cache_index.json"
+        self.stats = {"hits": 0, "misses": 0, "total_requests": 0}
+    
+    def _generate_cache_key(self, query, facet, json_format=False):
+        """Generate SHA256 cache key from query parameters"""
+        key_data = f"{query}:{facet}:{json_format}"
+        return hashlib.sha256(key_data.encode()).hexdigest()
+    
+    def _load_index(self):
+        """Load cache index with entry metadata"""
+        if self.index_file.exists():
+            try:
+                with open(self.index_file, 'r') as f:
+                    return json.load(f)
+            except:
+                return {}
+        return {}
+    
+    def _save_index(self, index):
+        """Save cache index to disk"""
+        try:
+            with open(self.index_file, 'w') as f:
+                json.dump(index, f, indent=2)
+        except:
+            pass
+    
+    def _is_cache_valid(self, cache_entry, max_age_seconds=86400):
+        """Check if cache entry is still valid (default: 24 hours)"""
+        if not cache_entry or 'timestamp' not in cache_entry:
+            return False
+        
+        entry_time = cache_entry['timestamp']
+        current_time = time.time()
+        return (current_time - entry_time) < max_age_seconds
+    
+    def get_cached_result(self, query, facet, json_format=False, max_age_seconds=86400):
+        """Retrieve cached Shef result if available and valid"""
+        self.stats["total_requests"] += 1
+        cache_key = self._generate_cache_key(query, facet, json_format)
+        cache_file = self.cache_dir / f"{cache_key}.json"
+        
+        index = self._load_index()
+        
+        if cache_key in index and cache_file.exists():
+            cache_entry = index[cache_key]
+            if self._is_cache_valid(cache_entry, max_age_seconds):
+                try:
+                    with open(cache_file, 'r') as f:
+                        cached_data = json.load(f)
+                    
+                    self.stats["hits"] += 1
+                    return {
+                        'results': cached_data.get('results', []),
+                        'findings_count': cached_data.get('findings_count', 0),
+                        'cached': True,
+                        'cache_timestamp': cache_entry['timestamp']
+                    }
+                except:
+                    # Remove corrupted cache entry
+                    try:
+                        cache_file.unlink()
+                        del index[cache_key]
+                        self._save_index(index)
+                    except:
+                        pass
+        
+        self.stats["misses"] += 1
+        return None
+    
+    def store_result(self, query, facet, results, findings_count, json_format=False):
+        """Store Shef results in cache"""
+        cache_key = self._generate_cache_key(query, facet, json_format)
+        cache_file = self.cache_dir / f"{cache_key}.json"
+        
+        cache_data = {
+            'results': results,
+            'findings_count': findings_count,
+            'query': query,
+            'facet': facet,
+            'json_format': json_format,
+            'timestamp': time.time()
+        }
+        
+        try:
+            with open(cache_file, 'w') as f:
+                json.dump(cache_data, f, indent=2)
+            
+            # Update index
+            index = self._load_index()
+            index[cache_key] = {
+                'timestamp': time.time(),
+                'query': query,
+                'facet': facet,
+                'json_format': json_format,
+                'findings_count': findings_count
+            }
+            self._save_index(index)
+            
+        except Exception as e:
+            pass  # Fail silently on cache storage errors
+    
+    def clear_cache(self):
+        """Clear all cached Shef results"""
+        try:
+            import shutil
+            if self.cache_dir.exists():
+                shutil.rmtree(self.cache_dir)
+                self.cache_dir.mkdir(exist_ok=True)
+                return True
+        except:
+            pass
+        return False
+    
+    def get_cache_stats(self):
+        """Get cache performance statistics"""
+        index = self._load_index()
+        total_size = sum(
+            (self.cache_dir / f"{key}.json").stat().st_size 
+            for key in index.keys() 
+            if (self.cache_dir / f"{key}.json").exists()
+        )
+        
+        hit_rate = (self.stats["hits"] / max(self.stats["total_requests"], 1)) * 100
+        
+        return {
+            'total_entries': len(index),
+            'cache_size_mb': round(total_size / (1024 * 1024), 2),
+            'hit_rate_percent': round(hit_rate, 1),
+            'hits': self.stats["hits"],
+            'misses': self.stats["misses"],
+            'total_requests': self.stats["total_requests"]
+        }
+
+
+class NucleiCacheManager:
+    """Cache manager for Nuclei scan results"""
+    
+    def __init__(self, cache_dir="nuclei_cache"):
+        self.cache_dir = Path(cache_dir)
+        self.cache_dir.mkdir(exist_ok=True)
+        self.index_file = self.cache_dir / "nuclei_cache_index.json"
+        self.stats = {"hits": 0, "misses": 0, "total_requests": 0}
+    
+    def _generate_cache_key(self, url_list_hash, templates="", tags="", severity="", excludes=""):
+        """Generate SHA256 cache key from scan parameters"""
+        key_data = f"{url_list_hash}:{templates}:{tags}:{severity}:{excludes}"
+        return hashlib.sha256(key_data.encode()).hexdigest()
+    
+    def _get_url_list_hash(self, url_file_path):
+        """Generate hash from URL list file content"""
+        try:
+            with open(url_file_path, 'r') as f:
+                content = f.read()
+            return hashlib.sha256(content.encode()).hexdigest()
+        except:
+            return hashlib.sha256(str(time.time()).encode()).hexdigest()
+    
+    def _load_index(self):
+        """Load cache index with entry metadata"""
+        if self.index_file.exists():
+            try:
+                with open(self.index_file, 'r') as f:
+                    return json.load(f)
+            except:
+                return {}
+        return {}
+    
+    def _save_index(self, index):
+        """Save cache index to disk"""
+        try:
+            with open(self.index_file, 'w') as f:
+                json.dump(index, f, indent=2)
+        except:
+            pass
+    
+    def _is_cache_valid(self, cache_entry, max_age_seconds=86400):
+        """Check if cache entry is still valid (default: 24 hours)"""
+        if not cache_entry or 'timestamp' not in cache_entry:
+            return False
+        
+        entry_time = cache_entry['timestamp']
+        current_time = time.time()
+        return (current_time - entry_time) < max_age_seconds
+    
+    def get_cached_result(self, url_file_path, templates="", tags="", severity="", excludes="", max_age_seconds=86400):
+        """Retrieve cached Nuclei result if available and valid"""
+        self.stats["total_requests"] += 1
+        url_list_hash = self._get_url_list_hash(url_file_path)
+        cache_key = self._generate_cache_key(url_list_hash, templates, tags, severity, excludes)
+        cache_file = self.cache_dir / f"{cache_key}.json"
+        
+        index = self._load_index()
+        
+        if cache_key in index and cache_file.exists():
+            cache_entry = index[cache_key]
+            if self._is_cache_valid(cache_entry, max_age_seconds):
+                try:
+                    with open(cache_file, 'r') as f:
+                        cached_data = json.load(f)
+                    
+                    self.stats["hits"] += 1
+                    return {
+                        'results': cached_data.get('results', []),
+                        'findings_count': cached_data.get('findings_count', 0),
+                        'template_info': cached_data.get('template_info', 'Default'),
+                        'cached': True,
+                        'cache_timestamp': cache_entry['timestamp']
+                    }
+                except:
+                    # Remove corrupted cache entry
+                    try:
+                        cache_file.unlink()
+                        del index[cache_key]
+                        self._save_index(index)
+                    except:
+                        pass
+        
+        self.stats["misses"] += 1
+        return None
+    
+    def store_result(self, url_file_path, results, findings_count, template_info, templates="", tags="", severity="", excludes=""):
+        """Store Nuclei results in cache"""
+        url_list_hash = self._get_url_list_hash(url_file_path)
+        cache_key = self._generate_cache_key(url_list_hash, templates, tags, severity, excludes)
+        cache_file = self.cache_dir / f"{cache_key}.json"
+        
+        cache_data = {
+            'results': results,
+            'findings_count': findings_count,
+            'template_info': template_info,
+            'url_list_hash': url_list_hash,
+            'templates': templates,
+            'tags': tags,
+            'severity': severity,
+            'excludes': excludes,
+            'timestamp': time.time()
+        }
+        
+        try:
+            with open(cache_file, 'w') as f:
+                json.dump(cache_data, f, indent=2)
+            
+            # Update index
+            index = self._load_index()
+            index[cache_key] = {
+                'timestamp': time.time(),
+                'url_list_hash': url_list_hash,
+                'template_info': template_info,
+                'findings_count': findings_count
+            }
+            self._save_index(index)
+            
+        except Exception as e:
+            pass  # Fail silently on cache storage errors
+    
+    def clear_cache(self):
+        """Clear all cached Nuclei results"""
+        try:
+            if self.cache_dir.exists():
+                shutil.rmtree(self.cache_dir)
+                self.cache_dir.mkdir(exist_ok=True)
+                return True
+        except:
+            pass
+        return False
+    
+    def get_cache_stats(self):
+        """Get cache performance statistics"""
+        index = self._load_index()
+        total_size = sum(
+            (self.cache_dir / f"{key}.json").stat().st_size 
+            for key in index.keys() 
+            if (self.cache_dir / f"{key}.json").exists()
+        )
+        
+        hit_rate = (self.stats["hits"] / max(self.stats["total_requests"], 1)) * 100
+        
+        return {
+            'total_entries': len(index),
+            'cache_size_mb': round(total_size / (1024 * 1024), 2),
+            'hit_rate_percent': round(hit_rate, 1),
+            'hits': self.stats["hits"],
+            'misses': self.stats["misses"],
+            'total_requests': self.stats["total_requests"]
+        }
+
+
+class JaelesCacheManager:
+    """Cache manager for Jaeles scan results"""
+    
+    def __init__(self, cache_dir="jaeles_cache"):
+        self.cache_dir = Path(cache_dir)
+        self.cache_dir.mkdir(exist_ok=True)
+        self.index_file = self.cache_dir / "jaeles_cache_index.json"
+        self.stats = {"hits": 0, "misses": 0, "total_requests": 0}
+    
+    def _generate_cache_key(self, url_list_hash, signatures="", selector="", excludes="", level=1):
+        """Generate SHA256 cache key from scan parameters"""
+        key_data = f"{url_list_hash}:{signatures}:{selector}:{excludes}:{level}"
+        return hashlib.sha256(key_data.encode()).hexdigest()
+    
+    def _get_url_list_hash(self, url_file_path):
+        """Generate hash from URL list file content"""
+        try:
+            with open(url_file_path, 'r') as f:
+                content = f.read()
+            return hashlib.sha256(content.encode()).hexdigest()
+        except:
+            return hashlib.sha256(str(time.time()).encode()).hexdigest()
+    
+    def _load_index(self):
+        """Load cache index with entry metadata"""
+        if self.index_file.exists():
+            try:
+                with open(self.index_file, 'r') as f:
+                    return json.load(f)
+            except:
+                return {}
+        return {}
+    
+    def _save_index(self, index):
+        """Save cache index to disk"""
+        try:
+            with open(self.index_file, 'w') as f:
+                json.dump(index, f, indent=2)
+        except:
+            pass
+    
+    def _is_cache_valid(self, cache_entry, max_age_seconds=86400):
+        """Check if cache entry is still valid (default: 24 hours)"""
+        if not cache_entry or 'timestamp' not in cache_entry:
+            return False
+        
+        entry_time = cache_entry['timestamp']
+        current_time = time.time()
+        return (current_time - entry_time) < max_age_seconds
+    
+    def get_cached_result(self, url_file_path, signatures="", selector="", excludes="", level=1, max_age_seconds=86400):
+        """Retrieve cached Jaeles result if available and valid"""
+        self.stats["total_requests"] += 1
+        url_list_hash = self._get_url_list_hash(url_file_path)
+        cache_key = self._generate_cache_key(url_list_hash, signatures, selector, excludes, level)
+        cache_file = self.cache_dir / f"{cache_key}.json"
+        
+        index = self._load_index()
+        
+        if cache_key in index and cache_file.exists():
+            cache_entry = index[cache_key]
+            if self._is_cache_valid(cache_entry, max_age_seconds):
+                try:
+                    with open(cache_file, 'r') as f:
+                        cached_data = json.load(f)
+                    
+                    self.stats["hits"] += 1
+                    return {
+                        'results': cached_data.get('results', []),
+                        'findings_count': cached_data.get('findings_count', 0),
+                        'signature_info': cached_data.get('signature_info', 'Default'),
+                        'cached': True,
+                        'cache_timestamp': cache_entry['timestamp']
+                    }
+                except:
+                    # Remove corrupted cache entry
+                    try:
+                        cache_file.unlink()
+                        del index[cache_key]
+                        self._save_index(index)
+                    except:
+                        pass
+        
+        self.stats["misses"] += 1
+        return None
+    
+    def store_result(self, url_file_path, results, findings_count, signature_info, signatures="", selector="", excludes="", level=1):
+        """Store Jaeles results in cache"""
+        url_list_hash = self._get_url_list_hash(url_file_path)
+        cache_key = self._generate_cache_key(url_list_hash, signatures, selector, excludes, level)
+        cache_file = self.cache_dir / f"{cache_key}.json"
+        
+        cache_data = {
+            'results': results,
+            'findings_count': findings_count,
+            'signature_info': signature_info,
+            'url_list_hash': url_list_hash,
+            'signatures': signatures,
+            'selector': selector,
+            'excludes': excludes,
+            'level': level,
+            'timestamp': time.time()
+        }
+        
+        try:
+            with open(cache_file, 'w') as f:
+                json.dump(cache_data, f, indent=2)
+            
+            # Update index
+            index = self._load_index()
+            index[cache_key] = {
+                'timestamp': time.time(),
+                'url_list_hash': url_list_hash,
+                'signature_info': signature_info,
+                'findings_count': findings_count
+            }
+            self._save_index(index)
+            
+        except Exception as e:
+            pass  # Fail silently on cache storage errors
+    
+    def clear_cache(self):
+        """Clear all cached Jaeles results"""
+        try:
+            if self.cache_dir.exists():
+                shutil.rmtree(self.cache_dir)
+                self.cache_dir.mkdir(exist_ok=True)
+                return True
+        except:
+            pass
+        return False
+    
+    def get_cache_stats(self):
+        """Get cache performance statistics"""
+        index = self._load_index()
+        total_size = sum(
+            (self.cache_dir / f"{key}.json").stat().st_size 
+            for key in index.keys() 
+            if (self.cache_dir / f"{key}.json").exists()
+        )
+        
+        hit_rate = (self.stats["hits"] / max(self.stats["total_requests"], 1)) * 100
+        
+        return {
+            'total_entries': len(index),
+            'cache_size_mb': round(total_size / (1024 * 1024), 2),
+            'hit_rate_percent': round(hit_rate, 1),
+            'hits': self.stats["hits"],
+            'misses': self.stats["misses"],
+            'total_requests': self.stats["total_requests"]
+        }
+
+
+class AICacheManager:
+    """Cache manager for AI-powered analysis results"""
+    
+    def __init__(self, cache_dir="ai_cache"):
+        self.cache_dir = Path(cache_dir)
+        self.cache_dir.mkdir(exist_ok=True)
+        self.index_file = self.cache_dir / "ai_cache_index.json"
+        self.stats = {"hits": 0, "misses": 0, "total_requests": 0}
+    
+    def _generate_cache_key(self, analysis_type, input_data_hash, parameters=""):
+        """Generate SHA256 cache key from AI analysis parameters"""
+        key_data = f"{analysis_type}:{input_data_hash}:{parameters}"
+        return hashlib.sha256(key_data.encode()).hexdigest()
+    
+    def _get_data_hash(self, data):
+        """Generate hash from input data"""
+        if isinstance(data, (list, tuple)):
+            data_str = "|".join(str(item) for item in data)
+        else:
+            data_str = str(data)
+        return hashlib.sha256(data_str.encode()).hexdigest()
+    
+    def _load_index(self):
+        """Load cache index with entry metadata"""
+        if self.index_file.exists():
+            try:
+                with open(self.index_file, 'r') as f:
+                    return json.load(f)
+            except:
+                return {}
+        return {}
+    
+    def _save_index(self, index):
+        """Save cache index to disk"""
+        try:
+            with open(self.index_file, 'w') as f:
+                json.dump(index, f, indent=2)
+        except:
+            pass
+    
+    def _is_cache_valid(self, cache_entry, max_age_seconds=86400):
+        """Check if cache entry is still valid (default: 24 hours)"""
+        if not cache_entry or 'timestamp' not in cache_entry:
+            return False
+        
+        entry_time = cache_entry['timestamp']
+        current_time = time.time()
+        return (current_time - entry_time) < max_age_seconds
+    
+    def get_cached_analysis(self, analysis_type, input_data, parameters="", max_age_seconds=86400):
+        """Retrieve cached AI analysis result if available and valid"""
+        self.stats["total_requests"] += 1
+        input_hash = self._get_data_hash(input_data)
+        cache_key = self._generate_cache_key(analysis_type, input_hash, parameters)
+        cache_file = self.cache_dir / f"{cache_key}.json"
+        
+        index = self._load_index()
+        
+        if cache_key in index and cache_file.exists():
+            cache_entry = index[cache_key]
+            if self._is_cache_valid(cache_entry, max_age_seconds):
+                try:
+                    with open(cache_file, 'r') as f:
+                        cached_data = json.load(f)
+                    
+                    self.stats["hits"] += 1
+                    return {
+                        'result': cached_data.get('result'),
+                        'analysis_type': cached_data.get('analysis_type'),
+                        'cached': True,
+                        'cache_timestamp': cache_entry['timestamp']
+                    }
+                except:
+                    # Remove corrupted cache entry
+                    try:
+                        cache_file.unlink()
+                        del index[cache_key]
+                        self._save_index(index)
+                    except:
+                        pass
+        
+        self.stats["misses"] += 1
+        return None
+    
+    def store_analysis(self, analysis_type, input_data, result, parameters=""):
+        """Store AI analysis result in cache"""
+        input_hash = self._get_data_hash(input_data)
+        cache_key = self._generate_cache_key(analysis_type, input_hash, parameters)
+        cache_file = self.cache_dir / f"{cache_key}.json"
+        
+        cache_data = {
+            'result': result,
+            'analysis_type': analysis_type,
+            'input_hash': input_hash,
+            'parameters': parameters,
+            'timestamp': time.time()
+        }
+        
+        try:
+            with open(cache_file, 'w') as f:
+                json.dump(cache_data, f, indent=2)
+            
+            # Update index
+            index = self._load_index()
+            index[cache_key] = {
+                'timestamp': time.time(),
+                'analysis_type': analysis_type,
+                'input_hash': input_hash,
+                'parameters': parameters
+            }
+            self._save_index(index)
+            
+        except Exception as e:
+            pass  # Fail silently on cache storage errors
+    
+    def clear_cache(self):
+        """Clear all cached AI analysis results"""
+        try:
+            if self.cache_dir.exists():
+                shutil.rmtree(self.cache_dir)
+                self.cache_dir.mkdir(exist_ok=True)
+                return True
+        except:
+            pass
+        return False
+    
+    def get_cache_stats(self):
+        """Get cache performance statistics"""
+        index = self._load_index()
+        total_size = sum(
+            (self.cache_dir / f"{key}.json").stat().st_size 
+            for key in index.keys() 
+            if (self.cache_dir / f"{key}.json").exists()
+        )
+        
+        hit_rate = (self.stats["hits"] / max(self.stats["total_requests"], 1)) * 100
+        
+        return {
+            'total_entries': len(index),
+            'cache_size_mb': round(total_size / (1024 * 1024), 2),
+            'hit_rate_percent': round(hit_rate, 1),
+            'hits': self.stats["hits"],
+            'misses': self.stats["misses"],
+            'total_requests': self.stats["total_requests"]
+        }
+
+
 @click.command()
 @click.option("--input-file", "-i", required=True, help="Input file with URLs.")
 @click.option("--output-dir", "-o", required=True, help="Directory to save results.")
@@ -517,6 +1192,7 @@ def ai_generate_executive_summary(stats, scan_results, tech_stack=None):
 @click.option("--run-dalfox", is_flag=True, help="Run Dalfox on xss.txt.")
 @click.option("--run-jaeles", is_flag=True, help="Run Jaeles scan.")
 @click.option("--run-nuclei", is_flag=True, help="Run Nuclei scan.")
+@click.option("--run-shef", is_flag=True, help="Run Shef reconnaissance with facets.")
 @click.option("--resume", is_flag=True, help="Skip steps if output exists.")
 @click.option(
     "--resume-stat", is_flag=True, help="Show detailed resume statistics and progress"
@@ -598,6 +1274,33 @@ def ai_generate_executive_summary(stats, scan_results, tech_stack=None):
     default=300,
     help="Timeout for Nuclei scan in seconds.",
 )
+@click.option("--shef-query", help="Shef search query (e.g., 'hackerone', 'example.com').")
+@click.option(
+    "--shef-facet", 
+    default="domain", 
+    help="Shef facet type: domain, ip, org, port, etc. (default: domain)."
+)
+@click.option("--shef-json", is_flag=True, help="Output Shef results in JSON format.")
+@click.option("--shef-cache", is_flag=True, help="Enable caching for Shef reconnaissance results.")
+@click.option("--shef-cache-dir", default="shef_cache", help="Directory for Shef cache files.")
+@click.option("--shef-cache-max-age", type=int, default=86400, help="Cache expiration time in seconds (default: 24h).")
+@click.option("--shef-clear-cache", is_flag=True, help="Clear all Shef cached results.")
+@click.option("--shef-cache-stats", is_flag=True, help="Show Shef cache statistics.")
+@click.option("--nuclei-cache", is_flag=True, help="Enable caching for Nuclei scan results.")
+@click.option("--nuclei-cache-dir", default="nuclei_cache", help="Directory for Nuclei cache files.")
+@click.option("--nuclei-cache-max-age", type=int, default=86400, help="Cache expiration time in seconds (default: 24h).")
+@click.option("--nuclei-clear-cache", is_flag=True, help="Clear all Nuclei cached results.")
+@click.option("--nuclei-cache-stats", is_flag=True, help="Show Nuclei cache statistics.")
+@click.option("--jaeles-cache", is_flag=True, help="Enable caching for Jaeles scan results.")
+@click.option("--jaeles-cache-dir", default="jaeles_cache", help="Directory for Jaeles cache files.")
+@click.option("--jaeles-cache-max-age", type=int, default=86400, help="Cache expiration time in seconds (default: 24h).")
+@click.option("--jaeles-clear-cache", is_flag=True, help="Clear all Jaeles cached results.")
+@click.option("--jaeles-cache-stats", is_flag=True, help="Show Jaeles cache statistics.")
+@click.option("--ai-cache", is_flag=True, help="Enable caching for AI-powered analysis results.")
+@click.option("--ai-cache-dir", default="ai_cache", help="Directory for AI cache files.")
+@click.option("--ai-cache-max-age", type=int, default=86400, help="Cache expiration time in seconds (default: 24h).")
+@click.option("--ai-clear-cache", is_flag=True, help="Clear all AI cached results.")
+@click.option("--ai-cache-stats", is_flag=True, help="Show AI cache statistics.")
 @click.option(
     "--exclude-extensions",
     help="Comma-separated extensions to exclude (e.g. css,js,png).",
@@ -667,6 +1370,7 @@ def vulncli(
     run_dalfox,
     run_jaeles,
     run_nuclei,
+    run_shef,
     resume,
     resume_stat,
     resume_reset,
@@ -697,6 +1401,29 @@ def vulncli(
     custom_headers,
     timeout,
     timeout_nuclei,
+    shef_query,
+    shef_facet,
+    shef_json,
+    shef_cache,
+    shef_cache_dir,
+    shef_cache_max_age,
+    shef_clear_cache,
+    shef_cache_stats,
+    nuclei_cache,
+    nuclei_cache_dir,
+    nuclei_cache_max_age,
+    nuclei_clear_cache,
+    nuclei_cache_stats,
+    jaeles_cache,
+    jaeles_cache_dir,
+    jaeles_cache_max_age,
+    jaeles_clear_cache,
+    jaeles_cache_stats,
+    ai_cache,
+    ai_cache_dir,
+    ai_cache_max_age,
+    ai_clear_cache,
+    ai_cache_stats,
     exclude_extensions,
     include_status_codes,
     technology_detect,
@@ -712,13 +1439,14 @@ def vulncli(
     program,
     insecure,
 ):
-    """🎯 Advanced vulnerability scanning with GF, Dalfox, Jaeles, and Nuclei
+    """🎯 Advanced vulnerability scanning with GF, Dalfox, Jaeles, Nuclei, and Shef
 
     Comprehensive URL filtering and vulnerability scanning pipeline with:
     • GF pattern matching (XSS, LFI, SQLi, etc.)
     • Parameter extraction and filtering
     • Technology detection and analysis
     • Multi-tool vulnerability scanning with selective template/signature usage
+    • 🔍 Shef reconnaissance with facets (domain, ip, org, port, etc.)
     • Professional reporting (JSON/Markdown)
     • Real-time notifications (Slack/Discord)
     • Resume functionality for large scans
@@ -730,6 +1458,12 @@ def vulncli(
     --ai-reduce-fp                  # Reduce false positives using AI
     --ai-executive-summary          # Generate AI-powered executive summary
     --ai-confidence-threshold 0.8   # Set AI confidence threshold
+
+    Shef Reconnaissance Examples:
+    --run-shef --shef-query 'hackerone' --shef-facet 'domain'    # Domain facets
+    --run-shef --shef-query 'bugcrowd' --shef-facet 'ip' --shef-json  # IP facets in JSON
+    --run-shef --shef-query 'example.com' --shef-facet 'org'     # Organization facets
+    --run-shef --shef-query 'port:443' --shef-facet 'port'       # Port facets
 
     Jaeles Signature Examples:
     --jaeles-select 'sensitive/.*'     # Only sensitive signatures
@@ -745,7 +1479,123 @@ def vulncli(
     --nuclei-exclude 'http/fuzzing/'   # Exclude fuzzing templates
     --nuclei-severity 'critical,high'  # Only critical/high severity
     --nuclei-tags 'exposure,misconfig' # Use specific tags
+
+    Cache Examples:
+    --nuclei-cache --nuclei-cache-dir './nuclei_cache'      # Enable Nuclei caching
+    --jaeles-cache --jaeles-cache-max-age 7200              # Enable Jaeles cache (2h TTL)
+    --shef-cache --shef-cache-stats                         # Enable Shef cache and show stats
+    --ai-cache --ai-cache-dir './ai_analysis_cache'         # Enable AI analysis caching
+    --ai-mode --ai-cache                                    # Enable AI mode with caching
+    --nuclei-clear-cache                                    # Clear Nuclei cache
+    --jaeles-cache-stats                                    # Show Jaeles cache statistics
+    --ai-clear-cache                                        # Clear AI analysis cache
+    --ai-cache-stats                                        # Show AI cache statistics
     """
+
+    # Initialize Shef cache manager if cache is enabled
+    shef_cache_manager = None
+    if shef_cache or shef_clear_cache or shef_cache_stats:
+        shef_cache_manager = ShefCacheManager(shef_cache_dir)
+    
+    # Initialize Nuclei cache manager if cache is enabled
+    nuclei_cache_manager = None
+    if nuclei_cache or nuclei_clear_cache or nuclei_cache_stats:
+        nuclei_cache_manager = NucleiCacheManager(nuclei_cache_dir)
+    
+    # Initialize Jaeles cache manager if cache is enabled
+    jaeles_cache_manager = None
+    if jaeles_cache or jaeles_clear_cache or jaeles_cache_stats:
+        jaeles_cache_manager = JaelesCacheManager(jaeles_cache_dir)
+    
+    # Initialize AI cache manager if cache is enabled
+    ai_cache_manager = None
+    if ai_cache or ai_clear_cache or ai_cache_stats:
+        ai_cache_manager = AICacheManager(ai_cache_dir)
+    
+    # Handle cache-only commands
+    if shef_clear_cache:
+        if shef_cache_manager and shef_cache_manager.clear_cache():
+            click.echo("✅ [SHEF-CACHE] All cached results cleared successfully")
+        else:
+            click.echo("❌ [SHEF-CACHE] Failed to clear cache")
+        return
+    
+    if nuclei_clear_cache:
+        if nuclei_cache_manager and nuclei_cache_manager.clear_cache():
+            click.echo("✅ [NUCLEI-CACHE] All cached results cleared successfully")
+        else:
+            click.echo("❌ [NUCLEI-CACHE] Failed to clear cache")
+        return
+    
+    if jaeles_clear_cache:
+        if jaeles_cache_manager and jaeles_cache_manager.clear_cache():
+            click.echo("✅ [JAELES-CACHE] All cached results cleared successfully")
+        else:
+            click.echo("❌ [JAELES-CACHE] Failed to clear cache")
+        return
+    
+    if ai_clear_cache:
+        if ai_cache_manager and ai_cache_manager.clear_cache():
+            click.echo("✅ [AI-CACHE] All cached AI analysis results cleared successfully")
+        else:
+            click.echo("❌ [AI-CACHE] Failed to clear cache")
+        return
+    
+    if shef_cache_stats:
+        if shef_cache_manager:
+            stats = shef_cache_manager.get_cache_stats()
+            click.echo("📊 [SHEF-CACHE] Cache Statistics:")
+            click.echo(f"  Total entries: {stats['total_entries']}")
+            click.echo(f"  Cache size: {stats['cache_size_mb']} MB")
+            click.echo(f"  Hit rate: {stats['hit_rate_percent']}%")
+            click.echo(f"  Hits: {stats['hits']}")
+            click.echo(f"  Misses: {stats['misses']}")
+            click.echo(f"  Total requests: {stats['total_requests']}")
+        else:
+            click.echo("ℹ️ [SHEF-CACHE] No cache statistics available")
+        return
+
+    if nuclei_cache_stats:
+        if nuclei_cache_manager:
+            stats = nuclei_cache_manager.get_cache_stats()
+            click.echo("📊 [NUCLEI-CACHE] Cache Statistics:")
+            click.echo(f"  Total entries: {stats['total_entries']}")
+            click.echo(f"  Cache size: {stats['cache_size_mb']} MB")
+            click.echo(f"  Hit rate: {stats['hit_rate_percent']}%")
+            click.echo(f"  Hits: {stats['hits']}")
+            click.echo(f"  Misses: {stats['misses']}")
+            click.echo(f"  Total requests: {stats['total_requests']}")
+        else:
+            click.echo("ℹ️ [NUCLEI-CACHE] No cache statistics available")
+        return
+
+    if jaeles_cache_stats:
+        if jaeles_cache_manager:
+            stats = jaeles_cache_manager.get_cache_stats()
+            click.echo("📊 [JAELES-CACHE] Cache Statistics:")
+            click.echo(f"  Total entries: {stats['total_entries']}")
+            click.echo(f"  Cache size: {stats['cache_size_mb']} MB")
+            click.echo(f"  Hit rate: {stats['hit_rate_percent']}%")
+            click.echo(f"  Hits: {stats['hits']}")
+            click.echo(f"  Misses: {stats['misses']}")
+            click.echo(f"  Total requests: {stats['total_requests']}")
+        else:
+            click.echo("ℹ️ [JAELES-CACHE] No cache statistics available")
+        return
+
+    if ai_cache_stats:
+        if ai_cache_manager:
+            stats = ai_cache_manager.get_cache_stats()
+            click.echo("📊 [AI-CACHE] Cache Statistics:")
+            click.echo(f"  Total entries: {stats['total_entries']}")
+            click.echo(f"  Cache size: {stats['cache_size_mb']} MB")
+            click.echo(f"  Hit rate: {stats['hit_rate_percent']}%")
+            click.echo(f"  Hits: {stats['hits']}")
+            click.echo(f"  Misses: {stats['misses']}")
+            click.echo(f"  Total requests: {stats['total_requests']}")
+        else:
+            click.echo("ℹ️ [AI-CACHE] No cache statistics available")
+        return
 
     # Initialize scan statistics
     start_time = time.time()
@@ -1138,27 +1988,80 @@ def vulncli(
                         "[!] Retry not supported in Jaeles – skipping retry flag."
                     )
 
-            with open(jaeles_out, "w") as out:
-                subprocess.run(jaeles_cmd, stdout=out, stderr=subprocess.DEVNULL)
+            # Try to get cached results first if cache is enabled
+            cached_result = None
+            if jaeles_cache and jaeles_cache_manager:
+                signatures_key = jaeles_signatures or ""
+                selector_key = jaeles_select or ""
+                excludes_key = jaeles_exclude or ""
+                
+                cached_result = jaeles_cache_manager.get_cached_result(
+                    str(all_file), signatures_key, selector_key, excludes_key, jaeles_level, jaeles_cache_max_age
+                )
+                
+                if cached_result:
+                    if verbose:
+                        cache_time = datetime.fromtimestamp(cached_result['cache_timestamp']).strftime('%H:%M:%S')
+                        click.echo(f"💾 [JAELES-CACHE] Using cached results from {cache_time} ({cached_result['findings_count']} findings)")
+                    
+                    # Use cached data
+                    scan_results["jaeles"] = {
+                        "findings": cached_result['findings_count'],
+                        "signatures": cached_result['signature_info'],
+                        "cached": True
+                    }
+                    stats["vulnerabilities_found"] += cached_result['findings_count']
+                    
+                    # Write cached results to output file for consistency
+                    with open(jaeles_out, "w") as f:
+                        f.write("\n".join(cached_result['results']))
+                    
+                    if verbose:
+                        click.echo(f"🔧 [JAELES] Cache hit! Found {cached_result['findings_count']} vulnerabilities (cached)")
+                    
+                    click.echo(f"[✓] Jaeles done (cached): {jaeles_out}")
 
-            # Count findings
-            if jaeles_out.exists():
-                with open(jaeles_out, "r") as f:
-                    findings = len(
-                        [line for line in f if "[VULN]" in line or "[INFO]" in line]
-                    )
-                scan_results["jaeles"] = {
-                    "findings": findings,
-                    "signatures": signature_info,
-                }
-                stats["vulnerabilities_found"] += findings
+            # If no cache hit or cache disabled, run actual jaeles command
+            if not cached_result:
+                with open(jaeles_out, "w") as out:
+                    subprocess.run(jaeles_cmd, stdout=out, stderr=subprocess.DEVNULL)
 
-                if verbose:
-                    click.echo(
-                        f"🔧 [JAELES] Completed! Found {findings} potential vulnerabilities"
-                    )
+                # Count findings
+                if jaeles_out.exists():
+                    with open(jaeles_out, "r") as f:
+                        raw_findings = [line.strip() for line in f if "[VULN]" in line or "[INFO]" in line]
+                        findings = len(raw_findings)
+                    
+                    scan_results["jaeles"] = {
+                        "findings": findings,
+                        "signatures": signature_info,
+                    }
+                    stats["vulnerabilities_found"] += findings
 
-            click.echo(f"[✓] Jaeles done: {jaeles_out}")
+                    # Store results in cache if cache is enabled
+                    if jaeles_cache and jaeles_cache_manager:
+                        signatures_key = jaeles_signatures or ""
+                        selector_key = jaeles_select or ""
+                        excludes_key = jaeles_exclude or ""
+                        
+                        # Read all lines for caching
+                        with open(jaeles_out, "r") as f:
+                            all_lines = [line.strip() for line in f]
+                        
+                        jaeles_cache_manager.store_result(
+                            str(all_file), all_lines, findings, signature_info,
+                            signatures_key, selector_key, excludes_key, jaeles_level
+                        )
+                        
+                        if verbose:
+                            click.echo(f"💾 [JAELES-CACHE] Results cached for future use")
+
+                    if verbose:
+                        click.echo(
+                            f"🔧 [JAELES] Completed! Found {findings} potential vulnerabilities"
+                        )
+
+                click.echo(f"[✓] Jaeles done: {jaeles_out}")
 
     # === NUCLEI ===
     if run_nuclei:
@@ -1179,7 +2082,9 @@ def vulncli(
 
                 # Get technology stack for AI analysis
                 tech_list = list(stats.get("technologies", {}).keys())
-                smart_templates = ai_smart_template_selection(all_urls, tech_list)
+                smart_templates = ai_smart_template_selection_cached(
+                    all_urls, tech_list, None, ai_cache_manager, ai_cache_max_age
+                )
 
                 if verbose:
                     click.echo(
@@ -1324,11 +2229,48 @@ def vulncli(
             # Add timeout
             nuclei_cmd += ["-timeout", str(timeout_nuclei)]
 
-            with open(nuclei_out, "w") as out:
-                subprocess.run(nuclei_cmd, stdout=out, stderr=subprocess.DEVNULL)
+            # Try to get cached results first if cache is enabled
+            cached_result = None
+            if nuclei_cache and nuclei_cache_manager:
+                template_key = nuclei_templates or ""
+                tags_key = nuclei_tags or ""
+                severity_key = nuclei_severity or ""
+                excludes_key = nuclei_exclude or ""
+                
+                cached_result = nuclei_cache_manager.get_cached_result(
+                    str(all_file), template_key, tags_key, severity_key, excludes_key, nuclei_cache_max_age
+                )
+                
+                if cached_result:
+                    if verbose:
+                        cache_time = datetime.fromtimestamp(cached_result['cache_timestamp']).strftime('%H:%M:%S')
+                        click.echo(f"💾 [NUCLEI-CACHE] Using cached results from {cache_time} ({cached_result['findings_count']} findings)")
+                    
+                    # Use cached data
+                    scan_results["nuclei"] = {
+                        "findings": cached_result['findings_count'],
+                        "templates": cached_result['template_info'],
+                        "ai_enhanced": False,
+                        "cached": True
+                    }
+                    stats["vulnerabilities_found"] += cached_result['findings_count']
+                    
+                    # Write cached results to output file for consistency
+                    with open(nuclei_out, "w") as f:
+                        f.write("\n".join(cached_result['results']))
+                    
+                    if verbose:
+                        click.echo(f"⚡ [NUCLEI] Cache hit! Found {cached_result['findings_count']} vulnerabilities (cached)")
+                    
+                    click.echo(f"[✓] Nuclei done (cached): {nuclei_out}")
+
+            # If no cache hit or cache disabled, run actual nuclei command
+            if not cached_result:
+                with open(nuclei_out, "w") as out:
+                    subprocess.run(nuclei_cmd, stdout=out, stderr=subprocess.DEVNULL)
 
             # Count findings and apply AI analysis
-            if nuclei_out.exists():
+            if nuclei_out.exists() and not cached_result:
                 with open(nuclei_out, "r") as f:
                     raw_findings = [
                         line.strip() for line in f if "[" in line and "]" in line
@@ -1346,15 +2288,15 @@ def vulncli(
 
                     # Analyze findings with AI
                     tech_list = list(stats.get("technologies", {}).keys())
-                    filtered_findings = ai_reduce_false_positives(
-                        raw_findings, tech_list, str(all_file)
+                    filtered_findings = ai_reduce_false_positives_cached(
+                        raw_findings, tech_list, str(all_file), ai_cache_manager, ai_cache_max_age
                     )
 
                     # Classify vulnerabilities
                     for i, finding_data in enumerate(filtered_findings):
                         if finding_data["likely_valid"]:
-                            classification = ai_classify_vulnerability(
-                                finding_data["original"], tech_list
+                            classification = ai_classify_vulnerability_cached(
+                                finding_data["original"], tech_list, ai_cache_manager, ai_cache_max_age
                             )
                             ai_analyzed_findings.append(
                                 {
@@ -1413,6 +2355,21 @@ def vulncli(
                 }
                 stats["vulnerabilities_found"] += final_findings
 
+                # Store results in cache if cache is enabled
+                if nuclei_cache and nuclei_cache_manager:
+                    template_key = nuclei_templates or ""
+                    tags_key = nuclei_tags or ""
+                    severity_key = nuclei_severity or ""
+                    excludes_key = nuclei_exclude or ""
+                    
+                    nuclei_cache_manager.store_result(
+                        str(all_file), raw_findings, final_findings, template_info,
+                        template_key, tags_key, severity_key, excludes_key
+                    )
+                    
+                    if verbose:
+                        click.echo(f"💾 [NUCLEI-CACHE] Results cached for future use")
+
                 if verbose:
                     if ai_mode or ai_reduce_fp:
                         click.echo(
@@ -1424,6 +2381,140 @@ def vulncli(
                         )
 
             click.echo(f"[✓] Nuclei done: {nuclei_out}")
+
+    # === SHEF RECONNAISSANCE ===
+    if run_shef and shef_query:
+        stats["scan_tools"].append("shef")
+        
+        # Try to get cached results first if cache is enabled
+        cached_result = None
+        if shef_cache and shef_cache_manager:
+            cached_result = shef_cache_manager.get_cached_result(
+                shef_query, shef_facet, shef_json, shef_cache_max_age
+            )
+            
+            if cached_result:
+                if verbose:
+                    cache_time = datetime.fromtimestamp(cached_result['cache_timestamp']).strftime('%H:%M:%S')
+                    click.echo(f"🎯 [SHEF-CACHE] Found cached results from {cache_time}")
+                    click.echo(f"🔍 [SHEF] Using cached reconnaissance results...")
+                
+                # Use cached results
+                findings_count = cached_result['findings_count']
+                
+                # Write cached results to output file
+                shef_out = Path(output_dir) / "shef.txt"
+                try:
+                    if shef_json:
+                        with open(shef_out, "w") as f:
+                            json.dump(cached_result['results'], f, indent=2)
+                    else:
+                        with open(shef_out, "w") as f:
+                            if isinstance(cached_result['results'], list):
+                                f.write('\n'.join(str(item) for item in cached_result['results']))
+                            else:
+                                f.write(str(cached_result['results']))
+                except Exception as e:
+                    if verbose:
+                        click.echo(f"⚠️ [SHEF-CACHE] Error writing cached results: {e}")
+
+        # If no cache hit or cache disabled, run actual shef command
+        if not cached_result:
+            if verbose:
+                click.echo("🔍 [SHEF] Running reconnaissance with facets...")
+
+            shef_out = Path(output_dir) / "shef.txt"
+            if not (resume and shef_out.exists()):
+                try:
+                    # Build shef command
+                    shef_cmd = ["shef", "-q", shef_query, "-f", shef_facet]
+                    if shef_json:
+                        shef_cmd.append("-json")
+
+                    if verbose:
+                        click.echo(f"🔍 [SHEF] Command: {' '.join(shef_cmd)}")
+
+                    with open(shef_out, "w") as out:
+                        result = subprocess.run(
+                            shef_cmd, 
+                            stdout=out, 
+                            stderr=subprocess.DEVNULL,
+                            timeout=300  # 5 minutes timeout
+                        )
+
+                    # Read and count findings
+                    findings_count = 0
+                    results_data = []
+                    
+                    if shef_out.exists():
+                        with open(shef_out, "r") as f:
+                            if shef_json:
+                                try:
+                                    results_data = json.load(f)
+                                    findings_count = len(results_data) if isinstance(results_data, list) else 1
+                                except:
+                                    content = f.read()
+                                    findings_count = len([line for line in content.split('\n') if line.strip()])
+                                    results_data = content.split('\n')
+                            else:
+                                results_data = [line.strip() for line in f if line.strip()]
+                                findings_count = len(results_data)
+
+                    # Store in cache if cache is enabled
+                    if shef_cache and shef_cache_manager and results_data:
+                        shef_cache_manager.store_result(
+                            shef_query, shef_facet, results_data, findings_count, shef_json
+                        )
+                        if verbose:
+                            click.echo(f"� [SHEF-CACHE] Results stored in cache")
+
+                except subprocess.TimeoutExpired:
+                    if verbose:
+                        click.echo("⚠️  [SHEF] Timeout - scan took too long")
+                    findings_count = 0
+                except FileNotFoundError:
+                    if verbose:
+                        click.echo("❌ [SHEF] Error: shef command not found")
+                    findings_count = 0
+                except Exception as e:
+                    if verbose:
+                        click.echo(f"❌ [SHEF] Error: {e}")
+                    findings_count = 0
+            else:
+                if verbose:
+                    click.echo("🔍 [SHEF] Output exists, skipping...")
+                # Count existing file results
+                try:
+                    with open(shef_out, "r") as f:
+                        if shef_json:
+                            try:
+                                data = json.load(f)
+                                findings_count = len(data) if isinstance(data, list) else 1
+                            except:
+                                findings_count = sum(1 for line in f if line.strip())
+                        else:
+                            findings_count = sum(1 for line in f if line.strip())
+                except:
+                    findings_count = 0
+
+        # Store scan results
+        scan_results["shef"] = {
+            "findings": findings_count,
+            "query": shef_query,
+            "facet": shef_facet,
+            "format": "json" if shef_json else "text",
+            "cached": bool(cached_result)
+        }
+        stats["vulnerabilities_found"] += findings_count
+
+        if verbose:
+            cache_indicator = " (cached)" if cached_result else ""
+            click.echo(f"🔍 [SHEF] Found {findings_count} results{cache_indicator}")
+            
+            # Show cache stats if cache is enabled
+            if shef_cache and shef_cache_manager:
+                cache_stats = shef_cache_manager.get_cache_stats()
+                click.echo(f"📊 [SHEF-CACHE] Hit rate: {cache_stats['hit_rate_percent']}% ({cache_stats['hits']}/{cache_stats['total_requests']})")
 
     # === SEVERITY FILTERING ===
     def filter_by_severity(path, out_path, sevs):

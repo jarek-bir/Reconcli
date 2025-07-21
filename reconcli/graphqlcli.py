@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 
+import hashlib
 import json
+import shutil
 import subprocess
 import time
 from datetime import datetime
@@ -18,8 +20,149 @@ except ImportError:
     DEPENDENCIES_AVAILABLE = False
 
 
+class GraphQLCacheManager:
+    """Intelligent cache manager for GraphQL security operations."""
+
+    def __init__(self, cache_dir: str = "graphql_cache", max_age_hours: int = 24):
+        self.cache_dir = Path(cache_dir)
+        self.cache_dir.mkdir(parents=True, exist_ok=True)
+        self.max_age_seconds = max_age_hours * 3600
+        self.cache_index_file = self.cache_dir / "graphql_cache_index.json"
+        self.cache_stats = {"hits": 0, "misses": 0, "total_requests": 0}
+
+    def _generate_cache_key(self, target: str, engine: str, options: dict) -> str:
+        """Generate unique cache key based on target and scan parameters."""
+        # Create a deterministic key from target, engine, and options
+        key_data = {
+            "target": target,
+            "engine": engine,
+            "options": {k: v for k, v in sorted(options.items()) if v is not None},
+        }
+        key_string = json.dumps(key_data, sort_keys=True)
+        return hashlib.sha256(key_string.encode()).hexdigest()
+
+    def _is_cache_valid(self, cache_file: Path) -> bool:
+        """Check if cache file is still valid based on age."""
+        if not cache_file.exists():
+            return False
+
+        file_age = time.time() - cache_file.stat().st_mtime
+        return file_age < self.max_age_seconds
+
+    def get_cached_result(self, target: str, engine: str, options: dict):
+        """Retrieve cached result if available and valid."""
+        cache_key = self._generate_cache_key(target, engine, options)
+        cache_file = self.cache_dir / f"{cache_key}.json"
+
+        self.cache_stats["total_requests"] += 1
+
+        if self._is_cache_valid(cache_file):
+            try:
+                with open(cache_file, "r") as f:
+                    cached_data = json.load(f)
+                    self.cache_stats["hits"] += 1
+                    return cached_data
+            except (json.JSONDecodeError, IOError):
+                # If cache file is corrupted, treat as cache miss
+                pass
+
+        self.cache_stats["misses"] += 1
+        return None
+
+    def store_result(self, target: str, engine: str, options: dict, result_data: dict):
+        """Store scan result in cache."""
+        cache_key = self._generate_cache_key(target, engine, options)
+        cache_file = self.cache_dir / f"{cache_key}.json"
+
+        # Add metadata to cached result
+        cache_data = {
+            "metadata": {
+                "target": target,
+                "engine": engine,
+                "options": options,
+                "cached_at": time.strftime("%Y-%m-%d %H:%M:%S"),
+                "cache_key": cache_key,
+            },
+            "result": result_data,
+        }
+
+        try:
+            with open(cache_file, "w") as f:
+                json.dump(cache_data, f, indent=2)
+
+            # Update cache index
+            self._update_cache_index(cache_key, target, engine)
+
+        except IOError as e:
+            print(f"⚠️  [CACHE] Failed to store cache: {e}")
+
+    def _update_cache_index(self, cache_key: str, target: str, engine: str):
+        """Update cache index with new entry."""
+        index_data = {}
+
+        if self.cache_index_file.exists():
+            try:
+                with open(self.cache_index_file, "r") as f:
+                    index_data = json.load(f)
+            except (json.JSONDecodeError, IOError):
+                index_data = {}
+
+        index_data[cache_key] = {
+            "target": target,
+            "engine": engine,
+            "created_at": time.strftime("%Y-%m-%d %H:%M:%S"),
+            "file_size": (self.cache_dir / f"{cache_key}.json").stat().st_size,
+        }
+
+        try:
+            with open(self.cache_index_file, "w") as f:
+                json.dump(index_data, f, indent=2)
+        except IOError as e:
+            print(f"⚠️  [CACHE] Failed to update cache index: {e}")
+
+    def clear_cache(self) -> bool:
+        """Clear all cached results."""
+        try:
+            if self.cache_dir.exists():
+                shutil.rmtree(self.cache_dir)
+                self.cache_dir.mkdir(parents=True, exist_ok=True)
+                print("✅ [CACHE] All cached results cleared successfully")
+                return True
+            return True
+        except Exception as e:
+            print(f"❌ [CACHE] Failed to clear cache: {e}")
+            return False
+
+    def get_cache_stats(self) -> dict:
+        """Get cache performance statistics."""
+        cache_files = list(self.cache_dir.glob("*.json"))
+        cache_size = sum(
+            f.stat().st_size
+            for f in cache_files
+            if f.name != "graphql_cache_index.json"
+        )
+
+        hit_rate = (
+            (self.cache_stats["hits"] / self.cache_stats["total_requests"] * 100)
+            if self.cache_stats["total_requests"] > 0
+            else 0
+        )
+
+        return {
+            "cache_hits": self.cache_stats["hits"],
+            "cache_misses": self.cache_stats["misses"],
+            "hit_rate": f"{hit_rate:.1f}%",
+            "total_requests": self.cache_stats["total_requests"],
+            "cache_files": len(
+                [f for f in cache_files if f.name != "graphql_cache_index.json"]
+            ),
+            "cache_size": cache_size,
+            "cache_dir": str(self.cache_dir),
+        }
+
+
 @click.command()
-@click.option("--domain", required=True, help="Target domain (e.g. target.com)")
+@click.option("--domain", required=False, help="Target domain (e.g. target.com)")
 @click.option(
     "--engine",
     default="graphw00f",
@@ -92,6 +235,16 @@ except ImportError:
     is_flag=True,
     help="Disable SSL certificate verification (security risk)",
 )
+# ========== Cache Options ==========
+@click.option(
+    "--cache", is_flag=True, help="Enable intelligent caching for faster repeated scans"
+)
+@click.option(
+    "--cache-dir", default="graphql_cache", help="Directory for cache storage"
+)
+@click.option("--cache-max-age", type=int, default=24, help="Cache TTL in hours")
+@click.option("--cache-stats", is_flag=True, help="Show cache statistics and exit")
+@click.option("--clear-cache", is_flag=True, help="Clear all cached results and exit")
 def graphqlcli(
     domain,
     engine,
@@ -128,12 +281,51 @@ def graphqlcli(
     gql_transport,
     verbose,
     insecure,
+    cache,
+    cache_dir,
+    cache_max_age,
+    cache_stats,
+    clear_cache,
 ):
     """GraphQL recon & audit module using multiple engines and advanced techniques"""
+
+    # ========== Cache System ==========
+    cache_manager = None
+    if cache or cache_stats or clear_cache:
+        cache_manager = GraphQLCacheManager(
+            cache_dir=cache_dir, max_age_hours=cache_max_age
+        )
+
+        if clear_cache:
+            if cache_manager.clear_cache():
+                print(f"✅ [CACHE] Cache cleared successfully: {cache_dir}")
+            else:
+                print(f"❌ [CACHE] Failed to clear cache: {cache_dir}")
+            return
+
+        if cache_stats:
+            stats = cache_manager.get_cache_stats()
+            print("📊 [CACHE] GraphQL Cache Statistics:")
+            print(f"    Cache hits: {stats['cache_hits']}")
+            print(f"    Cache misses: {stats['cache_misses']}")
+            print(f"    Hit rate: {stats['hit_rate']}")
+            print(f"    Total requests: {stats['total_requests']}")
+            print(f"    Cache files: {stats['cache_files']}")
+            print(f"    Cache size: {stats['cache_size']} bytes")
+            print(f"    Cache directory: {stats['cache_dir']}")
+            return
 
     if not DEPENDENCIES_AVAILABLE:
         click.echo("[!] Required dependencies not found. Install with:")
         click.echo("    pip install requests gql[all] click")
+        return
+
+    # Validate required parameters
+    if not domain:
+        print(
+            "❌ Error: Domain is required for GraphQL scanning. Use --help for options."
+        )
+        print("💡 Available cache-only commands: --cache-stats, --clear-cache")
         return
 
     # Security warning for insecure mode
@@ -158,6 +350,12 @@ def graphqlcli(
         click.echo(f"[+] Starting GraphQL security assessment for {domain}")
         click.echo(f"[+] Engine: {engine}")
         click.echo(f"[+] Output directory: {output_path}")
+        if cache_manager:
+            click.echo(
+                f"💾 [CACHE] Cache: ENABLED (dir: {cache_dir}, TTL: {cache_max_age}h)"
+            )
+        else:
+            click.echo("💾 [CACHE] Cache: DISABLED")
 
     # Resume logic
     if resume_reset:
@@ -201,6 +399,38 @@ def graphqlcli(
         if verbose:
             click.echo(f"[+] Running {eng} engine...")
 
+        # ========== Cache Check ==========
+        cache_options = {
+            "endpoint": endpoint,
+            "proxy": proxy,
+            "tor": tor,
+            "headers": header,
+            "wordlist": wordlist,
+            "threads": threads,
+            "timeout": timeout,
+            "fingerprint": fingerprint,
+            "threat_matrix": threat_matrix,
+            "detect_engines": detect_engines,
+            "batch_queries": batch_queries,
+            "field_suggestions": field_suggestions,
+            "depth_limit": depth_limit,
+            "rate_limit": rate_limit,
+            "sqli_test": sqli_test,
+            "nosqli_test": nosqli_test,
+        }
+
+        if cache_manager:
+            cached_result = cache_manager.get_cached_result(
+                target_url, eng, cache_options
+            )
+            if cached_result:
+                if verbose:
+                    click.echo(f"💾 [CACHE] Using cached result for {eng} engine")
+                results[eng] = cached_result["result"]
+                continue
+            elif verbose:
+                click.echo(f"💾 [CACHE] No cache found for {eng} engine, scanning...")
+
         if eng == "graphw00f":
             result = run_graphw00f(
                 domain, header, proxy, fingerprint, detect_engines, verbose, ssl_verify
@@ -236,6 +466,12 @@ def graphqlcli(
             continue
 
         results[eng] = result
+
+        # ========== Cache Storage ==========
+        if cache_manager and result:
+            cache_manager.store_result(target_url, eng, cache_options, result)
+            if verbose:
+                click.echo(f"💾 [CACHE] Stored {eng} result in cache")
 
         # Run advanced tests if requested
         if threat_matrix:
@@ -312,6 +548,16 @@ def graphqlcli(
         md_content = generate_markdown_report(domain, engines, results, verbose)
         md_output.write_text(md_content)
         click.echo(f"[+] Markdown report saved: {md_output}")
+
+    # ========== Cache Statistics ==========
+    if cache_manager and verbose:
+        stats = cache_manager.get_cache_stats()
+        click.echo("\n📊 [CACHE] GraphQL Cache Performance:")
+        click.echo(f"    Cache hits: {stats['cache_hits']}")
+        click.echo(f"    Cache misses: {stats['cache_misses']}")
+        click.echo(f"    Hit rate: {stats['hit_rate']}")
+        click.echo(f"    Cache files: {stats['cache_files']}")
+        click.echo(f"    Cache size: {stats['cache_size']} bytes")
 
     return results
 

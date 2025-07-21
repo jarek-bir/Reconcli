@@ -49,6 +49,199 @@ from rich.syntax import Syntax
 
 console = Console()
 
+
+class CDNCacheManager:
+    """Intelligent caching system for CDN analysis operations with SHA256-based cache keys."""
+
+    def __init__(
+        self,
+        cache_dir: str = "cdn_cache",
+        ttl_hours: int = 24,
+        max_cache_size: int = 500,
+    ):
+        self.cache_dir = Path(cache_dir)
+        self.cache_dir.mkdir(exist_ok=True)
+        self.ttl_seconds = ttl_hours * 3600
+        self.max_cache_size = max_cache_size
+        self.cache_index_file = self.cache_dir / "cdn_cache_index.json"
+        self.cache_stats = {
+            "hits": 0,
+            "misses": 0,
+            "total_requests": 0,
+            "cache_files": 0,
+            "total_size_mb": 0.0,
+        }
+        self._load_cache_index()
+
+    def _load_cache_index(self):
+        """Load cache index from disk."""
+        if self.cache_index_file.exists():
+            try:
+                with open(self.cache_index_file, "r") as f:
+                    self.cache_index = json.load(f)
+            except:
+                self.cache_index = {}
+        else:
+            self.cache_index = {}
+
+    def _save_cache_index(self):
+        """Save cache index to disk."""
+        with open(self.cache_index_file, "w") as f:
+            json.dump(self.cache_index, f, indent=2)
+
+    def _generate_cache_key(self, domain: str, analysis_type: str, **kwargs) -> str:
+        """Generate SHA256 cache key based on domain and analysis parameters."""
+        import hashlib
+
+        # Create deterministic cache key from parameters
+        cache_data = {
+            "domain": domain,
+            "analysis_type": analysis_type,
+            "subfinder": kwargs.get("subfinder", False),
+            "dnsx": kwargs.get("dnsx", False),
+            "cdncheck": kwargs.get("cdncheck", False),
+            "nuclei": kwargs.get("nuclei", False),
+            "metabigor": kwargs.get("metabigor", False),
+            "cloudhunter": kwargs.get("cloudhunter", False),
+            "services": kwargs.get("services", ""),
+            "bypass": kwargs.get("bypass", False),
+            "shodan": kwargs.get("shodan", False),
+            "fofa": kwargs.get("fofa", False),
+        }
+
+        # Sort for consistent ordering
+        cache_string = json.dumps(cache_data, sort_keys=True)
+        return hashlib.sha256(cache_string.encode()).hexdigest()
+
+    def get_cached_result(
+        self, domain: str, analysis_type: str, **kwargs
+    ) -> Optional[Dict]:
+        """Retrieve cached result if valid and not expired."""
+        self.cache_stats["total_requests"] += 1
+
+        cache_key = self._generate_cache_key(domain, analysis_type, **kwargs)
+        cache_file = self.cache_dir / f"{cache_key}.json"
+
+        if not cache_file.exists():
+            self.cache_stats["misses"] += 1
+            return None
+
+        try:
+            with open(cache_file, "r") as f:
+                cached_data = json.load(f)
+
+            # Check if cache is still valid
+            cache_time = cached_data.get("cache_metadata", {}).get("timestamp", 0)
+            if time.time() - cache_time > self.ttl_seconds:
+                cache_file.unlink()  # Remove expired cache
+                self.cache_stats["misses"] += 1
+                return None
+
+            self.cache_stats["hits"] += 1
+            cached_data["cache_metadata"]["cache_hit"] = True
+            return cached_data
+
+        except Exception:
+            # If cache file is corrupted, remove it
+            if cache_file.exists():
+                cache_file.unlink()
+            self.cache_stats["misses"] += 1
+            return None
+
+    def save_result_to_cache(
+        self, domain: str, analysis_type: str, result: Dict, **kwargs
+    ):
+        """Save analysis result to cache with metadata."""
+        cache_key = self._generate_cache_key(domain, analysis_type, **kwargs)
+        cache_file = self.cache_dir / f"{cache_key}.json"
+
+        # Add cache metadata
+        cached_result = {
+            **result,
+            "cache_metadata": {
+                "timestamp": time.time(),
+                "cache_key": cache_key,
+                "domain": domain,
+                "analysis_type": analysis_type,
+                "ttl_seconds": self.ttl_seconds,
+                "cache_hit": False,
+            },
+        }
+
+        # Save to cache
+        with open(cache_file, "w") as f:
+            json.dump(cached_result, f, indent=2)
+
+        # Update cache index
+        self.cache_index[cache_key] = {
+            "domain": domain,
+            "analysis_type": analysis_type,
+            "timestamp": time.time(),
+            "file": str(cache_file.name),
+        }
+        self._save_cache_index()
+
+        # Cleanup old cache if needed
+        self._cleanup_old_cache()
+
+    def _cleanup_old_cache(self):
+        """Remove oldest cache files if cache size exceeds limit."""
+        cache_files = list(self.cache_dir.glob("*.json"))
+        cache_files = [f for f in cache_files if f.name != "cdn_cache_index.json"]
+
+        if len(cache_files) > self.max_cache_size:
+            # Sort by modification time and remove oldest
+            cache_files.sort(key=lambda x: x.stat().st_mtime)
+            files_to_remove = cache_files[: -self.max_cache_size]
+
+            for cache_file in files_to_remove:
+                cache_file.unlink()
+                # Remove from index
+                cache_key = cache_file.stem
+                self.cache_index.pop(cache_key, None)
+
+            self._save_cache_index()
+
+    def get_cache_stats(self) -> Dict:
+        """Get comprehensive cache statistics."""
+        cache_files = list(self.cache_dir.glob("*.json"))
+        cache_files = [f for f in cache_files if f.name != "cdn_cache_index.json"]
+
+        total_size = sum(f.stat().st_size for f in cache_files)
+
+        hit_rate = (
+            (self.cache_stats["hits"] / self.cache_stats["total_requests"] * 100)
+            if self.cache_stats["total_requests"] > 0
+            else 0
+        )
+
+        return {
+            **self.cache_stats,
+            "hit_rate_percent": round(hit_rate, 1),
+            "cache_files": len(cache_files),
+            "total_size_mb": round(total_size / (1024 * 1024), 2),
+            "cache_dir": str(self.cache_dir),
+            "ttl_hours": self.ttl_seconds / 3600,
+        }
+
+    def clear_cache(self):
+        """Clear all cached results."""
+        for cache_file in self.cache_dir.glob("*.json"):
+            cache_file.unlink()
+
+        self.cache_index = {}
+        self._save_cache_index()
+
+        # Reset stats
+        self.cache_stats = {
+            "hits": 0,
+            "misses": 0,
+            "total_requests": 0,
+            "cache_files": 0,
+            "total_size_mb": 0.0,
+        }
+
+
 # CDN Provider signatures
 CDN_SIGNATURES = {
     "cloudflare": {
@@ -231,13 +424,19 @@ class CDNAnalyzer:
 
         return True
 
-    def __init__(self, domain: str, options: Dict[str, Any]):
+    def __init__(
+        self,
+        domain: str,
+        options: Dict[str, Any],
+        cache_manager: Optional["CDNCacheManager"] = None,
+    ):
         # Validate domain for security
         if not self._validate_domain_init(domain):
             raise ValueError(f"Invalid domain format: {domain}")
 
         self.domain = domain
         self.options = options
+        self.cache_manager = cache_manager
         self.output_dir = Path(options.get("output_dir", "cdncli_output"))
         self.output_dir.mkdir(exist_ok=True)
 
@@ -915,7 +1114,40 @@ class CDNAnalyzer:
             console.print(f"[red]Database storage failed: {e}[/red]")
 
     def run_full_analysis(self):
-        """Run comprehensive CDN and cloud storage analysis."""
+        """Run comprehensive CDN and cloud storage analysis with intelligent caching."""
+        # Check cache first if enabled
+        if self.cache_manager:
+            cache_params = {
+                "subfinder": self.options.get("subfinder", False),
+                "dnsx": self.options.get("dnsx", False),
+                "cdncheck": self.options.get("cdncheck", True),
+                "nuclei": self.options.get("nuclei", False),
+                "metabigor": self.options.get("metabigor", False),
+                "cloudhunter": self.options.get("cloudhunter", False),
+                "services": self.options.get("services", ""),
+                "bypass": self.options.get("bypass", False),
+                "shodan": self.options.get("shodan", False),
+                "fofa": self.options.get("fofa", False),
+            }
+
+            cached_result = self.cache_manager.get_cached_result(
+                self.domain, "full_analysis", **cache_params
+            )
+
+            if cached_result:
+                # Use cached results
+                self.results = cached_result
+                console.print(
+                    Panel(
+                        f"🚀 Cache Hit! Using cached results for [cyan]{self.domain}[/cyan]\n"
+                        f"Cache Key: {cached_result['cache_metadata']['cache_key'][:16]}...\n"
+                        f"Cached at: {datetime.fromtimestamp(cached_result['cache_metadata']['timestamp']).strftime('%Y-%m-%d %H:%M:%S')}",
+                        title="⚡ CDN Cache Performance",
+                        border_style="green",
+                    )
+                )
+                return
+
         # Calculate total steps
         total_steps = 0
         if self.options.get("cdncheck", True):
@@ -1025,6 +1257,27 @@ class CDNAnalyzer:
         # Save final stats
         self.save_stats()
 
+        # Save to cache if enabled (excluding cached results)
+        if self.cache_manager and not self.results.get("cache_metadata", {}).get(
+            "cache_hit", False
+        ):
+            cache_params = {
+                "subfinder": self.options.get("subfinder", False),
+                "dnsx": self.options.get("dnsx", False),
+                "cdncheck": self.options.get("cdncheck", True),
+                "nuclei": self.options.get("nuclei", False),
+                "metabigor": self.options.get("metabigor", False),
+                "cloudhunter": self.options.get("cloudhunter", False),
+                "services": self.options.get("services", ""),
+                "bypass": self.options.get("bypass", False),
+                "shodan": self.options.get("shodan", False),
+                "fofa": self.options.get("fofa", False),
+            }
+
+            self.cache_manager.save_result_to_cache(
+                self.domain, "full_analysis", self.results, **cache_params
+            )
+
 
 def display_results(results: Dict[str, Any], format_type: str = "rich"):
     """Display results in various formats."""
@@ -1118,7 +1371,7 @@ def display_table_results(results: Dict[str, Any]):
 
 
 @click.command()
-@click.option("--domain", required=True, help="Target domain to analyze")
+@click.option("--domain", help="Target domain to analyze")
 @click.option("--ip", help="Target IP address for direct scanning")
 @click.option("--check-cdn", is_flag=True, help="Perform CDN detection")
 @click.option(
@@ -1168,6 +1421,13 @@ def display_table_results(results: Dict[str, Any]):
 @click.option("--resume", is_flag=True, help="Resume from previous session")
 @click.option("--resume-stats", is_flag=True, help="Display resume statistics")
 @click.option("--resume-clear", is_flag=True, help="Clear resume state and exit")
+@click.option(
+    "--cache", is_flag=True, help="Enable intelligent caching for faster repeated scans"
+)
+@click.option("--cache-dir", default="cdn_cache", help="Directory for cache storage")
+@click.option("--cache-max-age", type=int, default=24, help="Cache TTL in hours")
+@click.option("--cache-stats", is_flag=True, help="Show cache statistics and exit")
+@click.option("--clear-cache", is_flag=True, help="Clear all cached results and exit")
 def cdncli(
     domain,
     ip,
@@ -1205,8 +1465,52 @@ def cdncli(
     resume,
     resume_stats,
     resume_clear,
+    cache,
+    cache_dir,
+    cache_max_age,
+    cache_stats,
+    clear_cache,
 ):
     """🌐 CDNCli - Advanced CDN Fingerprinting & Cloud Storage Discovery Tool"""
+
+    # Initialize cache manager if caching is enabled
+    cache_manager = None
+    if cache or cache_stats or clear_cache:
+        cache_manager = CDNCacheManager(cache_dir=cache_dir, ttl_hours=cache_max_age)
+
+    # Handle cache operations
+    if cache_stats:
+        if cache_manager:
+            stats = cache_manager.get_cache_stats()
+            console.print(
+                Panel(
+                    f"📊 CDN Cache Statistics\n\n"
+                    f"Hit Rate: [green]{stats['hit_rate_percent']}%[/green] "
+                    f"({stats['hits']}/{stats['total_requests']} requests)\n"
+                    f"Cache Files: {stats['cache_files']}\n"
+                    f"Total Size: {stats['total_size_mb']} MB\n"
+                    f"Cache Directory: {stats['cache_dir']}\n"
+                    f"TTL: {stats['ttl_hours']} hours",
+                    title="🚀 CDN Cache Performance",
+                    border_style="cyan",
+                )
+            )
+        else:
+            console.print(
+                "[yellow]Cache not enabled. Use --cache to enable caching.[/yellow]"
+            )
+        return
+
+    if clear_cache:
+        if cache_manager:
+            cache_manager.clear_cache()
+            console.print("[green]✅ CDN cache cleared successfully[/green]")
+        return
+
+    # Domain is required for analysis operations
+    if not domain:
+        console.print("[red]Error: --domain is required for analysis operations[/red]")
+        return
 
     # Configure proxy
     if tor:
@@ -1244,7 +1548,7 @@ def cdncli(
     }
 
     # Initialize analyzer
-    analyzer = CDNAnalyzer(domain, options)
+    analyzer = CDNAnalyzer(domain, options, cache_manager)
 
     # Handle resume operations
     if resume_clear:

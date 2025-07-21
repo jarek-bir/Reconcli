@@ -1,6 +1,10 @@
 import json
 import os
+import time
+import hashlib
 from datetime import datetime
+from pathlib import Path
+from typing import Dict, List, Optional, Any
 
 import click
 
@@ -15,6 +19,189 @@ from reconcli.utils.s3_enum import (
     print_s3_results,
     save_s3_results,
 )
+
+
+class CloudCacheManager:
+    """Intelligent caching system for cloud detection and S3 enumeration operations."""
+
+    def __init__(
+        self,
+        cache_dir: str = "cloud_cache",
+        ttl_hours: int = 24,
+        max_cache_size: int = 500,
+    ):
+        self.cache_dir = Path(cache_dir)
+        self.cache_dir.mkdir(exist_ok=True)
+        self.ttl_seconds = ttl_hours * 3600
+        self.max_cache_size = max_cache_size
+        self.cache_index_file = self.cache_dir / "cloud_cache_index.json"
+        self.cache_stats = {
+            "hits": 0,
+            "misses": 0,
+            "total_requests": 0,
+            "cache_files": 0,
+            "total_size_mb": 0.0,
+        }
+        self._load_cache_index()
+
+    def _load_cache_index(self):
+        """Load cache index from disk."""
+        if self.cache_index_file.exists():
+            try:
+                with open(self.cache_index_file, "r") as f:
+                    self.cache_index = json.load(f)
+            except:
+                self.cache_index = {}
+        else:
+            self.cache_index = {}
+
+    def _save_cache_index(self):
+        """Save cache index to disk."""
+        with open(self.cache_index_file, "w") as f:
+            json.dump(self.cache_index, f, indent=2)
+
+    def _generate_cache_key(self, domain: str, analysis_type: str, **kwargs) -> str:
+        """Generate SHA256 cache key based on domain and analysis parameters."""
+        cache_data = {
+            "domain": domain,
+            "analysis_type": analysis_type,
+            "ip": kwargs.get("ip", ""),
+            "s3_enum": kwargs.get("s3_enum", False),
+            "s3_regions": kwargs.get("s3_regions", False),
+            "s3_threads": kwargs.get("s3_threads", 10),
+        }
+
+        # Sort for consistent ordering
+        cache_string = json.dumps(cache_data, sort_keys=True)
+        return hashlib.sha256(cache_string.encode()).hexdigest()
+
+    def get_cached_result(
+        self, domain: str, analysis_type: str, **kwargs
+    ) -> Optional[Dict]:
+        """Retrieve cached result if valid and not expired."""
+        self.cache_stats["total_requests"] += 1
+
+        cache_key = self._generate_cache_key(domain, analysis_type, **kwargs)
+        cache_file = self.cache_dir / f"{cache_key}.json"
+
+        if not cache_file.exists():
+            self.cache_stats["misses"] += 1
+            return None
+
+        try:
+            with open(cache_file, "r") as f:
+                cached_data = json.load(f)
+
+            # Check if cache is still valid
+            cache_time = cached_data.get("cache_metadata", {}).get("timestamp", 0)
+            if time.time() - cache_time > self.ttl_seconds:
+                cache_file.unlink()  # Remove expired cache
+                self.cache_stats["misses"] += 1
+                return None
+
+            self.cache_stats["hits"] += 1
+            cached_data["cache_metadata"]["cache_hit"] = True
+            return cached_data
+
+        except Exception:
+            # If cache file is corrupted, remove it
+            if cache_file.exists():
+                cache_file.unlink()
+            self.cache_stats["misses"] += 1
+            return None
+
+    def save_result_to_cache(
+        self, domain: str, analysis_type: str, result: Dict, **kwargs
+    ):
+        """Save analysis result to cache with metadata."""
+        cache_key = self._generate_cache_key(domain, analysis_type, **kwargs)
+        cache_file = self.cache_dir / f"{cache_key}.json"
+
+        # Add cache metadata
+        cached_result = {
+            **result,
+            "cache_metadata": {
+                "timestamp": time.time(),
+                "cache_key": cache_key,
+                "domain": domain,
+                "analysis_type": analysis_type,
+                "ttl_seconds": self.ttl_seconds,
+                "cache_hit": False,
+            },
+        }
+
+        # Save to cache
+        with open(cache_file, "w") as f:
+            json.dump(cached_result, f, indent=2)
+
+        # Update cache index
+        self.cache_index[cache_key] = {
+            "domain": domain,
+            "analysis_type": analysis_type,
+            "timestamp": time.time(),
+            "file": str(cache_file.name),
+        }
+        self._save_cache_index()
+
+        # Cleanup old cache if needed
+        self._cleanup_old_cache()
+
+    def _cleanup_old_cache(self):
+        """Remove oldest cache files if cache size exceeds limit."""
+        cache_files = list(self.cache_dir.glob("*.json"))
+        cache_files = [f for f in cache_files if f.name != "cloud_cache_index.json"]
+
+        if len(cache_files) > self.max_cache_size:
+            # Sort by modification time and remove oldest
+            cache_files.sort(key=lambda x: x.stat().st_mtime)
+            files_to_remove = cache_files[: -self.max_cache_size]
+
+            for cache_file in files_to_remove:
+                cache_file.unlink()
+                # Remove from index
+                cache_key = cache_file.stem
+                self.cache_index.pop(cache_key, None)
+
+            self._save_cache_index()
+
+    def get_cache_stats(self) -> Dict:
+        """Get comprehensive cache statistics."""
+        cache_files = list(self.cache_dir.glob("*.json"))
+        cache_files = [f for f in cache_files if f.name != "cloud_cache_index.json"]
+
+        total_size = sum(f.stat().st_size for f in cache_files)
+
+        hit_rate = (
+            (self.cache_stats["hits"] / self.cache_stats["total_requests"] * 100)
+            if self.cache_stats["total_requests"] > 0
+            else 0
+        )
+
+        return {
+            **self.cache_stats,
+            "hit_rate_percent": round(hit_rate, 1),
+            "cache_files": len(cache_files),
+            "total_size_mb": round(total_size / (1024 * 1024), 2),
+            "cache_dir": str(self.cache_dir),
+            "ttl_hours": self.ttl_seconds / 3600,
+        }
+
+    def clear_cache(self):
+        """Clear all cached results."""
+        for cache_file in self.cache_dir.glob("*.json"):
+            cache_file.unlink()
+
+        self.cache_index = {}
+        self._save_cache_index()
+
+        # Reset stats
+        self.cache_stats = {
+            "hits": 0,
+            "misses": 0,
+            "total_requests": 0,
+            "cache_files": 0,
+            "total_size_mb": 0.0,
+        }
 
 
 @click.command()
@@ -45,6 +232,13 @@ from reconcli.utils.s3_enum import (
 @click.option("--resume", is_flag=True, help="Resume previous scan")
 @click.option("--clear-resume", is_flag=True, help="Clear previous resume state")
 @click.option("--show-resume", is_flag=True, help="Show status of previous scans")
+@click.option(
+    "--cache", is_flag=True, help="Enable intelligent caching for faster repeated scans"
+)
+@click.option("--cache-dir", default="cloud_cache", help="Directory for cache storage")
+@click.option("--cache-max-age", type=int, default=24, help="Cache TTL in hours")
+@click.option("--cache-stats", is_flag=True, help="Show cache statistics and exit")
+@click.option("--clear-cache", is_flag=True, help="Clear all cached results and exit")
 def cloudcli(
     domain,
     domains_file,
@@ -58,8 +252,41 @@ def cloudcli(
     resume,
     clear_resume,
     show_resume,
+    cache,
+    cache_dir,
+    cache_max_age,
+    cache_stats,
+    clear_cache,
 ):
     """Detect cloud providers and enumerate public cloud assets (S3, etc)."""
+
+    # Initialize cache manager if caching is enabled
+    cache_manager = None
+    if cache or cache_stats or clear_cache:
+        cache_manager = CloudCacheManager(cache_dir=cache_dir, ttl_hours=cache_max_age)
+
+    # Handle cache operations
+    if cache_stats:
+        if cache_manager:
+            stats = cache_manager.get_cache_stats()
+            click.echo("🚀 Cloud Cache Performance Statistics")
+            click.echo("═" * 45)
+            click.echo(
+                f"Hit Rate: {stats['hit_rate_percent']}% ({stats['hits']}/{stats['total_requests']} requests)"
+            )
+            click.echo(f"Cache Files: {stats['cache_files']}")
+            click.echo(f"Total Size: {stats['total_size_mb']} MB")
+            click.echo(f"Cache Directory: {stats['cache_dir']}")
+            click.echo(f"TTL: {stats['ttl_hours']} hours")
+        else:
+            click.echo("⚠️  Cache not enabled. Use --cache to enable caching.")
+        return
+
+    if clear_cache:
+        if cache_manager:
+            cache_manager.clear_cache()
+            click.echo("✅ Cloud cache cleared successfully")
+        return
 
     # Handle resume options first
     os.makedirs(output_dir, exist_ok=True)
@@ -338,9 +565,39 @@ def cloudcli(
                 return
 
     else:
-        # Single domain processing
+        # Single domain processing with cache support
         print(f"[+] Detecting cloud provider for: {domain}")
-        cloud_info = detect_cloud_provider(domain, ip, verbose=verbose)
+
+        # Check cache first if enabled
+        cloud_info = None
+        s3_results = None
+
+        if cache_manager:
+            cache_params = {
+                "ip": ip,
+                "s3_enum": s3_enum,
+                "s3_regions": s3_regions,
+                "s3_threads": s3_threads,
+            }
+
+            cached_result = cache_manager.get_cached_result(
+                domain, "cloud_analysis", **cache_params
+            )
+
+            if cached_result:
+                cloud_info = cached_result.get("cloud_info")
+                s3_results = cached_result.get("s3_results")
+                print(f"🚀 Cache hit! Using cached results for {domain}")
+                print(
+                    f"   Cache key: {cached_result['cache_metadata']['cache_key'][:16]}..."
+                )
+                print(
+                    f"   Cached at: {datetime.fromtimestamp(cached_result['cache_metadata']['timestamp']).strftime('%Y-%m-%d %H:%M:%S')}"
+                )
+
+        # Perform analysis if not cached
+        if not cloud_info:
+            cloud_info = detect_cloud_provider(domain, ip, verbose=verbose)
 
         # Pretty print results
         print_cloud_detection_results(cloud_info, verbose=verbose)
@@ -368,7 +625,7 @@ def cloudcli(
         print(f"[✓] Cloud detection saved: {cloud_output}")
 
         # S3 enumeration for single domain
-        if s3_enum:
+        if s3_enum and not s3_results:  # Only run if not cached
             print(f"\n[+] Enumerating S3 buckets for: {domain}")
             s3_results = enumerate_s3_buckets(
                 domain,
@@ -377,6 +634,7 @@ def cloudcli(
                 verbose=verbose,
             )
 
+        if s3_enum and s3_results:
             # Pretty print S3 results
             print_s3_results(s3_results, show_all=verbose)
 
@@ -385,6 +643,26 @@ def cloudcli(
             save_s3_results(s3_results, s3_output, output_format)
 
             print(f"[✓] S3 results saved: {s3_output}")
+
+        # Save to cache if enabled and not from cache
+        if cache_manager and not (
+            cloud_info and cloud_info.get("cache_metadata", {}).get("cache_hit", False)
+        ):
+            cache_params = {
+                "ip": ip,
+                "s3_enum": s3_enum,
+                "s3_regions": s3_regions,
+                "s3_threads": s3_threads,
+            }
+
+            cache_result = {
+                "cloud_info": cloud_info,
+                "s3_results": s3_results if s3_enum else None,
+            }
+
+            cache_manager.save_result_to_cache(
+                domain, "cloud_analysis", cache_result, **cache_params
+            )
 
 
 if __name__ == "__main__":

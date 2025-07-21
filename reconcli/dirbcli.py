@@ -132,6 +132,145 @@ def get_smart_wordlist_recommendations(technologies, base_wordlist):
     return list(set(recommendations))
 
 
+class DirBCacheManager:
+    """Intelligent cache manager for directory bruteforce operations."""
+
+    def __init__(self, cache_dir: str = "dirb_cache", max_age_hours: int = 24):
+        self.cache_dir = Path(cache_dir)
+        self.cache_dir.mkdir(parents=True, exist_ok=True)
+        self.max_age_seconds = max_age_hours * 3600
+        self.cache_index_file = self.cache_dir / "dirb_cache_index.json"
+        self.cache_stats = {"hits": 0, "misses": 0, "total_requests": 0}
+
+    def _generate_cache_key(self, target: str, tool: str, options: dict) -> str:
+        """Generate unique cache key based on target and scan parameters."""
+        # Create a deterministic key from target, tool, and options
+        key_data = {
+            "target": target,
+            "tool": tool,
+            "options": {k: v for k, v in sorted(options.items()) if v is not None},
+        }
+        key_string = json.dumps(key_data, sort_keys=True)
+        return hashlib.sha256(key_string.encode()).hexdigest()
+
+    def _is_cache_valid(self, cache_file: Path) -> bool:
+        """Check if cache file is still valid based on age."""
+        if not cache_file.exists():
+            return False
+
+        file_age = time.time() - cache_file.stat().st_mtime
+        return file_age < self.max_age_seconds
+
+    def get_cached_result(self, target: str, tool: str, options: dict):
+        """Retrieve cached result if available and valid."""
+        cache_key = self._generate_cache_key(target, tool, options)
+        cache_file = self.cache_dir / f"{cache_key}.json"
+
+        self.cache_stats["total_requests"] += 1
+
+        if self._is_cache_valid(cache_file):
+            try:
+                with open(cache_file, "r") as f:
+                    cached_data = json.load(f)
+                    self.cache_stats["hits"] += 1
+                    return cached_data
+            except (json.JSONDecodeError, IOError):
+                # If cache file is corrupted, treat as cache miss
+                pass
+
+        self.cache_stats["misses"] += 1
+        return None
+
+    def store_result(self, target: str, tool: str, options: dict, result_data: dict):
+        """Store scan result in cache."""
+        cache_key = self._generate_cache_key(target, tool, options)
+        cache_file = self.cache_dir / f"{cache_key}.json"
+
+        # Add metadata to cached result
+        cache_data = {
+            "metadata": {
+                "target": target,
+                "tool": tool,
+                "options": options,
+                "cached_at": time.strftime("%Y-%m-%d %H:%M:%S"),
+                "cache_key": cache_key,
+            },
+            "result": result_data,
+        }
+
+        try:
+            with open(cache_file, "w") as f:
+                json.dump(cache_data, f, indent=2)
+
+            # Update cache index
+            self._update_cache_index(cache_key, target, tool)
+
+        except IOError as e:
+            print(f"⚠️  [CACHE] Failed to store cache: {e}")
+
+    def _update_cache_index(self, cache_key: str, target: str, tool: str):
+        """Update cache index with new entry."""
+        index_data = {}
+
+        if self.cache_index_file.exists():
+            try:
+                with open(self.cache_index_file, "r") as f:
+                    index_data = json.load(f)
+            except (json.JSONDecodeError, IOError):
+                index_data = {}
+
+        index_data[cache_key] = {
+            "target": target,
+            "tool": tool,
+            "created_at": time.strftime("%Y-%m-%d %H:%M:%S"),
+            "file_size": (self.cache_dir / f"{cache_key}.json").stat().st_size,
+        }
+
+        try:
+            with open(self.cache_index_file, "w") as f:
+                json.dump(index_data, f, indent=2)
+        except IOError as e:
+            print(f"⚠️  [CACHE] Failed to update cache index: {e}")
+
+    def clear_cache(self) -> bool:
+        """Clear all cached results."""
+        try:
+            if self.cache_dir.exists():
+                shutil.rmtree(self.cache_dir)
+                self.cache_dir.mkdir(parents=True, exist_ok=True)
+                print("✅ [CACHE] All cached results cleared successfully")
+                return True
+            return True
+        except Exception as e:
+            print(f"❌ [CACHE] Failed to clear cache: {e}")
+            return False
+
+    def get_cache_stats(self) -> dict:
+        """Get cache performance statistics."""
+        cache_files = list(self.cache_dir.glob("*.json"))
+        cache_size = sum(
+            f.stat().st_size for f in cache_files if f.name != "dirb_cache_index.json"
+        )
+
+        hit_rate = (
+            (self.cache_stats["hits"] / self.cache_stats["total_requests"] * 100)
+            if self.cache_stats["total_requests"] > 0
+            else 0
+        )
+
+        return {
+            "cache_hits": self.cache_stats["hits"],
+            "cache_misses": self.cache_stats["misses"],
+            "hit_rate": f"{hit_rate:.1f}%",
+            "total_requests": self.cache_stats["total_requests"],
+            "cache_files": len(
+                [f for f in cache_files if f.name != "dirb_cache_index.json"]
+            ),
+            "cache_size": cache_size,
+            "cache_dir": str(self.cache_dir),
+        }
+
+
 def parse_tool_output(tool, output_file, target_url=None):
     """Parse tool output and extract findings."""
     findings = []
@@ -1094,7 +1233,9 @@ def get_user_agents(user_agent_option, user_agent_file, builtin_ua, random_ua):
                 import random
 
                 return [
-                    random.choice(file_agents)  # nosec: B311 - non-cryptographic use for UA selection
+                    random.choice(
+                        file_agents
+                    )  # nosec: B311 - non-cryptographic use for UA selection
                 ]
             return file_agents
         else:
@@ -1106,7 +1247,9 @@ def get_user_agents(user_agent_option, user_agent_file, builtin_ua, random_ua):
             import random
 
             return [
-                random.choice(builtin_agents)  # nosec: B311 - non-cryptographic use for UA selection
+                random.choice(
+                    builtin_agents
+                )  # nosec: B311 - non-cryptographic use for UA selection
             ]
         return builtin_agents
 
@@ -1118,7 +1261,7 @@ def get_user_agents(user_agent_option, user_agent_file, builtin_ua, random_ua):
 
 
 @click.command()
-@click.option("--url", required=True, help="Target URL (e.g., http://example.com)")
+@click.option("--url", required=False, help="Target URL (e.g., http://example.com)")
 @click.option(
     "--wordlist",
     type=click.Path(exists=True),
@@ -1247,6 +1390,14 @@ def get_user_agents(user_agent_option, user_agent_file, builtin_ua, random_ua):
     help="Primary target domain for database storage (auto-detected if not provided)",
 )
 @click.option("--program", help="Bug bounty program name for database classification")
+# ========== Cache Options ==========
+@click.option(
+    "--cache", is_flag=True, help="Enable intelligent caching for faster repeated scans"
+)
+@click.option("--cache-dir", default="dirb_cache", help="Directory for cache storage")
+@click.option("--cache-max-age", type=int, default=24, help="Cache TTL in hours")
+@click.option("--cache-stats", is_flag=True, help="Show cache statistics and exit")
+@click.option("--clear-cache", is_flag=True, help="Clear all cached results and exit")
 def dirbcli(
     url,
     wordlist,
@@ -1295,6 +1446,11 @@ def dirbcli(
     store_db,
     target_domain,
     program,
+    cache,
+    cache_dir,
+    cache_max_age,
+    cache_stats,
+    clear_cache,
 ):
     """
     🔍 Advanced Directory Brute Force Scanner with Smart Analysis
@@ -1358,6 +1514,40 @@ def dirbcli(
     dirbcli --url https://example.com --wordlist wordlist.txt --tool ffuf --smart-filter --response-analysis --honeypot-detection --backup-detection --parameter-discovery --builtin-ua --random-ua --json-report --markdown-report
     """
 
+    # ========== Cache System ==========
+    cache_manager = None
+    if cache or cache_stats or clear_cache:
+        cache_manager = DirBCacheManager(
+            cache_dir=cache_dir, max_age_hours=cache_max_age
+        )
+
+        if clear_cache:
+            if cache_manager.clear_cache():
+                print(f"✅ [CACHE] Cache cleared successfully: {cache_dir}")
+            else:
+                print(f"❌ [CACHE] Failed to clear cache: {cache_dir}")
+            return
+
+        if cache_stats:
+            stats = cache_manager.get_cache_stats()
+            print("📊 [CACHE] DirB Cache Statistics:")
+            print(f"    Cache hits: {stats['cache_hits']}")
+            print(f"    Cache misses: {stats['cache_misses']}")
+            print(f"    Hit rate: {stats['hit_rate']}")
+            print(f"    Total requests: {stats['total_requests']}")
+            print(f"    Cache files: {stats['cache_files']}")
+            print(f"    Cache size: {stats['cache_size']} bytes")
+            print(f"    Cache directory: {stats['cache_dir']}")
+            return
+
+    # Validate required parameters
+    if not url:
+        print(
+            "❌ Error: URL is required for directory scanning. Use --help for options."
+        )
+        print("💡 Available cache-only commands: --cache-stats, --clear-cache")
+        return
+
     # Initialize scan statistics
     start_time = time.time()
     stats = {
@@ -1369,6 +1559,17 @@ def dirbcli(
         "accessibility": {},
         "technology_info": {},
     }
+
+    if verbose:
+        click.echo(f"🔍 [INFO] Target: {url}")
+        click.echo(f"🔧 [INFO] Tool: {tool}")
+        click.echo(f"🧵 [INFO] Threads: {threads}")
+        if cache_manager:
+            click.echo(
+                f"💾 [INFO] Cache: ENABLED (dir: {cache_dir}, TTL: {cache_max_age}h)"
+            )
+        else:
+            click.echo("💾 [INFO] Cache: DISABLED")
 
     # Setup output directory
     output_path = Path(output_dir)
@@ -1528,6 +1729,67 @@ def dirbcli(
 
     if verbose:
         click.echo(f"🚀 [SCAN] Starting {tool} scan with {threads} threads...")
+
+    # ========== Cache Check ==========
+    cache_options = {
+        "tool": tool,
+        "wordlist": wordlist,
+        "threads": threads,
+        "filter_status": filter_status,
+        "filter_size": filter_size,
+        "recursive": recursive,
+        "max_depth": max_depth,
+        "follow_redirects": follow_redirects,
+        "custom_headers": custom_headers,
+        "verify_ssl": verify_ssl,
+        "auto_calibrate": auto_calibrate,
+        "exclude_length": exclude_length,
+        "include_length": include_length,
+        "match_regex": match_regex,
+        "smart_filter": smart_filter,
+        "response_analysis": response_analysis,
+        "similarity_threshold": similarity_threshold,
+        "pattern_analysis": pattern_analysis,
+        "honeypot_detection": honeypot_detection,
+        "adaptive_threading": adaptive_threading,
+        "backup_detection": backup_detection,
+        "parameter_discovery": parameter_discovery,
+    }
+
+    if cache_manager:
+        cached_result = cache_manager.get_cached_result(url, tool, cache_options)
+        if cached_result:
+            if verbose:
+                click.echo(f"✅ [CACHE] ✓ Using cached result for {tool} on {url}")
+
+            # Use cached findings and stats
+            cached_data = cached_result["result"]
+            findings = cached_data.get("findings", [])
+            stats.update(cached_data.get("stats", {}))
+
+            # Generate reports with cached data (simplified version for cached results)
+            if json_report or markdown_report:
+                categories = cached_data.get("categories", {})
+                tech_info = cached_data.get("tech_info", {})
+                generate_comprehensive_report(
+                    output_path, stats, findings, categories, tech_info
+                )
+
+            # Send notifications if configured
+            if slack_webhook or discord_webhook:
+                notification_msg = f"🔍 DirB Scan Complete (CACHED)\n🎯 Target: {url}\n📊 Found: {len(findings)} directories/files"
+                if slack_webhook:
+                    send_notification(slack_webhook, notification_msg, "slack")
+                if discord_webhook:
+                    send_notification(discord_webhook, notification_msg, "discord")
+
+            if verbose:
+                click.echo(
+                    f"✅ [CACHE] Cache hit! Scan completed in {time.time() - start_time:.2f} seconds"
+                )
+            return
+        elif verbose:
+            click.echo(f"ℹ️  [CACHE] ✗ Cache miss for {tool} on {url}")
 
     # Tool-specific command execution
     output_file = None
@@ -2455,6 +2717,21 @@ print(f"Found {{len(urls)}} potential directories")
 
     # Categorize findings
     categories = categorize_findings(findings)
+
+    # ========== Cache Storage ==========
+    if cache_manager and findings:
+        # Store successful scan result in cache
+        scan_result = {
+            "findings": findings,
+            "stats": stats,
+            "categories": categories,
+            "tech_info": tech_info,
+            "scan_completed": True,
+            "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
+        }
+        cache_manager.store_result(url, tool, cache_options, scan_result)
+        if verbose:
+            click.echo(f"✅ [CACHE] ✓ Stored result for {tool} on {url}")
 
     # Generate reports
     if json_report or markdown_report:

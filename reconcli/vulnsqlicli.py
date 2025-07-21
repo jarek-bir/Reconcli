@@ -19,6 +19,147 @@ import sqlite3
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 
+class VulnSQLCacheManager:
+    """Intelligent cache manager for SQL injection vulnerability scanning operations."""
+
+    def __init__(self, cache_dir: str = "nuclei_cache", max_age_hours: int = 24):
+        self.cache_dir = Path(cache_dir)
+        self.cache_dir.mkdir(parents=True, exist_ok=True)
+        self.max_age_seconds = max_age_hours * 3600
+        self.cache_index_file = self.cache_dir / "vulnsql_cache_index.json"
+        self.cache_stats = {"hits": 0, "misses": 0, "total_requests": 0}
+
+    def _generate_cache_key(self, target: str, tool: str, options: dict) -> str:
+        """Generate unique cache key based on target and scan parameters."""
+        # Create a deterministic key from target, tool, and options
+        key_data = {
+            "target": target,
+            "tool": tool,
+            "options": {k: v for k, v in sorted(options.items()) if v is not None},
+        }
+        key_string = json.dumps(key_data, sort_keys=True)
+        return hashlib.sha256(key_string.encode()).hexdigest()
+
+    def _is_cache_valid(self, cache_file: Path) -> bool:
+        """Check if cache file is still valid based on age."""
+        if not cache_file.exists():
+            return False
+
+        file_age = time.time() - cache_file.stat().st_mtime
+        return file_age < self.max_age_seconds
+
+    def get_cached_result(self, target: str, tool: str, options: dict):
+        """Retrieve cached result if available and valid."""
+        cache_key = self._generate_cache_key(target, tool, options)
+        cache_file = self.cache_dir / f"{cache_key}.json"
+
+        self.cache_stats["total_requests"] += 1
+
+        if self._is_cache_valid(cache_file):
+            try:
+                with open(cache_file, "r") as f:
+                    cached_data = json.load(f)
+                    self.cache_stats["hits"] += 1
+                    return cached_data
+            except (json.JSONDecodeError, IOError):
+                # If cache file is corrupted, treat as cache miss
+                pass
+
+        self.cache_stats["misses"] += 1
+        return None
+
+    def store_result(self, target: str, tool: str, options: dict, result_data: dict):
+        """Store scan result in cache."""
+        cache_key = self._generate_cache_key(target, tool, options)
+        cache_file = self.cache_dir / f"{cache_key}.json"
+
+        # Add metadata to cached result
+        cache_data = {
+            "metadata": {
+                "target": target,
+                "tool": tool,
+                "options": options,
+                "cached_at": time.strftime("%Y-%m-%d %H:%M:%S"),
+                "cache_key": cache_key,
+            },
+            "result": result_data,
+        }
+
+        try:
+            with open(cache_file, "w") as f:
+                json.dump(cache_data, f, indent=2)
+
+            # Update cache index
+            self._update_cache_index(cache_key, target, tool)
+
+        except IOError as e:
+            print(f"⚠️  [CACHE] Failed to store cache: {e}")
+
+    def _update_cache_index(self, cache_key: str, target: str, tool: str):
+        """Update cache index with new entry."""
+        index_data = {}
+
+        if self.cache_index_file.exists():
+            try:
+                with open(self.cache_index_file, "r") as f:
+                    index_data = json.load(f)
+            except (json.JSONDecodeError, IOError):
+                index_data = {}
+
+        index_data[cache_key] = {
+            "target": target,
+            "tool": tool,
+            "created_at": time.strftime("%Y-%m-%d %H:%M:%S"),
+            "file_size": (self.cache_dir / f"{cache_key}.json").stat().st_size,
+        }
+
+        try:
+            with open(self.cache_index_file, "w") as f:
+                json.dump(index_data, f, indent=2)
+        except IOError as e:
+            print(f"⚠️  [CACHE] Failed to update cache index: {e}")
+
+    def clear_cache(self) -> bool:
+        """Clear all cached results."""
+        try:
+            if self.cache_dir.exists():
+                shutil.rmtree(self.cache_dir)
+                self.cache_dir.mkdir(parents=True, exist_ok=True)
+                print("✅ [CACHE] All cached results cleared successfully")
+                return True
+            return True
+        except Exception as e:
+            print(f"❌ [CACHE] Failed to clear cache: {e}")
+            return False
+
+    def get_cache_stats(self) -> dict:
+        """Get cache performance statistics."""
+        cache_files = list(self.cache_dir.glob("*.json"))
+        cache_size = sum(
+            f.stat().st_size
+            for f in cache_files
+            if f.name != "vulnsql_cache_index.json"
+        )
+
+        hit_rate = (
+            (self.cache_stats["hits"] / self.cache_stats["total_requests"] * 100)
+            if self.cache_stats["total_requests"] > 0
+            else 0
+        )
+
+        return {
+            "cache_hits": self.cache_stats["hits"],
+            "cache_misses": self.cache_stats["misses"],
+            "hit_rate": f"{hit_rate:.1f}%",
+            "total_requests": self.cache_stats["total_requests"],
+            "cache_files": len(
+                [f for f in cache_files if f.name != "vulnsql_cache_index.json"]
+            ),
+            "cache_size": cache_size,
+            "cache_dir": str(self.cache_dir),
+        }
+
+
 def find_executable(name):
     """Find full path to executable, preventing B607 partial path issues."""
     full_path = shutil.which(name)
@@ -66,111 +207,140 @@ def ai_analyze_sqli_results(results, target_url):
         "attack_vectors": [],  # This should be a list
         "recommendations": [],  # This should be a list
         "executive_summary": {},
-        "technical_details": {}
+        "technical_details": {},
     }
-    
+
     # Vulnerability Assessment
     critical_indicators = []
     high_risk_indicators = []
     medium_risk_indicators = []
-    
+
     # Analyze SQLMap results
     if results.get("sqlmap_findings"):
         for finding in results["sqlmap_findings"]:
             finding_str = str(finding).lower()
-            
+
             # Critical vulnerabilities
-            if any(keyword in finding_str for keyword in [
-                "vulnerability confirmed", "injection point", "back-end dbms",
-                "current user extracted", "database enumeration", "table enumeration"
-            ]):
-                critical_indicators.append({
-                    "type": "SQL Injection Confirmed",
-                    "severity": "CRITICAL",
-                    "description": f"SQLMap confirmed vulnerability: {finding}",
-                    "impact": "Full database compromise possible",
-                    "tool": "SQLMap"
-                })
-            
+            if any(
+                keyword in finding_str
+                for keyword in [
+                    "vulnerability confirmed",
+                    "injection point",
+                    "back-end dbms",
+                    "current user extracted",
+                    "database enumeration",
+                    "table enumeration",
+                ]
+            ):
+                critical_indicators.append(
+                    {
+                        "type": "SQL Injection Confirmed",
+                        "severity": "CRITICAL",
+                        "description": f"SQLMap confirmed vulnerability: {finding}",
+                        "impact": "Full database compromise possible",
+                        "tool": "SQLMap",
+                    }
+                )
+
             # High risk indicators
-            elif any(keyword in finding_str for keyword in [
-                "time-based", "boolean-based", "union-based", "error-based"
-            ]):
-                high_risk_indicators.append({
-                    "type": "SQL Injection Vector",
-                    "severity": "HIGH", 
-                    "description": f"SQLMap detected injection vector: {finding}",
-                    "impact": "Data extraction and manipulation possible",
-                    "tool": "SQLMap"
-                })
-    
+            elif any(
+                keyword in finding_str
+                for keyword in [
+                    "time-based",
+                    "boolean-based",
+                    "union-based",
+                    "error-based",
+                ]
+            ):
+                high_risk_indicators.append(
+                    {
+                        "type": "SQL Injection Vector",
+                        "severity": "HIGH",
+                        "description": f"SQLMap detected injection vector: {finding}",
+                        "impact": "Data extraction and manipulation possible",
+                        "tool": "SQLMap",
+                    }
+                )
+
     # Analyze Ghauri results
     if results.get("ghauri_findings"):
         for finding in results["ghauri_findings"]:
             finding_str = str(finding).lower()
-            
+
             if "vulnerable" in finding_str:
-                critical_indicators.append({
-                    "type": "SQL Injection Confirmed",
-                    "severity": "CRITICAL", 
-                    "description": f"Ghauri confirmed vulnerability: {finding}",
-                    "impact": "Database compromise via fast exploitation",
-                    "tool": "Ghauri"
-                })
-    
+                critical_indicators.append(
+                    {
+                        "type": "SQL Injection Confirmed",
+                        "severity": "CRITICAL",
+                        "description": f"Ghauri confirmed vulnerability: {finding}",
+                        "impact": "Database compromise via fast exploitation",
+                        "tool": "Ghauri",
+                    }
+                )
+
     # Analyze basic test results
     if results.get("basic_sqli_results"):
         for vuln in results["basic_sqli_results"]:
             if vuln.get("vulnerable"):
-                high_risk_indicators.append({
-                    "type": "SQL Injection Pattern",
-                    "severity": "HIGH",
-                    "description": f"Basic test detected vulnerability in parameter: {vuln.get('parameter')}",
-                    "payload": vuln.get("payload"),
-                    "impact": "Potential SQL injection vulnerability",
-                    "tool": "Basic Testing"
-                })
-    
+                high_risk_indicators.append(
+                    {
+                        "type": "SQL Injection Pattern",
+                        "severity": "HIGH",
+                        "description": f"Basic test detected vulnerability in parameter: {vuln.get('parameter')}",
+                        "payload": vuln.get("payload"),
+                        "impact": "Potential SQL injection vulnerability",
+                        "tool": "Basic Testing",
+                    }
+                )
+
     # Analyze GF pattern results
     if results.get("gf_findings"):
         for finding in results["gf_findings"]:
-            medium_risk_indicators.append({
-                "type": "SQL Pattern Match",
-                "severity": "MEDIUM",
-                "description": f"GF pattern match: {finding.get('description', 'Unknown')}",
-                "parameter": finding.get("parameter"),
-                "pattern": finding.get("pattern"),
-                "impact": "Requires manual verification",
-                "tool": "GF"
-            })
-    
+            medium_risk_indicators.append(
+                {
+                    "type": "SQL Pattern Match",
+                    "severity": "MEDIUM",
+                    "description": f"GF pattern match: {finding.get('description', 'Unknown')}",
+                    "parameter": finding.get("parameter"),
+                    "pattern": finding.get("pattern"),
+                    "impact": "Requires manual verification",
+                    "tool": "GF",
+                }
+            )
+
     # Risk Analysis
     total_critical = len(critical_indicators)
-    total_high = len(high_risk_indicators) 
+    total_high = len(high_risk_indicators)
     total_medium = len(medium_risk_indicators)
-    
+
     risk_score = (total_critical * 10) + (total_high * 7) + (total_medium * 3)
-    
+
     if risk_score >= 20:
         risk_level = "CRITICAL"
-        risk_description = "Immediate action required - Active SQL injection vulnerabilities confirmed"
+        risk_description = (
+            "Immediate action required - Active SQL injection vulnerabilities confirmed"
+        )
     elif risk_score >= 10:
         risk_level = "HIGH"
-        risk_description = "High probability of SQL injection vulnerabilities - Investigation required"
+        risk_description = (
+            "High probability of SQL injection vulnerabilities - Investigation required"
+        )
     elif risk_score >= 5:
         risk_level = "MEDIUM"
-        risk_description = "Potential SQL injection indicators - Manual testing recommended"
+        risk_description = (
+            "Potential SQL injection indicators - Manual testing recommended"
+        )
     else:
         risk_level = "LOW"
         risk_description = "No significant SQL injection indicators detected"
-    
+
     analysis["vulnerability_assessment"] = {
         "critical_vulnerabilities": critical_indicators,
         "high_risk_vulnerabilities": high_risk_indicators,
         "medium_risk_vulnerabilities": medium_risk_indicators,
-        "total_vulnerabilities": total_critical + total_high + total_medium
+        "total_vulnerabilities": total_critical + total_high + total_medium,
     }
-    
+
     analysis["risk_analysis"] = {
         "overall_risk_level": risk_level,
         "risk_score": risk_score,
@@ -178,106 +348,144 @@ def ai_analyze_sqli_results(results, target_url):
         "target_url": target_url,
         "critical_count": total_critical,
         "high_count": total_high,
-        "medium_count": total_medium
+        "medium_count": total_medium,
     }
-    
+
     # Attack Vectors Analysis
     attack_vectors = []
     if critical_indicators or high_risk_indicators:
-        if any("time-based" in str(i).lower() for i in high_risk_indicators + critical_indicators):
-            attack_vectors.append({
-                "vector": "Time-Based Blind SQL Injection",
-                "description": "Exploits database response delays to extract information",
-                "impact": "Data extraction through timing attacks",
-                "mitigation": "Implement query timeouts and input validation"
-            })
-        
-        if any("union" in str(i).lower() for i in high_risk_indicators + critical_indicators):
-            attack_vectors.append({
-                "vector": "Union-Based SQL Injection", 
-                "description": "Uses UNION statements to extract database information",
-                "impact": "Direct data extraction and database enumeration",
-                "mitigation": "Use parameterized queries and input sanitization"
-            })
-        
-        if any("error" in str(i).lower() for i in high_risk_indicators + critical_indicators):
-            attack_vectors.append({
-                "vector": "Error-Based SQL Injection",
-                "description": "Exploits database error messages for information disclosure",
-                "impact": "Database structure and data leakage through errors", 
-                "mitigation": "Implement proper error handling and logging"
-            })
-        
-        if any("boolean" in str(i).lower() for i in high_risk_indicators + critical_indicators):
-            attack_vectors.append({
-                "vector": "Boolean-Based Blind SQL Injection",
-                "description": "Uses true/false responses to extract information",
-                "impact": "Gradual data extraction through boolean logic",
-                "mitigation": "Input validation and parameterized queries"
-            })
-    
+        if any(
+            "time-based" in str(i).lower()
+            for i in high_risk_indicators + critical_indicators
+        ):
+            attack_vectors.append(
+                {
+                    "vector": "Time-Based Blind SQL Injection",
+                    "description": "Exploits database response delays to extract information",
+                    "impact": "Data extraction through timing attacks",
+                    "mitigation": "Implement query timeouts and input validation",
+                }
+            )
+
+        if any(
+            "union" in str(i).lower()
+            for i in high_risk_indicators + critical_indicators
+        ):
+            attack_vectors.append(
+                {
+                    "vector": "Union-Based SQL Injection",
+                    "description": "Uses UNION statements to extract database information",
+                    "impact": "Direct data extraction and database enumeration",
+                    "mitigation": "Use parameterized queries and input sanitization",
+                }
+            )
+
+        if any(
+            "error" in str(i).lower()
+            for i in high_risk_indicators + critical_indicators
+        ):
+            attack_vectors.append(
+                {
+                    "vector": "Error-Based SQL Injection",
+                    "description": "Exploits database error messages for information disclosure",
+                    "impact": "Database structure and data leakage through errors",
+                    "mitigation": "Implement proper error handling and logging",
+                }
+            )
+
+        if any(
+            "boolean" in str(i).lower()
+            for i in high_risk_indicators + critical_indicators
+        ):
+            attack_vectors.append(
+                {
+                    "vector": "Boolean-Based Blind SQL Injection",
+                    "description": "Uses true/false responses to extract information",
+                    "impact": "Gradual data extraction through boolean logic",
+                    "mitigation": "Input validation and parameterized queries",
+                }
+            )
+
     analysis["attack_vectors"] = attack_vectors
-    
+
     # Recommendations
     recommendations = []
-    
+
     if total_critical > 0:
-        recommendations.extend([
-            "🚨 IMMEDIATE: Patch all confirmed SQL injection vulnerabilities",
-            "🔒 URGENT: Implement parameterized queries/prepared statements",
-            "🛡️ CRITICAL: Review and sanitize all database interactions",
-            "⚡ PRIORITY: Disable database error reporting in production"
-        ])
-    
+        recommendations.extend(
+            [
+                "🚨 IMMEDIATE: Patch all confirmed SQL injection vulnerabilities",
+                "🔒 URGENT: Implement parameterized queries/prepared statements",
+                "🛡️ CRITICAL: Review and sanitize all database interactions",
+                "⚡ PRIORITY: Disable database error reporting in production",
+            ]
+        )
+
     if total_high > 0:
-        recommendations.extend([
-            "⚠️ HIGH: Conduct thorough code review for injection vulnerabilities", 
-            "🔍 INVESTIGATE: Manually verify all high-risk indicators",
-            "🧪 TEST: Perform comprehensive penetration testing"
-        ])
-    
+        recommendations.extend(
+            [
+                "⚠️ HIGH: Conduct thorough code review for injection vulnerabilities",
+                "🔍 INVESTIGATE: Manually verify all high-risk indicators",
+                "🧪 TEST: Perform comprehensive penetration testing",
+            ]
+        )
+
     if total_medium > 0:
-        recommendations.extend([
-            "📋 REVIEW: Analyze GF pattern matches for false positives",
-            "🔬 VALIDATE: Manual testing of flagged parameters"
-        ])
-    
+        recommendations.extend(
+            [
+                "📋 REVIEW: Analyze GF pattern matches for false positives",
+                "🔬 VALIDATE: Manual testing of flagged parameters",
+            ]
+        )
+
     # General security recommendations
-    recommendations.extend([
-        "🔐 Implement principle of least privilege for database accounts",
-        "📊 Enable database activity monitoring and logging", 
-        "🛠️ Keep database systems and applications updated",
-        "🏗️ Deploy Web Application Firewall (WAF) with SQL injection rules",
-        "🔄 Conduct regular security assessments and code reviews"
-    ])
-    
+    recommendations.extend(
+        [
+            "🔐 Implement principle of least privilege for database accounts",
+            "📊 Enable database activity monitoring and logging",
+            "🛠️ Keep database systems and applications updated",
+            "🏗️ Deploy Web Application Firewall (WAF) with SQL injection rules",
+            "🔄 Conduct regular security assessments and code reviews",
+        ]
+    )
+
     analysis["recommendations"] = recommendations
-    
+
     # Executive Summary
     analysis["executive_summary"] = {
         "assessment_overview": f"SQL injection vulnerability assessment completed for {target_url}",
         "key_findings": f"Identified {total_critical} critical, {total_high} high-risk, and {total_medium} medium-risk indicators",
         "business_impact": risk_description,
-        "immediate_actions": "Review critical and high-risk findings immediately" if total_critical + total_high > 0 else "Continue monitoring and testing",
-        "tools_effectiveness": f"Analysis based on {len([k for k in results.keys() if k.endswith('_results')])} security tools"
+        "immediate_actions": (
+            "Review critical and high-risk findings immediately"
+            if total_critical + total_high > 0
+            else "Continue monitoring and testing"
+        ),
+        "tools_effectiveness": f"Analysis based on {len([k for k in results.keys() if k.endswith('_results')])} security tools",
     }
-    
+
     # Technical Details
     analysis["technical_details"] = {
         "scan_timestamp": datetime.now().isoformat(),
         "target_analysis": {
             "url": target_url,
             "injection_points": len(results.get("injection_points", [])),
-            "parameters_tested": len([ip for ip in results.get("injection_points", []) if ip.get("type") == "GET"])
+            "parameters_tested": len(
+                [
+                    ip
+                    for ip in results.get("injection_points", [])
+                    if ip.get("type") == "GET"
+                ]
+            ),
         },
         "tool_results": {
             "sqlmap_executed": bool(results.get("sqlmap_results")),
             "ghauri_executed": bool(results.get("ghauri_results")),
             "gf_patterns_matched": bool(results.get("gf_results")),
-            "basic_tests_performed": bool(results.get("basic_sqli_results"))
-        }
+            "basic_tests_performed": bool(results.get("basic_sqli_results")),
+        },
     }
-    
+
     return analysis
 
 
@@ -285,13 +493,13 @@ def load_custom_payloads(payloads_file):
     """Load custom SQL injection payloads from file."""
     if not payloads_file or not os.path.exists(payloads_file):
         return []
-    
+
     payloads = []
     try:
-        with open(payloads_file, 'r', encoding='utf-8') as f:
+        with open(payloads_file, "r", encoding="utf-8") as f:
             for line in f:
                 line = line.strip()
-                if line and not line.startswith('#'):
+                if line and not line.startswith("#"):
                     payloads.append(line)
         return payloads
     except Exception as e:
@@ -304,9 +512,10 @@ def init_database(db_path):
     try:
         conn = sqlite3.connect(db_path)
         cursor = conn.cursor()
-        
+
         # Create tables for storing scan results
-        cursor.execute('''
+        cursor.execute(
+            """
             CREATE TABLE IF NOT EXISTS scan_sessions (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 session_id TEXT UNIQUE,
@@ -317,9 +526,11 @@ def init_database(db_path):
                 status TEXT DEFAULT 'running',
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
-        ''')
-        
-        cursor.execute('''
+        """
+        )
+
+        cursor.execute(
+            """
             CREATE TABLE IF NOT EXISTS target_results (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 session_id TEXT,
@@ -336,9 +547,11 @@ def init_database(db_path):
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (session_id) REFERENCES scan_sessions (session_id)
             )
-        ''')
-        
-        cursor.execute('''
+        """
+        )
+
+        cursor.execute(
+            """
             CREATE TABLE IF NOT EXISTS vulnerabilities (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 session_id TEXT,
@@ -354,9 +567,11 @@ def init_database(db_path):
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (session_id) REFERENCES scan_sessions (session_id)
             )
-        ''')
-        
-        cursor.execute('''
+        """
+        )
+
+        cursor.execute(
+            """
             CREATE TABLE IF NOT EXISTS ai_analysis (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 session_id TEXT,
@@ -372,8 +587,9 @@ def init_database(db_path):
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (session_id) REFERENCES scan_sessions (session_id)
             )
-        ''')
-        
+        """
+        )
+
         conn.commit()
         conn.close()
         return True
@@ -387,13 +603,16 @@ def store_scan_session(db_path, session_id, total_targets):
     try:
         conn = sqlite3.connect(db_path)
         cursor = conn.cursor()
-        
-        cursor.execute('''
+
+        cursor.execute(
+            """
             INSERT OR REPLACE INTO scan_sessions 
             (session_id, start_time, total_targets, status) 
             VALUES (?, ?, ?, 'running')
-        ''', (session_id, datetime.now().isoformat(), total_targets))
-        
+        """,
+            (session_id, datetime.now().isoformat(), total_targets),
+        )
+
         conn.commit()
         conn.close()
         return True
@@ -407,92 +626,122 @@ def store_target_result(db_path, session_id, result):
     try:
         conn = sqlite3.connect(db_path)
         cursor = conn.cursor()
-        
+
         # Count vulnerabilities
         vuln_count = 0
         risk_level = "LOW"
-        
+
         if result.get("basic_sqli_results"):
-            vuln_count += len([v for v in result["basic_sqli_results"] if v.get("vulnerable")])
-        
+            vuln_count += len(
+                [v for v in result["basic_sqli_results"] if v.get("vulnerable")]
+            )
+
         if result.get("sqlmap_findings"):
-            if any("vulnerability confirmed" in str(f).lower() for f in result["sqlmap_findings"]):
+            if any(
+                "vulnerability confirmed" in str(f).lower()
+                for f in result["sqlmap_findings"]
+            ):
                 vuln_count += 1
                 risk_level = "CRITICAL"
-        
+
         if result.get("ghauri_findings"):
             if any("vulnerable" in str(f).lower() for f in result["ghauri_findings"]):
                 vuln_count += 1
                 risk_level = "CRITICAL"
-                
+
         if vuln_count > 0 and risk_level == "LOW":
             risk_level = "HIGH"
-        
-        cursor.execute('''
+
+        cursor.execute(
+            """
             INSERT INTO target_results 
             (session_id, target_url, scan_timestamp, injection_points_count,
              sqlmap_executed, ghauri_executed, gf_executed, basic_tests_executed,
              vulnerabilities_found, risk_level, status) 
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'completed')
-        ''', (
-            session_id,
-            result.get("target", "Unknown"),
-            result.get("timestamp", datetime.now().isoformat()),
-            len(result.get("injection_points", [])),
-            bool(result.get("sqlmap_results")),
-            bool(result.get("ghauri_results")),
-            bool(result.get("gf_results")),
-            bool(result.get("basic_sqli_results")),
-            vuln_count,
-            risk_level
-        ))
-        
+        """,
+            (
+                session_id,
+                result.get("target", "Unknown"),
+                result.get("timestamp", datetime.now().isoformat()),
+                len(result.get("injection_points", [])),
+                bool(result.get("sqlmap_results")),
+                bool(result.get("ghauri_results")),
+                bool(result.get("gf_results")),
+                bool(result.get("basic_sqli_results")),
+                vuln_count,
+                risk_level,
+            ),
+        )
+
         # Store individual vulnerabilities
         target_url = result.get("target", "Unknown")
-        
+
         if result.get("basic_sqli_results"):
             for vuln in result["basic_sqli_results"]:
                 if vuln.get("vulnerable"):
-                    cursor.execute('''
+                    cursor.execute(
+                        """
                         INSERT INTO vulnerabilities 
                         (session_id, target_url, vulnerability_type, severity, 
                          parameter_name, payload, tool_used, description, impact)
                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    ''', (
-                        session_id, target_url, "SQL Injection", "HIGH",
-                        vuln.get("parameter"), vuln.get("payload"), "Basic Testing",
-                        f"SQL injection detected in parameter: {vuln.get('parameter')}",
-                        "Potential data extraction and manipulation"
-                    ))
-        
+                    """,
+                        (
+                            session_id,
+                            target_url,
+                            "SQL Injection",
+                            "HIGH",
+                            vuln.get("parameter"),
+                            vuln.get("payload"),
+                            "Basic Testing",
+                            f"SQL injection detected in parameter: {vuln.get('parameter')}",
+                            "Potential data extraction and manipulation",
+                        ),
+                    )
+
         if result.get("sqlmap_findings"):
             for finding in result["sqlmap_findings"]:
                 if "vulnerability confirmed" in str(finding).lower():
-                    cursor.execute('''
+                    cursor.execute(
+                        """
                         INSERT INTO vulnerabilities 
                         (session_id, target_url, vulnerability_type, severity, 
                          tool_used, description, impact)
                         VALUES (?, ?, ?, ?, ?, ?, ?)
-                    ''', (
-                        session_id, target_url, "SQL Injection", "CRITICAL",
-                        "SQLMap", f"SQLMap confirmed: {finding}",
-                        "Full database compromise possible"
-                    ))
-        
+                    """,
+                        (
+                            session_id,
+                            target_url,
+                            "SQL Injection",
+                            "CRITICAL",
+                            "SQLMap",
+                            f"SQLMap confirmed: {finding}",
+                            "Full database compromise possible",
+                        ),
+                    )
+
         if result.get("ghauri_findings"):
             for finding in result["ghauri_findings"]:
                 if "vulnerable" in str(finding).lower():
-                    cursor.execute('''
+                    cursor.execute(
+                        """
                         INSERT INTO vulnerabilities 
                         (session_id, target_url, vulnerability_type, severity, 
                          tool_used, description, impact)
                         VALUES (?, ?, ?, ?, ?, ?, ?)
-                    ''', (
-                        session_id, target_url, "SQL Injection", "CRITICAL",
-                        "Ghauri", f"Ghauri confirmed: {finding}",
-                        "Database compromise via fast exploitation"
-                    ))
-        
+                    """,
+                        (
+                            session_id,
+                            target_url,
+                            "SQL Injection",
+                            "CRITICAL",
+                            "Ghauri",
+                            f"Ghauri confirmed: {finding}",
+                            "Database compromise via fast exploitation",
+                        ),
+                    )
+
         conn.commit()
         conn.close()
         return True
@@ -506,28 +755,31 @@ def store_ai_analysis(db_path, session_id, target_url, ai_analysis):
     try:
         conn = sqlite3.connect(db_path)
         cursor = conn.cursor()
-        
+
         risk_analysis = ai_analysis.get("risk_analysis", {})
         vuln_assessment = ai_analysis.get("vulnerability_assessment", {})
-        
-        cursor.execute('''
+
+        cursor.execute(
+            """
             INSERT INTO ai_analysis 
             (session_id, target_url, risk_score, risk_level, critical_count,
              high_count, medium_count, attack_vectors, recommendations, executive_summary)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ''', (
-            session_id,
-            target_url,
-            risk_analysis.get("risk_score", 0),
-            risk_analysis.get("overall_risk_level", "UNKNOWN"),
-            len(vuln_assessment.get("critical_vulnerabilities", [])),
-            len(vuln_assessment.get("high_risk_vulnerabilities", [])),
-            len(vuln_assessment.get("medium_risk_vulnerabilities", [])),
-            str(ai_analysis.get("attack_vectors", [])),
-            str(ai_analysis.get("recommendations", [])),
-            str(ai_analysis.get("executive_summary", {}))
-        ))
-        
+        """,
+            (
+                session_id,
+                target_url,
+                risk_analysis.get("risk_score", 0),
+                risk_analysis.get("overall_risk_level", "UNKNOWN"),
+                len(vuln_assessment.get("critical_vulnerabilities", [])),
+                len(vuln_assessment.get("high_risk_vulnerabilities", [])),
+                len(vuln_assessment.get("medium_risk_vulnerabilities", [])),
+                str(ai_analysis.get("attack_vectors", [])),
+                str(ai_analysis.get("recommendations", [])),
+                str(ai_analysis.get("executive_summary", {})),
+            ),
+        )
+
         conn.commit()
         conn.close()
         return True
@@ -541,20 +793,26 @@ def finalize_scan_session(db_path, session_id):
     try:
         conn = sqlite3.connect(db_path)
         cursor = conn.cursor()
-        
+
         # Count vulnerable targets
-        cursor.execute('''
+        cursor.execute(
+            """
             SELECT COUNT(*) FROM target_results 
             WHERE session_id = ? AND vulnerabilities_found > 0
-        ''', (session_id,))
+        """,
+            (session_id,),
+        )
         vulnerable_count = cursor.fetchone()[0]
-        
-        cursor.execute('''
+
+        cursor.execute(
+            """
             UPDATE scan_sessions 
             SET end_time = ?, vulnerable_targets = ?, status = 'completed'
             WHERE session_id = ?
-        ''', (datetime.now().isoformat(), vulnerable_count, session_id))
-        
+        """,
+            (datetime.now().isoformat(), vulnerable_count, session_id),
+        )
+
         conn.commit()
         conn.close()
         return True
@@ -571,17 +829,31 @@ def retry_request(func, *args, max_retries=3, **kwargs):
         except Exception as e:
             if attempt == max_retries - 1:
                 raise e
-            wait_time = 2 ** attempt
-            print(f"⚠️ [RETRY] Attempt {attempt + 1} failed, retrying in {wait_time}s: {e}")
+            wait_time = 2**attempt
+            print(
+                f"⚠️ [RETRY] Attempt {attempt + 1} failed, retrying in {wait_time}s: {e}"
+            )
             time.sleep(wait_time)
     return None
 
 
-def process_target_with_concurrency(target_url, options, tools_config, custom_payloads=None, ai_enabled=False, db_path=None, session_id=None, dry_run=False, retry_count=3):
+def process_target_with_concurrency(
+    target_url,
+    options,
+    tools_config,
+    custom_payloads=None,
+    ai_enabled=False,
+    db_path=None,
+    session_id=None,
+    dry_run=False,
+    retry_count=3,
+):
     """Process a single target with all configurations."""
     if dry_run:
         print(f"🔍 [DRY-RUN] Would scan: {target_url}")
-        print(f"🔧 [DRY-RUN] Tools: {', '.join([k for k, v in tools_config.items() if v])}")
+        print(
+            f"🔧 [DRY-RUN] Tools: {', '.join([k for k, v in tools_config.items() if v])}"
+        )
         if custom_payloads:
             print(f"🎯 [DRY-RUN] Custom payloads: {len(custom_payloads)} loaded")
         if ai_enabled:
@@ -590,104 +862,148 @@ def process_target_with_concurrency(target_url, options, tools_config, custom_pa
             "target": target_url,
             "timestamp": datetime.now().isoformat(),
             "dry_run": True,
-            "status": "simulated"
+            "status": "simulated",
         }
-    
+
     print(f"🔍 [SCAN] Processing: {target_url}")
-    
+
     result = {
         "target": target_url,
         "timestamp": datetime.now().isoformat(),
         "injection_points": [],
     }
-    
+
     # Detect injection points with retry
     try:
         injection_points = retry_request(
             detect_injection_points, target_url, max_retries=retry_count
         )
-        result["injection_points"] = injection_points if injection_points is not None else []
-        print(f"🔍 [DETECT] Found {len(result['injection_points'])} potential injection points")
+        result["injection_points"] = (
+            injection_points if injection_points is not None else []
+        )
+        print(
+            f"🔍 [DETECT] Found {len(result['injection_points'])} potential injection points"
+        )
     except Exception as e:
         print(f"❌ [ERROR] Failed to detect injection points for {target_url}: {e}")
         result["injection_points"] = []
-    
+
     # Basic SQL injection testing
     if tools_config.get("use_basic"):
         try:
             print("🧪 [BASIC] Running basic SQL injection tests...")
             basic_results = retry_request(
-                test_basic_sql_injection, target_url, custom_payloads=custom_payloads, max_retries=retry_count
+                test_basic_sql_injection,
+                target_url,
+                custom_payloads=custom_payloads,
+                max_retries=retry_count,
             )
-            result["basic_sqli_results"] = basic_results if basic_results is not None else []
+            result["basic_sqli_results"] = (
+                basic_results if basic_results is not None else []
+            )
             if result["basic_sqli_results"]:
-                vulnerabilities = [r for r in result["basic_sqli_results"] if r.get("vulnerable")]
-                print(f"🧪 [BASIC] Found {len(vulnerabilities)} potential vulnerabilities")
+                vulnerabilities = [
+                    r for r in result["basic_sqli_results"] if r.get("vulnerable")
+                ]
+                print(
+                    f"🧪 [BASIC] Found {len(vulnerabilities)} potential vulnerabilities"
+                )
         except Exception as e:
             print(f"❌ [ERROR] Basic testing failed for {target_url}: {e}")
             result["basic_sqli_results"] = []
-    
+
     # SQLMap testing
     if tools_config.get("use_sqlmap"):
         try:
             print("🔥 [SQLMAP] Running SQLMap...")
             sqlmap_results = retry_request(
-                run_sqlmap, target_url, options, tools_config.get("timeout", 300), max_retries=retry_count
+                run_sqlmap,
+                target_url,
+                options,
+                tools_config.get("timeout", 300),
+                max_retries=retry_count,
             )
-            result["sqlmap_results"] = sqlmap_results if sqlmap_results is not None else {"success": False, "error": "No results"}
+            result["sqlmap_results"] = (
+                sqlmap_results
+                if sqlmap_results is not None
+                else {"success": False, "error": "No results"}
+            )
             if result["sqlmap_results"] and result["sqlmap_results"].get("success"):
                 result["sqlmap_findings"] = parse_sqlmap_output(
                     result["sqlmap_results"]["output_file"]
                 )
                 print(f"🔥 [SQLMAP] Found {len(result['sqlmap_findings'])} findings")
             else:
-                error_msg = result["sqlmap_results"].get("error", "Unknown error") if result["sqlmap_results"] else "No results"
+                error_msg = (
+                    result["sqlmap_results"].get("error", "Unknown error")
+                    if result["sqlmap_results"]
+                    else "No results"
+                )
                 print(f"❌ [SQLMAP] Failed: {error_msg}")
         except Exception as e:
             print(f"❌ [ERROR] SQLMap failed for {target_url}: {e}")
             result["sqlmap_results"] = {"success": False, "error": str(e)}
-    
+
     # Ghauri testing
     if tools_config.get("use_ghauri"):
         try:
             print("⚡ [GHAURI] Running Ghauri...")
             ghauri_results = retry_request(
-                run_ghauri, target_url, options, tools_config.get("timeout", 300), max_retries=retry_count
+                run_ghauri,
+                target_url,
+                options,
+                tools_config.get("timeout", 300),
+                max_retries=retry_count,
             )
-            result["ghauri_results"] = ghauri_results if ghauri_results is not None else {"success": False, "error": "No results"}
+            result["ghauri_results"] = (
+                ghauri_results
+                if ghauri_results is not None
+                else {"success": False, "error": "No results"}
+            )
             if result["ghauri_results"] and result["ghauri_results"].get("success"):
                 result["ghauri_findings"] = parse_ghauri_output(
                     result["ghauri_results"]["output_file"]
                 )
                 print(f"⚡ [GHAURI] Found {len(result['ghauri_findings'])} findings")
             else:
-                error_msg = result["ghauri_results"].get("error", "Unknown error") if result["ghauri_results"] else "No results"
+                error_msg = (
+                    result["ghauri_results"].get("error", "Unknown error")
+                    if result["ghauri_results"]
+                    else "No results"
+                )
                 print(f"❌ [GHAURI] Failed: {error_msg}")
         except Exception as e:
             print(f"❌ [ERROR] Ghauri failed for {target_url}: {e}")
             result["ghauri_results"] = {"success": False, "error": str(e)}
-    
+
     # GF pattern matching
     if tools_config.get("use_gf"):
         try:
             print("🔍 [GF] Running GF pattern matching...")
             gf_results = retry_request(
-                run_gf_sqli_patterns, [target_url], options["output_dir"], max_retries=retry_count
+                run_gf_sqli_patterns,
+                [target_url],
+                options["output_dir"],
+                max_retries=retry_count,
             )
             result["gf_results"] = gf_results if gf_results is not None else {}
             if result["gf_results"]:
-                total_matches = sum(r.get("match_count", 0) for r in result["gf_results"].values())
+                total_matches = sum(
+                    r.get("match_count", 0) for r in result["gf_results"].values()
+                )
                 print(f"🔍 [GF] Found {total_matches} pattern matches")
-                
+
                 result["gf_findings"] = analyze_gf_results(result["gf_results"])
-                print(f"🔍 [GF] Identified {len(result['gf_findings'])} potential SQL injection points")
+                print(
+                    f"🔍 [GF] Identified {len(result['gf_findings'])} potential SQL injection points"
+                )
             else:
                 result["gf_findings"] = []
         except Exception as e:
             print(f"❌ [ERROR] GF failed for {target_url}: {e}")
             result["gf_results"] = {}
             result["gf_findings"] = []
-    
+
     # AI Analysis
     if ai_enabled:
         try:
@@ -695,18 +1011,20 @@ def process_target_with_concurrency(target_url, options, tools_config, custom_pa
             result["ai_analysis"] = ai_analyze_sqli_results(result, target_url)
             risk_level = result["ai_analysis"]["risk_analysis"]["overall_risk_level"]
             print(f"🧠 [AI] Risk assessment: {risk_level}")
-            
+
             # Store AI analysis in database
             if db_path and session_id:
-                store_ai_analysis(db_path, session_id, target_url, result["ai_analysis"])
+                store_ai_analysis(
+                    db_path, session_id, target_url, result["ai_analysis"]
+                )
         except Exception as e:
             print(f"❌ [ERROR] AI analysis failed for {target_url}: {e}")
             result["ai_analysis"] = {}
-    
+
     # Store result in database
     if db_path and session_id:
         store_target_result(db_path, session_id, result)
-    
+
     return result
 
 
@@ -869,7 +1187,7 @@ def test_basic_sql_injection(url, timeout=5, custom_payloads=None):
         "' OR pg_sleep(5)--",
         "' OR BENCHMARK(1000000,MD5(1))--",
     ]
-    
+
     # Add custom payloads if provided
     if custom_payloads:
         basic_payloads.extend(custom_payloads)
@@ -1771,14 +2089,48 @@ def save_results(results, output_dir, format_type="json"):
 @click.option(
     "--resume-reset", is_flag=True, help="Reset and clear all resume data completely"
 )
-@click.option("--ai", is_flag=True, help="Enable AI-powered analysis of SQL injection results")
-@click.option("--payloads", type=click.Path(exists=True), help="Custom SQL injection payloads file")
-@click.option("--sqlmap-args", help="Custom arguments for SQLMap (e.g., '--threads 5 --level 3')")
-@click.option("--ghauri-args", help="Custom arguments for Ghauri (e.g., '--threads 10 --level 2')")
-@click.option("--store-db", help="Store results in SQLite database (specify database path)")
-@click.option("--dry-run", is_flag=True, help="Show what would be executed without running actual tests")
-@click.option("--retry", default=3, type=int, help="Number of retries for failed requests (default: 3)")
-@click.option("--concurrency", default=1, type=int, help="Number of concurrent URL scans (default: 1)")
+@click.option(
+    "--ai", is_flag=True, help="Enable AI-powered analysis of SQL injection results"
+)
+@click.option(
+    "--payloads",
+    type=click.Path(exists=True),
+    help="Custom SQL injection payloads file",
+)
+@click.option(
+    "--sqlmap-args", help="Custom arguments for SQLMap (e.g., '--threads 5 --level 3')"
+)
+@click.option(
+    "--ghauri-args", help="Custom arguments for Ghauri (e.g., '--threads 10 --level 2')"
+)
+@click.option(
+    "--store-db", help="Store results in SQLite database (specify database path)"
+)
+@click.option(
+    "--dry-run",
+    is_flag=True,
+    help="Show what would be executed without running actual tests",
+)
+@click.option(
+    "--retry",
+    default=3,
+    type=int,
+    help="Number of retries for failed requests (default: 3)",
+)
+@click.option(
+    "--concurrency",
+    default=1,
+    type=int,
+    help="Number of concurrent URL scans (default: 1)",
+)
+# ========== Cache Options ==========
+@click.option(
+    "--cache", is_flag=True, help="Enable intelligent caching for faster repeated scans"
+)
+@click.option("--cache-dir", default="nuclei_cache", help="Directory for cache storage")
+@click.option("--cache-max-age", type=int, default=24, help="Cache TTL in hours")
+@click.option("--cache-stats", is_flag=True, help="Show cache statistics and exit")
+@click.option("--clear-cache", is_flag=True, help="Clear all cached results and exit")
 def main(
     url,
     urls_file,
@@ -1837,6 +2189,11 @@ def main(
     dry_run,
     retry,
     concurrency,
+    cache,
+    cache_dir,
+    cache_max_age,
+    cache_stats,
+    clear_cache,
 ):
     """
     🔍 Advanced SQL Injection Vulnerability Scanner
@@ -1938,7 +2295,7 @@ def main(
     # Custom SQLMap arguments
     reconcli vulnsqlicli --url "http://example.com/page.php?id=1" --sqlmap --sqlmap-args "--threads 10 --level 5 --risk 3 --technique BEUST"
 
-    # Custom Ghauri arguments  
+    # Custom Ghauri arguments
     reconcli vulnsqlicli --url "http://example.com/page.php?id=1" --ghauri --ghauri-args "--threads 15 --level 4 --batch"
 
     # Combined AI and custom arguments
@@ -1952,9 +2309,52 @@ def main(
     reconcli vulnsqlicli --urls-file enterprise_targets.txt --tool all --ai --sqlmap-args "--threads 20 --level 4" --ghauri-args "--threads 25 --level 3" --json-report --slack-webhook https://hooks.slack.com/...
     """
 
+    # ========== Cache System ==========
+    cache_manager = None
+    if cache or cache_stats or clear_cache:
+        cache_manager = VulnSQLCacheManager(
+            cache_dir=cache_dir, max_age_hours=cache_max_age
+        )
+
+        if clear_cache:
+            if cache_manager.clear_cache():
+                print(f"✅ [CACHE] Cache cleared successfully: {cache_dir}")
+            else:
+                print(f"❌ [CACHE] Failed to clear cache: {cache_dir}")
+            return
+
+        if cache_stats:
+            stats = cache_manager.get_cache_stats()
+            print("📊 [CACHE] VulnSQL Cache Statistics:")
+            print(f"    Cache hits: {stats['cache_hits']}")
+            print(f"    Cache misses: {stats['cache_misses']}")
+            print(f"    Hit rate: {stats['hit_rate']}")
+            print(f"    Total requests: {stats['total_requests']}")
+            print(f"    Cache files: {stats['cache_files']}")
+            print(f"    Cache size: {stats['cache_size']} bytes")
+            print(f"    Cache directory: {stats['cache_dir']}")
+            return
+
+    # Validate required parameters
+    if not url and not urls_file:
+        print(
+            "❌ Error: URL or URLs file is required for SQL injection scanning. Use --help for options."
+        )
+        print("💡 Available cache-only commands: --cache-stats, --clear-cache")
+        return
+
     if verbose:
         print("🚀 [START] VulnSQLiCLI - Advanced SQL Injection Scanner")
-        print(f"🎯 [TARGET] {url}")
+        if url:
+            print(f"🎯 [TARGET] {url}")
+        if urls_file:
+            print(f"📁 [TARGETS] {urls_file}")
+        if cache_manager:
+            print(
+                f"💾 [CACHE] Cache: ENABLED (dir: {cache_dir}, TTL: {cache_max_age}h)"
+            )
+        else:
+            print("💾 [CACHE] Cache: DISABLED")
 
     # Check tool availability
     if check_tools:
@@ -2068,7 +2468,9 @@ def main(
     # Load custom payloads if provided
     custom_payloads = load_custom_payloads(payloads) if payloads else None
     if custom_payloads and verbose:
-        print(f"📝 [PAYLOADS] Loaded {len(custom_payloads)} custom payloads from {payloads}")
+        print(
+            f"📝 [PAYLOADS] Loaded {len(custom_payloads)} custom payloads from {payloads}"
+        )
 
     options = {
         "output_dir": output_dir,
@@ -2118,7 +2520,9 @@ def main(
         init_database(output_dir)
         scan_session_id = store_scan_session(output_dir, urls, options)
         if verbose:
-            print(f"🗄️ [DATABASE] Initialized database and created scan session {scan_session_id}")
+            print(
+                f"🗄️ [DATABASE] Initialized database and created scan session {scan_session_id}"
+            )
 
     # Create state file for new scan if not resuming
     if not resume:
@@ -2129,8 +2533,10 @@ def main(
     # Process URLs with concurrent support
     if concurrency > 1:
         if verbose:
-            print(f"🚀 [CONCURRENT] Processing {len(urls)} URLs with {concurrency} workers")
-        
+            print(
+                f"🚀 [CONCURRENT] Processing {len(urls)} URLs with {concurrency} workers"
+            )
+
         # Prepare tools configuration
         tools_config = {
             "use_basic": use_basic,
@@ -2138,22 +2544,61 @@ def main(
             "use_ghauri": use_ghauri and available_tools["ghauri"]["available"],
             "use_gf": use_gf and available_tools.get("gf", {}).get("available"),
             "timeout": timeout,
-            "verbose": verbose
+            "verbose": verbose,
         }
-        
+
         # Process all URLs concurrently
         new_results = []
         for url in urls:
+            # ========== Cache Check ==========
+            if cache_manager:
+                cache_options = {
+                    "tool": tool,
+                    "sqlmap": use_sqlmap,
+                    "ghauri": use_ghauri,
+                    "gf": use_gf,
+                    "basic_test": use_basic,
+                    "level": level,
+                    "risk": risk,
+                    "technique": technique,
+                    "dbms": dbms,
+                    "tamper": tamper,
+                    "proxy": proxy,
+                    "timeout": timeout,
+                    "custom_payloads": bool(custom_payloads),
+                    "ai_enabled": ai,
+                }
+
+                cached_result = cache_manager.get_cached_result(
+                    url, tool, cache_options
+                )
+                if cached_result:
+                    if verbose:
+                        print(f"💾 [CACHE] Using cached result for {url}")
+                    new_results.append(cached_result["result"])
+                    all_results.append(cached_result["result"])
+                    continue
+                elif verbose:
+                    print(f"💾 [CACHE] No cache found for {url}, scanning...")
+
             result = process_target_with_concurrency(
-                url, options, tools_config, 
+                url,
+                options,
+                tools_config,
                 custom_payloads=custom_payloads,
                 ai_enabled=ai,
                 db_path=output_dir if store_db else None,
                 session_id=scan_session_id,
                 dry_run=dry_run,
-                retry_count=retry
+                retry_count=retry,
             )
             if result:
+                # ========== Cache Storage ==========
+                if cache_manager and not dry_run:
+                    cache_manager.store_result(url, tool, cache_options, result)
+                    if verbose:
+                        print(f"💾 [CACHE] Stored result for {url} in cache")
+
                 new_results.append(result)
                 all_results.append(result)
     else:
@@ -2161,6 +2606,44 @@ def main(
         for i, target_url in enumerate(urls):
             if verbose:
                 print(f"🔍 [SCAN] Processing URL {i + 1}/{len(urls)}: {target_url}")
+
+            # ========== Cache Check ==========
+            if cache_manager:
+                cache_options = {
+                    "tool": tool,
+                    "sqlmap": use_sqlmap,
+                    "ghauri": use_ghauri,
+                    "gf": use_gf,
+                    "basic_test": use_basic,
+                    "level": level,
+                    "risk": risk,
+                    "technique": technique,
+                    "dbms": dbms,
+                    "tamper": tamper,
+                    "proxy": proxy,
+                    "timeout": timeout,
+                    "custom_payloads": bool(custom_payloads),
+                    "ai_enabled": ai,
+                }
+
+                cached_result = cache_manager.get_cached_result(
+                    target_url, tool, cache_options
+                )
+                if cached_result:
+                    if verbose:
+                        print(f"💾 [CACHE] Using cached result for {target_url}")
+                    all_results.append(cached_result["result"])
+                    # Update resume state
+                    if state_file:
+                        update_resume_state(
+                            state_file,
+                            target_url,
+                            cached_result["result"],
+                            urls[i + 1 :],
+                        )
+                    continue
+                elif verbose:
+                    print(f"💾 [CACHE] No cache found for {target_url}, scanning...")
 
             result = {
                 "target": target_url,
@@ -2181,7 +2664,9 @@ def main(
             if use_basic:
                 if verbose:
                     print("🧪 [BASIC] Running basic SQL injection tests...")
-                result["basic_sqli_results"] = test_basic_sql_injection(target_url, custom_payloads=custom_payloads)
+                result["basic_sqli_results"] = test_basic_sql_injection(
+                    target_url, custom_payloads=custom_payloads
+                )
                 if verbose:
                     vulnerabilities = [
                         r for r in result["basic_sqli_results"] if r.get("vulnerable")
@@ -2256,13 +2741,23 @@ def main(
                     ai_summary = result["ai_analysis"]["risk_analysis"]
                     print(f"🧠 [AI] Risk Level: {ai_summary['overall_risk_level']}")
                     print(f"🧠 [AI] Risk Score: {ai_summary['risk_score']}")
-                    print(f"🧠 [AI] Critical: {ai_summary['critical_count']}, High: {ai_summary['high_count']}, Medium: {ai_summary['medium_count']}")
+                    print(
+                        f"🧠 [AI] Critical: {ai_summary['critical_count']}, High: {ai_summary['high_count']}, Medium: {ai_summary['medium_count']}"
+                    )
 
             # Store results to database if enabled
             if store_db and scan_session_id:
                 store_target_result(output_dir, scan_session_id, result)
                 if result.get("ai_analysis"):
-                    store_ai_analysis(output_dir, scan_session_id, target_url, result["ai_analysis"])
+                    store_ai_analysis(
+                        output_dir, scan_session_id, target_url, result["ai_analysis"]
+                    )
+
+            # ========== Cache Storage ==========
+            if cache_manager and not dry_run:
+                cache_manager.store_result(target_url, tool, cache_options, result)
+                if verbose:
+                    print(f"💾 [CACHE] Stored result for {target_url} in cache")
 
             all_results.append(result)
 
@@ -2385,6 +2880,16 @@ def main(
             else:
                 if verbose:
                     print("❌ [NOTIFY] Failed to send Discord notification")
+
+    # ========== Cache Statistics ==========
+    if cache_manager and verbose:
+        stats = cache_manager.get_cache_stats()
+        print("\n📊 [CACHE] VulnSQL Cache Performance:")
+        print(f"    Cache hits: {stats['cache_hits']}")
+        print(f"    Cache misses: {stats['cache_misses']}")
+        print(f"    Hit rate: {stats['hit_rate']}")
+        print(f"    Cache files: {stats['cache_files']}")
+        print(f"    Cache size: {stats['cache_size']} bytes")
 
     print(f"\n📂 Results saved in: {output_dir}")
     print("🎉 [COMPLETE] VulnSQLiCLI scan finished successfully!")

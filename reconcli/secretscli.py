@@ -2,6 +2,7 @@
 
 import csv
 import glob
+import hashlib
 import json
 import os
 import shutil
@@ -100,10 +101,149 @@ def resume_handler(tool_name, resume, resume_clear, resume_stat):
     return None
 
 
+class SecretsCacheManager:
+    """Intelligent cache manager for secret discovery operations."""
+
+    def __init__(self, cache_dir: str = "secrets_cache", max_age_hours: int = 24):
+        self.cache_dir = Path(cache_dir)
+        self.cache_dir.mkdir(parents=True, exist_ok=True)
+        self.max_age_seconds = max_age_hours * 3600
+        self.cache_index_file = self.cache_dir / "secrets_cache_index.json"
+        self.cache_stats = {"hits": 0, "misses": 0, "total_requests": 0}
+
+    def _generate_cache_key(self, target: str, tools: list, options: dict) -> str:
+        """Generate unique cache key based on target and scan parameters."""
+        # Create a deterministic key from target, tools, and options
+        key_data = {
+            "target": target,
+            "tools": sorted(tools),
+            "options": {k: v for k, v in sorted(options.items()) if v is not None},
+        }
+        key_string = json.dumps(key_data, sort_keys=True)
+        return hashlib.sha256(key_string.encode()).hexdigest()
+
+    def _is_cache_valid(self, cache_file: Path) -> bool:
+        """Check if cache file is still valid based on age."""
+        if not cache_file.exists():
+            return False
+
+        file_age = time.time() - cache_file.stat().st_mtime
+        return file_age < self.max_age_seconds
+
+    def get_cached_result(self, target: str, tools: list, options: dict):
+        """Retrieve cached result if available and valid."""
+        cache_key = self._generate_cache_key(target, tools, options)
+        cache_file = self.cache_dir / f"{cache_key}.json"
+
+        self.cache_stats["total_requests"] += 1
+
+        if self._is_cache_valid(cache_file):
+            try:
+                with open(cache_file, "r") as f:
+                    cached_data = json.load(f)
+                    self.cache_stats["hits"] += 1
+                    return cached_data
+            except (json.JSONDecodeError, IOError):
+                # If cache file is corrupted, treat as cache miss
+                pass
+
+        self.cache_stats["misses"] += 1
+        return None
+
+    def store_result(self, target: str, tools: list, options: dict, result_data: dict):
+        """Store scan result in cache."""
+        cache_key = self._generate_cache_key(target, tools, options)
+        cache_file = self.cache_dir / f"{cache_key}.json"
+
+        # Add metadata to cached result
+        cache_data = {
+            "metadata": {
+                "target": target,
+                "tools": tools,
+                "options": options,
+                "cached_at": time.strftime("%Y-%m-%d %H:%M:%S"),
+                "cache_key": cache_key,
+            },
+            "result": result_data,
+        }
+
+        try:
+            with open(cache_file, "w") as f:
+                json.dump(cache_data, f, indent=2)
+
+            # Update cache index
+            self._update_cache_index(cache_key, target, tools)
+
+        except IOError as e:
+            print_warn(f"[CACHE] Failed to store cache: {e}")
+
+    def _update_cache_index(self, cache_key: str, target: str, tools: list):
+        """Update cache index with new entry."""
+        index_data = {}
+
+        if self.cache_index_file.exists():
+            try:
+                with open(self.cache_index_file, "r") as f:
+                    index_data = json.load(f)
+            except (json.JSONDecodeError, IOError):
+                index_data = {}
+
+        index_data[cache_key] = {
+            "target": target,
+            "tools": tools,
+            "created_at": time.strftime("%Y-%m-%d %H:%M:%S"),
+            "file_size": (self.cache_dir / f"{cache_key}.json").stat().st_size,
+        }
+
+        try:
+            with open(self.cache_index_file, "w") as f:
+                json.dump(index_data, f, indent=2)
+        except IOError as e:
+            print_warn(f"[CACHE] Failed to update cache index: {e}")
+
+    def clear_cache(self) -> bool:
+        """Clear all cached results."""
+        try:
+            if self.cache_dir.exists():
+                shutil.rmtree(self.cache_dir)
+                self.cache_dir.mkdir(parents=True, exist_ok=True)
+                print_good("[CACHE] All cached results cleared successfully")
+                return True
+            return True
+        except Exception as e:
+            print_bad(f"[CACHE] Failed to clear cache: {e}")
+            return False
+
+    def get_cache_stats(self) -> dict:
+        """Get cache performance statistics."""
+        cache_files = list(self.cache_dir.glob("*.json"))
+        cache_size = sum(
+            f.stat().st_size
+            for f in cache_files
+            if f.name != "secrets_cache_index.json"
+        )
+
+        hit_rate = (
+            (self.cache_stats["hits"] / self.cache_stats["total_requests"] * 100)
+            if self.cache_stats["total_requests"] > 0
+            else 0
+        )
+
+        return {
+            "cache_hits": self.cache_stats["hits"],
+            "cache_misses": self.cache_stats["misses"],
+            "hit_rate": f"{hit_rate:.1f}%",
+            "total_requests": self.cache_stats["total_requests"],
+            "cache_files": len(
+                [f for f in cache_files if f.name != "secrets_cache_index.json"]
+            ),
+            "cache_size": cache_size,
+            "cache_dir": str(self.cache_dir),
+        }
+
+
 @click.command()
-@click.option(
-    "--input", required=True, help="Input file (e.g. domains.txt) or single domain/URL"
-)
+@click.option("--input", help="Input file (e.g. domains.txt) or single domain/URL")
 @click.option(
     "--tool",
     multiple=True,
@@ -183,6 +323,16 @@ def resume_handler(tool_name, resume, resume_clear, resume_stat):
     type=float,
     help="Entropy threshold for detecting secrets",
 )
+# ========== Cache Options ==========
+@click.option(
+    "--cache", is_flag=True, help="Enable intelligent caching for faster repeated scans"
+)
+@click.option(
+    "--cache-dir", default="secrets_cache", help="Directory for cache storage"
+)
+@click.option("--cache-max-age", type=int, default=24, help="Cache TTL in hours")
+@click.option("--cache-stats", is_flag=True, help="Show cache statistics and exit")
+@click.option("--clear-cache", is_flag=True, help="Clear all cached results and exit")
 def secretscli(
     input,
     tool,
@@ -216,10 +366,49 @@ def secretscli(
     config_file,
     wordlist,
     entropy_threshold,
+    cache,
+    cache_dir,
+    cache_max_age,
+    cache_stats,
+    clear_cache,
 ):
     """
     🔐 secretscli – Secret discovery using tools like jsubfinder, gitleaks, trufflehog, etc.
     """
+
+    # ========== Cache System ==========
+    cache_manager = None
+    if cache or cache_stats or clear_cache:
+        cache_manager = SecretsCacheManager(
+            cache_dir=cache_dir, max_age_hours=cache_max_age
+        )
+
+        if clear_cache:
+            if cache_manager.clear_cache():
+                print_good(f"✅ [CACHE] Cache cleared successfully: {cache_dir}")
+            else:
+                print_bad(f"❌ [CACHE] Failed to clear cache: {cache_dir}")
+            return
+
+        if cache_stats:
+            stats = cache_manager.get_cache_stats()
+            print_info("📊 [CACHE] Secrets Cache Statistics:")
+            print_info(f"    Cache hits: {stats['cache_hits']}")
+            print_info(f"    Cache misses: {stats['cache_misses']}")
+            print_info(f"    Hit rate: {stats['hit_rate']}")
+            print_info(f"    Total requests: {stats['total_requests']}")
+            print_info(f"    Cache files: {stats['cache_files']}")
+            print_info(f"    Cache size: {stats['cache_size']} bytes")
+            print_info(f"    Cache directory: {stats['cache_dir']}")
+            return
+
+    # Validate required input for scanning operations
+    if not input:
+        print_bad("❌ Error: --input is required for scanning operations")
+        print_info(
+            "💡 Use --cache-stats to view cache statistics or --clear-cache to clear cache"
+        )
+        return
 
     # Handle verbose/quiet modes
     if verbose:
@@ -233,9 +422,17 @@ def secretscli(
         print_info(f"[secretscli] Min confidence: {min_confidence}")
         print_info(f"[secretscli] Max depth: {depth}")
         print_info(f"[secretscli] Entropy threshold: {entropy_threshold}")
+        if cache_manager:
+            print_info(
+                f"[secretscli] Cache: ENABLED (dir: {cache_dir}, TTL: {cache_max_age}h)"
+            )
+        else:
+            print_info("[secretscli] Cache: DISABLED")
     elif not quiet:
         print_info(f"[secretscli] Input: {input}")
         print_info(f"[secretscli] Output: {output}")
+        if cache_manager:
+            print_info(f"[secretscli] Cache: ENABLED")
 
     os.makedirs(output, exist_ok=True)
 
@@ -334,6 +531,31 @@ def secretscli(
         for target in inputs:
             if not quiet:
                 print_info(f"[+] Running tool: {t} on target: {target}")
+
+            # ========== Cache Check ==========
+            cache_options = {
+                "tool": t,
+                "min_confidence": min_confidence,
+                "entropy_threshold": entropy_threshold,
+                "extensions": extensions,
+                "exclude_paths": exclude_paths,
+                "depth": depth,
+                "timeout": timeout,
+                "filter_keywords": filter_keywords,
+                "exclude_keywords": exclude_keywords,
+            }
+
+            if cache_manager:
+                cached_result = cache_manager.get_cached_result(
+                    target, [t], cache_options
+                )
+                if cached_result:
+                    if verbose:
+                        print_good(f"[CACHE] ✓ Using cached result for {t} on {target}")
+                    # Use cached result instead of running tool
+                    continue
+                elif verbose:
+                    print_info(f"[CACHE] ✗ Cache miss for {t} on {target}")
 
             # Apply filtering logic based on target type and exclusions
             if should_skip_target(target, excluded_paths, verbose):
@@ -593,6 +815,20 @@ def secretscli(
                     min_confidence,
                     verbose,
                 )
+
+                # ========== Cache Storage ==========
+                if cache_manager:
+                    # Store successful scan result in cache
+                    scan_result = {
+                        "tool": t,
+                        "target": target,
+                        "output_dir": output,
+                        "scan_completed": True,
+                        "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
+                    }
+                    cache_manager.store_result(target, [t], cache_options, scan_result)
+                    if verbose:
+                        print_good(f"[CACHE] ✓ Stored result for {t} on {target}")
 
             except subprocess.TimeoutExpired:
                 print_warn(f"[TIMEOUT] Tool {t} timed out on {target}")

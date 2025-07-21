@@ -11,6 +11,11 @@ reconcli secretscli --input /path/to/source --tool gitleaks
 
 # Multi-tool scan
 reconcli secretscli --input targets.txt --tool trufflehog,gitleaks,jsubfinder
+
+# Cache-powered scanning ⭐ NEW
+reconcli secretscli --input repo.git --tool trufflehog --cache --verbose
+reconcli secretscli --cache-stats     # View cache performance
+reconcli secretscli --clear-cache     # Clear cache
 ```
 
 ## 🎯 Common Options
@@ -26,6 +31,16 @@ reconcli secretscli --input targets.txt --tool trufflehog,gitleaks,jsubfinder
 | `--entropy-threshold` | Entropy threshold | `--entropy-threshold 5.0` |
 | `--resume` | Resume interrupted scan | `--resume` |
 | `--proxy` | HTTP proxy | `--proxy http://127.0.0.1:8080` |
+
+### 🚀 Cache Options ⭐ NEW
+
+| Option | Description | Example |
+|--------|-------------|---------|
+| `--cache` | Enable intelligent caching | `--cache` |
+| `--cache-dir` | Custom cache directory | `--cache-dir /tmp/secrets_cache` |
+| `--cache-max-age` | Cache TTL in hours | `--cache-max-age 12` |
+| `--cache-stats` | Show cache statistics | `--cache-stats` |
+| `--clear-cache` | Clear all cached results | `--clear-cache` |
 
 ## 🔧 Supported Tools
 
