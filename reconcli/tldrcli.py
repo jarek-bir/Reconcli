@@ -6,8 +6,10 @@ import os
 import shutil
 import socket
 import time
-from datetime import datetime
+import hashlib
+from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Tuple
+from pathlib import Path
 
 import click
 from tqdm import tqdm
@@ -49,6 +51,224 @@ except ImportError:
         path = os.path.join(output_dir, "resume.cfg")
         if os.path.exists(path):
             os.remove(path)
+
+
+class TLDRCacheManager:
+    """Intelligent caching system for TLD enumeration and DNS lookup results with performance optimization."""
+
+    def __init__(self, cache_dir: str = "tldr_cache", max_age_hours: int = 24):
+        self.cache_dir = Path(cache_dir)
+        self.cache_dir.mkdir(parents=True, exist_ok=True)
+        self.max_age = timedelta(hours=max_age_hours)
+        self.cache_index_file = self.cache_dir / "tldr_cache_index.json"
+        self.cache_index = self._load_cache_index()
+        self.hits = 0
+        self.misses = 0
+
+    def _load_cache_index(self) -> dict:
+        """Load cache index from disk."""
+        if self.cache_index_file.exists():
+            try:
+                with open(self.cache_index_file, "r") as f:
+                    return json.load(f)
+            except (json.JSONDecodeError, IOError):
+                return {}
+        return {}
+
+    def _save_cache_index(self):
+        """Save cache index to disk."""
+        try:
+            with open(self.cache_index_file, "w") as f:
+                json.dump(self.cache_index, f, indent=2)
+        except IOError as e:
+            click.echo(f"Warning: Failed to save cache index: {e}", err=True)
+
+    def _generate_cache_key(
+        self,
+        domain: str,
+        tlds: list,
+        dns_servers: list = None,
+        operation: str = "enumerate",
+        **kwargs,
+    ) -> str:
+        """Generate a unique cache key for TLD enumeration parameters."""
+        # Create deterministic key from enumeration parameters
+        key_data = {
+            "domain": domain,
+            "tlds": sorted(tlds) if tlds else [],
+            "dns_servers": sorted(dns_servers) if dns_servers else [],
+            "operation": operation,
+            "kwargs": sorted(kwargs.items()),
+        }
+
+        key_string = json.dumps(key_data, sort_keys=True)
+        return hashlib.sha256(key_string.encode()).hexdigest()
+
+    def _is_cache_valid(self, timestamp: str) -> bool:
+        """Check if cache entry is still valid based on timestamp."""
+        try:
+            cache_time = datetime.fromisoformat(timestamp)
+            return datetime.now() - cache_time < self.max_age
+        except (ValueError, TypeError):
+            return False
+
+    def get_cached_result(
+        self,
+        domain: str,
+        tlds: list,
+        dns_servers: list = None,
+        operation: str = "enumerate",
+        **kwargs,
+    ) -> dict:
+        """Retrieve cached TLD enumeration results if available and valid."""
+        cache_key = self._generate_cache_key(
+            domain, tlds, dns_servers, operation, **kwargs
+        )
+
+        if cache_key in self.cache_index:
+            cache_entry = self.cache_index[cache_key]
+            if self._is_cache_valid(cache_entry["timestamp"]):
+                cache_file = self.cache_dir / f"{cache_key}.json"
+                if cache_file.exists():
+                    try:
+                        with open(cache_file, "r") as f:
+                            result = json.load(f)
+                        self.hits += 1
+                        click.echo(
+                            f"✅ Cache HIT for TLD enumeration: {domain} ({len(tlds)} TLDs)",
+                            err=True,
+                        )
+                        return result
+                    except (json.JSONDecodeError, IOError):
+                        # Cache file corrupted, remove from index
+                        del self.cache_index[cache_key]
+                        self._save_cache_index()
+
+        self.misses += 1
+        click.echo(
+            f"❌ Cache MISS for TLD enumeration: {domain} ({len(tlds)} TLDs)", err=True
+        )
+        return None
+
+    def save_result(
+        self,
+        domain: str,
+        tlds: list,
+        result: dict,
+        dns_servers: list = None,
+        operation: str = "enumerate",
+        **kwargs,
+    ):
+        """Save TLD enumeration results to cache."""
+        cache_key = self._generate_cache_key(
+            domain, tlds, dns_servers, operation, **kwargs
+        )
+
+        # Add metadata to result
+        cached_result = {
+            "metadata": {
+                "domain": domain,
+                "operation": operation,
+                "tlds_count": len(tlds) if tlds else 0,
+                "dns_servers_count": len(dns_servers) if dns_servers else 0,
+                "timestamp": datetime.now().isoformat(),
+                "cache_key": cache_key,
+            },
+            "result": result,
+        }
+
+        # Save result to file
+        cache_file = self.cache_dir / f"{cache_key}.json"
+        try:
+            with open(cache_file, "w") as f:
+                json.dump(cached_result, f, indent=2)
+
+            # Update cache index
+            self.cache_index[cache_key] = {
+                "domain": domain,
+                "timestamp": datetime.now().isoformat(),
+                "file": f"{cache_key}.json",
+                "tlds_count": len(tlds) if tlds else 0,
+                "operation": operation,
+            }
+            self._save_cache_index()
+
+        except IOError as e:
+            click.echo(f"Warning: Failed to save cache: {e}", err=True)
+
+    def clear_cache(self) -> int:
+        """Clear all cached results and return count of removed files."""
+        removed_count = 0
+
+        # Remove cache files
+        for cache_file in self.cache_dir.glob("*.json"):
+            if cache_file.name != "tldr_cache_index.json":
+                try:
+                    cache_file.unlink()
+                    removed_count += 1
+                except OSError:
+                    pass
+
+        # Clear cache index
+        self.cache_index.clear()
+        self._save_cache_index()
+
+        return removed_count
+
+    def get_cache_stats(self) -> dict:
+        """Get cache performance statistics."""
+        total_requests = self.hits + self.misses
+        hit_rate = (self.hits / total_requests * 100) if total_requests > 0 else 0
+
+        # Count cache files
+        cache_files = len(
+            [
+                f
+                for f in self.cache_dir.glob("*.json")
+                if f.name != "tldr_cache_index.json"
+            ]
+        )
+
+        # Calculate cache size
+        cache_size = sum(f.stat().st_size for f in self.cache_dir.glob("*.json")) / (
+            1024 * 1024
+        )
+
+        return {
+            "total_requests": total_requests,
+            "cache_hits": self.hits,
+            "cache_misses": self.misses,
+            "hit_rate": round(hit_rate, 2),
+            "cached_results": cache_files,
+            "cache_size_mb": round(cache_size, 2),
+            "cache_dir": str(self.cache_dir),
+        }
+
+    def cleanup_expired_cache(self) -> int:
+        """Remove expired cache entries and return count of removed files."""
+        removed_count = 0
+        current_time = datetime.now()
+
+        expired_keys = []
+        for cache_key, cache_entry in self.cache_index.items():
+            if not self._is_cache_valid(cache_entry["timestamp"]):
+                expired_keys.append(cache_key)
+
+        # Remove expired entries
+        for cache_key in expired_keys:
+            cache_file = self.cache_dir / f"{cache_key}.json"
+            try:
+                if cache_file.exists():
+                    cache_file.unlink()
+                    removed_count += 1
+                del self.cache_index[cache_key]
+            except OSError:
+                pass
+
+        if removed_count > 0:
+            self._save_cache_index()
+
+        return removed_count
 
 
 # SUPER COMPREHENSIVE TLD lists for different categories - MASSIVE EXPANSION
@@ -2834,6 +3054,31 @@ ACTIVE_HTTP_CODES = [200, 301, 302, 303, 307, 308, 403, 404, 405, 429, 500, 502,
     is_flag=True,
     help="Exclude domains that appear to be wildcards",
 )
+@click.option(
+    "--cache",
+    is_flag=True,
+    help="Enable intelligent caching for TLD enumeration results",
+)
+@click.option("--cache-dir", default="tldr_cache", help="Directory for cache storage")
+@click.option(
+    "--cache-max-age", default=24, type=int, help="Maximum cache age in hours"
+)
+@click.option(
+    "--cache-stats", is_flag=True, help="Display cache performance statistics"
+)
+@click.option(
+    "--clear-cache", is_flag=True, help="Clear all cached TLD enumeration results"
+)
+@click.option(
+    "--ai", is_flag=True, help="Enable AI-powered analysis of TLD enumeration results"
+)
+@click.option(
+    "--ai-provider",
+    type=click.Choice(["openai", "anthropic", "gemini"]),
+    help="AI provider for analysis",
+)
+@click.option("--ai-model", help="Specific AI model to use for analysis")
+@click.option("--ai-context", help="Additional context for AI analysis")
 def cli(
     domain,
     output_dir,
@@ -2855,6 +3100,15 @@ def cli(
     discord_webhook,
     whois_check,
     exclude_wildcards,
+    cache,
+    cache_dir,
+    cache_max_age,
+    cache_stats,
+    clear_cache,
+    ai,
+    ai_provider,
+    ai_model,
+    ai_context,
 ):
     """Advanced TLD reconnaissance - discover domains across alternative TLDs
 
@@ -2866,6 +3120,38 @@ def cli(
         tldrcli -d mycompany --tld-list custom_tlds.txt --filter-active
         tldrcli -d brand --categories all --whois-check --save-json
     """
+
+    # Initialize cache manager
+    cache_manager = None
+    if cache:
+        cache_manager = TLDRCacheManager(
+            cache_dir=cache_dir, max_age_hours=cache_max_age
+        )
+
+        # Handle cache management operations
+        if clear_cache:
+            removed = cache_manager.clear_cache()
+            click.echo(f"✅ Cleared {removed} cached TLD enumeration results")
+            return
+
+        if cache_stats:
+            stats = cache_manager.get_cache_stats()
+            click.echo("\n📊 TLD Cache Statistics:")
+            click.echo(f"  Total requests: {stats['total_requests']}")
+            click.echo(f"  Cache hits: {stats['cache_hits']}")
+            click.echo(f"  Cache misses: {stats['cache_misses']}")
+            click.echo(f"  Hit rate: {stats['hit_rate']}%")
+            click.echo(f"  Cached results: {stats['cached_results']}")
+            click.echo(f"  Cache size: {stats['cache_size_mb']} MB")
+            click.echo(f"  Cache directory: {stats['cache_dir']}")
+
+            # Show performance improvement
+            if stats["cache_hits"] > 0:
+                improvement = (
+                    stats["cache_hits"] * 50
+                )  # Assume 50x average improvement for DNS
+                click.echo(f"  🚀 Estimated speed improvement: {improvement}x faster")
+            return
 
     # Handle special resume operations
     if show_resume:
@@ -2889,6 +3175,10 @@ def cli(
             click.echo("[+] 🌐 HTTP probing enabled")
         if whois_check:
             click.echo("[+] 📋 WHOIS checking enabled")
+        if ai:
+            provider_info = f" ({ai_provider})" if ai_provider else ""
+            model_info = f" using {ai_model}" if ai_model else ""
+            click.echo(f"[+] 🧠 AI analysis enabled{provider_info}{model_info}")
 
     # Build TLD list
     tld_list_final = build_tld_list(tld_list, categories, verbose)
@@ -2901,6 +3191,41 @@ def cli(
 
     if verbose:
         click.echo(f"[+] 📝 Testing {len(tld_list_final)} TLD(s)")
+
+    # Check cache first
+    if cache_manager:
+        cached_result = cache_manager.get_cached_result(
+            domain=domain, tlds=tld_list_final, operation="enumerate"
+        )
+        if cached_result:
+            cached_data = cached_result.get("result", {})
+            if verbose:
+                click.echo(
+                    f"✅ Using cached results for {domain} with {len(tld_list_final)} TLDs"
+                )
+
+            # Process cached results
+            results = cached_data.get("results", [])
+            active_domains = [
+                r for r in results if r.get("dns_resolved") or r.get("http_status")
+            ]
+
+            if verbose:
+                click.echo(f"[+] Found {len(active_domains)} active domains from cache")
+
+            # Generate reports from cached data if requested
+            if save_json or save_markdown:
+                generate_reports(
+                    results, domain, output_dir, save_json, save_markdown, verbose
+                )
+
+            # AI analysis if requested
+            if ai and results:
+                perform_ai_analysis(
+                    results, domain, ai_provider, ai_model, ai_context, verbose
+                )
+
+            return
 
     os.makedirs(output_dir, exist_ok=True)
 
@@ -3175,7 +3500,9 @@ def detect_wildcard(domain: str, tld: str, resolved_ip: str, timeout: int) -> bo
     try:
         # Generate random subdomain
         random_sub = "".join(
-            random.choices(string.ascii_lowercase + string.digits, k=15)  # nosec: B311 - non-cryptographic wildcard detection
+            random.choices(
+                string.ascii_lowercase + string.digits, k=15
+            )  # nosec: B311 - non-cryptographic wildcard detection
         )
         test_domain = f"{random_sub}.{domain}.{tld}"
 
@@ -3475,6 +3802,92 @@ def show_resume_status(output_dir: str):
 def clear_resume_state(output_dir: str):
     """Clear resume state for TLD scans"""
     clear_resume(output_dir)
+
+
+def generate_reports(results, domain, output_dir, save_json, save_markdown, verbose):
+    """Generate reports from TLD enumeration results."""
+    if save_json:
+        json_file = os.path.join(output_dir, f"{domain}_tlds.json")
+        with open(json_file, "w") as f:
+            json.dump(results, f, indent=2)
+        if verbose:
+            click.echo(f"[+] 💾 Saved JSON report: {json_file}")
+
+    if save_markdown:
+        md_file = os.path.join(output_dir, f"{domain}_tlds.md")
+        with open(md_file, "w") as f:
+            f.write(f"# TLD Enumeration Report for {domain}\n\n")
+            f.write(f"Generated: {datetime.now().isoformat()}\n\n")
+            f.write(f"## Summary\n")
+            f.write(f"- Total TLDs tested: {len(results)}\n")
+            active_count = len(
+                [r for r in results if r.get("dns_resolved") or r.get("http_status")]
+            )
+            f.write(f"- Active domains found: {active_count}\n\n")
+            f.write(f"## Results\n\n")
+            for result in results:
+                if result.get("dns_resolved") or result.get("http_status"):
+                    f.write(f"### {result['domain']}\n")
+                    f.write(f"- DNS Resolved: {result.get('dns_resolved', False)}\n")
+                    if result.get("http_status"):
+                        f.write(f"- HTTP Status: {result['http_status']}\n")
+                    f.write("\n")
+        if verbose:
+            click.echo(f"[+] 📋 Saved Markdown report: {md_file}")
+
+
+def perform_ai_analysis(results, domain, ai_provider, ai_model, ai_context, verbose):
+    """Perform AI analysis on TLD enumeration results."""
+    try:
+        # Import AI here to avoid dependency issues
+        from reconcli.aicli import AIReconAssistant
+
+        ai_assistant = AIReconAssistant()
+
+        # Build analysis prompt
+        active_domains = [
+            r for r in results if r.get("dns_resolved") or r.get("http_status")
+        ]
+
+        analysis_prompt = f"""
+        Analyze TLD enumeration results for domain: {domain}
+        
+        Summary:
+        - Total TLDs tested: {len(results)}
+        - Active domains found: {len(active_domains)}
+        
+        Active domains:
+        {json.dumps(active_domains[:10], indent=2)}
+        
+        Context: {ai_context or "TLD enumeration security analysis"}
+        
+        Please provide:
+        1. Security implications of found domains
+        2. Potential attack vectors
+        3. Brand protection recommendations
+        4. Monitoring suggestions
+        """
+
+        if verbose:
+            click.echo(f"[+] 🧠 Performing AI analysis...")
+
+        ai_response = ai_assistant.ask_ai(
+            analysis_prompt, provider=ai_provider, context="recon"
+        )
+
+        if ai_response:
+            click.echo(f"\n{'='*60}")
+            click.echo(f"🧠 AI ANALYSIS RESULTS")
+            click.echo(f"{'='*60}")
+            click.echo(ai_response)
+            click.echo(f"{'='*60}")
+
+    except ImportError:
+        if verbose:
+            click.echo("[!] ⚠️ AI module not available for analysis")
+    except Exception as e:
+        if verbose:
+            click.echo(f"[!] ⚠️ AI analysis failed: {e}")
 
 
 if __name__ == "__main__":

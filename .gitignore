@@ -139,3 +139,6 @@ reconcli/urls.txt
 reconcli/test_*.txt
 reconcli/tests/*
 TOMORROW_COMMANDS.md
+
+# XSS test results
+brutelogic_xss_results_*.json

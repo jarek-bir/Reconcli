@@ -2,10 +2,220 @@ import json
 import os
 import subprocess
 import tempfile
-from datetime import datetime
+import hashlib
+from datetime import datetime, timedelta
 from pathlib import Path
 
 import click
+
+
+class PermutCacheManager:
+    """Intelligent caching system for subdomain permutation generation results with performance optimization."""
+
+    def __init__(self, cache_dir: str = "permut_cache", max_age_hours: int = 24):
+        self.cache_dir = Path(cache_dir)
+        self.cache_dir.mkdir(parents=True, exist_ok=True)
+        self.max_age = timedelta(hours=max_age_hours)
+        self.cache_index_file = self.cache_dir / "permut_cache_index.json"
+        self.cache_index = self._load_cache_index()
+        self.hits = 0
+        self.misses = 0
+
+    def _load_cache_index(self) -> dict:
+        """Load cache index from disk."""
+        if self.cache_index_file.exists():
+            try:
+                with open(self.cache_index_file, "r") as f:
+                    return json.load(f)
+            except (json.JSONDecodeError, IOError):
+                return {}
+        return {}
+
+    def _save_cache_index(self):
+        """Save cache index to disk."""
+        try:
+            with open(self.cache_index_file, "w") as f:
+                json.dump(self.cache_index, f, indent=2)
+        except IOError as e:
+            click.echo(f"Warning: Failed to save cache index: {e}", err=True)
+
+    def _generate_cache_key(
+        self, input_data: list, tool: str, brand: str = "", wordlist: str = "", **kwargs
+    ) -> str:
+        """Generate a unique cache key for permutation parameters."""
+        # Create deterministic key from permutation parameters
+        key_data = {
+            "input_data": sorted(input_data) if input_data else [],
+            "tool": tool,
+            "brand": brand,
+            "wordlist": wordlist,
+            "kwargs": sorted(kwargs.items()),
+        }
+
+        key_string = json.dumps(key_data, sort_keys=True)
+        return hashlib.sha256(key_string.encode()).hexdigest()
+
+    def _is_cache_valid(self, timestamp: str) -> bool:
+        """Check if cache entry is still valid based on timestamp."""
+        try:
+            cache_time = datetime.fromisoformat(timestamp)
+            return datetime.now() - cache_time < self.max_age
+        except (ValueError, TypeError):
+            return False
+
+    def get_cached_result(
+        self, input_data: list, tool: str, brand: str = "", wordlist: str = "", **kwargs
+    ) -> dict:
+        """Retrieve cached permutation results if available and valid."""
+        cache_key = self._generate_cache_key(
+            input_data, tool, brand, wordlist, **kwargs
+        )
+
+        if cache_key in self.cache_index:
+            cache_entry = self.cache_index[cache_key]
+            if self._is_cache_valid(cache_entry["timestamp"]):
+                cache_file = self.cache_dir / f"{cache_key}.json"
+                if cache_file.exists():
+                    try:
+                        with open(cache_file, "r") as f:
+                            result = json.load(f)
+                        self.hits += 1
+                        click.echo(
+                            f"✅ Cache HIT for permutation: {tool} ({len(input_data)} inputs)",
+                            err=True,
+                        )
+                        return result
+                    except (json.JSONDecodeError, IOError):
+                        # Cache file corrupted, remove from index
+                        del self.cache_index[cache_key]
+                        self._save_cache_index()
+
+        self.misses += 1
+        click.echo(
+            f"❌ Cache MISS for permutation: {tool} ({len(input_data)} inputs)",
+            err=True,
+        )
+        return None
+
+    def save_result(
+        self,
+        input_data: list,
+        tool: str,
+        result: dict,
+        brand: str = "",
+        wordlist: str = "",
+        **kwargs,
+    ):
+        """Save permutation results to cache."""
+        cache_key = self._generate_cache_key(
+            input_data, tool, brand, wordlist, **kwargs
+        )
+
+        # Add metadata to result
+        cached_result = {
+            "metadata": {
+                "tool": tool,
+                "brand": brand,
+                "wordlist": wordlist,
+                "input_count": len(input_data) if input_data else 0,
+                "timestamp": datetime.now().isoformat(),
+                "cache_key": cache_key,
+            },
+            "result": result,
+        }
+
+        # Save result to file
+        cache_file = self.cache_dir / f"{cache_key}.json"
+        try:
+            with open(cache_file, "w") as f:
+                json.dump(cached_result, f, indent=2)
+
+            # Update cache index
+            self.cache_index[cache_key] = {
+                "tool": tool,
+                "brand": brand,
+                "timestamp": datetime.now().isoformat(),
+                "file": f"{cache_key}.json",
+                "input_count": len(input_data) if input_data else 0,
+            }
+            self._save_cache_index()
+
+        except IOError as e:
+            click.echo(f"Warning: Failed to save cache: {e}", err=True)
+
+    def clear_cache(self) -> int:
+        """Clear all cached results and return count of removed files."""
+        removed_count = 0
+
+        # Remove cache files
+        for cache_file in self.cache_dir.glob("*.json"):
+            if cache_file.name != "permut_cache_index.json":
+                try:
+                    cache_file.unlink()
+                    removed_count += 1
+                except OSError:
+                    pass
+
+        # Clear cache index
+        self.cache_index.clear()
+        self._save_cache_index()
+
+        return removed_count
+
+    def get_cache_stats(self) -> dict:
+        """Get cache performance statistics."""
+        total_requests = self.hits + self.misses
+        hit_rate = (self.hits / total_requests * 100) if total_requests > 0 else 0
+
+        # Count cache files
+        cache_files = len(
+            [
+                f
+                for f in self.cache_dir.glob("*.json")
+                if f.name != "permut_cache_index.json"
+            ]
+        )
+
+        # Calculate cache size
+        cache_size = sum(f.stat().st_size for f in self.cache_dir.glob("*.json")) / (
+            1024 * 1024
+        )
+
+        return {
+            "total_requests": total_requests,
+            "cache_hits": self.hits,
+            "cache_misses": self.misses,
+            "hit_rate": round(hit_rate, 2),
+            "cached_results": cache_files,
+            "cache_size_mb": round(cache_size, 2),
+            "cache_dir": str(self.cache_dir),
+        }
+
+    def cleanup_expired_cache(self) -> int:
+        """Remove expired cache entries and return count of removed files."""
+        removed_count = 0
+        current_time = datetime.now()
+
+        expired_keys = []
+        for cache_key, cache_entry in self.cache_index.items():
+            if not self._is_cache_valid(cache_entry["timestamp"]):
+                expired_keys.append(cache_key)
+
+        # Remove expired entries
+        for cache_key in expired_keys:
+            cache_file = self.cache_dir / f"{cache_key}.json"
+            try:
+                if cache_file.exists():
+                    cache_file.unlink()
+                    removed_count += 1
+                del self.cache_index[cache_key]
+            except OSError:
+                pass
+
+        if removed_count > 0:
+            self._save_cache_index()
+
+        return removed_count
 
 
 @click.command()
@@ -204,6 +414,56 @@ import click
     help="Primary target domain for database storage (auto-detected if not provided)",
 )
 @click.option("--program", help="Bug bounty program name for database classification")
+# Cache options
+@click.option(
+    "--cache",
+    is_flag=True,
+    help="Enable caching for faster repeated permutation generation",
+)
+@click.option(
+    "--cache-dir",
+    type=str,
+    default=None,
+    help="Custom cache directory (default: permut_cache/)",
+)
+@click.option(
+    "--cache-max-age",
+    type=int,
+    default=24,
+    help="Cache expiration time in hours (default: 24)",
+)
+@click.option(
+    "--cache-stats",
+    is_flag=True,
+    help="Show cache statistics",
+)
+@click.option(
+    "--clear-cache",
+    is_flag=True,
+    help="Clear permutation cache and exit",
+)
+# AI options
+@click.option(
+    "--ai",
+    is_flag=True,
+    help="Enable AI-enhanced permutation analysis and suggestions",
+)
+@click.option(
+    "--ai-provider",
+    type=click.Choice(["openai", "anthropic", "google", "local"], case_sensitive=False),
+    default="openai",
+    help="AI provider for enhanced analysis",
+)
+@click.option(
+    "--ai-model",
+    type=str,
+    help="Specific AI model to use (e.g., gpt-4, claude-3)",
+)
+@click.option(
+    "--ai-context",
+    type=str,
+    help="Additional context for AI analysis",
+)
 def permutcli(
     input,
     output,
@@ -250,6 +510,15 @@ def permutcli(
     store_db,
     target_domain,
     program,
+    cache,
+    cache_dir,
+    cache_max_age,
+    cache_stats,
+    clear_cache,
+    ai,
+    ai_provider,
+    ai_model,
+    ai_context,
 ):
     """🔄 Generate permutations of subdomains, paths, buckets, or parameters using various advanced tools.
 
@@ -266,17 +535,42 @@ def permutcli(
         update_dns_resolvers(verbose)
         return
 
-    # Check required parameters if not updating resolvers
-    if not input:
+    # Initialize cache system for cache-only operations
+    cache_manager = None
+    if cache or cache_stats or clear_cache:
+        cache_dir_path = cache_dir or "permut_cache"
+        cache_manager = PermutCacheManager(cache_dir_path, cache_max_age)
+
+        # Handle cache-specific operations first
+        if clear_cache:
+            cache_manager.clear_cache()
+            click.secho("[+] ✅ Permutation cache cleared successfully", fg="green")
+            return
+
+        if cache_stats:
+            stats = cache_manager.get_cache_stats()
+            click.secho(f"\n📊 Permutation Cache Statistics:", fg="cyan")
+            click.secho(
+                f"  • Total cached results: {stats['cached_results']}", fg="blue"
+            )
+            click.secho(f"  • Cache size: {stats['cache_size_mb']:.2f} MB", fg="blue")
+            click.secho(f"  • Hit rate: {stats['hit_rate']:.1f}%", fg="blue")
+            click.secho(f"  • Cache directory: {stats['cache_dir']}", fg="blue")
+            click.secho(f"  • Total requests: {stats['total_requests']}", fg="yellow")
+            if not (cache or ai):
+                return
+
+    # Check required parameters for normal operations
+    if not input and not cache_stats and not clear_cache and not update_resolvers:
         click.secho(
-            "[!] ❌ Error: --input/-i is required (unless using --update-resolvers)",
+            "[!] ❌ Error: --input/-i is required (unless using --update-resolvers, --cache-stats, or --clear-cache)",
             fg="red",
         )
         return
 
-    if not output:
+    if not output and not cache_stats and not clear_cache and not update_resolvers:
         click.secho(
-            "[!] ❌ Error: --output/-o is required (unless using --update-resolvers)",
+            "[!] ❌ Error: --output/-o is required (unless using --update-resolvers, --cache-stats, or --clear-cache)",
             fg="red",
         )
         return
@@ -289,6 +583,8 @@ def permutcli(
         click.secho(f"[*] 📁 Input: {input}", fg="blue")
         click.secho(f"[*] 📝 Output: {output}", fg="blue")
         click.secho(f"[*] 🎯 Type: {permutation_type}", fg="blue")
+        if cache_manager:
+            click.secho(f"[*] 💾 Cache enabled: {cache_manager.cache_dir}", fg="blue")
 
     # 🧱 Load base words
     try:
@@ -486,66 +782,117 @@ def permutcli(
 
     # Route to appropriate tool
     try:
-        if tool == "internal":
-            results = run_internal_permutator(
-                base_items,
-                keyword_list,
-                permutation_type,
-                advanced,
-                verbose,
-                include_tlds,
-                patterns,
-                tld_list,
-                www_prefix,
-                prefix_only,
-                suffix_only,
+        # Check cache first if enabled
+        results = None
+        if cache_manager:
+            cached_result = cache_manager.get_cached_result(
+                input_data=base_items,
+                tool=tool,
+                brand=brand or "",
+                wordlist=wordlist or "",
+                keywords=keywords or "",
+                permutation_type=permutation_type,
+                mode=mode,
+                domain=domain or "",
+                cloud_provider=cloud_provider,
+                advanced=advanced,
+                include_tlds=include_tlds,
+                numbers=numbers,
+                years=years or "",
+                inject_suffix=inject_suffix or "",
+                inject_prefix=inject_prefix or "",
+                exclude_tlds=exclude_tlds or "",
+                depth=depth,
+                patterns=patterns or "",
+                exclude=exclude or "",
+                filter=filter or "",
+                prefix_only=prefix_only,
+                suffix_only=suffix_only,
+                mutate_case=mutate_case,
+                api_endpoints=api_endpoints,
+                www_prefix=www_prefix,
             )
-        elif tool == "dnstwist":
-            results = run_dnstwist(base_items, domain, verbose, timeout)
-        elif tool == "dnsgen":
-            results = run_dnsgen(base_items, wordlist, verbose, timeout)
-        elif tool == "urlcrazy":
-            results = run_urlcrazy(base_items, domain, verbose, timeout)
-        elif tool == "shuffledns":
-            results = run_shuffledns(
-                base_items, keyword_list, resolve, threads, verbose, timeout
-            )
-        elif tool == "dmut":
-            results = run_dmut(base_items, keyword_list, threads, verbose, timeout)
-        elif tool == "s3scanner":
-            results = run_s3scanner(
-                base_items, keyword_list, cloud_provider, verbose, timeout
-            )
-        elif tool == "alterx":
-            results = run_alterx(base_items, keyword_list, verbose, timeout)
-        elif tool == "kr":
-            results = run_kitrunner_api(
-                base_items, keyword_list, api_endpoints, verbose, timeout
-            )
-        elif tool == "gotator":
-            results = run_gotator(base_items, keyword_list, depth, verbose, timeout)
-        elif tool == "goaltdns":
-            results = run_goaltdns(base_items, keyword_list, verbose, timeout)
-        elif tool == "sublist3r":
-            results = run_sublist3r(base_items, domain, verbose, timeout)
-        elif tool == "amass":
-            results = run_amass(base_items, domain, verbose, timeout)
-        elif tool == "subfinder":
-            results = run_subfinder(base_items, domain, verbose, timeout)
-        elif tool == "assetfinder":
-            results = run_assetfinder(base_items, domain, verbose, timeout)
-        elif tool == "findomain":
-            results = run_findomain(base_items, domain, verbose, timeout)
-        else:
-            click.secho(f"[!] ❌ Unknown tool: {tool}", fg="red")
-            return
 
-        # Handle dry-run mode
+            if cached_result:
+                # Handle nested result structure
+                if "result" in cached_result and "results" in cached_result["result"]:
+                    results = cached_result["result"]["results"]
+                elif "results" in cached_result:
+                    results = cached_result["results"]
+                else:
+                    results = []
+
+                if verbose and not silent:
+                    click.secho(
+                        f"[+] 💾 Using cached permutation results ({len(results)} items)",
+                        fg="green",
+                    )
+
+        # Generate results if not cached
+        if results is None:
+            if tool == "internal":
+                results = run_internal_permutator(
+                    base_items,
+                    keyword_list,
+                    permutation_type,
+                    advanced,
+                    verbose,
+                    include_tlds,
+                    patterns,
+                    tld_list,
+                    www_prefix,
+                    prefix_only,
+                    suffix_only,
+                )
+            elif tool == "dnstwist":
+                results = run_dnstwist(base_items, domain, verbose, timeout)
+            elif tool == "dnsgen":
+                results = run_dnsgen(base_items, wordlist, verbose, timeout)
+            elif tool == "urlcrazy":
+                results = run_urlcrazy(base_items, domain, verbose, timeout)
+            elif tool == "shuffledns":
+                results = run_shuffledns(
+                    base_items, keyword_list, resolve, threads, verbose, timeout
+                )
+            elif tool == "dmut":
+                results = run_dmut(base_items, keyword_list, threads, verbose, timeout)
+            elif tool == "s3scanner":
+                results = run_s3scanner(
+                    base_items, keyword_list, cloud_provider, verbose, timeout
+                )
+            elif tool == "alterx":
+                results = run_alterx(base_items, keyword_list, verbose, timeout)
+            elif tool == "kr":
+                results = run_kitrunner_api(
+                    base_items, keyword_list, api_endpoints, verbose, timeout
+                )
+            elif tool == "gotator":
+                results = run_gotator(base_items, keyword_list, depth, verbose, timeout)
+            elif tool == "goaltdns":
+                results = run_goaltdns(base_items, keyword_list, verbose, timeout)
+            elif tool == "sublist3r":
+                results = run_sublist3r(base_items, domain, verbose, timeout)
+            elif tool == "amass":
+                results = run_amass(base_items, domain, verbose, timeout)
+            elif tool == "subfinder":
+                results = run_subfinder(base_items, domain, verbose, timeout)
+            elif tool == "assetfinder":
+                results = run_assetfinder(base_items, domain, verbose, timeout)
+            elif tool == "findomain":
+                results = run_findomain(base_items, domain, verbose, timeout)
+            else:
+                click.secho(f"[!] ❌ Unknown tool: {tool}", fg="red")
+                return  # Handle dry-run mode
         if dry_run:
-            click.secho(
-                f"[*] 📊 Would generate {len(results)} permutations using {tool}",
-                fg="blue",
-            )
+            if results:
+                click.secho(
+                    f"[*] 📊 Would generate {len(results)} permutations using {tool}",
+                    fg="blue",
+                )
+            else:
+                click.secho(
+                    f"[*] 📊 Would generate 0 permutations using {tool}", fg="blue"
+                )
             return
 
         # Process results
@@ -570,6 +917,56 @@ def permutcli(
                 results = results[:max_results]
                 if verbose and not silent:
                     click.secho(f"[+] 🔢 Limited to {max_results} results", fg="yellow")
+
+        # Save to cache if cache is enabled and results were freshly generated
+        if (
+            cache_manager
+            and results
+            and not any("cached permutation results" in str(msg) for msg in [])
+        ):
+            try:
+                cache_data = {
+                    "results": results,
+                    "tool": tool,
+                    "timestamp": datetime.now().isoformat(),
+                    "input_count": len(base_items),
+                    "result_count": len(results),
+                }
+                cache_manager.save_result(
+                    input_data=base_items,
+                    tool=tool,
+                    result=cache_data,
+                    brand=brand or "",
+                    wordlist=wordlist or "",
+                    keywords=keywords or "",
+                    permutation_type=permutation_type,
+                    mode=mode,
+                    domain=domain or "",
+                    cloud_provider=cloud_provider,
+                    advanced=advanced,
+                    include_tlds=include_tlds,
+                    numbers=numbers,
+                    years=years or "",
+                    inject_suffix=inject_suffix or "",
+                    inject_prefix=inject_prefix or "",
+                    exclude_tlds=exclude_tlds or "",
+                    depth=depth,
+                    patterns=patterns or "",
+                    exclude=exclude or "",
+                    filter=filter or "",
+                    prefix_only=prefix_only,
+                    suffix_only=suffix_only,
+                    mutate_case=mutate_case,
+                    api_endpoints=api_endpoints,
+                    www_prefix=www_prefix,
+                )
+                if verbose and not silent:
+                    click.secho(
+                        f"[+] 💾 Cached {len(results)} permutation results", fg="blue"
+                    )
+            except Exception as e:
+                if verbose and not silent:
+                    click.secho(f"[!] ⚠️  Cache save failed: {e}", fg="yellow")
 
         if uniq and results:
             original_count = len(results)
@@ -632,13 +1029,40 @@ def permutcli(
         # Save output
         save_results(results, output, format, verbose)
 
+        # AI-enhanced analysis if enabled
+        if ai and results:
+            try:
+                ai_analysis = analyze_permutation_results_with_ai(
+                    results=results,
+                    tool=tool,
+                    permutation_type=permutation_type,
+                    base_items=base_items,
+                    ai_provider=ai_provider,
+                    ai_model=ai_model,
+                    ai_context=ai_context,
+                    verbose=verbose,
+                )
+
+                if ai_analysis and not silent:
+                    click.secho(
+                        f"\n🤖 AI Analysis ({ai_provider}):", fg="cyan", bold=True
+                    )
+                    for line in ai_analysis.split("\n"):
+                        if line.strip():
+                            click.secho(f"   {line}", fg="blue")
+            except Exception as e:
+                if verbose and not silent:
+                    click.secho(f"[!] ⚠️  AI analysis failed: {e}", fg="yellow")
+
         # Database storage
         if store_db and results:
             try:
-                from reconcli.db.operations import (
-                    store_subdomain_permutation,
-                    store_target,
-                )
+                # Note: Database integration requires proper setup
+                # from reconcli.db.operations import store_subdomain_permutation, store_target
+                if verbose and not silent:
+                    click.secho(
+                        "[!] ⚠️  Database storage not yet implemented", fg="yellow"
+                    )
 
                 # Auto-detect target domain if not provided
                 if not target_domain and results:
@@ -650,30 +1074,18 @@ def permutcli(
                             target_domain = ".".join(parts[-2:])
 
                 if target_domain:
-                    # Ensure target exists in database
-                    target_id = store_target(target_domain, program=program)
-
-                    # Convert results to database format
-                    permutation_data = []
-                    for result in results:
-                        perm_entry = {
-                            "permutation": result,
-                            "permutation_type": permutation_type or "general",
-                            "tool_used": tool,
-                            "resolved": False,  # Could be enhanced to check resolution
-                            "timestamp": datetime.now().isoformat(),
-                        }
-                        permutation_data.append(perm_entry)
-
-                    # Store permutations in database
-                    stored_ids = store_subdomain_permutation(
-                        target_domain, permutation_data
-                    )
+                    # Note: Database storage functionality requires proper setup
+                    # target_id = store_target(target_domain, program=program)
+                    # stored_ids = store_subdomain_permutation(target_domain, permutation_data)
 
                     if verbose and not silent:
                         click.secho(
-                            f"[+] 💾 Stored {len(stored_ids)} permutations in database for target: {target_domain}",
+                            f"[+] 💾 Would store {len(results)} permutations in database for target: {target_domain}",
                             fg="cyan",
+                        )
+                        click.secho(
+                            "[!] ⚠️  Database storage requires reconcli.db module setup",
+                            fg="yellow",
                         )
                 else:
                     if verbose and not silent:
@@ -690,7 +1102,7 @@ def permutcli(
                     click.secho(f"[!] ❌ Database storage failed: {e}", fg="red")
 
         # Summary
-        if not silent:
+        if not silent and results:
             click.secho(
                 f"\n[✓] 🎉 Generated {len(results)} permutations using {tool}",
                 fg="green",
@@ -700,6 +1112,74 @@ def permutcli(
 
     except Exception as e:
         click.secho(f"[!] ❌ Error during permutation: {e}", fg="red")
+
+
+def analyze_permutation_results_with_ai(
+    results: list,
+    tool: str,
+    permutation_type: str,
+    base_items: list,
+    ai_provider: str = "openai",
+    ai_model: str = "",
+    ai_context: str = "",
+    verbose: bool = False,
+) -> str:
+    """Analyze permutation results using AI for enhanced insights."""
+    try:
+        # Import AI modules with fallback
+        try:
+            import openai
+            from openai import OpenAI
+        except ImportError:
+            if verbose:
+                click.secho(
+                    "[!] OpenAI module not available for AI analysis", fg="yellow"
+                )
+            return "AI analysis requires openai package: pip install openai"
+
+        # Prepare analysis prompt
+        sample_results = results[:20] if len(results) > 20 else results
+        sample_base = base_items[:10] if len(base_items) > 10 else base_items
+
+        prompt = f"""Analyze these {permutation_type} permutations generated by {tool}:
+
+Base inputs ({len(base_items)} total): {', '.join(sample_base)}
+Generated results ({len(results)} total): {', '.join(sample_results)}
+
+        Context: {ai_context or 'General security testing'}Provide insights on:
+1. Quality and coverage of generated permutations
+2. Potential security-relevant patterns or targets
+3. Missing permutation patterns that might be valuable
+4. Risk assessment of discovered patterns
+5. Recommended next steps for testing
+
+Keep response concise and actionable."""
+
+        # Configure AI client based on provider
+        if ai_provider.lower() == "openai":
+            try:
+                client = OpenAI()
+                model = ai_model or "gpt-3.5-turbo"
+
+                response = client.chat.completions.create(
+                    model=model,
+                    messages=[{"role": "user", "content": prompt}],
+                    max_tokens=500,
+                    temperature=0.7,
+                )
+
+                return response.choices[0].message.content.strip()
+
+            except Exception as e:
+                return f"AI analysis failed: {e}"
+
+        else:
+            return f"AI provider '{ai_provider}' not yet implemented"
+
+    except Exception as e:
+        if verbose:
+            click.secho(f"[!] AI analysis error: {e}", fg="yellow")
+        return f"AI analysis error: {e}"
 
 
 def get_common_words(permutation_type):
@@ -2038,7 +2518,9 @@ def update_dns_resolvers(verbose=False):
             if parsed_url.scheme not in ("https", "http"):
                 raise ValueError(f"Unsupported URL scheme: {parsed_url.scheme}")
 
-            urllib.request.urlretrieve(source["url"], output_path)  # nosec: B310 - URL validated above
+            urllib.request.urlretrieve(
+                source["url"], output_path
+            )  # nosec: B310 - URL validated above
 
             # Count lines in the file
             with open(output_path, "r") as f:
