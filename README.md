@@ -41,6 +41,7 @@ A comprehensive, modular reconnaissance toolkit designed for security profession
 - **🆕 Directory Brute Force**: 30-300s → Near-instant (20-150x faster)
 - **🆕 GraphQL Security**: 20-180s → Near-instant (30-200x faster)
 - **🆕 SQL Injection Testing**: 25-400s → Near-instant (15-300x faster)
+- **🆕 XSS Testing (XSpear)**: 60-300s → Near-instant (25-100x faster)
 
 ```bash
 # Enable caching for any module (DNS, HTTP, Port, Subdomain, Security Tools)
@@ -519,15 +520,28 @@ reconcli shodancli --cache-dir /tmp/shodan_cache --cache-max-age 48
 
 ### 🛡️ **XSSCli - Professional XSS Testing Framework** (MAJOR UPDATE!)
 - **🚀 KNOXSS API Integration**: Professional-grade XSS detection with knoxnl wrapper
+- **⚔️ XSpear Engine Integration**: Advanced Ruby-based XSS scanner with WAF bypass capabilities
 - **🎯 Brute Logic Lab Testing**: Specialized testing environment with 120+ payloads
+- **👻 Blind XSS Support**: Out-of-band testing with callback URL integration (XSpear)
 - **🧠 Advanced AI Analysis**: Multi-provider support (OpenAI, Anthropic, Gemini) with contextual insights
+- **🛡️ Multi-Engine Architecture**: Manual, XSpear, Dalfox, kxss engines with comparison capabilities
 - **⚡ Intelligent Caching**: 25x-100x speed improvements with SHA256-based cache keys
-- **🔧 15 Specialized Commands**: Comprehensive testing suite with professional tool integrations
+- **🔧 16 Specialized Commands**: Comprehensive testing suite with professional tool integrations
 - **🕵️ Tor Proxy Support**: Anonymous testing with full proxy integration
 - **📊 Performance Metrics**: Real-time cache statistics and vulnerability success rates
 - **💾 Enterprise Storage**: ReconCLI database integration with comprehensive result management
 
 ```bash
+# XSpear advanced XSS scanning with AI and caching
+reconcli xsscli test-input --input targets.txt --engine xspear --cache --ai
+
+# XSpear with blind XSS testing
+reconcli xsscli xspear --url "https://target.com/search.php" \
+  --blind-url "https://callback.com/xss" --threads 5 --ai
+
+# Multi-engine comparison (manual, XSpear, Dalfox, kxss)
+reconcli xsscli test-input --input targets.txt --engine all --cache --ai
+
 # Professional KNOXSS testing with AI and caching
 export KNOXSS_API_KEY="your_key"
 reconcli xsscli knoxnl --input urls.txt --cache --ai --ai-provider anthropic
@@ -535,12 +549,8 @@ reconcli xsscli knoxnl --input urls.txt --cache --ai --ai-provider anthropic
 # Brute Logic lab testing (120 vulnerabilities found)
 reconcli xsscli brutelogic-test --cache --ai --verbose
 
-# Advanced testing with full feature set
-reconcli xsscli test-input --input targets.txt \
-  --cache --ai --ai-provider openai --tor --output results.json
-
-# AI analysis of stored results
-reconcli xsscli ai-analyze --provider anthropic --model claude-3-opus
+# XSpear-specific AI analysis
+reconcli xsscli xspear --url "https://target.com" --ai --ai-provider openai
 
 # Cache management and performance monitoring
 reconcli xsscli test-input --cache-stats

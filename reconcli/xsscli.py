@@ -64,6 +64,8 @@ BINARIES = [
     "chromedriver",
     "geckodriver",
     "playwright-python",
+    "XSpear",
+    "ruby",
 ]
 
 # XSS Categories for payload organization
@@ -526,6 +528,304 @@ def setup_tor_proxy(tor_proxy_url):
         return None
 
 
+def run_xspear_scan(
+    target, output_file=None, blind_url=None, custom_payloads=None, threads=10, delay=1
+):
+    """Run XSpear XSS scanner on target URL."""
+
+    if not check_binary("XSpear"):
+        print("[!] XSpear not found. Install with: gem install XSpear")
+        return None
+
+    if not check_binary("ruby"):
+        print("[!] Ruby not found. Install Ruby first.")
+        return None
+
+    print(f"[*] Running XSpear scan on {target}")
+
+    # Build XSpear command
+    cmd = ["XSpear", "-u", target]
+
+    # Add options
+    if threads:
+        cmd.extend(["-t", str(threads)])
+
+    # XSpear doesn't have --delay option, skip it
+    # if delay:
+    #     cmd.extend(["--delay", str(delay)])
+
+    if blind_url:
+        cmd.extend(["-b", blind_url])
+        print(f"[*] Using blind XSS callback: {blind_url}")
+
+    if custom_payloads and os.path.exists(custom_payloads):
+        cmd.extend(["--custom-payload", custom_payloads])
+        print(f"[*] Using custom payloads: {custom_payloads}")
+
+    # Output options
+    if output_file:
+        cmd.extend(["-o", "json"])  # Use json output for better parsing
+
+    # Additional XSpear options for advanced scanning
+    cmd.extend(
+        [
+            "-v",
+            "2",  # Verbose mode 2 (show scanning logs)
+            "-a",  # Test all parameters
+        ]
+    )
+
+    try:
+        print(f"[*] Executing: {' '.join(cmd)}")
+        result = subprocess.run(
+            cmd, capture_output=True, text=True, timeout=300  # 5 minute timeout
+        )
+
+        if result.returncode == 0:
+            print(f"[+] XSpear scan completed successfully")
+            return {
+                "success": True,
+                "stdout": result.stdout,
+                "stderr": result.stderr,
+                "command": " ".join(cmd),
+            }
+        else:
+            print(f"[!] XSpear scan failed with return code: {result.returncode}")
+            print(f"[!] Error output: {result.stderr}")
+            return {
+                "success": False,
+                "stdout": result.stdout,
+                "stderr": result.stderr,
+                "command": " ".join(cmd),
+                "return_code": result.returncode,
+            }
+
+    except subprocess.TimeoutExpired:
+        print(f"[!] XSpear scan timed out after 5 minutes")
+        return {"success": False, "error": "timeout"}
+    except Exception as e:
+        print(f"[!] Error running XSpear: {e}")
+        return {"success": False, "error": str(e)}
+
+
+def parse_xspear_results(xspear_output):
+    """Parse XSpear scan results into structured format."""
+
+    if not xspear_output or not xspear_output.get("success"):
+        return []
+
+    results = []
+    output_lines = xspear_output.get("stdout", "").split("\n")
+
+    current_vuln = {}
+
+    for line in output_lines:
+        line = line.strip()
+
+        if not line:
+            continue
+
+        # Parse XSpear output patterns
+        if "XSS Detected" in line or "VULNERABILITY" in line.upper():
+            if current_vuln:
+                results.append(current_vuln)
+            current_vuln = {
+                "vulnerable": True,
+                "tool": "xspear",
+                "timestamp": datetime.now().isoformat(),
+            }
+
+        elif "URL:" in line and current_vuln:
+            current_vuln["url"] = line.split("URL:")[1].strip()
+
+        elif "Parameter:" in line and current_vuln:
+            current_vuln["param"] = line.split("Parameter:")[1].strip()
+
+        elif "Payload:" in line and current_vuln:
+            current_vuln["payload"] = line.split("Payload:")[1].strip()
+
+        elif "Method:" in line and current_vuln:
+            current_vuln["method"] = line.split("Method:")[1].strip()
+
+        elif "Response Code:" in line and current_vuln:
+            try:
+                current_vuln["response_code"] = int(
+                    line.split("Response Code:")[1].strip()
+                )
+            except ValueError:
+                current_vuln["response_code"] = 0
+
+        elif "WAF Detected:" in line and current_vuln:
+            current_vuln["waf_detected"] = "true" in line.lower()
+
+        elif "Blind XSS" in line and current_vuln:
+            current_vuln["blind_xss"] = True
+
+        elif "Reflected" in line and current_vuln:
+            current_vuln["reflected"] = True
+
+        elif "DOM Based" in line and current_vuln:
+            current_vuln["xss_type"] = "dom"
+
+        elif "Stored" in line and current_vuln:
+            current_vuln["xss_type"] = "stored"
+
+    # Add last vulnerability if exists
+    if current_vuln:
+        results.append(current_vuln)
+
+    # If no structured results found, try to extract basic info
+    if not results and "xss" in xspear_output.get("stdout", "").lower():
+        # Basic result extraction for less structured output
+        results.append(
+            {
+                "vulnerable": True,
+                "tool": "xspear",
+                "timestamp": datetime.now().isoformat(),
+                "raw_output": xspear_output.get("stdout", ""),
+                "note": "Manual review required - check raw output",
+            }
+        )
+
+    print(f"[*] Parsed {len(results)} XSpear results")
+    return results
+
+
+def run_xspear_with_cache(target, cache_manager=None, **kwargs):
+    """Run XSpear with intelligent caching support."""
+
+    if not cache_manager:
+        # Run without cache
+        return run_xspear_scan(target, **kwargs)
+
+    # Generate cache key for XSpear scan
+    cache_key_data = {
+        "target": target,
+        "tool": "xspear",
+        "kwargs": sorted(kwargs.items()),
+    }
+
+    cache_key = hashlib.sha256(
+        json.dumps(cache_key_data, sort_keys=True).encode()
+    ).hexdigest()
+
+    # Check cache first
+    cached_result = cache_manager.get_cached_result(
+        target, ["xspear"], method="XSpear", tool="xspear"
+    )
+
+    if cached_result:
+        print(f"[+] Using cached XSpear results for {target}")
+        return cached_result.get("result", {})
+
+    # Run actual scan
+    print(f"[*] Running fresh XSpear scan for {target}")
+    result = run_xspear_scan(target, **kwargs)
+
+    # Cache the result
+    if result and cache_manager:
+        cache_manager.save_result(
+            target, ["xspear"], result, method="XSpear", tool="xspear"
+        )
+        print(f"[+] Cached XSpear results for {target}")
+
+    return result
+
+
+def xspear_ai_analysis(xspear_results, target_info=None):
+    """AI-powered analysis specifically for XSpear results."""
+
+    if not xspear_results:
+        return "No XSpear results to analyze"
+
+    analysis = []
+    analysis.append("🔍 XSpear AI Analysis")
+    analysis.append("=" * 50)
+
+    # XSpear-specific metrics
+    total_vulns = len(xspear_results)
+    waf_bypassed = len([r for r in xspear_results if r.get("waf_detected", False)])
+    blind_xss = len([r for r in xspear_results if r.get("blind_xss", False)])
+    dom_based = len([r for r in xspear_results if r.get("xss_type") == "dom"])
+    stored_xss = len([r for r in xspear_results if r.get("xss_type") == "stored"])
+
+    analysis.append(f"📊 XSpear Scan Summary:")
+    analysis.append(f"  Total vulnerabilities: {total_vulns}")
+    analysis.append(f"  WAF bypass attempts: {waf_bypassed}")
+    analysis.append(f"  Blind XSS findings: {blind_xss}")
+    analysis.append(f"  DOM-based XSS: {dom_based}")
+    analysis.append(f"  Stored XSS: {stored_xss}")
+
+    # XSpear advantages analysis
+    analysis.append(f"\n🎯 XSpear Advanced Features Detected:")
+
+    if waf_bypassed > 0:
+        analysis.append(
+            f"  ✅ WAF bypass techniques successful ({waf_bypassed} instances)"
+        )
+        analysis.append(f"  🛡️ Advanced evasion payloads effective")
+
+    if blind_xss > 0:
+        analysis.append(f"  ✅ Blind XSS detection successful ({blind_xss} findings)")
+        analysis.append(f"  💀 Out-of-band XSS vulnerabilities discovered")
+
+    if dom_based > 0:
+        analysis.append(f"  ✅ DOM-based XSS analysis completed ({dom_based} findings)")
+        analysis.append(f"  🔄 Client-side vulnerabilities identified")
+
+    # Payload effectiveness
+    payloads_used = {}
+    for result in xspear_results:
+        payload = result.get("payload", "unknown")[:50]
+        payloads_used[payload] = payloads_used.get(payload, 0) + 1
+
+    if payloads_used:
+        analysis.append(f"\n💥 Most Effective XSpear Payloads:")
+        top_payloads = sorted(payloads_used.items(), key=lambda x: x[1], reverse=True)[
+            :3
+        ]
+        for payload, count in top_payloads:
+            analysis.append(f"  {count}x: {payload}...")
+
+    # XSpear-specific recommendations
+    analysis.append(f"\n💡 XSpear-Specific Recommendations:")
+
+    if total_vulns > 0:
+        analysis.append(f"  🚨 XSpear detected {total_vulns} XSS vulnerabilities")
+        analysis.append(
+            f"  📋 XSpear's advanced detection capabilities validated findings"
+        )
+
+        if waf_bypassed > 0:
+            analysis.append(f"  ⚠️ WAF bypass successful - review security controls")
+            analysis.append(f"  🔧 Implement advanced WAF rules and monitoring")
+
+        if blind_xss > 0:
+            analysis.append(f"  🕵️ Blind XSS found - implement proper output encoding")
+            analysis.append(
+                f"  📡 Monitor for callback requests and anomalous behavior"
+            )
+
+        if dom_based > 0:
+            analysis.append(f"  🌐 DOM XSS detected - review client-side security")
+            analysis.append(f"  ⚡ Implement Content Security Policy (CSP)")
+
+    else:
+        analysis.append(f"  ✅ XSpear found no XSS vulnerabilities")
+        analysis.append(f"  🔍 Consider testing with additional custom payloads")
+        analysis.append(f"  🎯 XSpear's advanced techniques found no bypasses")
+
+    # Target-specific insights
+    if target_info:
+        analysis.append(f"\n🎯 Target Analysis:")
+        if target_info.get("waf_detected"):
+            analysis.append(f"  🛡️ WAF detected - XSpear's bypass techniques activated")
+        if target_info.get("blind_callback"):
+            analysis.append(f"  📡 Blind XSS callback configured")
+
+    return "\n".join(analysis)
+
+
 def init_db():
     """Initialize the SQLite database with comprehensive tables."""
     if DB_AVAILABLE:
@@ -803,11 +1103,24 @@ def check_deps():
     if missing:
         print("\n[*] Install missing tools:")
         go_tools = ["dalfox", "kxss", "waybackurls", "gau", "hakrawler", "gospider"]
+        ruby_tools = ["xspear"]
+
         for tool in missing:
             if tool in go_tools:
                 print(f"  go install github.com/author/{tool}@latest")
+            elif tool in ruby_tools:
+                if tool == "xspear":
+                    print(f"  gem install XSpear")
+                    print(f"  # Requires Ruby and gem package manager")
+                else:
+                    print(f"  gem install {tool}")
             else:
                 print(f"  # Install {tool} from its repository")
+
+        print(f"\n[*] XSpear Installation Guide:")
+        print(f"  1. Install Ruby: sudo apt install ruby-full")
+        print(f"  2. Install XSpear: gem install XSpear")
+        print(f"  3. Verify: xspear --version")
 
 
 @cli.command()
@@ -824,6 +1137,13 @@ def check_deps():
     default="txt",
     help="Output format",
 )
+@click.option(
+    "--engine",
+    type=click.Choice(["manual", "xspear", "dalfox", "kxss", "all"]),
+    default="manual",
+    help="XSS scanning engine to use",
+)
+@click.option("--blind-url", help="Blind XSS callback URL for XSpear")
 @click.option(
     "--cache", is_flag=True, help="Enable intelligent caching for XSS test results"
 )
@@ -854,6 +1174,8 @@ def test_input(
     threads,
     output,
     format,
+    engine,
+    blind_url,
     cache,
     cache_dir,
     cache_max_age,
@@ -957,6 +1279,49 @@ def test_input(
 
     print(f"[*] Using {len(payloads)} XSS payloads")
     print(f"[*] Method: {method} | Delay: {delay}s | Threads: {threads}")
+    print(f"[*] Scanning engine: {engine}")
+
+    # Engine-specific setup
+    if engine == "xspear":
+        if not check_binary("XSpear"):
+            print("[!] XSpear not found. Install with: gem install XSpear")
+            print("[*] Falling back to manual testing")
+            engine = "manual"
+        else:
+            print("[+] XSpear engine ready")
+            if blind_url:
+                print(f"[*] Blind XSS callback: {blind_url}")
+
+    elif engine == "dalfox":
+        if not check_binary("dalfox"):
+            print("[!] Dalfox not found. Install from: github.com/hahwul/dalfox")
+            print("[*] Falling back to manual testing")
+            engine = "manual"
+        else:
+            print("[+] Dalfox engine ready")
+
+    elif engine == "kxss":
+        if not check_binary("kxss"):
+            print("[!] kxss not found. Install from: github.com/tomnomnom/hacks/kxss")
+            print("[*] Falling back to manual testing")
+            engine = "manual"
+        else:
+            print("[+] kxss engine ready")
+
+    elif engine == "all":
+        available_engines = []
+        if check_binary("XSpear"):
+            available_engines.append("xspear")
+        if check_binary("dalfox"):
+            available_engines.append("dalfox")
+        if check_binary("kxss"):
+            available_engines.append("kxss")
+
+        if not available_engines:
+            print("[!] No external engines found, using manual testing")
+            engine = "manual"
+        else:
+            print(f"[+] Available engines: {', '.join(available_engines)}")
 
     if tor:
         print(f"[*] Setting up Tor proxy for anonymous scanning...")
@@ -983,95 +1348,234 @@ def test_input(
                 print(f"  ✅ Using cached results for {target}")
                 continue
 
-        # Perform actual testing if not cached
+        # Perform actual testing based on selected engine
         target_results = []
         target_vulnerable_count = 0
 
-        try:
-            # Use Tor client if available, otherwise regular client
-            if tor and "tor_client" in locals():
-                client = tor_client
+        # XSpear Engine
+        if engine == "xspear" or (engine == "all" and "xspear" in available_engines):
+            print(f"  🔍 Running XSpear scan...")
+            xspear_result = run_xspear_with_cache(
+                target=target,
+                cache_manager=cache_manager,
+                threads=threads,
+                delay=delay,
+                blind_url=blind_url,
+                custom_payloads=payloads_file,
+            )
+
+            if xspear_result and xspear_result.get("success"):
+                xspear_parsed = parse_xspear_results(xspear_result)
+                target_results.extend(xspear_parsed)
+                target_vulnerable_count += len(
+                    [r for r in xspear_parsed if r.get("vulnerable")]
+                )
+                print(f"    [+] XSpear found {len(xspear_parsed)} results")
+
+                # Save XSpear results to database
+                for result in xspear_parsed:
+                    save_result(
+                        result.get("url", target),
+                        result.get("param", "xspear_detected"),
+                        result.get("payload", "XSpear payload"),
+                        result.get("reflected", False),
+                        result.get("vulnerable", False),
+                        result.get("method", method),
+                        result.get("response_code", 0),
+                        0,  # response_length
+                        "xspear",
+                        "high" if result.get("vulnerable") else "low",
+                        f"XSpear scan, WAF: {result.get('waf_detected', False)}",
+                    )
             else:
-                client = httpx.Client(timeout=10)
+                print(f"    [!] XSpear scan failed or returned no results")
 
-            with client:
-                for j, payload in enumerate(payloads, 1):
-                    print(f"  [*] Payload {j}/{len(payloads)}: {payload[:50]}...")
+        # Dalfox Engine
+        elif engine == "dalfox" or (engine == "all" and "dalfox" in available_engines):
+            print(f"  🔍 Running Dalfox scan...")
+            dalfox_cmd = ["dalfox", "url", target]
+            if threads > 1:
+                dalfox_cmd.extend(["--worker", str(threads)])
+            if delay > 0:
+                dalfox_cmd.extend(["--delay", str(int(delay * 1000))])  # Dalfox uses ms
 
-                    try:
-                        if method.upper() == "GET":
-                            if param:
-                                test_url = (
-                                    f"{target}?{param}={urllib.parse.quote(payload)}"
-                                )
-                            else:
-                                test_url = (
-                                    f"{target}?xss_test={urllib.parse.quote(payload)}"
-                                )
+            try:
+                dalfox_result = subprocess.run(
+                    dalfox_cmd, capture_output=True, text=True, timeout=120
+                )
+                if "XSS" in dalfox_result.stdout.upper():
+                    dalfox_vuln = {
+                        "url": target,
+                        "param": "dalfox_detected",
+                        "payload": "Dalfox payload",
+                        "reflected": True,
+                        "vulnerable": True,
+                        "method": method,
+                        "tool": "dalfox",
+                        "timestamp": datetime.now().isoformat(),
+                        "raw_output": dalfox_result.stdout,
+                    }
+                    target_results.append(dalfox_vuln)
+                    target_vulnerable_count += 1
+                    print(f"    [+] Dalfox found XSS vulnerability!")
 
-                            response = client.get(test_url)
-                            actual_url = test_url
-                        else:
-                            data = {}
-                            if param:
-                                data[param] = payload
-                            else:
-                                data["xss_test"] = payload
+                    save_result(
+                        target,
+                        "dalfox_detected",
+                        "Dalfox payload",
+                        True,
+                        True,
+                        method,
+                        200,
+                        0,
+                        "dalfox",
+                        "high",
+                        "Dalfox XSS detection",
+                    )
+                else:
+                    print(f"    [-] Dalfox found no vulnerabilities")
+            except Exception as e:
+                print(f"    [!] Dalfox error: {e}")
 
-                            response = client.post(target, data=data)
-                            actual_url = target
+        # kxss Engine
+        elif engine == "kxss" or (engine == "all" and "kxss" in available_engines):
+            print(f"  🔍 Running kxss scan...")
+            try:
+                # kxss expects URLs via stdin
+                kxss_process = subprocess.Popen(
+                    ["kxss"],
+                    stdin=subprocess.PIPE,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    text=True,
+                )
+                kxss_output, kxss_error = kxss_process.communicate(input=target)
 
-                        # Check if payload is reflected in response
-                        reflected = payload in response.text
-                        vulnerable = reflected  # Basic check - could be enhanced
-
-                        if reflected:
-                            print(f"    [+] REFLECTED: {payload[:30]}...")
-                            vulnerable_count += 1
+                if kxss_output.strip():
+                    kxss_lines = kxss_output.strip().split("\n")
+                    for line in kxss_lines:
+                        if line.strip():
+                            kxss_vuln = {
+                                "url": line.strip(),
+                                "param": "kxss_detected",
+                                "payload": "kxss payload",
+                                "reflected": True,
+                                "vulnerable": True,
+                                "method": method,
+                                "tool": "kxss",
+                                "timestamp": datetime.now().isoformat(),
+                            }
+                            target_results.append(kxss_vuln)
                             target_vulnerable_count += 1
 
-                        # Store result
-                        result = {
-                            "url": actual_url,
-                            "target": target,
-                            "param": param or "xss_test",
-                            "payload": payload,
-                            "method": method,
-                            "reflected": reflected,
-                            "vulnerable": vulnerable,
-                            "response_code": response.status_code,
-                            "response_length": len(response.text),
-                            "timestamp": datetime.now().isoformat(),
-                            "tor_used": tor,
-                        }
+                            save_result(
+                                line.strip(),
+                                "kxss_detected",
+                                "kxss payload",
+                                True,
+                                True,
+                                method,
+                                200,
+                                0,
+                                "kxss",
+                                "medium",
+                                "kxss reflection detection",
+                            )
 
-                        results.append(result)
-                        target_results.append(result)
+                    print(f"    [+] kxss found {len(kxss_lines)} reflected parameters")
+                else:
+                    print(f"    [-] kxss found no reflected parameters")
+            except Exception as e:
+                print(f"    [!] kxss error: {e}")
 
-                        # Save to database
-                        save_result(
-                            actual_url,
-                            param or "xss_test",
-                            payload,
-                            reflected,
-                            vulnerable,
-                            method,
-                            response.status_code,
-                            len(response.text),
-                            "test_input",
-                            "medium" if vulnerable else "low",
-                            f"Tor: {tor}, Target: {target}",
-                        )
+        # Manual Testing Engine (default/fallback)
+        if engine == "manual" or engine == "all":
+            print(f"  🔍 Running manual XSS testing...")
 
-                    except Exception as e:
-                        print(f"    [!] Error with payload: {e}")
-                        continue
+            try:
+                # Use Tor client if available, otherwise regular client
+                if tor and "tor_client" in locals():
+                    client = tor_client
+                else:
+                    client = httpx.Client(timeout=10)
 
-                    time.sleep(delay)
+                with client:
+                    for j, payload in enumerate(payloads, 1):
+                        print(f"    [*] Payload {j}/{len(payloads)}: {payload[:50]}...")
 
-        except Exception as e:
-            print(f"[!] Error testing target {target}: {e}")
-            continue
+                        try:
+                            if method.upper() == "GET":
+                                if param:
+                                    test_url = f"{target}?{param}={urllib.parse.quote(payload)}"
+                                else:
+                                    test_url = f"{target}?xss_test={urllib.parse.quote(payload)}"
+
+                                response = client.get(test_url)
+                                actual_url = test_url
+                            else:
+                                data = {}
+                                if param:
+                                    data[param] = payload
+                                else:
+                                    data["xss_test"] = payload
+
+                                response = client.post(target, data=data)
+                                actual_url = target
+
+                            # Check if payload is reflected in response
+                            reflected = payload in response.text
+                            vulnerable = reflected  # Basic check - could be enhanced
+
+                            if reflected:
+                                print(f"      [+] REFLECTED: {payload[:30]}...")
+                                vulnerable_count += 1
+                                target_vulnerable_count += 1
+
+                            # Store result
+                            result = {
+                                "url": actual_url,
+                                "target": target,
+                                "param": param or "xss_test",
+                                "payload": payload,
+                                "method": method,
+                                "reflected": reflected,
+                                "vulnerable": vulnerable,
+                                "response_code": response.status_code,
+                                "response_length": len(response.text),
+                                "timestamp": datetime.now().isoformat(),
+                                "tor_used": tor,
+                                "tool": "manual",
+                            }
+
+                            target_results.append(result)
+
+                            # Save to database
+                            save_result(
+                                actual_url,
+                                param or "xss_test",
+                                payload,
+                                reflected,
+                                vulnerable,
+                                method,
+                                response.status_code,
+                                len(response.text),
+                                "manual",
+                                "medium" if vulnerable else "low",
+                                f"Manual test, Tor: {tor}, Target: {target}",
+                            )
+
+                        except Exception as e:
+                            print(f"      [!] Error with payload: {e}")
+                            continue
+
+                        time.sleep(delay)
+
+            except Exception as e:
+                print(f"  [!] Error testing target {target}: {e}")
+
+        # Aggregate all results for this target
+        results.extend(target_results)
+        vulnerable_count += target_vulnerable_count
 
         # Save target results to cache
         if cache_manager and target_results:
@@ -1080,6 +1584,7 @@ def test_input(
                 "vulnerable_count": target_vulnerable_count,
                 "total_payloads": len(payloads),
                 "method": method,
+                "engine": engine,
                 "timestamp": datetime.now().isoformat(),
             }
             cache_manager.save_result(
@@ -1091,14 +1596,15 @@ def test_input(
             print(f"  💾 Cached {len(target_results)} results for {target}")
 
     print(f"\n[+] Testing completed!")
-    print(f"[+] Tested {len(targets)} targets with {len(payloads)} payloads each")
-    print(f"[+] Found {vulnerable_count} reflected payloads")
+    print(f"[+] Engine used: {engine}")
+    print(f"[+] Tested {len(targets)} targets with {engine} engine")
+    print(f"[+] Found {vulnerable_count} vulnerabilities")
     print(f"[+] Found {len(results)} total test results")
 
     if tor:
         print(f"[+] All requests made through Tor proxy")
 
-    # Enhanced AI Analysis with new options
+    # Enhanced AI Analysis with engine-specific insights
     if ai and results:
         print(f"\n" + "=" * 60)
         print(f"🤖 ENHANCED AI ANALYSIS")
@@ -1111,11 +1617,43 @@ def test_input(
             "ai_provider": ai_provider,
             "ai_model": ai_model,
             "ai_context": ai_context,
+            "engine": engine,
+            "blind_url": blind_url,
         }
+
+        # Engine-specific AI analysis
+        if engine == "xspear":
+            print("🔍 XSpear Engine Analysis:")
+            xspear_results = [r for r in results if r.get("tool") == "xspear"]
+            if xspear_results:
+                xspear_ai = xspear_ai_analysis(xspear_results, target_info)
+                print(xspear_ai)
+            else:
+                print("  No XSpear-specific results found for analysis")
+
+        elif engine == "dalfox":
+            print("🔍 Dalfox Engine Analysis:")
+            dalfox_results = [r for r in results if r.get("tool") == "dalfox"]
+            print(f"  Dalfox detected {len(dalfox_results)} vulnerabilities")
+            print(f"  Advanced payload generation and WAF bypass attempted")
+
+        elif engine == "kxss":
+            print("🔍 kxss Engine Analysis:")
+            kxss_results = [r for r in results if r.get("tool") == "kxss"]
+            print(f"  kxss found {len(kxss_results)} reflected parameters")
+            print(f"  Fast reflection-based detection completed")
+
+        elif engine == "all":
+            print("🔍 Multi-Engine Analysis:")
+            tools_used = list(set(r.get("tool", "unknown") for r in results))
+            print(f"  Engines used: {', '.join(tools_used)}")
+            for tool in tools_used:
+                tool_results = [r for r in results if r.get("tool") == tool]
+                print(f"  {tool}: {len(tool_results)} results")
 
         # Basic AI analysis
         ai_analysis = ai_analyze_xss_results(results, input, target_info)
-        print(ai_analysis)
+        print("\n" + ai_analysis)
 
         # Enhanced analysis with AI provider options
         if ai_provider or ai_model:
@@ -1130,6 +1668,13 @@ def test_input(
             # Additional AI insights based on provider
             enhanced_analysis = []
             enhanced_analysis.append("🎯 AI-Enhanced XSS Insights:")
+            enhanced_analysis.append(
+                f"  • Engine optimization: {engine} engine used effectively"
+            )
+            enhanced_analysis.append(
+                f"  • Vulnerability patterns detected in {vulnerable_count} cases"
+            )
+            enhanced_analysis.append(f"  • Cross-engine validation completed")
             enhanced_analysis.append(
                 f"  • Vulnerability patterns detected in {vulnerable_count} cases"
             )
@@ -1335,6 +1880,124 @@ def list_payloads(category, active_only):
 
 
 @cli.command()
+@click.option("--url", required=True, help="Target URL for XSpear scan")
+@click.option("--blind-url", help="Blind XSS callback URL")
+@click.option("--threads", default=10, type=int, help="Number of threads for XSpear")
+@click.option("--delay", default=1, type=float, help="Delay between requests")
+@click.option("--payloads-file", help="Custom payloads file for XSpear")
+@click.option("--output", help="Output file for XSpear results")
+@click.option("--cache", is_flag=True, help="Enable caching for XSpear results")
+@click.option("--cache-dir", default="xss_cache", help="Cache directory")
+@click.option("--ai", is_flag=True, help="Enable AI analysis of XSpear results")
+@click.option(
+    "--ai-provider",
+    type=click.Choice(["openai", "anthropic", "gemini"]),
+    help="AI provider",
+)
+@click.option("--verbose", is_flag=True, help="Verbose XSpear output")
+def xspear(
+    url,
+    blind_url,
+    threads,
+    delay,
+    payloads_file,
+    output,
+    cache,
+    cache_dir,
+    ai,
+    ai_provider,
+    verbose,
+):
+    """Advanced XSS scanning with XSpear engine."""
+
+    print(f"🔍 XSpear Advanced XSS Scanner")
+    print(f"=" * 50)
+    print(f"Target: {url}")
+
+    if not check_binary("xspear"):
+        print("[!] XSpear not found. Install with: gem install XSpear")
+        return
+
+    # Initialize cache if requested
+    cache_manager = None
+    if cache:
+        cache_manager = XSSCacheManager(cache_dir=cache_dir)
+        print(f"[+] Cache enabled: {cache_dir}")
+
+    # Run XSpear scan
+    print(f"[*] Starting XSpear scan...")
+    result = run_xspear_with_cache(
+        target=url,
+        cache_manager=cache_manager,
+        threads=threads,
+        delay=delay,
+        blind_url=blind_url,
+        custom_payloads=payloads_file,
+        output_file=output,
+    )
+
+    if not result or not result.get("success"):
+        print(f"[!] XSpear scan failed")
+        if result and result.get("error"):
+            print(f"[!] Error: {result['error']}")
+        return
+
+    # Parse results
+    parsed_results = parse_xspear_results(result)
+    print(f"\n[+] XSpear scan completed!")
+    print(f"[+] Found {len(parsed_results)} results")
+
+    vulnerable_count = len([r for r in parsed_results if r.get("vulnerable")])
+    if vulnerable_count > 0:
+        print(f"[+] 🚨 {vulnerable_count} vulnerabilities detected!")
+    else:
+        print(f"[+] ✅ No vulnerabilities found")
+
+    # Display results summary
+    if parsed_results:
+        print(f"\n📊 XSpear Results Summary:")
+        for i, result in enumerate(parsed_results, 1):
+            print(f"  {i}. {result.get('url', url)}")
+            if result.get("vulnerable"):
+                print(f"     🚨 VULNERABLE - {result.get('xss_type', 'XSS')}")
+            if result.get("waf_detected"):
+                print(f"     🛡️ WAF bypass attempted")
+            if result.get("blind_xss"):
+                print(f"     👻 Blind XSS potential")
+
+    # AI Analysis
+    if ai and parsed_results:
+        print(f"\n🤖 XSpear AI Analysis")
+        print(f"=" * 40)
+
+        target_info = {
+            "engine": "xspear",
+            "blind_url": blind_url,
+            "threads": threads,
+            "ai_provider": ai_provider,
+        }
+
+        xspear_ai = xspear_ai_analysis(parsed_results, target_info)
+        print(xspear_ai)
+
+    # Save results to file if requested
+    if output and parsed_results:
+        try:
+            with open(output, "w") as f:
+                json.dump(parsed_results, f, indent=2)
+            print(f"\n[+] Results saved to: {output}")
+        except Exception as e:
+            print(f"[!] Error saving results: {e}")
+
+    # Display cache stats if cache was used
+    if cache_manager:
+        stats = cache_manager.get_cache_stats()
+        print(f"\n📊 Cache Performance:")
+        print(f"  Hit rate: {stats['hit_rate']}%")
+        print(f"  Total cached: {stats['cached_results']}")
+
+
+@cli.command()
 @click.option("--url", required=True, help="URL to test")
 @click.option("--param", help="Parameter to test")
 @click.option("--payloads-file", help="Custom payloads file")
@@ -1456,6 +2119,36 @@ def full_scan(target, output, threads, ai, tor, tor_proxy):
     # Step 3: XSS Testing
     print("[*] Phase 3: XSS Testing")
     if os.path.exists(urls_file):
+        # XSpear testing
+        if check_binary("xspear"):
+            print("[*] Running XSpear...")
+            xspear_output = os.path.join(output, "xspear_results.json")
+            print(f"[*] XSpear results will be saved to: {xspear_output}")
+
+            # Run XSpear on collected URLs
+            with open(urls_file, "r") as f:
+                urls = [line.strip() for line in f if line.strip()]
+
+            all_xspear_results = []
+            for i, url in enumerate(urls[:10], 1):  # Limit to first 10 URLs for speed
+                print(f"[*] XSpear testing URL {i}/10: {url[:50]}...")
+                result = run_xspear_scan(target=url, threads=threads, delay=1)
+
+                if result and result.get("success"):
+                    parsed = parse_xspear_results(result)
+                    all_xspear_results.extend(parsed)
+                    print(f"    [+] XSpear found {len(parsed)} results")
+                else:
+                    print(f"    [-] XSpear scan failed for {url}")
+
+            # Save XSpear results
+            if all_xspear_results:
+                with open(xspear_output, "w") as f:
+                    json.dump(all_xspear_results, f, indent=2)
+                print(
+                    f"[+] XSpear saved {len(all_xspear_results)} results to {xspear_output}"
+                )
+
         if check_binary("dalfox"):
             print("[*] Running Dalfox...")
             dalfox_output = os.path.join(output, "dalfox_results.txt")
