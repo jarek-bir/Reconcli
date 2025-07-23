@@ -79,7 +79,7 @@ reconcli secretscli --target large_repo --cache --tools all --verbose  # Second 
 ```bash
 # XSSCli professional testing with KNOXSS and AI
 export KNOXSS_API_KEY="your_key"
-python -m reconcli.xsscli knoxnl --input urls.txt --cache --ai --ai-provider anthropic
+ reconcli xsscli knoxnl --input urls.txt --cache --ai --ai-provider anthropic
 
 # OpenRedirectCli with AI-enhanced testing and caching
 reconcli openredirectcli -i urls.txt --cache --ai-mode --ai-provider openai --advanced-payloads
@@ -94,7 +94,7 @@ reconcli urlcli --domain example.com --cache --ai-detailed --katana --verbose
 reconcli shodancli --query "mongodb" --ai --cache --country US --format rich
 
 # Cache performance monitoring across modules
-python -m reconcli.xsscli test-input --cache-stats
+reconcli xsscli test-input --cache-stats
 reconcli urlcli --cache-stats
 reconcli shodancli --cache-stats  
 reconcli permutcli --cache-stats
@@ -446,7 +446,7 @@ reconcli secretscli --input "https://github.com/target/repo.git" --tool truffleh
 reconcli subdocli --domain-list corporate_domains.txt --bbot-integration --store-db assessment.db --threads 20
 
 # Infrastructure analysis with Shodan
-python -m reconcli shodancli --query "org:\"Target Corp\"" --ai --store-db assessment.db --verbose
+reconcli shodancli --query "org:\"Target Corp\"" --ai --store-db assessment.db --verbose
 
 # Web application security testing
 reconcli httpcli --input corporate_apps.txt --security-scan --nuclei --benchmark --store-db assessment.db
@@ -502,21 +502,21 @@ reconcli shodancli --cache-dir /tmp/shodan_cache --cache-max-age 48
 ```bash
 # Professional KNOXSS testing with AI and caching
 export KNOXSS_API_KEY="your_key"
-python -m reconcli.xsscli knoxnl --input urls.txt --cache --ai --ai-provider anthropic
+reconcli xsscli knoxnl --input urls.txt --cache --ai --ai-provider anthropic
 
 # Brute Logic lab testing (120 vulnerabilities found)
-python -m reconcli.xsscli brutelogic-test --cache --ai --verbose
+reconcli xsscli brutelogic-test --cache --ai --verbose
 
 # Advanced testing with full feature set
-python -m reconcli.xsscli test-input --input targets.txt \
+reconcli xsscli test-input --input targets.txt \
   --cache --ai --ai-provider openai --tor --output results.json
 
 # AI analysis of stored results
-python -m reconcli.xsscli ai-analyze --provider anthropic --model claude-3-opus
+reconcli xsscli ai-analyze --provider anthropic --model claude-3-opus
 
 # Cache management and performance monitoring
-python -m reconcli.xsscli test-input --cache-stats
-python -m reconcli.xsscli test-input --clear-cache
+reconcli xsscli test-input --cache-stats
+reconcli xsscli test-input --clear-cache
 ```
 
 ### 🌐 **HTTPCli - Enhanced HTTP/HTTPS Analysis with Performance Cache** (NEW!)
