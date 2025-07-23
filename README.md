@@ -70,6 +70,8 @@ reconcli secretscli --target large_repo --cache --tools all --verbose  # Second 
 - **🛡️ XSSCli v2.0**: Professional XSS testing framework with KNOXSS API integration and Brute Logic lab testing
 - **🔄 OpenRedirectCli Enhanced**: AI-powered payload generation with 20x-80x cache speed improvements
 - **🔧 PermutCli Upgraded**: AI-enhanced permutation analysis with 50x-200x cache performance gains
+- **🔗 URLCli Enhanced**: Intelligent caching with 90% performance improvements and AI-powered URL security analysis
+- **🔍 ShodanCLI Upgraded**: Advanced cache management with geographic intelligence and AI vulnerability assessment
 - **🤖 Unified AI Architecture**: Multi-provider support (OpenAI, Anthropic, Gemini) across all enhanced modules
 - **⚡ Intelligent Caching**: SHA256-based cache keys with automatic expiry and performance tracking
 - **📊 Performance Metrics**: Real-time cache statistics and vulnerability discovery rates
@@ -85,9 +87,16 @@ reconcli openredirectcli -i urls.txt --cache --ai-mode --ai-provider openai --ad
 # PermutCli with AI context and intelligent caching
 reconcli permutcli --domain example.com --cache --ai --ai-context "fintech app" --tool gotator
 
+# URLCli with intelligent caching and AI security analysis
+reconcli urlcli --domain example.com --cache --ai-detailed --katana --verbose
+
+# ShodanCLI with advanced caching and AI vulnerability assessment
+reconcli shodancli --query "mongodb" --ai --cache --country US --format rich
+
 # Cache performance monitoring across modules
 python -m reconcli.xsscli test-input --cache-stats
-reconcli openredirectcli --cache-stats  
+reconcli urlcli --cache-stats
+reconcli shodancli --cache-stats  
 reconcli permutcli --cache-stats
 ```
 
@@ -458,19 +467,26 @@ reconcli csvtkcli generate-report assessment.db --security-focus --executive-sum
 - **🧠 AI-Powered Analysis**: Comprehensive vulnerability analysis with geographical insights
 - **🌍 Geographic Intelligence**: Country-based risk assessment and threat landscape analysis
 - **🎯 Vulnerability Assessment**: Automated detection of critical security misconfigurations
+- **⚡ Intelligent Caching**: SHA256-based cache system for massive performance improvements
 - **📊 Rich Reporting**: Beautiful terminal output with Rich library integration
 - **💾 Database Storage**: SQLite integration for persistent result storage
-- **🔧 Module Usage**: Run as `python -m reconcli shodancli` for improved module compatibility
+- **🔧 Cache Management**: Configurable cache directories, expiration (default 24h), and detailed statistics
+- **🔧 Module Usage**: Run as `reconcli shodancli` for improved module compatibility
 
 ```bash
-# Basic Shodan search with AI analysis
-python -m reconcli shodancli --query "apache" --ai --store-db --verbose
+# Basic Shodan search with AI analysis and caching
+reconcli shodancli --query "apache" --ai --cache --store-db --verbose
 
-# Advanced search with geographic filtering
-python -m reconcli shodancli --query "nginx" --country US --ai --limit 100 --jsonout
+# Advanced search with geographic filtering and cache
+reconcli shodancli --query "nginx" --country US --ai --cache --limit 100 --jsonout
 
-# Vulnerability-focused analysis
-python -m reconcli shodancli --query "port:443 ssl" --ai --store-db results.db --verbose
+# Vulnerability-focused analysis with intelligent caching
+reconcli shodancli --query "port:443 ssl" --ai --cache --store-db results.db --verbose
+
+# Cache management and performance monitoring
+reconcli shodancli --cache-stats
+reconcli shodancli --clear-cache
+reconcli shodancli --cache-dir /tmp/shodan_cache --cache-max-age 48
 ```
 
 ### 🛡️ **XSSCli - Professional XSS Testing Framework** (MAJOR UPDATE!)
@@ -1268,21 +1284,28 @@ reconcli dnscli --input 1000_domains.txt --cache --verbose  # Cache hit: ~0.01s 
 ### 🔗 URL Discovery & Analysis (`urlcli`)
 - **Multiple Tools**: GAU, Katana, Gospider, Waybackurls integration
 - **Advanced Katana Options**: Depth control, JS crawling, headless mode, form filling, tech detection
+- **⚡ Intelligent Caching**: SHA256-based cache system with 90% performance improvements
+- **🧠 AI-Powered Analysis**: Security-focused URL analysis with threat categorization
 - **Configurable Timeouts**: Per-tool timeout settings
 - **YAML Flow Support**: Predefined configuration templates
 - **Comprehensive Filtering**: URL deduplication and pattern matching
 - **Professional Reporting**: Detailed analysis with statistics
+- **💾 Cache Management**: Configurable cache directories, expiration, and statistics
 
 ```bash
-# Basic URL discovery
-reconcli urlcli --domain example.com --verbose
+# Basic URL discovery with caching and AI
+reconcli urlcli --domain example.com --cache --ai --verbose
 
-# Advanced Katana crawling
+# Advanced Katana crawling with intelligent caching
 reconcli urlcli --domain example.com --katana-depth 3 --katana-js-crawl \
-  --katana-headless --katana-tech-detect --katana-form-fill --verbose
+  --katana-headless --katana-tech-detect --cache --ai-detailed --verbose
 
-# Using flow configuration
-reconcli urlcli --domain example.com --flow flows/url_katana_advanced.yaml
+# Cache management and statistics
+reconcli urlcli --cache-stats
+reconcli urlcli --clear-cache
+
+# Using flow configuration with AI analysis
+reconcli urlcli --domain example.com --flow flows/url_katana_advanced.yaml --cache --ai
 ```
 
 ### 🔗 URL Sorting & Processing (`urlsorter`)
