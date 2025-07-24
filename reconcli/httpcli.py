@@ -8,23 +8,32 @@ custom fingerprinting, and advanced export capabilities.
 
 📋 USAGE EXAMPLES:
 
-Basic HTTP scanning:
+Single domain scanning:
+    reconcli httpcli --domain example.com
+    reconcli httpcli --domain pyszne.pl --security-scan --tech-detection
+
+Basic HTTP scanning from file:
     reconcli httpcli -i urls.txt
 
 Advanced security analysis:
     reconcli httpcli -i subdomains.txt --security-scan --check-waf --screenshot
+    reconcli httpcli --domain target.com --security-scan --check-cors --nuclei
 
 Bug bounty workflow:
     reconcli httpcli -i targets.txt --nuclei --check-cors --export-vulnerabilities --store-db
+    reconcli httpcli --domain site.com --nuclei --screenshot --benchmark
 
 Custom fingerprinting:
     reconcli httpcli -i hosts.txt --custom-headers --tech-detection --follow-redirects
+    reconcli httpcli --domain example.com --tech-detection --wappalyzer
 
 Performance analysis:
     reconcli httpcli -i urls.txt --benchmark --check-compression --ssl-analysis
+    reconcli httpcli --domain target.com --benchmark --check-compression
 
 Export and reporting:
     reconcli httpcli -i targets.txt --export json,csv,html --generate-report
+    reconcli httpcli --domain example.com --jsonout --markdown
 
 Advanced technology detection with Wappalyzer:
     reconcli httpcli -i urls.txt --tech-detection --wappalyzer --jsonout
@@ -348,6 +357,10 @@ class HTTPCacheManager:
     type=click.Path(exists=True),
     help="Path to URLs or hostnames",
 )
+@click.option(
+    "--domain", 
+    help="Single domain to scan (e.g., example.com)"
+)
 @click.option("--timeout", default=10, help="Timeout for requests")
 @click.option("--retries", default=2, help="Number of retries for failed requests")
 @click.option(
@@ -490,6 +503,7 @@ class HTTPCacheManager:
 @click.option("--cache-stats", is_flag=True, help="Show cache statistics")
 def httpcli(
     input,
+    domain,
     timeout,
     retries,
     output_dir,
@@ -543,7 +557,24 @@ def httpcli(
     • Vulnerability scanning with Nuclei
     • Screenshot capture for visual analysis
 
-    📊 EXPORT OPTIONS:
+    � USAGE EXAMPLES:
+    
+    Basic single domain scanning:
+        reconcli httpcli --domain example.com
+        reconcli httpcli --domain pyszne.pl --security-scan
+    
+    Advanced single domain analysis:
+        reconcli httpcli --domain target.com --security-scan --check-waf --tech-detection
+        reconcli httpcli --domain site.com --nuclei --check-cors --screenshot
+    
+    Batch scanning from file:
+        reconcli httpcli --input urls.txt
+        reconcli httpcli --input subdomains.txt --security-scan --benchmark
+    
+    Bug bounty workflow:
+        reconcli httpcli --domain target.com --nuclei --check-cors --export-vulnerabilities --store-db
+
+    �📊 EXPORT OPTIONS:
     • JSON, CSV, HTML, Markdown formats
     • Vulnerability-only exports
     • Tag-based filtering
@@ -599,10 +630,10 @@ def httpcli(
         console.print(f"Max age: {cache_max_age} hours")
         return
 
-    # Check if input is provided for scanning operations
-    if not input:
+    # Check if input or domain is provided for scanning operations
+    if not input and not domain:
         console.print(
-            "[red]❌ Error: --input is required for scanning operations[/red]"
+            "[red]❌ Error: Either --input or --domain is required for scanning operations[/red]"
         )
         console.print("Use --cache-stats or --clear-cache for cache management.")
         return
@@ -610,14 +641,24 @@ def httpcli(
     console.rule("[bold cyan]🌐 ReconCLI : HTTPCli Enhanced Analysis Module")
 
     if verbose:
-        console.print(f"[bold green]📁 Input file:[/bold green] {input}")
+        if input:
+            console.print(f"[bold green]📁 Input file:[/bold green] {input}")
+        if domain:
+            console.print(f"[bold green]🌐 Target domain:[/bold green] {domain}")
         console.print(f"[bold green]📂 Output directory:[/bold green] {output_dir}")
         console.print(f"[bold green]🧵 Threads:[/bold green] {threads}")
         console.print(f"[bold green]⏱️ Timeout:[/bold green] {timeout}s")
         console.print(f"[bold green]🔁 Retries:[/bold green] {retries}")
 
     start_time = time.time()
-    raw_lines = [u.strip() for u in Path(input).read_text().splitlines() if u.strip()]
+    
+    # Handle input sources: file or single domain
+    raw_lines = []
+    if input:
+        raw_lines = [u.strip() for u in Path(input).read_text().splitlines() if u.strip()]
+    elif domain:
+        raw_lines = [domain.strip()]
+    
     output_path = Path(output_dir)
     output_path.mkdir(parents=True, exist_ok=True)
     proxies = {"http": proxy, "https": proxy} if proxy else None

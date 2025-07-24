@@ -693,6 +693,7 @@ reconcli xsscli test-input --clear-cache
 - **🔧 Technology Stack Detection**: Server, CMS, framework identification with enhanced fingerprinting
 - **🚨 Vulnerability Export**: Export only vulnerable URLs with security misconfigurations
 - **📊 Rich Reporting**: JSON, CSV, HTML, Markdown reports with charts and statistics
+- **🌐 Single Domain Scanning**: Direct domain scanning without file creation using `--domain` option
 
 **🎯 Cache Features:**
 - `--cache`: Enable caching for massive speed improvements (2.03s → 0.02s)
@@ -702,6 +703,10 @@ reconcli xsscli test-input --clear-cache
 - `--cache-stats`: View cache statistics and performance metrics
 
 ```bash
+# Single domain scanning (NEW!)
+reconcli httpcli --domain example.com --security-scan --tech-detection
+reconcli httpcli --domain pyszne.pl --security-scan --check-waf --check-cors --cache
+
 # Comprehensive security assessment with caching
 reconcli httpcli --input targets.txt --security-scan --check-waf --check-cors \
   --tech-detection --screenshot --benchmark --cache --export-vulnerabilities --verbose
@@ -713,6 +718,9 @@ reconcli httpcli --input subdomains.txt --nuclei --custom-headers '{"X-Bug-Hunte
 # Performance and compression analysis with cache management
 reconcli httpcli --input sites.txt --benchmark --check-compression --ssl-analysis \
   --threads 20 --rate-limit 10/s --cache --cache-max-age 3600 --jsonout --markdown --verbose
+
+# Single domain advanced analysis (NEW!)
+reconcli httpcli --domain target.com --nuclei --benchmark --screenshot --export-vulnerabilities
 
 # Cache management commands
 reconcli httpcli --cache-stats  # View cache performance statistics
@@ -2178,6 +2186,9 @@ reconcli doctorcli --structure --configs --env --fix --verbose
 - **[SECRETSCLI_GUIDE.md](reconcli/SECRETSCLI_GUIDE.md)** - Multi-tool secret discovery and analysis
 - **[DOCTORCLI_GUIDE.md](reconcli/DOCTORCLI_GUIDE.md)** - Environment diagnostics and automated fixes
 - **[GRAPHQLCLI_ENHANCED_GUIDE.md](reconcli/GRAPHQLCLI_ENHANCED_GUIDE.md)** - GraphQL security testing
+- **[HTTPCLI_DOCUMENTATION.md](HTTPCLI_DOCUMENTATION.md)** - Comprehensive HTTP/HTTPS analysis with security assessment and domain scanning
+- **[HTTPCLI_TUTORIAL.md](HTTPCLI_TUTORIAL.md)** - HTTPCli quick start guide and practical examples
+- **[PORTCLI_DOCUMENTATION.md](PORTCLI_DOCUMENTATION.md)** - Advanced port scanning with domain support and AI analysis
 
 ### ⚡ **Quick References**
 - **[DOCTORCLI_QUICK_REFERENCE.md](reconcli/DOCTORCLI_QUICK_REFERENCE.md)** - DoctorCLI command quick reference

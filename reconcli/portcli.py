@@ -11,6 +11,7 @@ import hashlib
 import ipaddress
 import json
 import os
+import re
 import subprocess
 import time
 import shutil
@@ -1220,9 +1221,21 @@ def portcli(
                     if line
                 ]
             elif scanner == "rustscan":
-                open_ports = [
-                    int(p.strip()) for p in output.split() if p.strip().isdigit()
-                ]
+                # Parse rustscan output - look for "Open IP:PORT" format
+                for line in output.splitlines():
+                    line = line.strip()
+                    if line.startswith("Open ") and ":" in line:
+                        # Format: "Open 93.184.216.34:80"
+                        try:
+                            ip_port = line.split("Open ")[-1]
+                            if ":" in ip_port:
+                                port_str = ip_port.split(":")[-1]
+                                if port_str.isdigit():
+                                    port = int(port_str)
+                                    if 1 <= port <= 65535:
+                                        open_ports.append(port)
+                        except (ValueError, IndexError):
+                            continue
             elif scanner == "nmap":
                 for line in output.splitlines():
                     if "/tcp" in line and "open" in line:
