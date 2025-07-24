@@ -13,6 +13,7 @@ import json
 import os
 import subprocess
 import time
+import shutil
 from pathlib import Path
 from typing import Dict, List, Optional
 
@@ -352,6 +353,22 @@ def detect_service_patterns(open_ports, tags):
     return detected_services
 
 
+def validate_target(target):
+    """Validate target (IP address or domain)"""
+    # Check if it's a valid IP
+    if validate_ip(target):
+        return True
+
+    # Check if it's a valid domain name
+    import re
+
+    domain_pattern = r"^(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)*[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?$"
+    if re.match(domain_pattern, target.split(":")[0]):  # Handle domain:port format
+        return True
+
+    return False
+
+
 def validate_ip(ip_str):
     """Validate IP address format"""
     try:
@@ -359,6 +376,31 @@ def validate_ip(ip_str):
         return True
     except ValueError:
         return False
+
+
+def check_binary(binary_name):
+    """Check if binary is available in PATH"""
+    return shutil.which(binary_name) is not None
+
+
+def validate_scanner(scanner):
+    """Validate if selected scanner binary is available"""
+    if scanner == "naabu" and not check_binary("naabu"):
+        click.echo(f"[!] {scanner} binary not found in PATH")
+        return False
+    elif scanner == "rustscan" and not check_binary("rustscan"):
+        click.echo(f"[!] {scanner} binary not found in PATH")
+        return False
+    elif scanner == "nmap" and not check_binary("nmap"):
+        click.echo(f"[!] {scanner} binary not found in PATH")
+        return False
+    elif scanner == "masscan" and not check_binary("masscan"):
+        click.echo(f"[!] {scanner} binary not found in PATH")
+        return False
+    elif scanner == "rush" and not check_binary("rush"):
+        click.echo(f"[!] {scanner} binary not found in PATH")
+        return False
+    return True
 
 
 def expand_cidr(cidr):
@@ -376,7 +418,7 @@ def expand_cidr(cidr):
         return []
 
 
-def load_targets(ip, cidr, input_file):
+def load_targets(ip, domain, cidr, input_file):
     targets = []
 
     if ip:
@@ -385,6 +427,13 @@ def load_targets(ip, cidr, input_file):
             targets.append(ip_clean)
         else:
             click.echo(f"[!] Invalid IP format: {ip_clean}")
+
+    if domain:
+        domain_clean = domain.strip()
+        if validate_target(domain_clean):
+            targets.append(domain_clean)
+        else:
+            click.echo(f"[!] Invalid domain format: {domain_clean}")
 
     if cidr:
         expanded = expand_cidr(cidr.strip())
@@ -399,10 +448,10 @@ def load_targets(ip, cidr, input_file):
                         if "/" in line:  # CIDR
                             expanded = expand_cidr(line)
                             targets.extend(expanded)
-                        elif validate_ip(line):
+                        elif validate_target(line):  # IP or domain
                             targets.append(line)
                         else:
-                            click.echo(f"[!] Invalid IP on line {line_num}: {line}")
+                            click.echo(f"[!] Invalid target on line {line_num}: {line}")
         except Exception as e:
             click.echo(f"[!] Error reading file {input_file}: {e}")
 
@@ -698,11 +747,12 @@ class PortCacheManager:
 @click.option(
     "--ip", help="Single IP address to scan (e.g., 192.168.1.1 or 192.168.1.1:8080)"
 )
+@click.option("--domain", help="Single domain to scan (e.g., example.com)")
 @click.option("--cidr", help="CIDR block to scan (e.g., 192.168.1.0/24)")
-@click.option("--input", help="File with list of IPs/CIDRs (one per line)")
+@click.option("--input", help="File with list of IPs/CIDRs/domains (one per line)")
 @click.option(
     "--scanner",
-    type=click.Choice(["naabu", "rustscan", "nmap"]),
+    type=click.Choice(["naabu", "rustscan", "nmap", "masscan", "rush"]),
     default="naabu",
     show_default=True,
     help="Port scanner to use",
@@ -762,8 +812,37 @@ class PortCacheManager:
 @click.option("--cache-max-age", default=24, type=int, help="Cache max age in hours")
 @click.option("--clear-cache", is_flag=True, help="Clear all cached port scan results")
 @click.option("--cache-stats", is_flag=True, help="Show cache statistics")
+@click.option(
+    "--ai", is_flag=True, help="Enable AI-powered analysis of port scan results"
+)
+@click.option(
+    "--ai-provider",
+    type=click.Choice(["openai", "anthropic", "gemini"]),
+    help="AI provider for analysis",
+)
+@click.option("--ai-model", help="Specific AI model to use for analysis")
+@click.option("--ai-context", help="Additional context for AI analysis")
+@click.option("--ai-cache", is_flag=True, help="Enable AI analysis result caching")
+@click.option("--ai-cache-dir", default="ai_cache", help="AI cache directory")
+@click.option(
+    "--masscan-rate", type=int, default=1000, help="Masscan rate limit (packets/sec)"
+)
+@click.option("--masscan-interface", help="Masscan network interface to use")
+@click.option("--masscan-exclude", help="Masscan exclude file or IP ranges")
+@click.option("--rush-jobs", type=int, default=12, help="Rush parallel jobs count")
+@click.option("--rush-timeout", type=int, help="Rush timeout per job in seconds")
+@click.option(
+    "--rush-retries", type=int, default=0, help="Rush maximum retries per job"
+)
+@click.option(
+    "--rush-base-scanner",
+    type=click.Choice(["nmap", "naabu", "rustscan", "masscan"]),
+    default="nmap",
+    help="Base scanner to use with rush",
+)
 def portcli(
     ip,
+    domain,
     cidr,
     input,
     scanner,
@@ -794,6 +873,19 @@ def portcli(
     cache_max_age,
     clear_cache,
     cache_stats,
+    ai,
+    ai_provider,
+    ai_model,
+    ai_context,
+    ai_cache,
+    ai_cache_dir,
+    masscan_rate,
+    masscan_interface,
+    masscan_exclude,
+    rush_jobs,
+    rush_timeout,
+    rush_retries,
+    rush_base_scanner,
 ):
     """
     Advanced Port Scanning and Service Enumeration
@@ -805,6 +897,12 @@ def portcli(
     Examples:
         # Basic single IP scan with automatic tagging
         reconcli portcli --ip 192.168.1.100
+
+        # Single domain scan
+        reconcli portcli --domain example.com
+
+        # Domain with specific ports
+        reconcli portcli --domain example.com --ports "80,443,8080"
 
         # Scan CIDR with top 1000 ports and cloud detection
         reconcli portcli --cidr 192.168.1.0/24 --top-ports 1000
@@ -820,6 +918,15 @@ def portcli(
 
         # Full scan excluding cloud and CDN IPs
         reconcli portcli --ip 10.0.0.1 --scanner nmap --full --exclude-cdn
+
+        # Parallel scanning using rush with nmap
+        reconcli portcli --input targets.txt --scanner rush --rush-base-scanner nmap --rush-jobs 20
+
+        # Rush with masscan for fast scanning
+        reconcli portcli --input targets.txt --scanner rush --rush-base-scanner masscan --rush-jobs 10 --rush-timeout 30
+
+        # Domain scan with rush and AI analysis
+        reconcli portcli --domain target.com --scanner rush --rush-base-scanner naabu --ai
 
         # Resume previous scan and generate tagged report
         reconcli portcli --resume --markdown --verbose
@@ -840,6 +947,19 @@ def portcli(
         # Show cache stats
         reconcli portcli --cache-stats
     """
+
+    # Validate scanner binary
+    if not validate_scanner(scanner):
+        click.echo(f"[!] Scanner '{scanner}' not available. Please install it first.")
+        exit(1)
+
+    # Additional validation for rush - check base scanner
+    if scanner == "rush":
+        if not validate_scanner(rush_base_scanner):
+            click.echo(
+                f"[!] Base scanner '{rush_base_scanner}' for rush not available. Please install it first."
+            )
+            exit(1)
 
     # Initialize cache manager if cache is enabled
     cache_manager = None
@@ -902,7 +1022,7 @@ def portcli(
                 click.echo(f"[+] Loaded {len(results)} resumed results")
 
     already_scanned = {r["ip"] for r in results}
-    targets = load_targets(ip, cidr, input)
+    targets = load_targets(ip, domain, cidr, input)
     if exclude_cdn:
         targets = [t for t in targets if not is_cdn_ip(t)]
 
@@ -979,14 +1099,118 @@ def portcli(
                 ]
             if nmap_flags:
                 cmd += nmap_flags.split()
+        elif scanner == "masscan":
+            cmd = ["masscan", target, "--wait", "1"]
+            if ports:
+                cmd += ["-p", ports]
+            elif top_ports:
+                # Convert top_ports to common ports for masscan
+                if top_ports <= 100:
+                    cmd += [
+                        "-p",
+                        "21,22,23,25,53,80,110,111,135,139,143,443,993,995,1723,3306,3389,5432,5900,8080",
+                    ]
+                elif top_ports <= 1000:
+                    cmd += ["-p", "1-1000"]
+                else:
+                    cmd += ["-p", "1-65535"]
+            elif full:
+                cmd += ["-p", "1-65535"]
+
+            # Add masscan specific options
+            if masscan_rate:
+                cmd += ["--rate", str(masscan_rate)]
+            if masscan_interface:
+                cmd += ["-e", masscan_interface]
+            if masscan_exclude:
+                cmd += ["--exclude", masscan_exclude]
+        elif scanner == "rush":
+            # Rush is a parallel job executor - we'll use it to run the base scanner
+            base_scanner = rush_base_scanner
+
+            # Build base scanner command
+            base_cmd = []
+            if base_scanner == "nmap":
+                base_cmd = [
+                    "nmap",
+                    "-Pn",
+                    "{}",
+                ]  # {} will be replaced by rush with the target
+                if ports:
+                    base_cmd += ["-p", ports]
+                elif full:
+                    base_cmd += ["-p-"]
+                if nmap_flags:
+                    base_cmd += nmap_flags.split()
+            elif base_scanner == "naabu":
+                base_cmd = ["naabu", "-host", "{}", "-silent"]
+                if ports:
+                    base_cmd += ["-p", ports]
+                elif top_ports:
+                    base_cmd += ["-top-ports", str(top_ports)]
+                elif full:
+                    base_cmd += ["-p", "1-65535"]
+                if rate:
+                    base_cmd += ["-rate", str(rate)]
+                if timeout:
+                    base_cmd += ["-timeout", str(timeout)]
+            elif base_scanner == "rustscan":
+                base_cmd = ["rustscan", "-a", "{}", "--ulimit", "5000"]
+                if ports:
+                    base_cmd += ["-p", ports]
+                elif full:
+                    base_cmd += ["-r", "1-65535"]
+            elif base_scanner == "masscan":
+                base_cmd = ["masscan", "{}", "--wait", "1"]
+                if ports:
+                    base_cmd += ["-p", ports]
+                elif top_ports:
+                    if top_ports <= 100:
+                        base_cmd += [
+                            "-p",
+                            "21,22,23,25,53,80,110,111,135,139,143,443,993,995,1723,3306,3389,5432,5900,8080",
+                        ]
+                    elif top_ports <= 1000:
+                        base_cmd += ["-p", "1-1000"]
+                    else:
+                        base_cmd += ["-p", "1-65535"]
+                elif full:
+                    base_cmd += ["-p", "1-65535"]
+                if masscan_rate:
+                    base_cmd += ["--rate", str(masscan_rate)]
+                if masscan_interface:
+                    base_cmd += ["-e", masscan_interface]
+                if masscan_exclude:
+                    base_cmd += ["--exclude", masscan_exclude]
+
+            # Build rush command
+            cmd = ["echo", target, "|", "rush"]
+            cmd += ["-j", str(rush_jobs)]  # parallel jobs
+            cmd += ["-k"]  # keep order
+
+            if rush_timeout:
+                cmd += ["-t", str(rush_timeout)]
+            if rush_retries:
+                cmd += ["-r", str(rush_retries)]
+
+            # Add the base scanner command in quotes
+            base_cmd_str = " ".join(base_cmd)
+            cmd.append(f"'{base_cmd_str}'")
 
         try:
             if verbose:
                 click.echo(f"    Command: {' '.join(cmd)}")
 
-            output = subprocess.check_output(
-                cmd, stderr=subprocess.DEVNULL, timeout=120
-            ).decode()
+            # For rush, we need to handle the pipe differently
+            if scanner == "rush":
+                # Execute with shell=True to handle pipes
+                output = subprocess.check_output(
+                    " ".join(cmd), shell=True, stderr=subprocess.DEVNULL, timeout=120
+                ).decode()
+            else:
+                output = subprocess.check_output(
+                    cmd, stderr=subprocess.DEVNULL, timeout=120
+                ).decode()
             open_ports = []
 
             if scanner == "naabu":
@@ -1005,6 +1229,62 @@ def portcli(
                         port = line.split("/")[0].strip()
                         if port.isdigit():
                             open_ports.append(int(port))
+            elif scanner == "masscan":
+                # Parse masscan output format: "Discovered open port PORT/tcp on IP"
+                for line in output.strip().splitlines():
+                    if "Discovered open port" in line and "/tcp on" in line:
+                        # Extract port from format: "Discovered open port 443/tcp on IP"
+                        parts = line.split()
+                        for i, part in enumerate(parts):
+                            if part == "port" and i + 1 < len(parts):
+                                port_part = parts[i + 1]
+                                if "/tcp" in port_part:
+                                    port_num = port_part.split("/")[0]
+                                    if port_num.isdigit():
+                                        open_ports.append(int(port_num))
+                                break
+            elif scanner == "rush":
+                # Parse output based on the base scanner used
+                if rush_base_scanner == "naabu":
+                    open_ports = [
+                        int(line.split(":")[-1])
+                        for line in output.strip().splitlines()
+                        if line and ":" in line
+                    ]
+                elif rush_base_scanner == "rustscan":
+                    # Parse rustscan output - look for "Open IP:PORT" format
+                    for line in output.splitlines():
+                        line = line.strip()
+                        if line.startswith("Open ") and ":" in line:
+                            # Format: "Open 8.8.8.8:53"
+                            try:
+                                ip_port = line.split("Open ")[-1]
+                                if ":" in ip_port:
+                                    port_str = ip_port.split(":")[-1]
+                                    if port_str.isdigit():
+                                        port = int(port_str)
+                                        if 1 <= port <= 65535:
+                                            open_ports.append(port)
+                            except (ValueError, IndexError):
+                                continue
+                elif rush_base_scanner == "nmap":
+                    for line in output.splitlines():
+                        if "/tcp" in line and "open" in line:
+                            port = line.split("/")[0].strip()
+                            if port.isdigit():
+                                open_ports.append(int(port))
+                elif rush_base_scanner == "masscan":
+                    for line in output.strip().splitlines():
+                        if "Discovered open port" in line and "/tcp on" in line:
+                            parts = line.split()
+                            for i, part in enumerate(parts):
+                                if part == "port" and i + 1 < len(parts):
+                                    port_part = parts[i + 1]
+                                    if "/tcp" in port_part:
+                                        port_num = port_part.split("/")[0]
+                                        if port_num.isdigit():
+                                            open_ports.append(int(port_num))
+                                    break
 
             if only_web:
                 web_ports = [80, 443, 8080, 8443, 8000, 8008, 8888, 3000, 5000, 9000]
@@ -1238,6 +1518,164 @@ def portcli(
         except Exception as e:
             if not silent:
                 click.echo(f"❌ Error storing to database: {e}")
+
+    # AI Analysis
+    if ai and filtered_results:
+        if not silent:
+            click.echo("\n🤖 Running AI analysis...")
+
+        try:
+            analysis = analyze_with_ai(
+                filtered_results,
+                ai_provider=ai_provider,
+                ai_model=ai_model,
+                ai_context=ai_context,
+            )
+
+            if analysis:
+                if not silent:
+                    click.echo("\n📋 AI Analysis Results:")
+                    click.echo(
+                        f"   • Total targets analyzed: {analysis['summary']['total_targets']}"
+                    )
+                    click.echo(
+                        f"   • Total open ports: {analysis['summary']['total_open_ports']}"
+                    )
+                    click.echo(
+                        f"   • Unique ports: {analysis['summary']['unique_ports']}"
+                    )
+
+                    if analysis["recommendations"]:
+                        click.echo("\n💡 Recommendations:")
+                        for rec in analysis["recommendations"]:
+                            click.echo(f"   • {rec}")
+
+                    if analysis["security_insights"]:
+                        click.echo("\n🔐 Security Insights:")
+                        for insight in analysis["security_insights"]:
+                            click.echo(f"   • {insight}")
+
+                # Save AI analysis if caching enabled
+                if ai_cache and ai_cache_dir:
+                    timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+                    ai_cache_path = Path(ai_cache_dir)
+                    ai_cache_path.mkdir(exist_ok=True)
+                    analysis_file = ai_cache_path / f"ai_analysis_{timestamp}.json"
+
+                    with open(analysis_file, "w") as f:
+                        json.dump(analysis, f, indent=2, default=str)
+
+                    if not silent:
+                        click.echo(f"💾 AI analysis saved to: {analysis_file}")
+
+        except Exception as e:
+            if not silent:
+                click.echo(f"❌ AI analysis failed: {e}")
+
+
+def analyze_with_ai(results, ai_provider=None, ai_model=None, ai_context=None):
+    """
+    Analyze port scan results using AI
+    """
+    try:
+        if ai_provider == "openai":
+            return analyze_with_openai(results, ai_model, ai_context)
+        elif ai_provider == "anthropic":
+            return analyze_with_anthropic(results, ai_model, ai_context)
+        elif ai_provider == "gemini":
+            return analyze_with_gemini(results, ai_model, ai_context)
+        else:
+            # Default to basic analysis
+            return analyze_basic(results)
+    except Exception as e:
+        click.echo(f"[!] AI analysis failed: {e}")
+        return None
+
+
+def analyze_basic(results):
+    """
+    Basic AI-like analysis without external APIs
+    """
+    analysis = {
+        "summary": {},
+        "recommendations": [],
+        "security_insights": [],
+        "service_analysis": [],
+    }
+
+    all_ports = []
+    all_tags = set()
+
+    for result in results:
+        # Check both formats: open_ports and port_details
+        if "open_ports" in result:
+            all_ports.extend(result["open_ports"])
+        if "port_details" in result:
+            for port_info in result["port_details"]:
+                all_tags.update(port_info.get("tags", []))
+        if "tags" in result:
+            all_tags.update(result["tags"])
+
+    # Summary
+    analysis["summary"] = {
+        "total_targets": len(results),
+        "total_open_ports": len(all_ports),
+        "unique_ports": len(set(all_ports)),
+        "common_tags": list(all_tags),
+    }
+
+    # Basic recommendations
+    if 22 in all_ports:
+        analysis["recommendations"].append(
+            "SSH service detected - ensure key-based authentication"
+        )
+    if 80 in all_ports or 443 in all_ports:
+        analysis["recommendations"].append(
+            "Web services detected - consider security headers analysis"
+        )
+    if 3389 in all_ports:
+        analysis["recommendations"].append(
+            "RDP detected - ensure strong authentication and network restrictions"
+        )
+
+    # Security insights
+    if "database" in all_tags:
+        analysis["security_insights"].append(
+            "Database services exposed - verify access controls"
+        )
+    if "cloud" in all_tags:
+        analysis["security_insights"].append(
+            "Cloud infrastructure detected - review security groups"
+        )
+
+    return analysis
+
+
+def analyze_with_openai(results, model=None, context=None):
+    """
+    Analyze with OpenAI API (placeholder - requires API key)
+    """
+    # This would integrate with OpenAI API
+    click.echo("[!] OpenAI integration requires API key configuration")
+    return analyze_basic(results)
+
+
+def analyze_with_anthropic(results, model=None, context=None):
+    """
+    Analyze with Anthropic API (placeholder - requires API key)
+    """
+    # This would integrate with Anthropic API
+    click.echo("[!] Anthropic integration requires API key configuration")
+    return analyze_basic(results)
+
+
+def analyze_with_gemini(results, model=None, context=None):
+    """
+    Analyze with Google Gemini API (placeholder - requires API key)
+    """
+    # This would integrate with Gemini API
+    click.echo("[!] Gemini integration requires API key configuration")
+    return analyze_basic(results)
 
 
 if __name__ == "__main__":

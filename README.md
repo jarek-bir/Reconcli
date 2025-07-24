@@ -315,7 +315,34 @@ reconcli subdocli --domain example.com --bbot-integration --bbot-targets targets
 reconcli subdocli --domain-list domains.txt --store-db --json --markdown --threads 10
 ```
 
-### 🚀 JSCli - Advanced JavaScript Analysis & SourceMapper Integration
+### � PortCLI - Multi-Scanner Port Discovery & AI Analysis
+Professional port scanning framework with 5 integrated scanners and intelligent service detection:
+
+```bash
+# Single domain scanning
+reconcli portcli --domain example.com --top-ports 1000 --ai
+
+# Fast parallel scanning with Rush + AI analysis
+reconcli portcli --input targets.txt --scanner rush --rush-base-scanner naabu \
+  --rush-jobs 20 --ai --cache --json
+
+# Domain with rush scanner  
+reconcli portcli --domain target.com --scanner rush --rush-base-scanner nmap --ai
+
+# High-speed enterprise scanning
+reconcli portcli --cidr 192.168.0.0/16 --scanner rush --rush-base-scanner masscan \
+  --top-ports 1000 --masscan-rate 5000 --exclude-cdn --store-db
+
+# Bug bounty web service discovery
+reconcli portcli --input subdomains.txt --only-web --filter-tags prod \
+  --exclude-tags dev --ai --markdown
+
+# Service pattern detection and analysis
+reconcli portcli --input infrastructure.txt --filter-services "kubernetes-cluster,database-server" \
+  --ai --cache --json --verbose
+```
+
+### �🚀 JSCli - Advanced JavaScript Analysis & SourceMapper Integration
 Enhanced JavaScript analysis with multiple engines and advanced security features:
 
 ```bash
@@ -449,30 +476,129 @@ reconcli jscli -i js_targets.txt -o js_analysis --engine jsluice --concurrency 1
 reconcli jscli -i js_targets.txt -o js_analysis --ai-mode --store-db --target-domain example.com --program "security-audit" --verbose
 ```
 
-## 💡 Real-World Security Testing Workflows
+### 🔍 PortCLI - Advanced Port Scanning & Service Discovery ⭐ (ENHANCED!)
+
+Professional multi-scanner port scanning framework with AI analysis, parallel execution, and intelligent service detection:
+
+```bash
+# Basic port scanning with automatic tagging
+reconcli portcli --ip 192.168.1.100 --scanner naabu --verbose
+
+# Advanced parallel scanning with Rush
+reconcli portcli --input targets.txt --scanner rush --rush-base-scanner nmap --rush-jobs 20 --ai
+
+# High-speed masscan with AI analysis
+reconcli portcli --input scope.txt --scanner rush --rush-base-scanner masscan \
+  --rush-jobs 15 --masscan-rate 5000 --ai --cache --json
+
+# Comprehensive enterprise scanning
+reconcli portcli --cidr 192.168.0.0/16 --scanner rush --rush-base-scanner naabu \
+  --top-ports 1000 --exclude-cdn --filter-tags "web,database" --store-db
+
+# Bug bounty focused scanning
+reconcli portcli --input subdomains.txt --only-web --filter-tags prod \
+  --exclude-tags dev --ai --cache --json --markdown
+```
+
+🔑 **Key Features**:
+
+- **🚀 Multi-Scanner Support**: naabu, rustscan, nmap, masscan, rush (5 scanners)
+- **⚡ Parallel Execution**: Rush-powered parallel scanning with configurable job limits  
+- **🧠 AI Analysis**: Intelligent service analysis with security recommendations
+- **🏷️ Smart Tagging**: Automatic port categorization (web, database, cloud, dev, prod)
+- **☁️ Cloud Detection**: AWS, Azure, GCP, DigitalOcean infrastructure identification
+- **💾 Intelligent Caching**: SHA256-based cache system for instant result retrieval
+- **🎯 Advanced Filtering**: Filter by tags, services, cloud providers
+- **📊 Rich Reports**: JSON, Markdown, database storage with professional formatting
+
+🔐 **Security Intelligence**:
+
+- **Service Pattern Detection**: Web stacks, Kubernetes clusters, database servers
+- **Attack Surface Analysis**: Development vs production service identification  
+- **CDN Bypass Insights**: Automatic CDN detection and exclusion capabilities
+- **Vulnerability Context**: Port-specific security recommendations and next steps
+
+⚙️ **Advanced Options**:
+
+```bash
+# Rush parallel scanning options
+--rush-jobs INTEGER              # Parallel jobs count (default: 12)
+--rush-timeout INTEGER           # Job timeout in seconds
+--rush-retries INTEGER           # Maximum retries per job
+--rush-base-scanner [nmap|naabu|rustscan|masscan]  # Base scanner selection
+
+# AI-powered analysis
+--ai --ai-provider openai        # AI analysis with specific provider
+--ai-cache --ai-context "pentest" # Cache AI results with custom context
+
+# Intelligent filtering and tagging
+--filter-tags "web,prod"         # Show only web production services
+--exclude-tags "dev,staging"     # Exclude development services
+--filter-services "web-stack,kubernetes-cluster"  # Filter by detected service patterns
+
+# Performance and caching
+--cache --cache-max-age 24       # Enable 24-hour result caching
+--masscan-rate 5000              # High-speed masscan configuration
+```
+
+📊 **Professional Reporting**:
+
+```bash
+# Generate comprehensive reports
+reconcli portcli --input enterprise_scope.txt --scanner rush \
+  --rush-base-scanner nmap --rush-jobs 25 --top-ports 1000 \
+  --ai --cache --json --markdown --store-db \
+  --target-domain company.com --program "Security-Assessment-2025"
+
+# Service-focused analysis
+reconcli portcli --input targets.txt --filter-services "database-server,jenkins-server" \
+  --exclude-cdn --ai --markdown
+```
+
+🎯 **Use Cases**:
+
+- **Bug Bounty**: Fast web service discovery with intelligent filtering
+- **Penetration Testing**: Comprehensive infrastructure mapping with AI insights
+- **Red Team**: Parallel reconnaissance with stealth scanning options
+- **Blue Team**: Asset discovery and service inventory management
+- **DevOps**: Infrastructure monitoring and service validation
+
+```
+
+### 💡 Real-World Security Testing Workflows
 
 ### 🎯 Bug Bounty Hunter Workflow
+
 ```bash
 # Step 1: Subdomain enumeration
 reconcli subdocli --domain target.com --tools "amass,subfinder,crtsh_alternative" --store-db --json
 
-# Step 2: HTTP analysis with screenshots
+# Step 2: Port scanning and service discovery
+reconcli portcli --input subdomains.txt --scanner rush --rush-base-scanner naabu \
+  --only-web --filter-tags prod --exclude-cdn --ai --cache --json
+
+# Step 3: HTTP analysis with screenshots
 reconcli httpcli --input subdomains.txt --security-scan --screenshot --store-db --export-vulnerabilities
 
-# Step 3: JavaScript security analysis
+# Step 4: JavaScript security analysis
 reconcli jscli -i js_urls.txt -o js_analysis --framework-detection --sensitive-functions --ai-mode --store-db
 
-# Step 4: API discovery and testing
+# Step 5: API discovery and testing
 reconcli apicli --url https://api.target.com --swagger-brute --security-test --store-db
 
-# Step 5: Secret scanning in repositories
+# Step 6: Secret scanning in repositories
 reconcli secretscli --input "https://github.com/target/repo.git" --tool trufflehog --store-db
 ```
 
 ### 🏢 Enterprise Security Assessment
+
 ```bash
 # Comprehensive domain analysis
 reconcli subdocli --domain-list corporate_domains.txt --bbot-integration --store-db assessment.db --threads 20
+
+# Network infrastructure scanning
+reconcli portcli --input corporate_networks.txt --scanner rush --rush-base-scanner masscan \
+  --rush-jobs 25 --top-ports 1000 --ai --cache --store-db assessment.db
 
 # Infrastructure analysis with Shodan
 reconcli shodancli --query "org:\"Target Corp\"" --ai --store-db assessment.db --verbose
