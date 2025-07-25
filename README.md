@@ -119,6 +119,9 @@ reconcli permutcli --domain example.com --cache --ai --ai-context "fintech app" 
 # URLCli with intelligent caching and AI security analysis
 reconcli urlcli --domain example.com --cache --ai-detailed --katana --verbose
 
+# BypassCLI HTTP status code bypass testing with external tools
+reconcli bypasscli --url https://target.com/admin --use-forbidden --use-bypass-parser --ai
+
 # ShodanCLI with advanced caching and AI vulnerability assessment
 reconcli shodancli --query "mongodb" --ai --cache --country US --format rich
 
@@ -2188,6 +2191,7 @@ reconcli doctorcli --structure --configs --env --fix --verbose
 - **[GRAPHQLCLI_ENHANCED_GUIDE.md](reconcli/GRAPHQLCLI_ENHANCED_GUIDE.md)** - GraphQL security testing
 - **[HTTPCLI_DOCUMENTATION.md](HTTPCLI_DOCUMENTATION.md)** - Comprehensive HTTP/HTTPS analysis with security assessment and domain scanning
 - **[HTTPCLI_TUTORIAL.md](HTTPCLI_TUTORIAL.md)** - HTTPCli quick start guide and practical examples
+- **[BYPASSCLI_DOCUMENTATION.md](BYPASSCLI_DOCUMENTATION.md)** - HTTP status code bypass and access control evasion techniques
 - **[PORTCLI_DOCUMENTATION.md](PORTCLI_DOCUMENTATION.md)** - Advanced port scanning with domain support and AI analysis
 
 ### ⚡ **Quick References**

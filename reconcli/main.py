@@ -2,6 +2,9 @@ import click
 
 from reconcli.aicli import aicli  # Importing the aicli command
 from reconcli.apicli import main as api_cli
+from reconcli.bypasscli import (
+    bypasscli,
+)  # HTTP Status Code Bypass & Access Control Evasion
 from reconcli.cloudcli import cloudcli  # Cloud service discovery and enumeration
 from reconcli.cdncli import cdncli  # CDN Fingerprinting & Bypass Tool
 from reconcli.cnamecli import cnamecli  # CNAME Record Analysis and Takeover Detection
@@ -181,6 +184,10 @@ dirbcli.short_help = "Directory bruteforcing and enumeration"
 # API Security Testing
 cli.add_command(api_cli, name="apicli")
 api_cli.short_help = "API security testing and vulnerability assessment"
+
+# HTTP Status Code Bypass & Access Control Evasion
+cli.add_command(bypasscli, name="bypasscli")
+bypasscli.short_help = "HTTP status code bypass and access control evasion"
 
 # Shodan API Integration
 cli.add_command(shodancli, name="shodancli")
