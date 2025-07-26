@@ -52,6 +52,7 @@ from reconcli.whoisfreakscli import cli as whoisfreaks_cli
 from reconcli.zonewalkcli import cli as zonewalk_cli
 from reconcli.xsscli import cli as xsscli  # Importing the XSS CLI command
 from reconcli.shodancli import shodancli  # Importing the Shodan CLI command
+from reconcli.fofaxcli import cli as fofax_cli  # FOFA search engine CLI
 
 # Git Operations
 try:
@@ -192,6 +193,10 @@ bypasscli.short_help = "HTTP status code bypass and access control evasion"
 # Shodan API Integration
 cli.add_command(shodancli, name="shodancli")
 shodancli.short_help = "Shodan API integration for IoT and device reconnaissance"
+
+# FOFA Search Engine Integration
+cli.add_command(fofax_cli, name="fofacli")
+fofax_cli.short_help = "🔍 FOFA search engine integration for cyberspace mapping"
 
 # SQL Injection Vulnerability Scanner
 cli.add_command(vulnsql_cli, name="vulnsqlicli")

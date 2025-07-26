@@ -161,6 +161,72 @@ reconcli vulnsqlicli --url "https://target.com/page.php?id=1" --dry-run --ai --p
 reconcli vulnsqlicli --url "https://target.com/page.php?id=1" --tool all --ai --store-db assessment.db --markdown-report
 ```
 
+### 🔍 **FOFA CLI - Advanced FOFA Search with AI & Tool Chaining** (NEW!)
+- **🧠 AI-Powered Query Enhancement**: Fuzzy keyword expansion and smart query optimization with context-aware filtering
+- **🔗 Multi-Tool Chaining**: Seamless integration with httpx, nuclei, kscan, and uncover for complete reconnaissance workflows
+- **🌐 Multi-Engine Search**: Uncover integration across 8+ platforms (Shodan, Censys, FOFA, Quake, Hunter, ZoomEye, Netlas, CriminalIP)
+- **🎯 Technology Mapping**: 20+ technology stacks with variants and fuzzy keywords for comprehensive discovery
+- **🔍 Vulnerability Patterns**: Smart detection of common attack vectors and exposure patterns
+- **📊 FX Rules Engine**: 19+ built-in cybersecurity rules for unauthorized access, exposed services, and IoT devices
+- **🗄️ Database Storage**: Complete SQLite integration with search history and result persistence
+- **⚡ Intelligent Caching**: SHA256-based cache system with configurable expiration and performance tracking
+- **🎨 Rich Output**: Beautiful terminal output with tables, progress bars, and color-coded results
+
+```bash
+# Basic FOFA search with fuzzy and smart query enhancement
+reconcli fofacli search --query "jenkins" --fuzzy --smart-query --fetch-size 100
+
+# Multi-engine reconnaissance with uncover integration
+reconcli fofacli uncover --query "wordpress" --engines "fofa,shodan,censys" --limit 200 --json
+
+# Advanced tool chaining: FOFA → httpx → nuclei → uncover
+reconcli fofacli chain --query "jenkins" --fuzzy --smart-query --httpx --nuclei --uncover --nuclei-opts "-t exposed-panels"
+
+# Query enhancement and suggestions
+reconcli fofacli query-enhance --query "gitlab" --fuzzy --smart --suggestions --explain
+
+# FX rules for cybersecurity patterns
+reconcli fofacli fx list                                    # List all available FX rules
+reconcli fofacli fx search "jenkins-unauth" --fetch-size 50 # Search using FX rule
+reconcli fofacli fx show "elastic-unauth"                   # Show rule details
+
+# Certificate and icon hash searches
+reconcli fofacli hash-search --url-cert https://example.com --fetch-size 100
+reconcli fofacli hash-search --url-to-icon-hash https://example.com/favicon.ico
+
+# Database management and search history
+reconcli fofacli db stats                                   # Show database statistics
+reconcli fofacli db history --limit 20                      # View search history
+reconcli fofacli db export 123 --output results.json       # Export specific search results
+
+# Cache management for performance optimization
+reconcli fofacli cache stats                                # View cache statistics
+reconcli fofacli cache clear --confirm                      # Clear cache
+reconcli fofacli cache cleanup                              # Remove expired entries
+
+# Advanced search with AI, caching, and database storage
+reconcli fofacli advanced-search --query "mongodb" --ai --cache --store-db --format json --full-host --title
+
+# Configuration and user info
+reconcli fofacli config                                     # Configure FOFA credentials
+reconcli fofacli userinfo                                   # Show FOFA account info
+
+# Standalone tool execution with FOFA integration
+reconcli fofacli httpx --fofa-query "apache" --fetch-size 50 --title --tech-detect --status-code
+reconcli fofacli nuclei --fofa-query "nginx" --templates "exposed-panels" --severity "high,critical"
+
+# Complete reconnaissance workflow example
+reconcli fofacli chain \
+  --query "title='GitLab' && country='US'" \
+  --fuzzy --smart-query \
+  --fetch-size 50 \
+  --httpx --httpx-opts "--title --tech-detect" \
+  --nuclei --nuclei-opts "-t /home/user/nuclei-templates/http/exposed-panels/" \
+  --uncover --uncover-opts "-e shodan,censys -l 100" \
+  --output /tmp/gitlab_recon \
+  --cache --store-db
+```
+
 ### 🌐 **CDNCli - Advanced CDN Fingerprinting & Cloud Storage Discovery** (NEW!)
 - **🔍 CDN Detection**: Multi-method CDN fingerprinting for Cloudflare, Akamai, AWS CloudFront, Fastly, MaxCDN
 - **☁️ Cloud Storage Discovery**: Comprehensive AWS S3, Google Cloud, Azure Blob, Alibaba Cloud hunting with CloudHunter integration
@@ -573,50 +639,154 @@ reconcli portcli --input targets.txt --filter-services "database-server,jenkins-
 ### 🎯 Bug Bounty Hunter Workflow
 
 ```bash
-# Step 1: Subdomain enumeration
+# Step 1: Subdomain enumeration with FOFA integration
 reconcli subdocli --domain target.com --tools "amass,subfinder,crtsh_alternative" --store-db --json
+reconcli fofacli search --query "domain:target.com" --fuzzy --smart-query --fetch-size 200 --store-db
 
 # Step 2: Port scanning and service discovery
 reconcli portcli --input subdomains.txt --scanner rush --rush-base-scanner naabu \
   --only-web --filter-tags prod --exclude-cdn --ai --cache --json
 
-# Step 3: HTTP analysis with screenshots
+# Step 3: FOFA-powered reconnaissance with tool chaining
+reconcli fofacli chain --query "domain:target.com" --fuzzy --smart-query \
+  --httpx --nuclei --uncover --httpx-opts "--title --tech-detect" \
+  --nuclei-opts "-t exposed-panels" --uncover-opts "-e fofa,shodan -l 100"
+
+# Step 4: HTTP analysis with security scanning
 reconcli httpcli --input subdomains.txt --security-scan --screenshot --store-db --export-vulnerabilities
 
-# Step 4: JavaScript security analysis
-reconcli jscli -i js_urls.txt -o js_analysis --framework-detection --sensitive-functions --ai-mode --store-db
+# Step 5: JavaScript security analysis with SourceMapper
+reconcli jscli -i js_urls.txt -o js_analysis --engine sourcemapper --framework-detection \
+  --sensitive-functions --source-maps --beautify --ai-mode --store-db
 
-# Step 5: API discovery and testing
-reconcli apicli --url https://api.target.com --swagger-brute --security-test --store-db
+# Step 6: API discovery and testing with Swagger Jacker
+reconcli apicli --url https://api.target.com --swagger-brute --security-test \
+  --secret-scan --store-db --json-report
 
-# Step 6: Secret scanning in repositories
+# Step 7: Secret scanning in repositories
 reconcli secretscli --input "https://github.com/target/repo.git" --tool trufflehog --store-db
+
+# Step 8: CDN and cloud storage discovery
+reconcli cdncli --domain target.com --passive-all --cloudhunter --ai --bypass-all --store-db
+
+# Step 9: XSS testing with KNOXSS integration
+export KNOXSS_API_KEY="your_key"
+reconcli xsscli knoxnl --input vulnerable_params.txt --cache --ai --ai-provider anthropic
+
+# Step 10: SQL injection testing with AI analysis
+reconcli vulnsqlicli --urls-file target_params.txt --ai --tool all --store-db sqli_results.db
 ```
 
 ### 🏢 Enterprise Security Assessment
 
 ```bash
-# Comprehensive domain analysis
+# Comprehensive domain analysis with BBOT integration
 reconcli subdocli --domain-list corporate_domains.txt --bbot-integration --store-db assessment.db --threads 20
 
-# Network infrastructure scanning
+# FOFA-powered threat intelligence gathering
+reconcli fofacli search --query "org:'Target Corp'" --fuzzy --smart-query --ai --cache --store-db assessment.db
+reconcli fofacli uncover --query "ssl:'target.com'" --engines "shodan,censys,fofa" --limit 500 --json
+
+# Network infrastructure scanning with AI analysis
 reconcli portcli --input corporate_networks.txt --scanner rush --rush-base-scanner masscan \
   --rush-jobs 25 --top-ports 1000 --ai --cache --store-db assessment.db
 
-# Infrastructure analysis with Shodan
-reconcli shodancli --query "org:\"Target Corp\"" --ai --store-db assessment.db --verbose
+# Shodan intelligence with geographic risk assessment
+reconcli shodancli --query "org:\"Target Corp\"" --ai --cache --country-risk --store-db assessment.db --verbose
 
-# Web application security testing
+# Web application security testing with nuclei chaining
 reconcli httpcli --input corporate_apps.txt --security-scan --nuclei --benchmark --store-db assessment.db
 
-# JavaScript security audit
-reconcli jscli -i corporate_js.txt -o js_audit --engine sourcemapper --ai-mode --store-db assessment.db --custom-patterns corp_patterns.txt
+# JavaScript security audit with advanced analysis
+reconcli jscli -i corporate_js.txt -o js_audit --engine sourcemapper --ai-mode \
+  --framework-detection --webpack-analysis --source-maps --store-db assessment.db --custom-patterns corp_patterns.txt
 
-# API security assessment
-reconcli apicli --urls-file api_endpoints.txt --swagger-brute --security-test --store-db assessment.db
+# API security assessment with comprehensive testing
+reconcli apicli --urls-file api_endpoints.txt --swagger-brute --security-test --secret-scan \
+  --swagger-prepare curl --store-db assessment.db --json-report --markdown-report
 
-# Generate comprehensive report
+# CDN fingerprinting and cloud storage hunting
+reconcli cdncli --domain-list corporate_domains.txt --passive-all --cloudhunter \
+  --nuclei --ai --shodan --fofa --store-db assessment.db
+
+# FOFA FX rules for cybersecurity patterns
+reconcli fofacli fx search "elastic-unauth" --fetch-size 100 --exclude-country-cn --store-db assessment.db
+reconcli fofacli fx search "mongodb-unauth" --fetch-size 100 --exclude --store-db assessment.db
+
+# SQL injection testing across infrastructure
+reconcli vulnsqlicli --urls-file corporate_apps.txt --ai --tool all \
+  --concurrency 3 --store-db assessment.db --markdown-report
+
+# Generate comprehensive security report
 reconcli csvtkcli generate-report assessment.db --security-focus --executive-summary
+```
+
+### 🔥 Advanced FOFA Reconnaissance Workflows
+
+```bash
+# Technology-specific reconnaissance with fuzzy enhancement
+reconcli fofacli search --query "jenkins" --fuzzy --smart-query --show-suggestions --cache --store-db
+
+# Multi-stage vulnerability discovery pipeline
+reconcli fofacli chain --query "title='Jenkins' && country='US'" --fuzzy --smart-query \
+  --httpx --httpx-opts "--title --tech-detect --status-code" \
+  --nuclei --nuclei-opts "-t /path/to/nuclei-templates/http/exposed-panels/" \
+  --uncover --uncover-opts "-e shodan,censys,fofa -l 200" \
+  --output /tmp/jenkins_assessment --cache --store-db
+
+# FX rules for comprehensive security assessment
+reconcli fofacli fx search "docker-api" --fetch-size 50 --exclude-country-cn
+reconcli fofacli fx search "grafana-unauth" --fetch-size 50 --fetch-fullhost-info
+reconcli fofacli fx search "webcam-exposed" --fetch-size 30 --open-browser
+
+# Certificate and favicon-based hunting
+reconcli fofacli hash-search --url-cert https://target.com --fetch-size 100 --format json
+reconcli fofacli hash-search --url-to-icon-hash https://target.com/favicon.ico --format csv
+
+# Query enhancement and optimization
+reconcli fofacli query-enhance --query "wordpress" --fuzzy --smart --suggestions --explain
+reconcli fofacli query-enhance --query "gitlab" --fuzzy --smart --suggestions
+
+# Database-driven reconnaissance workflows
+reconcli fofacli db history --limit 10                          # Review search history
+reconcli fofacli db search-ip 1.2.3.4                          # Search by IP address
+reconcli fofacli db export 123 --output detailed_results.json   # Export specific results
+
+# Cache optimization for performance
+reconcli fofacli cache stats                                    # View cache performance
+reconcli fofacli cache cleanup                                  # Remove expired entries
+reconcli fofacli advanced-search --query "mongodb" --ai --cache --store-db --format json
+```
+
+### 🛡️ Cybersecurity Pattern Discovery with FOFA FX Rules
+
+```bash
+# Unauthorized access detection
+reconcli fofacli fx search "elastic-unauth" --exclude-country-cn --fetch-size 100
+reconcli fofacli fx search "mongodb-unauth" --exclude --fetch-fullhost-info
+reconcli fofacli fx search "redis-unauth" --exclude-country-cn --format json
+
+# Exposed management interfaces
+reconcli fofacli fx search "jenkins-unauth" --fetch-size 50 --open-browser
+reconcli fofacli fx search "grafana-unauth" --exclude-country-cn --fetch-fullhost-info
+reconcli fofacli fx search "kibana-unauth" --exclude --format csv
+
+# IoT and infrastructure exposure
+reconcli fofacli fx search "webcam-exposed" --fetch-size 30 --fetch-titles-ofdomain
+reconcli fofacli fx search "printer-exposed" --exclude-country-cn --format json
+reconcli fofacli fx search "vnc-exposed" --exclude --fetch-fullhost-info
+
+# Container and API exposure
+reconcli fofacli fx search "docker-api" --fetch-size 50 --exclude-country-cn
+reconcli fofacli fx search "solr-admin" --exclude --fetch-fullhost-info
+
+# Network services and protocols
+reconcli fofacli fx search "ftp-anonymous" --fetch-size 40 --exclude-country-cn
+reconcli fofacli fx search "smtp-open-relay" --exclude --format json
+
+# Monitoring and management systems
+reconcli fofacli fx search "zabbix-login" --fetch-size 50 --fetch-titles-ofdomain
+reconcli fofacli fx search "nagios-exposed" --exclude-country-cn --format csv
 ```
 
 ## 🚀 Latest Updates
@@ -1419,15 +1589,383 @@ reconcli subdocli --domain example.com --amass-config /path/to/amass.ini --verbo
 
 **📚 Complete Documentation**: See `reconcli/SUBDOCLI_GUIDE.md` for comprehensive usage guide, examples, and best practices.
 
-### 🌐 DNS Resolution & Analysis (`dnscli`) - Now with Performance Cache!
-- **⚡ Smart Caching System**: 4,520x performance improvement with intelligent cache management
-- **Enhanced DNS Resolution**: Multi-threaded IP resolution with PTR record tagging
-- **Subdomain Bruteforcing**: Custom wordlist support for subdomain discovery
-- **Custom DNS Resolvers**: Use custom resolver lists for improved performance
-- **WHOIS Integration**: Enrich DNS results with WHOIS data from WhoisFreaks
-- **Advanced Filtering**: Tag-based filtering and unresolved exclusion
-- **Resume Support**: Continue interrupted DNS scans
-- **Professional Reports**: JSON and Markdown output with detailed statistics
+## � **FOFA CLI - Advanced FOFA Search Engine Integration** ⭐ **NEWEST MODULE**
+
+The most comprehensive FOFA search tool with AI-powered query enhancement, multi-tool chaining, and advanced reconnaissance capabilities.
+
+### ✨ Key Features
+
+- **🧠 AI-Powered Query Enhancement**: Fuzzy keyword expansion and smart query optimization
+- **🔗 Multi-Tool Chaining**: Seamless integration with httpx, nuclei, kscan, and uncover
+- **🌐 Multi-Engine Search**: Uncover integration across 8+ platforms (Shodan, Censys, FOFA, Quake, Hunter, ZoomEye, Netlas, CriminalIP)
+- **🎯 FX Rules Engine**: 19+ built-in cybersecurity rules for unauthorized access and exposed services
+- **🗄️ Database Storage**: Complete SQLite integration with search history and analytics
+- **⚡ Intelligent Caching**: SHA256-based cache system with performance tracking
+- **🎨 Rich Output**: Beautiful terminal output with tables, progress bars, and color-coded results
+
+### 🚀 Quick Start Examples
+
+```bash
+# Basic FOFA search with AI enhancement
+reconcli fofacli search --query "jenkins" --fuzzy --smart-query --fetch-size 100
+
+# Complete reconnaissance pipeline
+reconcli fofacli chain --query "jenkins" --fuzzy --smart-query \
+  --httpx --nuclei --uncover --cache --store-db
+
+# Multi-engine search across platforms
+reconcli fofacli uncover --query "wordpress" --engines "fofa,shodan,censys" --limit 200
+
+# Cybersecurity pattern detection
+reconcli fofacli fx search "elastic-unauth" --exclude-country-cn --fetch-size 100
+
+# Query enhancement with suggestions
+reconcli fofacli query-enhance --query "gitlab" --fuzzy --smart --suggestions --explain
+```
+
+### 📖 Complete Documentation
+
+For comprehensive examples and advanced usage, see: **[FOFA_CLI_EXAMPLES.md](FOFA_CLI_EXAMPLES.md)**
+
+---
+
+### 🔍 **FOFA CLI - Advanced FOFA Search Engine Integration**
+
+The most advanced FOFA search tool with AI-powered query enhancement, multi-tool chaining, and comprehensive reconnaissance capabilities.
+
+#### 🎯 Basic Search Operations
+
+```bash
+# Simple FOFA search with enhanced output
+reconcli fofacli search --query "jenkins" --fetch-size 100 --format json
+
+# Enhanced searches with fuzzy and smart query optimization
+reconcli fofacli search --query "jenkins" --fuzzy --smart-query --fetch-size 50 --show-suggestions
+
+# Geographic and security filtering
+reconcli fofacli search --query "mongodb" --exclude-country-cn --exclude --fetch-fullhost-info
+
+# Open results directly in browser
+reconcli fofacli search --query "gitlab" --open-browser --fetch-size 30
+```
+
+#### 🧠 AI-Powered Query Enhancement
+
+```bash
+# Query enhancement with explanations
+reconcli fofacli query-enhance --query "jenkins" --fuzzy --smart --suggestions --explain
+
+# Technology-specific enhancement
+reconcli fofacli query-enhance --query "wordpress" --fuzzy --smart --suggestions
+
+# Get related query suggestions
+reconcli fofacli query-enhance --query "gitlab" --suggestions
+
+# Example output for jenkins:
+# Original: jenkins
+# Fuzzy: (title="jenkins" || title="Hudson" || body="jenkins" || body="Hudson")
+# Smart: + login filters + country filters + honeypot exclusion
+# Suggestions: GitLab, Grafana, Jira, TeamCity, Bamboo related queries
+```
+
+#### 🔗 Multi-Tool Reconnaissance Chaining
+
+```bash
+# Complete reconnaissance pipeline: FOFA → httpx → nuclei → uncover
+reconcli fofacli chain \
+  --query "title='Jenkins' && country='US'" \
+  --fuzzy --smart-query \
+  --fetch-size 50 \
+  --httpx --httpx-opts "--title --tech-detect --status-code" \
+  --nuclei --nuclei-opts "-t /home/user/nuclei-templates/http/exposed-panels/" \
+  --uncover --uncover-opts "-e shodan,censys,fofa -l 100" \
+  --output /tmp/jenkins_recon \
+  --cache --store-db
+
+# FOFA + httpx pipeline for web service discovery
+reconcli fofacli chain --query "nginx" --fuzzy --httpx --httpx-opts "--title --screenshot" --cache
+
+# FOFA + nuclei for vulnerability discovery
+reconcli fofacli chain --query "apache" --smart-query --nuclei --nuclei-opts "-severity high,critical" --store-db
+
+# Multi-engine search with uncover integration
+reconcli fofacli chain --query "wordpress" --uncover --uncover-opts "-e fofa,shodan,censys -l 200" --json
+```
+
+#### 🌐 Multi-Engine Search with Uncover
+
+```bash
+# Cross-platform reconnaissance
+reconcli fofacli uncover --query "jenkins" --engines "fofa,shodan,censys,quake" --limit 500 --json
+
+# Comprehensive multi-engine search across 8+ platforms
+reconcli fofacli uncover --query "mongodb" --engines "shodan,censys,fofa,quake,hunter,zoomeye,netlas,criminalip" --limit 200
+
+# Export multi-engine results
+reconcli fofacli uncover --query "elasticsearch" --engines "fofa,shodan" --limit 100 --output multi_engine_results.txt
+```
+
+#### 🎯 FX Rules for Cybersecurity Patterns
+
+```bash
+# List all available FX rules (19+ cybersecurity patterns)
+reconcli fofacli fx list
+
+# Search using specific FX rules for unauthorized access
+reconcli fofacli fx search "elastic-unauth" --fetch-size 100 --exclude-country-cn
+reconcli fofacli fx search "mongodb-unauth" --exclude --fetch-fullhost-info
+reconcli fofacli fx search "redis-unauth" --format json --output redis_exposed.json
+
+# Exposed management interfaces
+reconcli fofacli fx search "jenkins-unauth" --fetch-size 50 --open-browser
+reconcli fofacli fx search "grafana-unauth" --exclude-country-cn --store-db
+reconcli fofacli fx search "kibana-unauth" --format csv --output kibana_findings.csv
+
+# IoT and infrastructure exposure detection
+reconcli fofacli fx search "webcam-exposed" --fetch-size 30 --fetch-titles-ofdomain
+reconcli fofacli fx search "printer-exposed" --exclude-country-cn --store-db
+reconcli fofacli fx search "vnc-exposed" --exclude --format json
+
+# Container and API exposure
+reconcli fofacli fx search "docker-api" --fetch-size 50 --exclude-country-cn
+reconcli fofacli fx search "solr-admin" --exclude --fetch-fullhost-info
+
+# Show detailed rule information
+reconcli fofacli fx show "elastic-unauth"
+reconcli fofacli fx show "docker-api"
+```
+
+#### 🔍 Certificate and Icon Hash Searches
+
+```bash
+# Certificate-based reconnaissance
+reconcli fofacli hash-search --url-cert https://target.com --fetch-size 100 --format json
+
+# Icon hash hunting for similar services
+reconcli fofacli hash-search --url-to-icon-hash https://target.com/favicon.ico --format csv
+
+# Local favicon analysis
+reconcli fofacli hash-search --icon-file-path /path/to/favicon.ico --fetch-size 50
+```
+
+#### 🗄️ Database Management and History
+
+```bash
+# View database statistics
+reconcli fofacli db stats
+
+# Search history management
+reconcli fofacli db history --limit 20
+reconcli fofacli db export 123 --output detailed_results.json --format json
+
+# Search by IP address in stored results
+reconcli fofacli db search-ip 1.2.3.4
+```
+
+#### ⚡ Cache Management for Performance
+
+```bash
+# View cache performance statistics
+reconcli fofacli cache stats
+
+# Clear expired cache entries
+reconcli fofacli cache cleanup
+
+# Clear all cache (with confirmation)
+reconcli fofacli cache clear --confirm
+
+# Advanced search with caching enabled
+reconcli fofacli advanced-search --query "mongodb" --ai --cache --store-db --format json --full-host --title
+```
+
+#### 🔧 Configuration and Account Management
+
+```bash
+# Configure FOFA API credentials
+reconcli fofacli config
+
+# View FOFA account information
+reconcli fofacli userinfo
+
+# Advanced configuration with proxy support
+reconcli fofacli --proxy http://127.0.0.1:8080 --debug search --query "test"
+```
+
+#### 🛠️ Standalone Tool Integration
+
+```bash
+# httpx integration with FOFA query input
+reconcli fofacli httpx --fofa-query "apache" --fetch-size 50 --title --tech-detect --status-code
+
+# nuclei integration with FOFA targets
+reconcli fofacli nuclei --fofa-query "nginx" --templates "exposed-panels" --severity "high,critical"
+```
+
+---
+
+### 🌐 **DNS Resolution & Analysis (`dnscli`) - Performance Cache Enabled**
+
+Advanced DNS resolution and analysis with intelligent caching for massive speed improvements.
+
+#### ⚡ Cache Performance Features
+
+**Performance Improvements:**
+- **First Run**: 45.2 seconds for 100 domains
+- **Cache Hit**: 0.01 seconds (4,520x faster!)
+- **99.98% Performance Improvement**
+
+```bash
+# Enable caching for massive speed improvements
+reconcli dnscli --input domains.txt --cache --verbose
+
+# Custom cache configuration
+reconcli dnscli --input large_domain_list.txt --cache --cache-dir /tmp/dns_cache --cache-max-age 12 --verbose
+
+# View cache performance statistics
+reconcli dnscli --input domains.txt --cache-stats
+
+# Clear cache when needed
+reconcli dnscli --clear-cache
+```
+
+#### 🔍 Core DNS Operations
+
+```bash
+# Basic DNS resolution with enhanced features
+reconcli dnscli --input domains.txt --resolve --verbose
+
+# Subdomain bruteforcing with custom wordlist
+reconcli dnscli --domain example.com --bruteforce --wordlist subdomains.txt --cache --verbose
+
+# Custom DNS resolvers for improved performance
+reconcli dnscli --input domains.txt --resolvers custom_resolvers.txt --cache --verbose
+
+# PTR record analysis and reverse DNS
+reconcli dnscli --input ip_addresses.txt --ptr-records --cache --verbose
+```
+
+#### 🏷️ Advanced Filtering and Analysis
+
+```bash
+# Filter by specific tags (cloud providers, CDNs, etc.)
+reconcli dnscli --input mixed_domains.txt --filter-tags "aws,cloudflare" --cache --verbose
+
+# Exclude unresolved domains from output
+reconcli dnscli --input domains.txt --exclude-unresolved --cache --verbose
+
+# Enhanced output with WHOIS data integration
+reconcli dnscli --input domains.txt --whois-integration --cache --verbose
+```
+
+#### 📊 Professional Reporting
+
+```bash
+# Generate JSON report with full analysis
+reconcli dnscli --input domains.txt --cache --json --output dns_analysis.json
+
+# Comprehensive Markdown report
+reconcli dnscli --input domains.txt --cache --markdown --output dns_report.md
+
+# Database storage for enterprise analysis
+reconcli dnscli --input enterprise_domains.txt --cache --store-db --verbose
+```
+
+#### 🔄 Resume and Performance Features
+
+```bash
+# Resume interrupted DNS scans
+reconcli dnscli --input large_domain_list.txt --resume --cache --verbose
+
+# Performance comparison demonstration
+reconcli dnscli --input domains.txt --cache --verbose  # First run: ~45s
+reconcli dnscli --input domains.txt --cache --verbose  # Cache hit: ~0.01s ⚡
+
+# Batch processing with statistics
+reconcli dnscli --input domains.txt --cache --show-stats --verbose
+```
+
+---
+
+### 🌐 **HTTP/HTTPS Analysis (`httpcli`) - Smart Caching System**
+
+Comprehensive web service analysis with intelligent caching and security scanning capabilities.
+
+#### ⚡ Performance Cache Features
+
+**Cache Performance:**
+- **First Run**: 2.03 seconds for HTTP analysis
+- **Cache Hit**: 0.02 seconds (101x faster!)
+- **99.01% Performance Improvement**
+
+```bash
+# Enable caching for massive speed improvements
+reconcli httpcli --input urls.txt --cache --verbose
+
+# Custom cache configuration
+reconcli httpcli --input large_url_list.txt --cache --cache-dir /tmp/http_cache --cache-max-age 8 --verbose
+
+# View cache performance statistics
+reconcli httpcli --input urls.txt --cache-stats
+
+# Clear HTTP cache
+reconcli httpcli --clear-cache
+```
+
+#### 🔍 Core HTTP Analysis
+
+```bash
+# Basic HTTP analysis with enhanced features
+reconcli httpcli --input urls.txt --analyze --cache --verbose
+
+# Security scanning with nuclei integration
+reconcli httpcli --input urls.txt --security-scan --nuclei --cache --store-db --verbose
+
+# Screenshot capture for visual analysis
+reconcli httpcli --input urls.txt --screenshot --cache --output screenshots/ --verbose
+
+# Technology detection and fingerprinting
+reconcli httpcli --input urls.txt --tech-detect --cache --json --output tech_analysis.json
+```
+
+#### 🛡️ Security Analysis Features
+
+```bash
+# Comprehensive security scanning
+reconcli httpcli --input urls.txt --security-scan --cache --export-vulnerabilities --verbose
+
+# Custom nuclei templates for targeted scanning
+reconcli httpcli --input urls.txt --nuclei --nuclei-templates /path/to/custom/templates --cache --verbose
+
+# Vulnerability export for further analysis
+reconcli httpcli --input urls.txt --security-scan --cache --export-vulnerabilities --store-db
+```
+
+#### 📊 Professional Reporting and Analysis
+
+```bash
+# Benchmark analysis for performance metrics
+reconcli httpcli --input urls.txt --benchmark --cache --json --output performance_report.json
+
+# Enhanced Markdown reporting
+reconcli httpcli --input urls.txt --cache --markdown --output http_analysis.md
+
+# Database integration for enterprise workflows
+reconcli httpcli --input enterprise_urls.txt --cache --store-db --security-scan --verbose
+```
+
+#### 🔄 Advanced Features
+
+```bash
+# Resume interrupted HTTP analysis
+reconcli httpcli --input large_url_list.txt --resume --cache --verbose
+
+# Performance comparison demonstration
+reconcli httpcli --input urls.txt --cache --verbose  # First run: ~2.03s
+reconcli httpcli --input urls.txt --cache --verbose  # Cache hit: ~0.02s ⚡
+
+# Custom headers and authentication
+reconcli httpcli --input authenticated_urls.txt --headers "Authorization: Bearer token" --cache --verbose
+```
 - **Notification Support**: Real-time alerts via Slack/Discord webhooks
 
 **🎯 Cache Features:**
@@ -2180,6 +2718,7 @@ reconcli doctorcli --structure --configs --env --fix --verbose
 ## 📚 Documentation
 
 ### 📖 **Complete Guides**
+- **[FOFA_CLI_EXAMPLES.md](FOFA_CLI_EXAMPLES.md)** - 🔍 **Comprehensive FOFA CLI documentation** with advanced examples, AI query enhancement, multi-tool chaining, and real-world use cases
 - **[CACHE_SYSTEM_GUIDE.md](reconcli/CACHE_SYSTEM_GUIDE.md)** - Comprehensive cache system documentation with performance benchmarks and usage examples
 - **[AI_GUIDE.md](reconcli/AI_GUIDE.md)** - Complete AI features documentation with persona system and vulnerability scanning
 - **[BBOT_INTEGRATION_GUIDE.md](reconcli/BBOT_INTEGRATION_GUIDE.md)** - BBOT integration for enhanced subdomain enumeration
@@ -2193,6 +2732,167 @@ reconcli doctorcli --structure --configs --env --fix --verbose
 - **[HTTPCLI_TUTORIAL.md](HTTPCLI_TUTORIAL.md)** - HTTPCli quick start guide and practical examples
 - **[BYPASSCLI_DOCUMENTATION.md](BYPASSCLI_DOCUMENTATION.md)** - HTTP status code bypass and access control evasion techniques
 - **[PORTCLI_DOCUMENTATION.md](PORTCLI_DOCUMENTATION.md)** - Advanced port scanning with domain support and AI analysis
+
+---
+
+## 🎯 **Advanced Workflow Examples**
+
+### 🔥 **Enterprise Security Assessment Workflow**
+
+```bash
+# Phase 1: Intelligence Gathering with FOFA
+reconcli fofacli search --query 'org:"Target Corp"' --fuzzy --smart-query --store-db --cache
+reconcli fofacli fx search "elastic-unauth" --exclude-country-cn --store-db
+reconcli fofacli fx search "jenkins-unauth" --exclude --store-db
+
+# Phase 2: Multi-Engine Reconnaissance
+reconcli fofacli uncover --query 'org:"Target Corp"' --engines "fofa,shodan,censys" --limit 500 --json
+reconcli shodancli --query 'org:"Target Corp"' --ai --cache --country-risk --store-db
+
+# Phase 3: Comprehensive Discovery Pipeline
+reconcli fofacli chain --query 'org:"Target Corp"' --fuzzy --smart-query \
+  --httpx --httpx-opts "--title --tech-detect --screenshot" \
+  --nuclei --nuclei-opts "-t /path/to/nuclei-templates/http/vulnerabilities/ -severity high,critical" \
+  --uncover --uncover-opts "-e shodan,censys,fofa -l 300" \
+  --store-db --cache --output /tmp/enterprise_assessment
+
+# Phase 4: Specialized Security Testing
+reconcli subdocli --domain-list corporate_domains.txt --bbot-integration --store-db --cache
+reconcli vulnsqlicli --urls-file discovered_apps.txt --ai --tool all --store-db
+reconcli secretscli --input "https://github.com/target/repos" --tool all --store-db --cache
+
+# Phase 5: Analysis and Reporting
+reconcli fofacli db stats
+reconcli csvtkcli generate-report assessment.db --security-focus --executive-summary
+```
+
+### 🎯 **Bug Bounty Hunter Workflow**
+
+```bash
+# Phase 1: Target Discovery with FOFA AI Enhancement
+reconcli fofacli search --query "domain:target.com" --fuzzy --smart-query --show-suggestions --store-db
+reconcli fofacli query-enhance --query "target technologies" --fuzzy --smart --suggestions
+
+# Phase 2: Technology-Specific Hunting
+reconcli fofacli fx search "jenkins-unauth" --exclude-country-cn --fetch-size 50 --store-db
+reconcli fofacli fx search "grafana-unauth" --exclude --store-db --format json
+reconcli fofacli hash-search --url-cert https://target.com --fetch-size 100 --store-db
+
+# Phase 3: Multi-Tool Chain for Complete Coverage
+reconcli fofacli chain --query "domain:target.com" --fuzzy --smart-query \
+  --httpx --httpx-opts "--title --tech-detect --screenshot --status-code" \
+  --nuclei --nuclei-opts "-t /path/to/nuclei-templates/http/exposed-panels/" \
+  --uncover --uncover-opts "-e fofa,shodan -l 100" \
+  --cache --store-db --output /tmp/bugbounty_recon
+
+# Phase 4: Specialized Testing
+reconcli jscli -i discovered_js.txt --engine sourcemapper --ai-mode --store-db
+reconcli apicli --url https://api.target.com --swagger-brute --security-test --store-db
+reconcli vulnsqlicli --urls-file params.txt --ai --basic-test --store-db
+
+# Phase 5: Results Analysis
+reconcli fofacli db history --limit 10
+reconcli fofacli db export latest_scan --output bounty_results.json
+```
+
+### 🚨 **Incident Response & Threat Hunting**
+
+```bash
+# Phase 1: Threat Infrastructure Discovery
+reconcli fofacli hash-search --url-cert https://suspicious-domain.com --fetch-size 200 --store-db
+reconcli fofacli search --query 'cert.subject="*.suspicious-domain.com"' --store-db
+
+# Phase 2: IoT Botnet Detection
+reconcli fofacli fx search "webcam-exposed" --exclude-country-cn --fetch-size 100 --store-db
+reconcli fofacli fx search "vnc-exposed" --exclude --fetch-size 50 --store-db
+
+# Phase 3: Multi-Engine Correlation
+reconcli fofacli uncover --query "ssl:suspicious-domain.com" \
+  --engines "fofa,shodan,censys,quake" --limit 500 --json --output threat_intel.json
+
+# Phase 4: Infrastructure Analysis
+reconcli shodancli --query "ssl:suspicious-domain.com" --ai --cache --store-db
+reconcli cdncli --domain suspicious-domain.com --passive-all --cloudhunter --ai --store-db
+
+# Phase 5: Comprehensive Assessment
+reconcli fofacli chain --query "ssl:suspicious-domain.com" --smart-query \
+  --httpx --nuclei --uncover --store-db --cache
+```
+
+### 🔴 **Red Team Operation Workflow**
+
+```bash
+# Phase 1: Target Enumeration
+reconcli fofacli search --query "domain:target-company.com" --fuzzy --smart-query --store-db --cache
+reconcli fofacli fx search "docker-api" --exclude --store-db
+reconcli fofacli fx search "solr-admin" --exclude-country-cn --store-db
+
+# Phase 2: Attack Surface Discovery
+reconcli fofacli chain --query "domain:target-company.com" --fuzzy --smart-query \
+  --httpx --httpx-opts "--title --tech-detect" \
+  --nuclei --nuclei-opts "-t /path/to/nuclei-templates/http/exposed-panels/ -severity high,critical" \
+  --store-db --cache
+
+# Phase 3: Intelligence Gathering
+reconcli fofacli uncover --query 'org:"Target Company"' --engines "fofa,shodan,censys" \
+  --limit 300 --json --output redteam_intelligence.json
+reconcli secretscli --input "https://github.com/target-company" --tool all --store-db
+
+# Phase 4: Vulnerability Assessment
+reconcli vulnsqlicli --urls-file discovered_apps.txt --ai --tool all --store-db
+reconcli xsscli test-input --input xss_params.txt --cache --ai --store-db
+
+# Phase 5: Infrastructure Analysis
+reconcli cdncli --domain target-company.com --bypass-all --cloudhunter --ai --store-db
+reconcli portcli --input discovered_ips.txt --scanner rush --ai --cache --store-db
+```
+
+---
+
+## 🔗 **Integration Examples**
+
+### 🤝 **FOFA + Other Tools Integration**
+
+```bash
+# FOFA → httpx → nuclei Pipeline
+reconcli fofacli search --query "jenkins" --format txt --output targets.txt
+httpx -l targets.txt -title -tech-detect -json -o httpx_results.json
+nuclei -l targets.txt -t /path/to/templates/ -json -o nuclei_results.json
+
+# FOFA → nmap Integration
+reconcli fofacli search --query "ssh" --format txt --output ssh_targets.txt
+nmap -iL ssh_targets.txt -sV -p 22 --script ssh-enum-algos
+
+# FOFA + Amass + Subfinder Correlation
+reconcli fofacli search --query "domain:target.com" --format json --output fofa_results.json
+amass enum -d target.com -o amass_results.txt
+subfinder -d target.com -o subfinder_results.txt
+```
+
+### 🔄 **Multi-Source Intelligence Fusion**
+
+```bash
+# Combine FOFA, Shodan, and Censys
+reconcli fofacli uncover --query "jenkins" --engines "fofa,shodan,censys" --json --output multi_source.json
+reconcli shodancli --query "jenkins" --ai --cache --json --output shodan_intel.json
+
+# Cross-reference results
+jq -r '.[] | .ip' multi_source.json > combined_ips.txt
+jq -r '.[] | .ip' shodan_intel.json >> combined_ips.txt
+sort combined_ips.txt | uniq > unique_targets.txt
+```
+
+### 📊 **Data Analysis and Visualization**
+
+```bash
+# Export FOFA data for analysis
+reconcli fofacli search --query "nginx" --format json --output nginx_data.json
+reconcli fofacli db export latest_scan --format csv --output analysis_data.csv
+
+# Statistical analysis
+reconcli csvtkcli analyze nginx_data.json --statistics --visualization
+reconcli fofacli cache stats > performance_metrics.txt
+```
 
 ### ⚡ **Quick References**
 - **[DOCTORCLI_QUICK_REFERENCE.md](reconcli/DOCTORCLI_QUICK_REFERENCE.md)** - DoctorCLI command quick reference
