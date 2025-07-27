@@ -934,7 +934,7 @@ class SubdomainCacheManager:
 )
 @click.option(
     "--tools",
-    help="Comma-separated list of specific tools to run (e.g., 'amass,subfinder,crtsh'). Available tools: subfinder, findomain, assetfinder, chaos, amass, sublist3r, wayback, otx, hackertarget, rapiddns, certspotter, crtsh_alternative",
+    help="Comma-separated list of specific tools to run (e.g., 'amass,subfinder,crtsh'). Available tools: subfinder, findomain, assetfinder, chaos, amass, sublist3r, github-subdomains, wayback, otx, hackertarget, rapiddns, certspotter, crtsh_alternative",
 )
 @click.option("--markdown", is_flag=True, help="Generate Markdown report")
 @click.option("--resolve", is_flag=True, help="Resolve subdomains to IP addresses")
@@ -1027,14 +1027,14 @@ def subdocli(
     """Enhanced subdomain enumeration using multiple tools with resolution and HTTP probing.
 
     🔧 AVAILABLE TOOLS:
-    • Traditional Passive: subfinder, findomain, assetfinder, chaos, amass, sublist3r
+    • Traditional Passive: subfinder, findomain, assetfinder, chaos, amass, sublist3r, github-subdomains
     • API-Based: wayback, otx, hackertarget, rapiddns, certspotter, crtsh_alternative
     • Active Tools: gobuster, ffuf, dnsrecon (use --active or --all-tools)
     • BBOT Integration: 53+ modules for superior discovery (use --bbot)
 
     📝 USAGE EXAMPLES:
     • Single tool: --tools amass
-    • Multiple tools: --tools "amass,subfinder,crtsh_alternative"
+    • Multiple tools: --tools "amass,subfinder,github-subdomains,crtsh_alternative"
     • All passive: --passive-only
     • All tools: --all-tools
 
@@ -1048,7 +1048,7 @@ def subdocli(
     • Cloud resource enumeration and GitHub code search
 
     �️ Traditional Tools Control:
-    • --passive-only: Use only traditional passive tools (subfinder, findomain, amass, etc.)
+    • --passive-only: Use only traditional passive tools (subfinder, findomain, amass, github-subdomains, etc.)
     • --active-only: Use only traditional active tools (gobuster, ffuf, dnsrecon)
     • --bbot: Add BBOT integration with traditional tools
     • --all-tools: Use everything (traditional + BBOT + active)
@@ -1060,6 +1060,12 @@ def subdocli(
 
     Use --bbot for standard BBOT enumeration or --bbot-intensive for maximum coverage.
     Use --export csv|json|txt for structured data export.
+
+    🔑 GitHub Token Configuration (for github-subdomains):
+    • Set GITHUB_TOKEN environment variable: export GITHUB_TOKEN="your_token_here"
+    • Supports single token, comma-separated tokens, or token file (.tokens)
+    • Required for github-subdomains tool to search GitHub repositories for subdomains
+    • Get your token at: https://github.com/settings/tokens
     """
 
     # Initialize cache manager
@@ -1215,6 +1221,7 @@ def subdocli(
         "chaos": f"timeout {traditional_timeout}s chaos -d {domain} -silent",
         "amass": amass_cmd,
         "sublist3r": f"timeout {traditional_timeout}s sublist3r -d {domain} -o /tmp/sublist3r_output.txt -n && cat /tmp/sublist3r_output.txt",
+        "github-subdomains": f"timeout {int(300 * 1.2)}s github-subdomains -d {domain} -raw -o /tmp/github_subdomains_{domain}.txt && cat /tmp/github_subdomains_{domain}.txt 2>/dev/null || echo ''",
         "wayback": f"timeout {int(90 * 1.2)}s curl -s 'http://web.archive.org/cdx/search/cdx?url=*.{domain}/*&output=text&fl=original&collapse=urlkey' | sed -e 's_https*://__' -e 's_/.*__' | grep -E '^[a-zA-Z0-9.-]+\\.{domain}$' | sort -u",
         "otx": f"timeout {int(90 * 1.2)}s curl -s 'https://otx.alienvault.com/api/v1/indicators/domain/{domain}/url_list?limit=100&page=1' | jq -r '.url_list[].hostname' 2>/dev/null | grep -E '^[a-zA-Z0-9.-]+\\.{domain}$' | sort -u",
         "hackertarget": f"timeout {int(90 * 1.2)}s curl -s 'https://api.hackertarget.com/hostsearch/?q={domain}' | cut -d',' -f1 | grep -E '^[a-zA-Z0-9.-]+\\.{domain}$' | sort -u",
@@ -1337,6 +1344,18 @@ def subdocli(
         click.echo(f"[+] 🛠️  Using {len(tools)} enumeration tools")
         click.echo(f"[+] ⌨️  Press Ctrl+C to stop current tool and continue with next")
 
+    # Create timeout map for different tools
+    tool_timeouts = {
+        "github-subdomains": int(300 * 1.2),  # 360 seconds for github-subdomains
+        "amass": amass_timeout,
+        "wayback": int(90 * 1.2),
+        "otx": int(90 * 1.2),
+        "hackertarget": int(90 * 1.2),
+        "rapiddns": int(90 * 1.2),
+        "certspotter": int(90 * 1.2),
+        "crtsh_alternative": int(180 * 1.2),
+    }
+
     # Run enumeration tools with enhanced error handling
     total_tools = len(tools)
     current_tool_num = 0
@@ -1367,6 +1386,10 @@ def subdocli(
                 click.echo(
                     f"[+] ⏰ Amass timeout set to {amass_timeout}s (+40% increase) to prevent hanging"
                 )
+            elif tool == "github-subdomains":
+                click.echo(
+                    f"[+] ⏰ GitHub-subdomains timeout set to {tool_timeouts.get(tool, timeout)}s for comprehensive search"
+                )
 
         start_time = time.time()
         lines = []
@@ -1392,7 +1415,9 @@ def subdocli(
                 )
 
                 try:
-                    stdout, stderr = process.communicate(timeout=timeout)
+                    # Use tool-specific timeout or fall back to general timeout
+                    tool_timeout = tool_timeouts.get(tool, timeout)
+                    stdout, stderr = process.communicate(timeout=tool_timeout)
                     if process.returncode == 0:
                         lines = [
                             line.strip() for line in stdout.splitlines() if line.strip()
@@ -1417,7 +1442,8 @@ def subdocli(
                         process.kill()
 
                     process.wait()
-                    raise subprocess.TimeoutExpired(cmd, timeout)
+                    actual_timeout = tool_timeouts.get(tool, timeout) or timeout
+                    raise subprocess.TimeoutExpired(cmd, float(actual_timeout))
 
         except subprocess.TimeoutExpired:
             if verbose:

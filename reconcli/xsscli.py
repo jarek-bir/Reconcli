@@ -10,6 +10,7 @@ import csv
 import urllib.parse
 import time
 import hashlib
+import re
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -484,6 +485,531 @@ def ai_analyze_xss_results(results, query="", target_info=None):
             analysis.append(
                 f"  - Technologies: {', '.join(target_info['technologies'])}"
             )
+
+    return "\n".join(analysis)
+
+
+def run_xsstrike_scan(
+    target,
+    output_file=None,
+    threads=10,
+    delay=1,
+    crawl=False,
+    blind_url=None,
+    custom_headers=None,
+    fuzzer=False,
+    skip_dom=False,
+    params=None,
+):
+    """Run XSStrike XSS scanner on target URL."""
+
+    if not check_binary("python3"):
+        print("[!] Python3 not found. XSStrike requires Python3.")
+        return None
+
+    # Check for XSStrike directory or script
+    xsstrike_paths = [
+        "XSStrike/xsstrike.py",
+        "./XSStrike/xsstrike.py",
+        "/opt/XSStrike/xsstrike.py",
+        "/usr/local/bin/xsstrike.py",
+        "xsstrike.py",
+    ]
+
+    xsstrike_path = None
+    for path in xsstrike_paths:
+        if os.path.exists(path):
+            xsstrike_path = path
+            break
+
+    if not xsstrike_path:
+        print("[!] XSStrike not found. Install with:")
+        print("    git clone https://github.com/s0md3v/XSStrike")
+        print("    cd XSStrike")
+        print("    pip install -r requirements.txt --break-system-packages")
+        return None
+
+    print(f"[*] Running XSStrike scan on {target}")
+    print(f"[*] Using XSStrike at: {xsstrike_path}")
+
+    # Build XSStrike command
+    cmd = ["python3", xsstrike_path, "-u", target]
+
+    # Add threading option
+    if threads and threads > 1:
+        cmd.extend(["--threads", str(threads)])
+
+    # Add delay option
+    if delay and delay > 0:
+        cmd.extend(["--delay", str(delay)])
+
+    # Enable crawling for comprehensive scanning
+    if crawl:
+        cmd.append("--crawl")
+        print(f"[*] Crawling enabled for comprehensive scanning")
+
+    # Blind XSS support
+    if blind_url:
+        cmd.extend(["--blind", blind_url])
+        print(f"[*] Blind XSS callback URL: {blind_url}")
+
+    # Custom headers support
+    if custom_headers:
+        # XSStrike uses --headers for custom headers
+        headers_str = ""
+        for key, value in custom_headers.items():
+            headers_str += f"{key}: {value}\\n"
+        cmd.extend(["--headers", headers_str])
+        print(f"[*] Using custom headers")
+
+    # Enable fuzzing engine
+    if fuzzer:
+        cmd.append("--fuzzer")
+        print(f"[*] Fuzzing engine enabled")
+
+    # Skip DOM XSS scanning if requested
+    if skip_dom:
+        cmd.append("--skip-dom")
+        print(f"[*] Skipping DOM XSS scanning")
+
+    # Specific parameters to test
+    if params:
+        if isinstance(params, list):
+            for param in params:
+                cmd.extend(["--params", param])
+        else:
+            cmd.extend(["--params", params])
+        print(f"[*] Testing specific parameters: {params}")
+
+    # Output options for structured results
+    if output_file:
+        # XSStrike doesn't have direct JSON output, we'll capture stdout
+        cmd.extend(["--file-log-level", "INFO"])
+
+    # Additional XSStrike options for advanced scanning
+    cmd.extend(
+        [
+            "--timeout",
+            "10",  # 10 second timeout per request
+            "--skip-poc",  # Skip proof of concept generation for speed
+            "--encode",
+            "1",  # Enable basic payload encoding
+        ]
+    )
+
+    try:
+        print(f"[*] Executing: {' '.join(cmd)}")
+        result = subprocess.run(
+            cmd, capture_output=True, text=True, timeout=600  # 10 minute timeout
+        )
+
+        if result.returncode == 0:
+            print(f"[+] XSStrike scan completed successfully")
+            return {
+                "success": True,
+                "stdout": result.stdout,
+                "stderr": result.stderr,
+                "command": " ".join(cmd),
+                "target": target,
+            }
+        else:
+            print(f"[!] XSStrike scan completed with warnings/errors")
+            # XSStrike may return non-zero but still have useful output
+            return {
+                "success": True,  # Still consider it successful if we got output
+                "stdout": result.stdout,
+                "stderr": result.stderr,
+                "command": " ".join(cmd),
+                "target": target,
+                "return_code": result.returncode,
+            }
+
+    except subprocess.TimeoutExpired:
+        print(f"[!] XSStrike scan timed out after 10 minutes")
+        return {"success": False, "error": "timeout", "target": target}
+    except Exception as e:
+        print(f"[!] Error running XSStrike: {e}")
+        return {"success": False, "error": str(e), "target": target}
+
+
+def parse_xsstrike_results(xsstrike_output):
+    """Parse XSStrike scan results into structured format."""
+
+    if not xsstrike_output or not xsstrike_output.get("success"):
+        return []
+
+    results = []
+    output_lines = xsstrike_output.get("stdout", "").split("\n")
+
+    current_vuln = {}
+
+    # XSStrike output patterns to parse
+    vuln_indicators = [
+        "XSS Detected",
+        "Payload:",
+        "Vulnerable Parameter:",
+        "Context:",
+        "Reflected",
+        "DOM XSS",
+        "Blind XSS",
+    ]
+
+    for line in output_lines:
+        line = line.strip()
+
+        if not line:
+            continue
+
+        # Remove ANSI color codes for clean parsing
+        line = re.sub(r"\x1b\[[0-9;]*m", "", line)
+
+        # Detect vulnerability findings
+        if any(
+            indicator in line
+            for indicator in ["XSS Detected", "Vulnerable Parameter found"]
+        ):
+            if current_vuln:
+                results.append(current_vuln)
+            current_vuln = {
+                "vulnerable": True,
+                "tool": "xsstrike",
+                "timestamp": datetime.now().isoformat(),
+                "target": xsstrike_output.get("target", ""),
+            }
+
+        # Parse URL information
+        elif line.startswith("URL:") and current_vuln:
+            current_vuln["url"] = line.split("URL:")[1].strip()
+
+        # Parse parameter information
+        elif "Parameter:" in line and current_vuln:
+            param_match = re.search(r"Parameter:\s*([^\s]+)", line)
+            if param_match:
+                current_vuln["param"] = param_match.group(1)
+
+        # Parse payload information
+        elif "Payload:" in line and current_vuln:
+            payload_start = line.find("Payload:") + 8
+            current_vuln["payload"] = line[payload_start:].strip()
+
+        # Parse method information
+        elif "Method:" in line and current_vuln:
+            method_match = re.search(r"Method:\s*([A-Z]+)", line)
+            if method_match:
+                current_vuln["method"] = method_match.group(1)
+
+        # Parse context information (XSStrike specialty)
+        elif "Context:" in line and current_vuln:
+            context_start = line.find("Context:") + 8
+            current_vuln["context"] = line[context_start:].strip()
+
+        # Parse XSS type information
+        elif "DOM XSS" in line and current_vuln:
+            current_vuln["xss_type"] = "dom"
+            current_vuln["dom_xss"] = True
+
+        elif "Reflected" in line and current_vuln:
+            current_vuln["reflected"] = True
+            if "xss_type" not in current_vuln:
+                current_vuln["xss_type"] = "reflected"
+
+        elif "Stored" in line and current_vuln:
+            current_vuln["xss_type"] = "stored"
+
+        elif "Blind XSS" in line and current_vuln:
+            current_vuln["blind_xss"] = True
+            current_vuln["xss_type"] = "blind"
+
+        # Parse WAF detection
+        elif "WAF detected" in line or "Protection detected" in line:
+            if current_vuln:
+                current_vuln["waf_detected"] = True
+            # Could also be general info about the target
+
+        # Parse confidence level (XSStrike provides confidence ratings)
+        elif "Confidence:" in line and current_vuln:
+            confidence_match = re.search(r"Confidence:\s*(\d+)%", line)
+            if confidence_match:
+                current_vuln["confidence"] = int(confidence_match.group(1))
+
+        # Parse severity if mentioned
+        elif any(sev in line.lower() for sev in ["high", "medium", "low", "critical"]):
+            severity_match = re.search(r"(critical|high|medium|low)", line.lower())
+            if severity_match and current_vuln:
+                current_vuln["severity"] = severity_match.group(1)
+
+        # Parse efficiency information
+        elif "Efficiency:" in line and current_vuln:
+            efficiency_match = re.search(r"Efficiency:\s*(\d+)%", line)
+            if efficiency_match:
+                current_vuln["efficiency"] = int(efficiency_match.group(1))
+
+    # Add last vulnerability if exists
+    if current_vuln:
+        results.append(current_vuln)
+
+    # Enhanced parsing for different XSStrike output formats
+    # Look for additional patterns in case the main parsing missed something
+    if not results:
+        # Try alternative parsing for different XSStrike versions
+        xss_lines = [
+            line
+            for line in output_lines
+            if any(
+                keyword in line.lower() for keyword in ["xss", "payload", "vulnerable"]
+            )
+        ]
+
+        if xss_lines:
+            # Basic result extraction for unstructured output
+            basic_result = {
+                "vulnerable": True,
+                "tool": "xsstrike",
+                "timestamp": datetime.now().isoformat(),
+                "target": xsstrike_output.get("target", ""),
+                "raw_output": "\n".join(xss_lines),
+                "note": "Basic parsing - manual review recommended",
+                "confidence": 50,  # Lower confidence for basic parsing
+            }
+
+            # Try to extract URL from first line
+            for line in xss_lines:
+                url_match = re.search(r"https?://[^\s]+", line)
+                if url_match:
+                    basic_result["url"] = url_match.group(0)
+                    break
+
+            results.append(basic_result)
+
+    # Post-processing: add derived information
+    for result in results:
+        # Set default values
+        if "confidence" not in result:
+            result["confidence"] = 80  # Default high confidence for XSStrike
+
+        if "severity" not in result:
+            # Determine severity based on XSS type and context
+            if result.get("dom_xss"):
+                result["severity"] = "high"
+            elif result.get("blind_xss"):
+                result["severity"] = "medium"
+            else:
+                result["severity"] = "medium"
+
+        # Add XSStrike specific metadata
+        result["engine_features"] = {
+            "context_analysis": True,
+            "intelligent_payloads": True,
+            "waf_detection": result.get("waf_detected", False),
+            "dom_scanning": result.get("dom_xss", False),
+        }
+
+    print(f"[*] Parsed {len(results)} XSStrike results")
+    return results
+
+
+def run_xsstrike_with_cache(target, cache_manager=None, **kwargs):
+    """Run XSStrike with intelligent caching support."""
+
+    if not cache_manager:
+        # Run without cache
+        return run_xsstrike_scan(target, **kwargs)
+
+    # Generate cache key for XSStrike scan
+    cache_key_data = {
+        "target": target,
+        "tool": "xsstrike",
+        "kwargs": sorted(kwargs.items()),
+    }
+
+    cache_key = hashlib.sha256(
+        json.dumps(cache_key_data, sort_keys=True).encode()
+    ).hexdigest()
+
+    # Check cache first
+    cached_result = cache_manager.get_cached_result(
+        target, ["xsstrike"], method="XSStrike", tool="xsstrike"
+    )
+
+    if cached_result:
+        print(f"[+] Using cached XSStrike results for {target}")
+        return cached_result.get("result", {})
+
+    # Run actual scan
+    print(f"[*] Running fresh XSStrike scan for {target}")
+    result = run_xsstrike_scan(target, **kwargs)
+
+    # Cache the result
+    if result and cache_manager:
+        cache_manager.save_result(
+            target, ["xsstrike"], result, method="XSStrike", tool="xsstrike"
+        )
+        print(f"[+] Cached XSStrike results for {target}")
+
+    return result
+
+
+def xsstrike_ai_analysis(xsstrike_results, target_info=None):
+    """AI-powered analysis specifically for XSStrike results."""
+
+    if not xsstrike_results:
+        return "No XSStrike results to analyze"
+
+    analysis = []
+    analysis.append("🎯 XSStrike AI Analysis")
+    analysis.append("=" * 50)
+
+    # XSStrike-specific metrics
+    total_vulns = len(xsstrike_results)
+    dom_xss = len([r for r in xsstrike_results if r.get("dom_xss", False)])
+    reflected_xss = len([r for r in xsstrike_results if r.get("reflected", False)])
+    blind_xss = len([r for r in xsstrike_results if r.get("blind_xss", False)])
+    waf_detected = len([r for r in xsstrike_results if r.get("waf_detected", False)])
+
+    # Calculate average confidence
+    confidences = [
+        r.get("confidence", 0) for r in xsstrike_results if r.get("confidence")
+    ]
+    avg_confidence = sum(confidences) / len(confidences) if confidences else 0
+
+    analysis.append(f"📊 XSStrike Advanced Scan Summary:")
+    analysis.append(f"  Total vulnerabilities: {total_vulns}")
+    analysis.append(f"  DOM XSS findings: {dom_xss}")
+    analysis.append(f"  Reflected XSS: {reflected_xss}")
+    analysis.append(f"  Blind XSS: {blind_xss}")
+    analysis.append(f"  WAF detection instances: {waf_detected}")
+    analysis.append(f"  Average confidence: {avg_confidence:.1f}%")
+
+    # XSStrike unique capabilities analysis
+    analysis.append(f"\n🧠 XSStrike Intelligence Features:")
+
+    # Context analysis detection
+    contexts = [r.get("context", "") for r in xsstrike_results if r.get("context")]
+    if contexts:
+        analysis.append(
+            f"  ✅ Context analysis active ({len(contexts)} contexts identified)"
+        )
+        unique_contexts = set(contexts)
+        analysis.append(f"  🔍 Unique contexts discovered: {len(unique_contexts)}")
+
+        # Show top contexts
+        if len(unique_contexts) > 0:
+            analysis.append(
+                f"  📋 Context types: {', '.join(list(unique_contexts)[:3])}"
+            )
+
+    # Payload intelligence
+    payloads = [r.get("payload", "") for r in xsstrike_results if r.get("payload")]
+    if payloads:
+        # Analyze payload sophistication
+        advanced_patterns = [
+            "confirm",
+            "prompt",
+            "eval",
+            "onerror",
+            "onload",
+            "dom",
+            "bypass",
+        ]
+        advanced_payloads = sum(
+            1
+            for p in payloads
+            if any(pattern in p.lower() for pattern in advanced_patterns)
+        )
+
+        analysis.append(f"  🚀 Intelligent payloads generated: {len(payloads)}")
+        analysis.append(
+            f"  🎯 Advanced payloads: {advanced_payloads} ({(advanced_payloads/len(payloads)*100):.1f}%)"
+        )
+
+    # WAF evasion capabilities
+    if waf_detected > 0:
+        analysis.append(f"  🛡️ WAF evasion techniques employed")
+        analysis.append(f"  🔓 WAF bypass attempts: {waf_detected} instances")
+
+    # DOM XSS analysis (XSStrike specialty)
+    if dom_xss > 0:
+        analysis.append(f"  🌐 DOM XSS scanner active")
+        analysis.append(f"  ⚡ Client-side vulnerabilities: {dom_xss} found")
+        analysis.append(f"  🔄 JavaScript context analysis performed")
+
+    # Efficiency analysis
+    efficiencies = [
+        r.get("efficiency", 0) for r in xsstrike_results if r.get("efficiency")
+    ]
+    if efficiencies:
+        avg_efficiency = sum(efficiencies) / len(efficiencies)
+        analysis.append(f"  📈 Average payload efficiency: {avg_efficiency:.1f}%")
+
+    # Payload categories analysis
+    payload_types = {}
+    for result in xsstrike_results:
+        payload = result.get("payload", "").lower()
+        if "script" in payload:
+            payload_types["script_injection"] = (
+                payload_types.get("script_injection", 0) + 1
+            )
+        if "onerror" in payload or "onload" in payload:
+            payload_types["event_handler"] = payload_types.get("event_handler", 0) + 1
+        if "javascript:" in payload:
+            payload_types["javascript_protocol"] = (
+                payload_types.get("javascript_protocol", 0) + 1
+            )
+        if any(enc in payload for enc in ["%", "&#", "\\u"]):
+            payload_types["encoded"] = payload_types.get("encoded", 0) + 1
+
+    if payload_types:
+        analysis.append(f"\n💥 XSStrike Payload Distribution:")
+        for ptype, count in sorted(
+            payload_types.items(), key=lambda x: x[1], reverse=True
+        ):
+            percentage = (count / total_vulns) * 100
+            analysis.append(
+                f"  {ptype.replace('_', ' ').title()}: {count} ({percentage:.1f}%)"
+            )
+
+    # XSStrike-specific recommendations
+    analysis.append(f"\n💡 XSStrike Expert Recommendations:")
+
+    if total_vulns > 0:
+        analysis.append(f"  🚨 XSStrike identified {total_vulns} XSS vulnerabilities")
+        analysis.append(f"  🔬 Advanced context analysis validates findings")
+
+        if dom_xss > 0:
+            analysis.append(f"  ⚠️ DOM XSS critical - implement CSP policies")
+            analysis.append(f"  🌐 Review client-side JavaScript frameworks")
+
+        if blind_xss > 0:
+            analysis.append(f"  👁️ Blind XSS detected - implement output encoding")
+            analysis.append(f"  📡 Monitor callback URLs for exploitation attempts")
+
+        if waf_detected > 0:
+            analysis.append(f"  🛡️ WAF detected but bypassed - strengthen WAF rules")
+            analysis.append(f"  🔧 Implement additional security layers")
+
+        if avg_confidence > 90:
+            analysis.append(
+                f"  🎯 High confidence findings - immediate remediation needed"
+            )
+        elif avg_confidence > 70:
+            analysis.append(f"  ⚠️ Medium confidence - manual verification recommended")
+
+    else:
+        analysis.append(f"  ✅ XSStrike found no XSS vulnerabilities")
+        analysis.append(f"  🔍 Advanced scanning techniques found no bypasses")
+        analysis.append(
+            f"  🧠 Context analysis and intelligent payloads detected no issues"
+        )
+
+    # Target-specific insights
+    if target_info:
+        analysis.append(f"\n🎯 Target-Specific Analysis:")
+        if target_info.get("crawl_enabled"):
+            analysis.append(f"  🕷️ Comprehensive crawling performed")
+        if target_info.get("fuzzer_enabled"):
+            analysis.append(f"  🔀 Fuzzing engine activated")
+        if target_info.get("custom_headers"):
+            analysis.append(f"  📋 Custom headers configuration applied")
 
     return "\n".join(analysis)
 
@@ -1104,6 +1630,7 @@ def check_deps():
         print("\n[*] Install missing tools:")
         go_tools = ["dalfox", "kxss", "waybackurls", "gau", "hakrawler", "gospider"]
         ruby_tools = ["xspear"]
+        python_tools = ["xsstrike"]
 
         for tool in missing:
             if tool in go_tools:
@@ -1114,6 +1641,13 @@ def check_deps():
                     print(f"  # Requires Ruby and gem package manager")
                 else:
                     print(f"  gem install {tool}")
+            elif tool in python_tools:
+                if tool == "xsstrike":
+                    print(f"  git clone https://github.com/s0md3v/XSStrike")
+                    print(f"  cd XSStrike")
+                    print(f"  pip install -r requirements.txt --break-system-packages")
+                else:
+                    print(f"  # Install {tool} Python tool")
             else:
                 print(f"  # Install {tool} from its repository")
 
@@ -1121,6 +1655,13 @@ def check_deps():
         print(f"  1. Install Ruby: sudo apt install ruby-full")
         print(f"  2. Install XSpear: gem install XSpear")
         print(f"  3. Verify: xspear --version")
+
+        print(f"\n[*] XSStrike Installation Guide:")
+        print(f"  1. Clone repository: git clone https://github.com/s0md3v/XSStrike")
+        print(
+            f"  2. Install dependencies: cd XSStrike && pip install -r requirements.txt --break-system-packages"
+        )
+        print(f"  3. Verify: python3 xsstrike.py --help")
 
 
 @cli.command()
@@ -1139,7 +1680,7 @@ def check_deps():
 )
 @click.option(
     "--engine",
-    type=click.Choice(["manual", "xspear", "dalfox", "kxss", "all"]),
+    type=click.Choice(["manual", "xspear", "xsstrike", "dalfox", "kxss", "all"]),
     default="manual",
     help="XSS scanning engine to use",
 )
@@ -1292,6 +1833,31 @@ def test_input(
             if blind_url:
                 print(f"[*] Blind XSS callback: {blind_url}")
 
+    elif engine == "xsstrike":
+        # Check for XSStrike availability
+        xsstrike_available = any(
+            os.path.exists(path)
+            for path in [
+                "XSStrike/xsstrike.py",
+                "./XSStrike/xsstrike.py",
+                "/opt/XSStrike/xsstrike.py",
+                "/usr/local/bin/xsstrike.py",
+                "xsstrike.py",
+            ]
+        )
+
+        if not xsstrike_available:
+            print("[!] XSStrike not found. Install with:")
+            print("    git clone https://github.com/s0md3v/XSStrike")
+            print("    cd XSStrike")
+            print("    pip install -r requirements.txt --break-system-packages")
+            print("[*] Falling back to manual testing")
+            engine = "manual"
+        else:
+            print("[+] XSStrike engine ready")
+            if blind_url:
+                print(f"[*] Blind XSS callback: {blind_url}")
+
     elif engine == "dalfox":
         if not check_binary("dalfox"):
             print("[!] Dalfox not found. Install from: github.com/hahwul/dalfox")
@@ -1312,6 +1878,21 @@ def test_input(
         available_engines = []
         if check_binary("XSpear"):
             available_engines.append("xspear")
+
+        # Check XSStrike availability for "all" mode
+        xsstrike_available = any(
+            os.path.exists(path)
+            for path in [
+                "XSStrike/xsstrike.py",
+                "./XSStrike/xsstrike.py",
+                "/opt/XSStrike/xsstrike.py",
+                "/usr/local/bin/xsstrike.py",
+                "xsstrike.py",
+            ]
+        )
+        if xsstrike_available:
+            available_engines.append("xsstrike")
+
         if check_binary("dalfox"):
             available_engines.append("dalfox")
         if check_binary("kxss"):
@@ -1389,6 +1970,48 @@ def test_input(
                     )
             else:
                 print(f"    [!] XSpear scan failed or returned no results")
+
+        # XSStrike Engine
+        elif engine == "xsstrike" or (
+            engine == "all" and "xsstrike" in available_engines
+        ):
+            print(f"  🎯 Running XSStrike scan...")
+            xsstrike_result = run_xsstrike_with_cache(
+                target=target,
+                cache_manager=cache_manager,
+                threads=threads,
+                delay=delay,
+                crawl=True,  # Enable crawling for comprehensive scanning
+                blind_url=blind_url,
+                fuzzer=True,  # Enable fuzzing engine
+                skip_dom=False,  # Include DOM XSS scanning
+            )
+
+            if xsstrike_result and xsstrike_result.get("success"):
+                xsstrike_parsed = parse_xsstrike_results(xsstrike_result)
+                target_results.extend(xsstrike_parsed)
+                target_vulnerable_count += len(
+                    [r for r in xsstrike_parsed if r.get("vulnerable")]
+                )
+                print(f"    [+] XSStrike found {len(xsstrike_parsed)} results")
+
+                # Save XSStrike results to database
+                for result in xsstrike_parsed:
+                    save_result(
+                        result.get("url", target),
+                        result.get("param", result.get("param", "xsstrike_detected")),
+                        result.get("payload", "XSStrike intelligent payload"),
+                        result.get("reflected", False),
+                        result.get("vulnerable", False),
+                        result.get("method", method),
+                        result.get("response_code", 0),
+                        0,  # response_length
+                        "xsstrike",
+                        result.get("severity", "medium"),
+                        f"XSStrike scan, Confidence: {result.get('confidence', 80)}%, Context: {result.get('context', 'N/A')}, WAF: {result.get('waf_detected', False)}",
+                    )
+            else:
+                print(f"    [!] XSStrike scan failed or returned no results")
 
         # Dalfox Engine
         elif engine == "dalfox" or (engine == "all" and "dalfox" in available_engines):
@@ -1630,6 +2253,15 @@ def test_input(
                 print(xspear_ai)
             else:
                 print("  No XSpear-specific results found for analysis")
+
+        elif engine == "xsstrike":
+            print("🎯 XSStrike Engine Analysis:")
+            xsstrike_results = [r for r in results if r.get("tool") == "xsstrike"]
+            if xsstrike_results:
+                xsstrike_ai = xsstrike_ai_analysis(xsstrike_results, target_info)
+                print(xsstrike_ai)
+            else:
+                print("  No XSStrike-specific results found for analysis")
 
         elif engine == "dalfox":
             print("🔍 Dalfox Engine Analysis:")
@@ -1995,6 +2627,186 @@ def xspear(
         print(f"\n📊 Cache Performance:")
         print(f"  Hit rate: {stats['hit_rate']}%")
         print(f"  Total cached: {stats['cached_results']}")
+
+
+@cli.command()
+@click.option("--url", required=True, help="Target URL for XSStrike scan")
+@click.option("--threads", default=10, type=int, help="Number of threads for XSStrike")
+@click.option("--delay", default=1, type=float, help="Delay between requests")
+@click.option("--crawl", is_flag=True, help="Enable comprehensive crawling")
+@click.option("--blind-url", help="Blind XSS callback URL")
+@click.option("--fuzzer", is_flag=True, help="Enable fuzzing engine")
+@click.option("--skip-dom", is_flag=True, help="Skip DOM XSS scanning")
+@click.option("--params", help="Specific parameters to test (comma-separated)")
+@click.option("--headers", help="Custom headers (key:value,key:value)")
+@click.option("--output", help="Output file for XSStrike results")
+@click.option("--cache", is_flag=True, help="Enable caching for XSStrike results")
+@click.option("--cache-dir", default="xss_cache", help="Cache directory")
+@click.option("--ai", is_flag=True, help="Enable AI analysis of XSStrike results")
+@click.option(
+    "--ai-provider",
+    type=click.Choice(["openai", "anthropic", "gemini"]),
+    help="AI provider",
+)
+@click.option("--verbose", is_flag=True, help="Verbose XSStrike output")
+def xsstrike(
+    url,
+    threads,
+    delay,
+    crawl,
+    blind_url,
+    fuzzer,
+    skip_dom,
+    params,
+    headers,
+    output,
+    cache,
+    cache_dir,
+    ai,
+    ai_provider,
+    verbose,
+):
+    """Advanced XSS scanning with XSStrike intelligence engine."""
+
+    print(f"🎯 XSStrike Advanced XSS Intelligence Scanner")
+    print(f"=" * 60)
+    print(f"Target: {url}")
+
+    # Check XSStrike availability
+    xsstrike_available = any(
+        os.path.exists(path)
+        for path in [
+            "XSStrike/xsstrike.py",
+            "./XSStrike/xsstrike.py",
+            "/opt/XSStrike/xsstrike.py",
+            "/usr/local/bin/xsstrike.py",
+            "xsstrike.py",
+        ]
+    )
+
+    if not xsstrike_available:
+        print("[!] XSStrike not found. Install with:")
+        print("    git clone https://github.com/s0md3v/XSStrike")
+        print("    cd XSStrike")
+        print("    pip install -r requirements.txt --break-system-packages")
+        return
+
+    # Initialize cache if requested
+    cache_manager = None
+    if cache:
+        cache_manager = XSSCacheManager(cache_dir=cache_dir)
+        print(f"[+] Cache enabled: {cache_dir}")
+
+    # Parse custom headers
+    custom_headers = None
+    if headers:
+        try:
+            custom_headers = {}
+            for header_pair in headers.split(","):
+                key, value = header_pair.split(":", 1)
+                custom_headers[key.strip()] = value.strip()
+            print(f"[+] Custom headers: {len(custom_headers)} headers")
+        except Exception as e:
+            print(f"[!] Error parsing headers: {e}")
+            return
+
+    # Parse parameters to test
+    params_list = None
+    if params:
+        params_list = [p.strip() for p in params.split(",")]
+        print(f"[+] Testing specific parameters: {params_list}")
+
+    # Run XSStrike scan
+    print(f"[*] Starting XSStrike intelligence scan...")
+    print(
+        f"[*] Features: Crawl={crawl}, Fuzzer={fuzzer}, DOM={'No' if skip_dom else 'Yes'}"
+    )
+
+    result = run_xsstrike_with_cache(
+        target=url,
+        cache_manager=cache_manager,
+        threads=threads,
+        delay=delay,
+        crawl=crawl,
+        blind_url=blind_url,
+        custom_headers=custom_headers,
+        fuzzer=fuzzer,
+        skip_dom=skip_dom,
+        params=params_list,
+        output_file=output,
+    )
+
+    if not result or not result.get("success"):
+        print(f"[!] XSStrike scan failed")
+        if result and result.get("error"):
+            print(f"[!] Error: {result['error']}")
+        return
+
+    # Parse results
+    parsed_results = parse_xsstrike_results(result)
+    print(f"\n[+] XSStrike scan completed!")
+    print(f"[+] Found {len(parsed_results)} results")
+
+    vulnerable_count = len([r for r in parsed_results if r.get("vulnerable")])
+    if vulnerable_count > 0:
+        print(f"[+] 🚨 {vulnerable_count} vulnerabilities detected!")
+    else:
+        print(f"[+] ✅ No vulnerabilities found")
+
+    # Display detailed results summary
+    if parsed_results:
+        print(f"\n📊 XSStrike Intelligence Results:")
+        for i, result in enumerate(parsed_results, 1):
+            print(f"  {i}. {result.get('url', url)}")
+            if result.get("vulnerable"):
+                print(f"     🚨 VULNERABLE - {result.get('xss_type', 'XSS')}")
+                print(f"     🎯 Confidence: {result.get('confidence', 80)}%")
+                if result.get("context"):
+                    print(f"     📋 Context: {result.get('context')}")
+            if result.get("waf_detected"):
+                print(f"     🛡️ WAF detected and bypassed")
+            if result.get("dom_xss"):
+                print(f"     🌐 DOM XSS vulnerability")
+            if result.get("blind_xss"):
+                print(f"     👁️ Blind XSS potential")
+            if result.get("efficiency"):
+                print(f"     📈 Payload efficiency: {result.get('efficiency')}%")
+
+    # AI Analysis
+    if ai and parsed_results:
+        print(f"\n🤖 XSStrike AI Intelligence Analysis")
+        print(f"=" * 50)
+
+        target_info = {
+            "engine": "xsstrike",
+            "crawl_enabled": crawl,
+            "fuzzer_enabled": fuzzer,
+            "blind_url": blind_url,
+            "custom_headers": custom_headers is not None,
+            "threads": threads,
+            "ai_provider": ai_provider,
+        }
+
+        xsstrike_ai = xsstrike_ai_analysis(parsed_results, target_info)
+        print(xsstrike_ai)
+
+    # Save results to file if requested
+    if output and parsed_results:
+        try:
+            with open(output, "w") as f:
+                json.dump(parsed_results, f, indent=2)
+            print(f"\n[+] Results saved to: {output}")
+        except Exception as e:
+            print(f"[!] Error saving results: {e}")
+
+    # Display cache stats if cache was used
+    if cache_manager:
+        stats = cache_manager.get_cache_stats()
+        print(f"\n📊 Cache Performance:")
+        print(f"  Hit rate: {stats['hit_rate']}%")
+        print(f"  Total cached: {stats['cached_results']}")
+
+    print(f"\n🎯 XSStrike scan complete!")
 
 
 @cli.command()

@@ -835,7 +835,7 @@ class ToolChainManager:
         try:
             # subprocess.run with validated arguments - safe from injection
             result = subprocess.run(
-                cmd, capture_output=True, text=True, timeout=600
+                cmd, capture_output=True, text=True, timeout=1200
             )  # nosec B603
             if result.returncode == 0:
                 console.print(
