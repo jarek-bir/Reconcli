@@ -1,15 +1,18 @@
 #!/usr/bin/env python3
 import concurrent.futures
+import csv
 import hashlib
 import json
 import os
 import re
 import socket
+import ssl
 import subprocess
 import time
+import urllib.parse
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Set
 
 import click
 import requests
@@ -261,6 +264,263 @@ def validate_domain(domain):
     if not re.match(r"^[a-zA-Z0-9.-]+$", domain):
         raise ValueError(f"Invalid domain format: {domain}")
     return domain
+
+
+def parse_csp_header(
+    csp_header: str, target_domain: str, filter_cloudfront: bool = True
+) -> Set[str]:
+    """Parse Content-Security-Policy header and extract domains/subdomains.
+
+    Args:
+        csp_header: The CSP header value
+        target_domain: The main target domain to filter for relevant subdomains
+        filter_cloudfront: Whether to filter out *.cloudfront.net domains
+
+    Returns:
+        Set of discovered domains/subdomains
+    """
+    if not csp_header:
+        return set()
+
+    domains = set()
+
+    # CSP directives that may contain domains
+    domain_directives = [
+        "default-src",
+        "script-src",
+        "style-src",
+        "img-src",
+        "connect-src",
+        "font-src",
+        "object-src",
+        "media-src",
+        "frame-src",
+        "child-src",
+        "worker-src",
+        "manifest-src",
+        "form-action",
+        "frame-ancestors",
+        "base-uri",
+        "plugin-types",
+    ]
+
+    # Split CSP by semicolons to get individual directives
+    directives = [d.strip() for d in csp_header.split(";") if d.strip()]
+
+    for directive in directives:
+        parts = directive.split()
+        if len(parts) < 2:
+            continue
+
+        directive_name = parts[0].lower()
+        if directive_name not in domain_directives:
+            continue
+
+        # Process each value in the directive
+        for value in parts[1:]:
+            # Skip CSP keywords
+            if value.lower() in [
+                "'self'",
+                "'unsafe-inline'",
+                "'unsafe-eval'",
+                "'strict-dynamic'",
+                "'nonce-*'",
+                "'sha256-*'",
+                "'sha384-*'",
+                "'sha512-*'",
+                "'none'",
+                "data:",
+                "blob:",
+                "filesystem:",
+                "about:",
+                "javascript:",
+            ]:
+                continue
+
+            # Remove quotes and protocols
+            value = value.strip("'\"")
+            if value.startswith(("http://", "https://", "ws://", "wss://")):
+                parsed = urllib.parse.urlparse(value)
+                domain = parsed.netloc
+            elif value.startswith("//"):
+                domain = value[2:]
+            else:
+                domain = value
+
+            # Remove port numbers
+            if ":" in domain and not domain.startswith("["):  # Not IPv6
+                domain = domain.split(":")[0]
+
+            # Basic domain validation
+            if not domain or domain in ["*", "localhost"]:
+                continue
+
+            # Filter out non-domain values (like 'unsafe-inline', data URLs, etc.)
+            if not re.match(r"^[a-zA-Z0-9.-]+$", domain):
+                continue
+
+            # Apply cloudfront filter
+            if filter_cloudfront and domain.endswith(".cloudfront.net"):
+                continue
+
+            # Add wildcard subdomains without the asterisk
+            if domain.startswith("*."):
+                domain = domain[2:]
+
+            # Only add domains that are relevant to our target or are subdomains
+            if (
+                domain.endswith("." + target_domain)
+                or domain == target_domain
+                or target_domain.endswith("." + domain)
+            ):
+                domains.add(domain)
+            else:
+                # Also collect external domains that might be interesting
+                # (but we'll mark them separately)
+                domains.add(domain)
+
+    return domains
+
+
+def fetch_csp_from_url(
+    url: str, timeout: int = 10, ignore_ssl_errors: bool = False
+) -> str:
+    """Fetch CSP header from a URL.
+
+    Args:
+        url: URL to fetch CSP from
+        timeout: Request timeout
+        ignore_ssl_errors: Whether to ignore SSL certificate errors
+
+    Returns:
+        CSP header value or empty string if not found
+    """
+    try:
+        response = requests.get(
+            url,
+            timeout=timeout,
+            verify=not ignore_ssl_errors,
+            allow_redirects=True,
+            headers={
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+            },
+        )
+
+        # Check for CSP headers (multiple possible header names)
+        csp_headers = [
+            "Content-Security-Policy",
+            "Content-Security-Policy-Report-Only",
+            "X-Content-Security-Policy",
+            "X-WebKit-CSP",
+        ]
+
+        for header_name in csp_headers:
+            if header_name in response.headers:
+                return response.headers[header_name]
+
+    except (requests.RequestException, Exception):
+        pass
+
+    return ""
+
+
+def enumerate_subdomains_from_csp(
+    targets: List[str],
+    target_domain: str,
+    timeout: int = 10,
+    threads: int = 50,
+    verbose: bool = False,
+    ignore_ssl_errors: bool = False,
+    filter_cloudfront: bool = True,
+) -> Dict[str, Set[str]]:
+    """Enumerate subdomains from CSP headers of target URLs.
+
+    Args:
+        targets: List of URLs/subdomains to check for CSP headers
+        target_domain: Main target domain for filtering
+        timeout: Request timeout
+        threads: Number of concurrent threads
+        verbose: Enable verbose output
+        ignore_ssl_errors: Ignore SSL certificate errors
+        filter_cloudfront: Filter out cloudfront domains
+
+    Returns:
+        Dictionary mapping URLs to discovered domains from their CSP
+    """
+    if verbose:
+        click.echo(f"[+] 🔍 Analyzing CSP headers from {len(targets)} targets...")
+
+    def check_single_target(target: str) -> Dict[str, Set[str]]:
+        result = {}
+
+        # Ensure target has protocol
+        if not target.startswith(("http://", "https://")):
+            urls_to_check = [f"https://{target}", f"http://{target}"]
+        else:
+            urls_to_check = [target]
+
+        for url in urls_to_check:
+            try:
+                csp_header = fetch_csp_from_url(url, timeout, ignore_ssl_errors)
+                if csp_header:
+                    domains = parse_csp_header(
+                        csp_header, target_domain, filter_cloudfront
+                    )
+                    if domains:
+                        result[url] = domains
+                        if verbose:
+                            click.echo(
+                                f"[+] 📋 Found CSP at {url}: {len(domains)} domains"
+                            )
+                        break  # Found CSP, no need to check other protocol
+            except Exception as e:
+                if verbose:
+                    click.echo(f"[!] ❌ Error checking {url}: {str(e)}")
+
+        return result
+
+    all_results = {}
+
+    # Use ThreadPoolExecutor for concurrent CSP checking
+    with concurrent.futures.ThreadPoolExecutor(max_workers=threads) as executor:
+        future_to_target = {
+            executor.submit(check_single_target, target): target for target in targets
+        }
+
+        for future in concurrent.futures.as_completed(future_to_target):
+            target = future_to_target[future]
+            try:
+                result = future.result()
+                if result:
+                    all_results.update(result)
+            except Exception as e:
+                if verbose:
+                    click.echo(f"[!] ❌ Error processing {target}: {str(e)}")
+
+    return all_results
+
+
+def extract_subdomains_from_csp_results(
+    csp_results: Dict[str, Set[str]], target_domain: str
+) -> Set[str]:
+    """Extract unique subdomains from CSP analysis results.
+
+    Args:
+        csp_results: Results from enumerate_subdomains_from_csp
+        target_domain: Target domain to filter for relevant subdomains
+
+    Returns:
+        Set of unique subdomains discovered from CSP headers
+    """
+    all_subdomains = set()
+
+    for url, domains in csp_results.items():
+        for domain in domains:
+            # Only include subdomains of our target domain
+            if domain.endswith("." + target_domain) or domain == target_domain:
+                all_subdomains.add(domain)
+
+    return all_subdomains
 
 
 def parse_bbot_output(bbot_output_dir, domain, verbose=False):
@@ -934,7 +1194,7 @@ class SubdomainCacheManager:
 )
 @click.option(
     "--tools",
-    help="Comma-separated list of specific tools to run (e.g., 'amass,subfinder,crtsh'). Available tools: subfinder, findomain, assetfinder, chaos, amass, sublist3r, github-subdomains, wayback, otx, hackertarget, rapiddns, certspotter, crtsh_alternative",
+    help="Comma-separated list of specific tools to run (e.g., 'amass,subfinder,csp_analyzer'). Available tools: subfinder, findomain, assetfinder, chaos, amass, sublist3r, github-subdomains, wayback, otx, hackertarget, rapiddns, certspotter, crtsh_alternative, csp_analyzer",
 )
 @click.option("--markdown", is_flag=True, help="Generate Markdown report")
 @click.option("--resolve", is_flag=True, help="Resolve subdomains to IP addresses")
@@ -993,6 +1253,21 @@ class SubdomainCacheManager:
     type=click.Choice(["csv", "json", "txt"], case_sensitive=False),
     help="Export results to CSV, JSON, or TXT format for analysis and reporting",
 )
+@click.option(
+    "--csp-analysis",
+    is_flag=True,
+    help="Enable Content-Security-Policy header analysis for subdomain discovery",
+)
+@click.option(
+    "--csp-targets-file",
+    help="File containing list of URLs/subdomains to analyze for CSP headers (one per line)",
+)
+@click.option(
+    "--csp-filter-cloudfront",
+    is_flag=True,
+    default=True,
+    help="Filter out *.cloudfront.net domains from CSP analysis results",
+)
 def subdocli(
     cache,
     cache_dir,
@@ -1023,20 +1298,32 @@ def subdocli(
     bbot,
     bbot_intensive,
     export,
+    csp_analysis,
+    csp_targets_file,
+    csp_filter_cloudfront,
 ):
     """Enhanced subdomain enumeration using multiple tools with resolution and HTTP probing.
 
     🔧 AVAILABLE TOOLS:
     • Traditional Passive: subfinder, findomain, assetfinder, chaos, amass, sublist3r, github-subdomains
     • API-Based: wayback, otx, hackertarget, rapiddns, certspotter, crtsh_alternative
+    • CSP Analysis: Content-Security-Policy header parsing for subdomain discovery
     • Active Tools: gobuster, ffuf, dnsrecon (use --active or --all-tools)
     • BBOT Integration: 53+ modules for superior discovery (use --bbot)
 
     📝 USAGE EXAMPLES:
     • Single tool: --tools amass
     • Multiple tools: --tools "amass,subfinder,github-subdomains,crtsh_alternative"
+    • With CSP analysis: --tools "subfinder,csp_analyzer" --csp-analysis
     • All passive: --passive-only
     • All tools: --all-tools
+
+    📋 CSP ANALYSIS FEATURES:
+    • Parse Content-Security-Policy headers from websites
+    • Extract domains from script-src, frame-src, connect-src, and other CSP directives
+    • Filter out common CDN domains (*.cloudfront.net) with --csp-filter-cloudfront
+    • Analyze existing subdomains or provide custom target list with --csp-targets-file
+    • Discover internal subdomains and third-party integrations
 
     Now featuring BBOT (Bighuge BLS OSINT Tool) integration for superior subdomain discovery:
 
@@ -1047,19 +1334,20 @@ def subdocli(
     • Intelligent mutations and target-specific wordlists
     • Cloud resource enumeration and GitHub code search
 
-    �️ Traditional Tools Control:
+    ⚙️ Traditional Tools Control:
     • --passive-only: Use only traditional passive tools (subfinder, findomain, amass, github-subdomains, etc.)
     • --active-only: Use only traditional active tools (gobuster, ffuf, dnsrecon)
     • --bbot: Add BBOT integration with traditional tools
     • --all-tools: Use everything (traditional + BBOT + active)
 
-    �📊 Export Options:
+    📊 Export Options:
     • CSV format for spreadsheet analysis and data processing
     • JSON format for programmatic analysis and API integration
     • TXT format for readable reports and simple text processing
 
     Use --bbot for standard BBOT enumeration or --bbot-intensive for maximum coverage.
     Use --export csv|json|txt for structured data export.
+    Use --csp-analysis to discover subdomains from Content-Security-Policy headers.
 
     🔑 GitHub Token Configuration (for github-subdomains):
     • Set GITHUB_TOKEN environment variable: export GITHUB_TOKEN="your_token_here"
@@ -1132,6 +1420,8 @@ def subdocli(
                 "active_only": active_only,
                 "bbot": bbot,
                 "bbot_intensive": bbot_intensive,
+                "csp_analysis": csp_analysis,
+                "csp_filter_cloudfront": csp_filter_cloudfront,
             },
         )
 
@@ -1228,6 +1518,7 @@ def subdocli(
         "rapiddns": f"timeout {int(90 * 1.2)}s curl -s 'https://rapiddns.io/subdomain/{domain}?full=1' | grep -oE '[a-zA-Z0-9.-]+\\.{domain}' | sort -u",
         "certspotter": f"timeout {int(90 * 1.2)}s curl -s 'https://api.certspotter.com/v1/issuances?domain={domain}&include_subdomains=true&expand=dns_names' | jq -r '.[].dns_names[]' 2>/dev/null | grep -E '^[a-zA-Z0-9.-]+\\.{domain}$' | sort -u",
         "crtsh_alternative": f"timeout {int(180 * 1.2)}s curl -s 'https://crt.sh/?q=%25.{domain}&output=json' | jq -r '.[].name_value' 2>/dev/null | sed 's/\\*\\.//g' | sort -u | grep -o '\\w.*{domain}' | grep -v '@' || echo ''",
+        "csp_analyzer": "CSP_ANALYSIS_TOOL",  # Special marker for CSP analysis
     }
 
     # BBOT tools - separate for conditional inclusion
@@ -1335,6 +1626,12 @@ def subdocli(
             if verbose:
                 click.echo("[+] 🔥 Active enumeration enabled")
 
+    # Auto-enable CSP analysis if csp_analyzer tool is selected
+    if "csp_analyzer" in tools and not csp_analysis:
+        csp_analysis = True
+        if verbose:
+            click.echo("[+] 📋 Auto-enabled CSP analysis (csp_analyzer tool selected)")
+
     current_scan = resume_state[scan_key]
     completed_tools = set(current_scan.get("tools_completed", []))
     all_subs = set()
@@ -1401,6 +1698,74 @@ def subdocli(
                 lines = run_bbot_enumeration(
                     domain, outpath, tool, cmd, timeout, verbose
                 )
+            # Special handling for CSP analysis
+            elif tool == "csp_analyzer":
+                if csp_analysis:
+                    if verbose:
+                        click.echo("[+] 📋 Starting CSP header analysis...")
+
+                    # Determine targets for CSP analysis
+                    csp_targets = []
+
+                    if csp_targets_file and os.path.exists(csp_targets_file):
+                        # Load targets from file
+                        with open(csp_targets_file, "r") as f:
+                            csp_targets = [line.strip() for line in f if line.strip()]
+                        if verbose:
+                            click.echo(
+                                f"[+] 📂 Loaded {len(csp_targets)} targets from {csp_targets_file}"
+                            )
+                    else:
+                        # Use already discovered subdomains as targets
+                        csp_targets = list(all_subs) if all_subs else [domain]
+                        if verbose:
+                            click.echo(
+                                f"[+] 🎯 Using {len(csp_targets)} discovered subdomains as CSP targets"
+                            )
+
+                    if csp_targets:
+                        # Run CSP analysis
+                        csp_results = enumerate_subdomains_from_csp(
+                            csp_targets,
+                            domain,
+                            timeout,
+                            threads,
+                            verbose,
+                            ignore_ssl_errors,
+                            csp_filter_cloudfront,
+                        )
+
+                        # Extract subdomains from CSP results
+                        csp_subdomains = extract_subdomains_from_csp_results(
+                            csp_results, domain
+                        )
+                        lines = list(csp_subdomains)
+
+                        # Save detailed CSP analysis results
+                        csp_report_path = os.path.join(outpath, "csp_analysis.json")
+                        with open(csp_report_path, "w") as f:
+                            csp_export = {}
+                            for url, domains in csp_results.items():
+                                csp_export[url] = list(domains)
+                            json.dump(csp_export, f, indent=2)
+
+                        if verbose:
+                            click.echo(
+                                f"[+] 📋 CSP analysis found {len(lines)} subdomains"
+                            )
+                            click.echo(
+                                f"[+] 📄 Detailed CSP results saved to: {csp_report_path}"
+                            )
+                    else:
+                        lines = []
+                        if verbose:
+                            click.echo("[!] ⚠️  No targets available for CSP analysis")
+                else:
+                    lines = []
+                    if verbose:
+                        click.echo(
+                            "[!] ⚠️  CSP analysis tool selected but --csp-analysis flag not set"
+                        )
             else:
                 # Enhanced tool execution with better timeout handling
                 # NOTE: shell=True is required for complex commands with pipes and redirections
@@ -1613,6 +1978,8 @@ def subdocli(
             "active_tools": len(active_tools) if (active or all_tools) else 0,
             "resolution_enabled": resolve,
             "http_probing_enabled": probe_http,
+            "csp_analysis_enabled": csp_analysis and "csp_analyzer" in tools,
+            "csp_filter_cloudfront": csp_filter_cloudfront if csp_analysis else False,
         },
     }
 
@@ -1638,6 +2005,8 @@ def subdocli(
                 "active_only": active_only,
                 "bbot": bbot,
                 "bbot_intensive": bbot_intensive,
+                "csp_analysis": csp_analysis,
+                "csp_filter_cloudfront": csp_filter_cloudfront,
             },
         )
 

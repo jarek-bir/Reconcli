@@ -1,0 +1,26 @@
+# CSP Analysis Targets Example
+# One URL or subdomain per line
+# Lines starting with # are ignored
+
+# Main domain
+example.com
+
+# Common subdomains to check for CSP headers
+www.example.com
+app.example.com
+api.example.com
+admin.example.com
+login.example.com
+portal.example.com
+dashboard.example.com
+cdn.example.com
+
+# Include protocol if needed
+https://secure.example.com
+https://payment.example.com
+
+# Subdomains that might have rich CSP policies
+mail.example.com
+blog.example.com
+shop.example.com
+support.example.com
