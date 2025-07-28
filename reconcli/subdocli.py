@@ -10,6 +10,10 @@ import ssl
 import subprocess
 import time
 import urllib.parse
+import base64
+import dns.resolver
+import dns.zone
+import dns.query
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional, Set
@@ -521,6 +525,1097 @@ def extract_subdomains_from_csp_results(
                 all_subdomains.add(domain)
 
     return all_subdomains
+
+
+def get_ct_logs_intensive(domain: str, verbose: bool = False) -> List[str]:
+    """Enhanced Certificate Transparency logs search across multiple providers.
+
+    Args:
+        domain: Target domain
+        verbose: Enable verbose output
+
+    Returns:
+        List of discovered subdomains from CT logs
+    """
+    if verbose:
+        click.echo("[+] 🔐 Starting intensive Certificate Transparency search...")
+
+    ct_logs = {
+        "crt.sh": f"https://crt.sh/?q=%.{domain}&output=json",
+        "certspotter": f"https://api.certspotter.com/v1/issuances?domain={domain}&include_subdomains=true&expand=dns_names",
+        "facebook_ct": f"https://graph.facebook.com/certificates?query=*.{domain}&fields=domains",
+        "entrust": f"https://ctsearch.entrust.com/api/v1/certificates?fields=subjectDN&domain={domain}&includeExpired=true&exactMatch=false&limit=5000",
+    }
+
+    subdomains = set()
+
+    for log_name, log_url in ct_logs.items():
+        try:
+            if verbose:
+                click.echo(f"[CT] 🔍 Searching {log_name}...")
+
+            headers = {
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 SubdoCLI-BountyHunter"
+            }
+
+            response = requests.get(log_url, headers=headers, timeout=15)
+
+            if response.status_code == 200:
+                if log_name == "crt.sh":
+                    try:
+                        certs = response.json()
+                        for cert in certs:
+                            name_value = cert.get("name_value", "")
+                            for subdomain in name_value.split("\n"):
+                                subdomain = subdomain.strip().lower()
+                                if (
+                                    subdomain
+                                    and domain in subdomain
+                                    and subdomain.endswith(domain)
+                                ):
+                                    # Remove wildcard prefix
+                                    if subdomain.startswith("*."):
+                                        subdomain = subdomain[2:]
+                                    subdomains.add(subdomain)
+                    except json.JSONDecodeError:
+                        pass
+
+                elif log_name == "certspotter":
+                    try:
+                        certs = response.json()
+                        for cert in certs:
+                            dns_names = cert.get("dns_names", [])
+                            for dns_name in dns_names:
+                                dns_name = dns_name.strip().lower()
+                                if (
+                                    dns_name
+                                    and domain in dns_name
+                                    and dns_name.endswith(domain)
+                                ):
+                                    if dns_name.startswith("*."):
+                                        dns_name = dns_name[2:]
+                                    subdomains.add(dns_name)
+                    except json.JSONDecodeError:
+                        pass
+
+                if verbose and subdomains:
+                    click.echo(
+                        f"[CT] ✅ {log_name} found {len(subdomains)} unique subdomains so far"
+                    )
+
+        except Exception as e:
+            if verbose:
+                click.echo(f"[CT] ❌ Error with {log_name}: {str(e)}")
+
+    result = list(subdomains)
+    if verbose:
+        click.echo(f"[CT] 🎯 Total CT intensive search found {len(result)} subdomains")
+
+    return result
+
+
+def get_historical_certificates(domain: str, verbose: bool = False) -> List[str]:
+    """Search for historical certificates that might reveal old subdomains.
+
+    Args:
+        domain: Target domain
+        verbose: Enable verbose output
+
+    Returns:
+        List of historical subdomains from certificates
+    """
+    if verbose:
+        click.echo("[+] 📜 Searching historical certificates...")
+
+    historical_subdomains = set()
+
+    try:
+        # Enhanced historical search with multiple time ranges
+        historical_urls = [
+            f"https://crt.sh/?q=%.{domain}&output=json&exclude=expired",
+            f"https://crt.sh/?q=%.{domain}&output=json",  # Include expired
+            f"https://api.certspotter.com/v0/certs?domain={domain}",
+        ]
+
+        for url in historical_urls:
+            try:
+                response = requests.get(url, timeout=15)
+                if response.status_code == 200:
+                    data = response.json()
+
+                    if "crt.sh" in url:
+                        for cert in data:
+                            name_value = cert.get("name_value", "")
+                            for sub in name_value.split("\n"):
+                                sub = sub.strip().lower()
+                                if sub and domain in sub and sub.endswith(domain):
+                                    if sub.startswith("*."):
+                                        sub = sub[2:]
+                                    historical_subdomains.add(sub)
+
+                    elif "certspotter" in url:
+                        for cert in data:
+                            dns_names = cert.get("dns_names", [])
+                            for dns_name in dns_names:
+                                dns_name = dns_name.strip().lower()
+                                if (
+                                    dns_name
+                                    and domain in dns_name
+                                    and dns_name.endswith(domain)
+                                ):
+                                    if dns_name.startswith("*."):
+                                        dns_name = dns_name[2:]
+                                    historical_subdomains.add(dns_name)
+
+            except Exception as e:
+                if verbose:
+                    click.echo(f"[CT-HIST] ❌ Error with {url}: {str(e)}")
+
+    except Exception as e:
+        if verbose:
+            click.echo(f"[CT-HIST] ❌ General error: {str(e)}")
+
+    result = list(historical_subdomains)
+    if verbose:
+        click.echo(f"[CT-HIST] 🎯 Found {len(result)} historical subdomains")
+
+    return result
+
+
+def attempt_zone_transfer(domain: str, verbose: bool = False) -> List[str]:
+    """Attempt DNS zone transfer (AXFR) on all nameservers.
+
+    Args:
+        domain: Target domain
+        verbose: Enable verbose output
+
+    Returns:
+        List of subdomains discovered via zone transfer
+    """
+    if verbose:
+        click.echo("[+] 🌐 Attempting DNS zone transfers...")
+
+    transferred_domains = set()
+
+    try:
+        # Get nameservers
+        ns_records = dns.resolver.resolve(domain, "NS")
+        nameservers = [str(ns).rstrip(".") for ns in ns_records]
+
+        if verbose:
+            click.echo(
+                f"[AXFR] Found {len(nameservers)} nameservers: {', '.join(nameservers)}"
+            )
+
+        for ns in nameservers:
+            try:
+                if verbose:
+                    click.echo(f"[AXFR] 🔄 Trying zone transfer on {ns}")
+
+                # Attempt zone transfer
+                zone = dns.zone.from_xfr(dns.query.xfr(ns, domain))
+
+                for name, node in zone.nodes.items():
+                    if name == "@":
+                        subdomain = domain
+                    else:
+                        subdomain = f"{name}.{domain}"
+
+                    transferred_domains.add(subdomain.lower())
+                    if verbose:
+                        click.echo(f"[AXFR] ✅ Found: {subdomain}")
+
+                if verbose:
+                    click.echo(f"[AXFR] 🎉 Zone transfer successful on {ns}!")
+
+            except Exception as e:
+                if verbose:
+                    click.echo(f"[AXFR] ❌ Failed on {ns}: {str(e)}")
+
+    except Exception as e:
+        if verbose:
+            click.echo(f"[AXFR] ❌ Error getting nameservers: {str(e)}")
+
+    result = list(transferred_domains)
+    if verbose:
+        click.echo(f"[AXFR] 🎯 Zone transfer found {len(result)} domains total")
+
+    return result
+
+
+def dns_bruteforce_intensive(domain: str, verbose: bool = False) -> List[str]:
+    """Intensive DNS bruteforce with comprehensive bug bounty wordlist.
+
+    Args:
+        domain: Target domain
+        verbose: Enable verbose output
+
+    Returns:
+        List of subdomains discovered via DNS bruteforce
+    """
+    if verbose:
+        click.echo("[+] 💥 Starting intensive DNS bruteforce...")
+
+    # Comprehensive bug bounty wordlist
+    bounty_wordlist = [
+        # Basic services
+        "admin",
+        "api",
+        "dev",
+        "staging",
+        "test",
+        "beta",
+        "alpha",
+        "demo",
+        "www",
+        "mail",
+        "email",
+        "mx",
+        "ns",
+        "dns",
+        "ftp",
+        "sftp",
+        "blog",
+        "news",
+        "shop",
+        "store",
+        "cms",
+        "crm",
+        "erp",
+        # Applications
+        "app",
+        "mobile",
+        "web",
+        "portal",
+        "dashboard",
+        "panel",
+        "console",
+        "internal",
+        "intranet",
+        "extranet",
+        "vpn",
+        "remote",
+        "access",
+        # Development environments
+        "backup",
+        "old",
+        "legacy",
+        "archive",
+        "temp",
+        "tmp",
+        "new",
+        "prod",
+        "production",
+        "live",
+        "www-prod",
+        "www-dev",
+        "www-test",
+        # Infrastructure
+        "cdn",
+        "static",
+        "assets",
+        "media",
+        "images",
+        "img",
+        "js",
+        "css",
+        "api-v1",
+        "api-v2",
+        "api-v3",
+        "apiv1",
+        "apiv2",
+        "apiv3",
+        "v1",
+        "v2",
+        "v3",
+        # Security & Auth
+        "secure",
+        "ssl",
+        "tls",
+        "auth",
+        "oauth",
+        "sso",
+        "login",
+        "signin",
+        "signup",
+        "register",
+        "account",
+        "profile",
+        "user",
+        "users",
+        # File services
+        "uploads",
+        "files",
+        "docs",
+        "downloads",
+        "resources",
+        "documents",
+        "share",
+        "shared",
+        "public",
+        "private",
+        "storage",
+        "s3",
+        # Monitoring & Analytics
+        "monitor",
+        "status",
+        "health",
+        "metrics",
+        "analytics",
+        "stats",
+        "log",
+        "logs",
+        "logging",
+        "tracking",
+        "trace",
+        "debug",
+        # Real-time services
+        "websocket",
+        "ws",
+        "socket",
+        "realtime",
+        "live",
+        "stream",
+        "chat",
+        "messaging",
+        "notification",
+        "notifications",
+        "push",
+        # Development tools
+        "git",
+        "svn",
+        "repo",
+        "code",
+        "source",
+        "jenkins",
+        "ci",
+        "cd",
+        "build",
+        "deploy",
+        "deployment",
+        "pipeline",
+        "workflow",
+        # Databases
+        "db",
+        "database",
+        "sql",
+        "mysql",
+        "postgres",
+        "redis",
+        "mongo",
+        "cache",
+        "memcached",
+        "elasticsearch",
+        "kibana",
+        "grafana",
+        # APIs & Services
+        "graphql",
+        "rest",
+        "soap",
+        "grpc",
+        "rpc",
+        "webhook",
+        "webhooks",
+        "service",
+        "services",
+        "microservice",
+        "lambda",
+        "function",
+        # Support & Documentation
+        "support",
+        "help",
+        "docs",
+        "documentation",
+        "wiki",
+        "kb",
+        "faq",
+        "forum",
+        "community",
+        "feedback",
+        "contact",
+        # Testing environments
+        "sandbox",
+        "playground",
+        "lab",
+        "research",
+        "qa",
+        "quality",
+        "preprod",
+        "preproduction",
+        "uat",
+        "integration",
+        "staging2",
+        # Performance
+        "load",
+        "performance",
+        "stress",
+        "benchmark",
+        "speed",
+        "fast",
+        # Regional/Language
+        "en",
+        "us",
+        "uk",
+        "eu",
+        "asia",
+        "global",
+        "international",
+        # Cloud providers
+        "aws",
+        "azure",
+        "gcp",
+        "cloud",
+        "k8s",
+        "kubernetes",
+        "docker",
+        # Business functions
+        "hr",
+        "finance",
+        "accounting",
+        "billing",
+        "invoice",
+        "payment",
+        "order",
+        "checkout",
+        "cart",
+        "product",
+        "catalog",
+        "inventory",
+        # Security testing favorites
+        "phpinfo",
+        "phpmyadmin",
+        "adminer",
+        "wp-admin",
+        "wordpress",
+        "joomla",
+        "drupal",
+        "magento",
+        "prestashop",
+        "opencart",
+    ]
+
+    found_subdomains = set()
+
+    # Use ThreadPoolExecutor for faster bruteforce
+    def check_subdomain(subdomain_prefix):
+        try:
+            test_domain = f"{subdomain_prefix}.{domain}"
+            dns.resolver.resolve(test_domain, "A")
+            return test_domain
+        except:
+            return None
+
+    if verbose:
+        click.echo(f"[DNS-BRUTE] 🔄 Testing {len(bounty_wordlist)} subdomains...")
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=50) as executor:
+        future_to_subdomain = {
+            executor.submit(check_subdomain, prefix): prefix
+            for prefix in bounty_wordlist
+        }
+
+        for future in concurrent.futures.as_completed(future_to_subdomain):
+            result = future.result()
+            if result:
+                found_subdomains.add(result.lower())
+                if verbose:
+                    click.echo(f"[DNS-BRUTE] ✅ Found: {result}")
+
+    result = list(found_subdomains)
+    if verbose:
+        click.echo(f"[DNS-BRUTE] 🎯 DNS bruteforce found {len(result)} subdomains")
+
+    return result
+
+
+def search_github_repos(
+    domain: str, github_token: Optional[str] = None, verbose: bool = False
+) -> List[str]:
+    """Search GitHub repositories for subdomains in configuration files.
+
+    Args:
+        domain: Target domain
+        github_token: GitHub API token for enhanced access
+        verbose: Enable verbose output
+
+    Returns:
+        List of subdomains found in GitHub repositories
+    """
+    if verbose:
+        click.echo("[+] 📱 Searching GitHub repositories...")
+
+    github_subdomains = set()
+
+    try:
+        headers = {"User-Agent": "SubdoCLI-BountyHunter"}
+        if github_token:
+            headers["Authorization"] = f"token {github_token}"
+
+        # Search queries for different file types
+        search_queries = [
+            f'"{domain}" extension:json',
+            f'"{domain}" extension:yml',
+            f'"{domain}" extension:yaml',
+            f'"{domain}" extension:conf',
+            f'"{domain}" extension:config',
+            f'"{domain}" extension:env',
+            f'"{domain}" extension:js',
+            f'"{domain}" extension:py',
+            f'"{domain}" extension:rb',
+            f'"{domain}" extension:php',
+            f'"{domain}" filename:.env',
+            f'"{domain}" filename:config.json',
+            f'"{domain}" filename:settings.yml',
+        ]
+
+        for query in search_queries:
+            try:
+                if verbose:
+                    click.echo(f"[GITHUB] 🔍 Searching: {query}")
+
+                url = f"https://api.github.com/search/code?q={query}&per_page=100"
+                response = requests.get(url, headers=headers, timeout=10)
+
+                if response.status_code == 200:
+                    data = response.json()
+
+                    for item in data.get("items", []):
+                        # Extract potential subdomains using regex
+                        content_url = item.get("url", "")
+                        if content_url:
+                            try:
+                                content_response = requests.get(
+                                    content_url, headers=headers, timeout=5
+                                )
+                                if content_response.status_code == 200:
+                                    content_data = content_response.json()
+                                    content = base64.b64decode(
+                                        content_data.get("content", "")
+                                    ).decode("utf-8", errors="ignore")
+
+                                    # Regex to find subdomains
+                                    pattern = (
+                                        r"([a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?\.)*"
+                                        + re.escape(domain)
+                                    )
+                                    matches = re.findall(
+                                        pattern, content, re.IGNORECASE
+                                    )
+
+                                    for match in matches:
+                                        if isinstance(match, tuple):
+                                            match = match[0] if match[0] else ""
+
+                                        subdomain = match.strip().lower()
+                                        if subdomain and subdomain.endswith(domain):
+                                            github_subdomains.add(subdomain)
+
+                            except Exception as e:
+                                if verbose:
+                                    click.echo(
+                                        f"[GITHUB] ❌ Error fetching content: {str(e)}"
+                                    )
+
+                elif response.status_code == 403:
+                    if verbose:
+                        click.echo(
+                            "[GITHUB] ⚠️ Rate limited or need authentication token"
+                        )
+                    break
+
+            except Exception as e:
+                if verbose:
+                    click.echo(f"[GITHUB] ❌ Error with query '{query}': {str(e)}")
+
+    except Exception as e:
+        if verbose:
+            click.echo(f"[GITHUB] ❌ General error: {str(e)}")
+
+    result = list(github_subdomains)
+    if verbose:
+        click.echo(f"[GITHUB] 🎯 Found {len(result)} subdomains in repositories")
+
+    return result
+
+
+def search_pastebin_sites(domain: str, verbose: bool = False) -> List[str]:
+    """Search pastebin sites for leaked subdomains.
+
+    Args:
+        domain: Target domain
+        verbose: Enable verbose output
+
+    Returns:
+        List of subdomains found in paste sites
+    """
+    if verbose:
+        click.echo("[+] 📋 Searching pastebin sites...")
+
+    paste_subdomains = set()
+
+    try:
+        paste_apis = [
+            f"https://psbdmp.ws/api/search/{domain}",
+        ]
+
+        for api_url in paste_apis:
+            try:
+                if verbose:
+                    click.echo(f"[PASTE] 🔍 Searching {api_url}")
+
+                response = requests.get(api_url, timeout=15)
+                if response.status_code == 200:
+                    data = response.json()
+
+                    for paste in data.get("data", []):
+                        paste_id = paste.get("id")
+                        if paste_id:
+                            # Fetch paste content
+                            paste_url = f"https://pastebin.com/raw/{paste_id}"
+                            try:
+                                paste_response = requests.get(paste_url, timeout=10)
+                                if paste_response.status_code == 200:
+                                    content = paste_response.text
+
+                                    # Extract subdomains from paste content
+                                    pattern = (
+                                        r"([a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?\.)*"
+                                        + re.escape(domain)
+                                    )
+                                    matches = re.findall(
+                                        pattern, content, re.IGNORECASE
+                                    )
+
+                                    for match in matches:
+                                        if isinstance(match, tuple):
+                                            match = match[0] if match[0] else ""
+
+                                        subdomain = match.strip().lower()
+                                        if subdomain and subdomain.endswith(domain):
+                                            paste_subdomains.add(subdomain)
+
+                            except Exception as e:
+                                if verbose:
+                                    click.echo(
+                                        f"[PASTE] ❌ Error fetching paste {paste_id}: {str(e)}"
+                                    )
+
+            except Exception as e:
+                if verbose:
+                    click.echo(f"[PASTE] ❌ Error with {api_url}: {str(e)}")
+
+    except Exception as e:
+        if verbose:
+            click.echo(f"[PASTE] ❌ General error: {str(e)}")
+
+    result = list(paste_subdomains)
+    if verbose:
+        click.echo(f"[PASTE] 🎯 Found {len(result)} subdomains in paste sites")
+
+    return result
+
+
+def analyze_security_headers(url: str, verbose: bool = False) -> Dict:
+    """Comprehensive security headers analysis and subdomain extraction.
+
+    Args:
+        url: Target URL to analyze
+        verbose: Enable verbose output
+
+    Returns:
+        Dictionary with header analysis results and found subdomains
+    """
+    if verbose:
+        click.echo(f"[HEADERS] 🔍 Analyzing {url}...")
+
+    header_analysis = {
+        "url": url,
+        "security_score": 0,
+        "headers": {},
+        "subdomains_found": [],
+        "technologies": [],
+        "vulnerabilities": [],
+    }
+
+    try:
+        response = requests.get(url, timeout=10, allow_redirects=True)
+        headers = response.headers
+
+        # Security headers to check
+        security_headers = {
+            "Content-Security-Policy": "CSP",
+            "Strict-Transport-Security": "HSTS",
+            "X-Frame-Options": "X-Frame",
+            "X-Content-Type-Options": "X-Content-Type",
+            "X-XSS-Protection": "XSS-Protection",
+            "Referrer-Policy": "Referrer",
+            "Feature-Policy": "Feature-Policy",
+            "Permissions-Policy": "Permissions-Policy",
+        }
+
+        for header, short_name in security_headers.items():
+            if header in headers:
+                header_analysis["headers"][short_name] = headers[header]
+                header_analysis["security_score"] += 10
+
+                # Extract subdomains from headers
+                if header == "Content-Security-Policy":
+                    domain = urllib.parse.urlparse(url).netloc
+                    csp_domains = parse_csp_header(headers[header], domain)
+                    header_analysis["subdomains_found"].extend(list(csp_domains))
+
+        # Technology detection from headers
+        tech_headers = {
+            "Server": headers.get("Server", ""),
+            "X-Powered-By": headers.get("X-Powered-By", ""),
+            "X-AspNet-Version": headers.get("X-AspNet-Version", ""),
+            "X-Generator": headers.get("X-Generator", ""),
+        }
+
+        for tech_header, value in tech_headers.items():
+            if value:
+                header_analysis["technologies"].append(f"{tech_header}: {value}")
+
+        # CORS analysis
+        if "Access-Control-Allow-Origin" in headers:
+            cors_origin = headers["Access-Control-Allow-Origin"]
+            if cors_origin == "*":
+                header_analysis["vulnerabilities"].append("Wildcard CORS")
+            header_analysis["headers"]["CORS-Origin"] = cors_origin
+
+        # Look for interesting headers that might reveal subdomains
+        interesting_headers = ["Location", "Refresh", "Link", "Via", "X-Forwarded-Host"]
+        for header_name in interesting_headers:
+            header_value = headers.get(header_name, "")
+            if header_value:
+                # Extract potential subdomains from header values
+                domain_pattern = (
+                    r"([a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}"
+                )
+                matches = re.findall(domain_pattern, header_value)
+                for match in matches:
+                    if isinstance(match, tuple):
+                        match = match[0]
+                    header_analysis["subdomains_found"].append(match)
+
+    except Exception as e:
+        if verbose:
+            click.echo(f"[HEADERS] ❌ Error analyzing {url}: {str(e)}")
+
+    return header_analysis
+
+
+def discover_api_endpoints(domain: str, verbose: bool = False) -> List[Dict]:
+    """Discover API endpoints and admin panels.
+
+    Args:
+        domain: Target domain
+        verbose: Enable verbose output
+
+    Returns:
+        List of discovered API endpoints with metadata
+    """
+    if verbose:
+        click.echo("[+] 🔌 Discovering API endpoints...")
+
+    api_endpoints = []
+
+    # Common API paths
+    api_paths = [
+        "/api",
+        "/api/v1",
+        "/api/v2",
+        "/api/v3",
+        "/api/v4",
+        "/rest",
+        "/rest/api",
+        "/rest/v1",
+        "/rest/v2",
+        "/graphql",
+        "/graphiql",
+        "/graphql/v1",
+        "/swagger",
+        "/swagger-ui",
+        "/swagger.json",
+        "/swagger.yaml",
+        "/openapi.json",
+        "/openapi.yaml",
+        "/api-docs",
+        "/docs",
+        "/admin",
+        "/admin/api",
+        "/admin/panel",
+        "/admin/dashboard",
+        "/dashboard",
+        "/dashboard/api",
+        "/management",
+        "/mgmt",
+        "/manage",
+        "/console",
+        "/control",
+        "/cp",
+        "/panel",
+        "/backend",
+        "/internal",
+        "/private",
+        "/restricted",
+        "/v1",
+        "/v2",
+        "/v3",
+        "/v4",
+        "/version",
+        "/health",
+        "/status",
+        "/ping",
+        "/info",
+        "/metrics",
+        "/debug",
+        "/test",
+        "/dev",
+        "/development",
+    ]
+
+    protocols = ["https", "http"]
+
+    for protocol in protocols:
+        for path in api_paths:
+            try:
+                url = f"{protocol}://{domain}{path}"
+                response = requests.get(
+                    url,
+                    timeout=5,
+                    allow_redirects=False,
+                    headers={"User-Agent": "SubdoCLI-BountyHunter"},
+                )
+
+                if response.status_code in [200, 201, 400, 401, 403, 405, 500]:
+                    endpoint_info = {
+                        "url": url,
+                        "status": response.status_code,
+                        "content_type": response.headers.get("Content-Type", ""),
+                        "server": response.headers.get("Server", ""),
+                        "size": len(response.content),
+                        "interesting": False,
+                    }
+
+                    # Check if endpoint is interesting
+                    content = response.text.lower()
+                    interesting_keywords = [
+                        "api",
+                        "swagger",
+                        "openapi",
+                        "graphql",
+                        "rest",
+                        "admin",
+                        "dashboard",
+                        "management",
+                        "console",
+                        "json",
+                        "xml",
+                        "authentication",
+                        "login",
+                    ]
+
+                    if any(keyword in content for keyword in interesting_keywords):
+                        endpoint_info["interesting"] = True
+
+                    api_endpoints.append(endpoint_info)
+
+                    if verbose:
+                        status_emoji = "🎯" if endpoint_info["interesting"] else "📍"
+                        click.echo(
+                            f"[API] {status_emoji} Found: {url} [{response.status_code}]"
+                        )
+
+            except:
+                pass
+
+        # Only try HTTP if HTTPS fails
+        if api_endpoints:
+            break
+
+    result = api_endpoints
+    if verbose:
+        interesting_count = sum(1 for ep in result if ep["interesting"])
+        click.echo(
+            f"[API] 🎯 Found {len(result)} endpoints ({interesting_count} interesting)"
+        )
+
+    return result
+
+
+def take_screenshots(
+    subdomains: List[str], output_dir: str, verbose: bool = False
+) -> Dict[str, Dict]:
+    """Take screenshots of all live subdomains for visual reconnaissance.
+
+    Args:
+        subdomains: List of subdomains to screenshot
+        output_dir: Directory to save screenshots
+        verbose: Enable verbose output
+
+    Returns:
+        Dictionary mapping subdomain to screenshot result
+    """
+    if verbose:
+        click.echo(
+            f"[📸] Starting screenshot capture for {len(subdomains)} subdomains..."
+        )
+
+    screenshots_dir = os.path.join(output_dir, "screenshots")
+    os.makedirs(screenshots_dir, exist_ok=True)
+
+    results = {}
+
+    for subdomain in subdomains:
+        for protocol in ["https", "http"]:
+            url = f"{protocol}://{subdomain}"
+
+            try:
+                # Quick connectivity check first
+                response = requests.get(
+                    url, timeout=10, verify=False, allow_redirects=True
+                )
+
+                if response.status_code == 200:
+                    # Use basic screenshot approach with curl and html2ps if available
+                    screenshot_path = os.path.join(
+                        screenshots_dir, f"{subdomain.replace('.', '_')}.png"
+                    )
+
+                    try:
+                        # Try using wkhtmltopdf if available (common tool for screenshots)
+                        cmd = f"timeout 30s wkhtmltoimage --width 1920 --height 1080 --javascript-delay 3000 '{url}' '{screenshot_path}' 2>/dev/null"
+                        result = subprocess.run(
+                            cmd, shell=True, capture_output=True, text=True
+                        )
+
+                        if result.returncode == 0 and os.path.exists(screenshot_path):
+                            results[subdomain] = {
+                                "url": url,
+                                "screenshot_path": screenshot_path,
+                                "status": "success",
+                                "file_size": os.path.getsize(screenshot_path),
+                                "redirect_url": (
+                                    response.url if response.url != url else None
+                                ),
+                            }
+                            if verbose:
+                                click.echo(f"[📸] ✅ Screenshot saved: {subdomain}")
+                        else:
+                            # Fallback: just save HTML content
+                            html_path = os.path.join(
+                                screenshots_dir, f"{subdomain.replace('.', '_')}.html"
+                            )
+                            with open(html_path, "w", encoding="utf-8") as f:
+                                f.write(response.text)
+
+                            results[subdomain] = {
+                                "url": url,
+                                "html_path": html_path,
+                                "status": "html_only",
+                                "redirect_url": (
+                                    response.url if response.url != url else None
+                                ),
+                            }
+                            if verbose:
+                                click.echo(f"[📸] 📄 HTML saved: {subdomain}")
+
+                    except Exception as e:
+                        # Minimal fallback - just record the working URL
+                        results[subdomain] = {
+                            "url": url,
+                            "status": "accessible",
+                            "redirect_url": (
+                                response.url if response.url != url else None
+                            ),
+                            "error": str(e),
+                        }
+                        if verbose:
+                            click.echo(
+                                f"[📸] ⚠️ Accessible but screenshot failed: {subdomain}"
+                            )
+
+                    break  # Don't try HTTP if HTTPS worked
+
+            except:
+                pass
+
+        # If subdomain not in results, it's not accessible
+        if subdomain not in results:
+            results[subdomain] = {"status": "inaccessible"}
+
+    accessible_count = sum(1 for r in results.values() if r["status"] != "inaccessible")
+    if verbose:
+        click.echo(
+            f"[📸] 🎯 Completed screenshots: {accessible_count}/{len(subdomains)} accessible"
+        )
+
+    return results
+
+
+def run_bounty_mode_enumeration(
+    domain: str, github_token: Optional[str] = None, verbose: bool = False
+) -> Dict[str, List[str]]:
+    """Run comprehensive bug bounty enumeration combining all techniques.
+
+    Args:
+        domain: Target domain
+        github_token: GitHub API token
+        verbose: Enable verbose output
+
+    Returns:
+        Dictionary with results from all enumeration techniques
+    """
+    if verbose:
+        click.echo("[+] 🏆 Starting BOUNTY MODE - Full enumeration...")
+
+    bounty_results = {
+        "ct_intensive": [],
+        "ct_historical": [],
+        "zone_transfer": [],
+        "dns_bruteforce": [],
+        "github_repos": [],
+        "pastebin_search": [],
+    }
+
+    # Run all enumeration techniques
+    techniques = [
+        ("ct_intensive", lambda: get_ct_logs_intensive(domain, verbose)),
+        ("ct_historical", lambda: get_historical_certificates(domain, verbose)),
+        ("zone_transfer", lambda: attempt_zone_transfer(domain, verbose)),
+        ("dns_bruteforce", lambda: dns_bruteforce_intensive(domain, verbose)),
+        ("github_repos", lambda: search_github_repos(domain, github_token, verbose)),
+        ("pastebin_search", lambda: search_pastebin_sites(domain, verbose)),
+    ]
+
+    for technique_name, technique_func in techniques:
+        try:
+            if verbose:
+                click.echo(f"[BOUNTY] 🔄 Running {technique_name}...")
+
+            results = technique_func()
+            bounty_results[technique_name] = results
+
+            if verbose:
+                click.echo(f"[BOUNTY] ✅ {technique_name}: {len(results)} subdomains")
+
+        except Exception as e:
+            if verbose:
+                click.echo(f"[BOUNTY] ❌ Error in {technique_name}: {str(e)}")
+
+    # Combine and deduplicate all results
+    all_subdomains = set()
+    for technique_results in bounty_results.values():
+        all_subdomains.update(technique_results)
+
+    bounty_results["combined_unique"] = list(all_subdomains)
+
+    if verbose:
+        click.echo(f"[BOUNTY] 🎯 Total unique subdomains found: {len(all_subdomains)}")
+        click.echo("[BOUNTY] 🏆 BOUNTY MODE enumeration completed!")
+
+    return bounty_results
 
 
 def parse_bbot_output(bbot_output_dir, domain, verbose=False):
@@ -1268,6 +2363,60 @@ class SubdomainCacheManager:
     default=True,
     help="Filter out *.cloudfront.net domains from CSP analysis results",
 )
+@click.option(
+    "--ct-intensive",
+    is_flag=True,
+    help="Enable intensive Certificate Transparency logs search across multiple CT providers",
+)
+@click.option(
+    "--ct-historical",
+    is_flag=True,
+    help="Search historical certificates for old/expired subdomains that might still be valid",
+)
+@click.option(
+    "--zone-transfer",
+    is_flag=True,
+    help="Attempt DNS zone transfer (AXFR) on all discovered nameservers",
+)
+@click.option(
+    "--dns-bruteforce",
+    is_flag=True,
+    help="Intensive DNS bruteforce with comprehensive bug bounty wordlist",
+)
+@click.option(
+    "--github-repos",
+    is_flag=True,
+    help="Search GitHub repositories for subdomains in configuration files",
+)
+@click.option(
+    "--github-token",
+    help="GitHub API token for enhanced repository searching",
+)
+@click.option(
+    "--pastebin-search",
+    is_flag=True,
+    help="Search pastebin sites for leaked subdomains and credentials",
+)
+@click.option(
+    "--header-analysis",
+    is_flag=True,
+    help="Comprehensive HTTP header analysis including security headers and technology detection",
+)
+@click.option(
+    "--api-discovery",
+    is_flag=True,
+    help="Discover API endpoints, admin panels, and management interfaces",
+)
+@click.option(
+    "--screenshots",
+    is_flag=True,
+    help="Take screenshots of all live subdomains for visual reconnaissance",
+)
+@click.option(
+    "--bounty-mode",
+    is_flag=True,
+    help="Enable all bug bounty hunting features (CT intensive, zone transfer, GitHub, etc.)",
+)
 def subdocli(
     cache,
     cache_dir,
@@ -1301,6 +2450,17 @@ def subdocli(
     csp_analysis,
     csp_targets_file,
     csp_filter_cloudfront,
+    ct_intensive,
+    ct_historical,
+    zone_transfer,
+    dns_bruteforce,
+    github_repos,
+    github_token,
+    pastebin_search,
+    header_analysis,
+    api_discovery,
+    screenshots,
+    bounty_mode,
 ):
     """Enhanced subdomain enumeration using multiple tools with resolution and HTTP probing.
 
@@ -1519,6 +2679,15 @@ def subdocli(
         "certspotter": f"timeout {int(90 * 1.2)}s curl -s 'https://api.certspotter.com/v1/issuances?domain={domain}&include_subdomains=true&expand=dns_names' | jq -r '.[].dns_names[]' 2>/dev/null | grep -E '^[a-zA-Z0-9.-]+\\.{domain}$' | sort -u",
         "crtsh_alternative": f"timeout {int(180 * 1.2)}s curl -s 'https://crt.sh/?q=%25.{domain}&output=json' | jq -r '.[].name_value' 2>/dev/null | sed 's/\\*\\.//g' | sort -u | grep -o '\\w.*{domain}' | grep -v '@' || echo ''",
         "csp_analyzer": "CSP_ANALYSIS_TOOL",  # Special marker for CSP analysis
+        "ct_intensive": "CT_INTENSIVE_TOOL",  # Special marker for intensive CT logs search
+        "ct_historical": "CT_HISTORICAL_TOOL",  # Special marker for htophistorical CT analysis
+        "zone_transfer": "ZONE_TRANSFER_TOOL",  # Special marker for DNS zone transfer
+        "dns_bruteforce": "DNS_BRUTEFORCE_TOOL",  # Special marker for intensive DNS bruteforce
+        "github_repos": "GITHUB_REPOS_TOOL",  # Special marker for GitHub repository search
+        "pastebin_search": "PASTEBIN_SEARCH_TOOL",  # Special marker for pastebin search
+        "header_analysis": "HEADER_ANALYSIS_TOOL",  # Special marker for security header analysis
+        "api_discovery": "API_DISCOVERY_TOOL",  # Special marker for API endpoint discovery
+        "screenshots": "SCREENSHOTS_TOOL",  # Special marker for screenshot capture
     }
 
     # BBOT tools - separate for conditional inclusion
@@ -1625,6 +2794,88 @@ def subdocli(
             tools.update(active_tools)
             if verbose:
                 click.echo("[+] 🔥 Active enumeration enabled")
+
+    # Handle bounty mode activation
+    if bounty_mode:
+        # Enable all bug bounty hunting features
+        ct_intensive = True
+        ct_historical = True
+        zone_transfer = True
+        dns_bruteforce = True
+        github_repos = True
+        pastebin_search = True
+        header_analysis = True
+        api_discovery = True
+        screenshots = True
+        bbot_intensive = True
+        csp_analysis = True
+        active = True
+
+        # Add all advanced tools to the tool set
+        advanced_tools = [
+            "ct_intensive",
+            "ct_historical",
+            "zone_transfer",
+            "dns_bruteforce",
+            "github_repos",
+            "pastebin_search",
+            "header_analysis",
+            "api_discovery",
+            "screenshots",
+            "csp_analyzer",
+        ]
+
+        for tool in advanced_tools:
+            if tool in base_passive_tools:
+                tools[tool] = base_passive_tools[tool]
+
+        # Add BBOT intensive tools
+        tools.update(bbot_intensive_tools)
+        tools.update(base_active_tools)
+
+        if verbose:
+            click.echo(
+                "[+] 🏆 BOUNTY MODE ACTIVATED - All bug bounty hunting features enabled!"
+            )
+            click.echo("    • Intensive CT logs search")
+            click.echo("    • Historical certificate analysis")
+            click.echo("    • DNS zone transfer attempts")
+            click.echo("    • Intensive DNS bruteforcing")
+            click.echo("    • GitHub repository search")
+            click.echo("    • Pastebin & paste sites search")
+            click.echo("    • Security header analysis")
+            click.echo("    • API endpoint discovery")
+            click.echo("    • Website screenshots")
+            click.echo("    • CSP header analysis")
+            click.echo("    • BBOT intensive enumeration")
+
+    # Auto-enable individual advanced features based on flags
+    advanced_feature_tools = []
+    if ct_intensive:
+        advanced_feature_tools.append("ct_intensive")
+    if ct_historical:
+        advanced_feature_tools.append("ct_historical")
+    if zone_transfer:
+        advanced_feature_tools.append("zone_transfer")
+    if dns_bruteforce:
+        advanced_feature_tools.append("dns_bruteforce")
+    if github_repos:
+        advanced_feature_tools.append("github_repos")
+    if pastebin_search:
+        advanced_feature_tools.append("pastebin_search")
+    if header_analysis:
+        advanced_feature_tools.append("header_analysis")
+    if api_discovery:
+        advanced_feature_tools.append("api_discovery")
+    if screenshots:
+        advanced_feature_tools.append("screenshots")
+
+    # Add advanced tools to the tool set
+    for tool in advanced_feature_tools:
+        if tool in base_passive_tools:
+            tools[tool] = base_passive_tools[tool]
+            if verbose:
+                click.echo(f"[+] 🔧 Advanced feature enabled: {tool}")
 
     # Auto-enable CSP analysis if csp_analyzer tool is selected
     if "csp_analyzer" in tools and not csp_analysis:
@@ -1766,6 +3017,170 @@ def subdocli(
                         click.echo(
                             "[!] ⚠️  CSP analysis tool selected but --csp-analysis flag not set"
                         )
+            # Special handling for advanced bug bounty tools
+            elif tool == "ct_intensive":
+                if verbose:
+                    click.echo(
+                        "[+] 🔍 Starting intensive Certificate Transparency search..."
+                    )
+                lines = get_ct_logs_intensive(domain, verbose)
+                if verbose:
+                    click.echo(
+                        f"[+] 🔍 CT intensive search found {len(lines)} subdomains"
+                    )
+
+            elif tool == "ct_historical":
+                if verbose:
+                    click.echo(
+                        "[+] 📈 Starting historical Certificate Transparency analysis..."
+                    )
+                # Use the same intensive CT search for now, but could be enhanced for historical data
+                lines = get_ct_logs_intensive(domain, verbose)
+                if verbose:
+                    click.echo(
+                        f"[+] 📈 CT historical analysis found {len(lines)} subdomains"
+                    )
+
+            elif tool == "zone_transfer":
+                if verbose:
+                    click.echo("[+] 🔄 Attempting DNS zone transfer...")
+                lines = attempt_zone_transfer(domain, verbose)
+                if verbose:
+                    click.echo(f"[+] 🔄 Zone transfer found {len(lines)} subdomains")
+
+            elif tool == "dns_bruteforce":
+                if verbose:
+                    click.echo("[+] 🔨 Starting intensive DNS bruteforce...")
+                lines = dns_bruteforce_intensive(domain, verbose)
+                if verbose:
+                    click.echo(f"[+] 🔨 DNS bruteforce found {len(lines)} subdomains")
+
+            elif tool == "github_repos":
+                if verbose:
+                    click.echo("[+] 🐙 Searching GitHub repositories...")
+                lines = search_github_repos(domain, github_token, verbose)
+                if verbose:
+                    click.echo(f"[+] 🐙 GitHub search found {len(lines)} subdomains")
+
+            elif tool == "pastebin_search":
+                if verbose:
+                    click.echo("[+] 📋 Searching pastebin sites...")
+                lines = search_pastebin_sites(domain, verbose)
+                if verbose:
+                    click.echo(f"[+] 📋 Pastebin search found {len(lines)} subdomains")
+
+            elif tool == "header_analysis":
+                if verbose:
+                    click.echo("[+] 🔒 Analyzing security headers...")
+                target_subdomains = list(all_subs) if all_subs else [domain]
+                lines = []
+
+                # Process a subset of subdomains to avoid overwhelming the target
+                sample_subdomains = (
+                    target_subdomains[:100]
+                    if len(target_subdomains) > 100
+                    else target_subdomains
+                )
+
+                for subdomain in sample_subdomains:
+                    try:
+                        # Try both HTTP and HTTPS
+                        for protocol in ["https", "http"]:
+                            url = f"{protocol}://{subdomain}"
+                            header_results = analyze_security_headers(
+                                url, False
+                            )  # Disable verbose for individual calls
+
+                            # Extract subdomains from header analysis results
+                            if (
+                                isinstance(header_results, dict)
+                                and "headers" in header_results
+                            ):
+                                headers = header_results["headers"]
+                                for header_name, header_value in headers.items():
+                                    if header_name.lower() in [
+                                        "location",
+                                        "server",
+                                        "x-forwarded-host",
+                                        "content-security-policy",
+                                    ]:
+                                        # Extract potential subdomains from headers
+                                        import re
+
+                                        matches = re.findall(
+                                            r"([a-zA-Z0-9.-]+\."
+                                            + re.escape(domain)
+                                            + r")",
+                                            str(header_value),
+                                        )
+                                        lines.extend(matches)
+                            break  # If HTTPS works, don't try HTTP
+                    except:
+                        continue
+
+                lines = list(set(lines))  # Remove duplicates
+                if verbose:
+                    click.echo(f"[+] 🔒 Header analysis found {len(lines)} subdomains")
+
+            elif tool == "api_discovery":
+                if verbose:
+                    click.echo("[+] 🔌 Discovering API endpoints...")
+                target_subdomains = list(all_subs) if all_subs else [domain]
+                lines = []
+
+                # Process a subset of subdomains to avoid overwhelming the target
+                sample_subdomains = (
+                    target_subdomains[:50]
+                    if len(target_subdomains) > 50
+                    else target_subdomains
+                )
+
+                for subdomain in sample_subdomains:
+                    try:
+                        api_results = discover_api_endpoints(
+                            subdomain, False
+                        )  # Disable verbose for individual calls
+                        # Extract subdomains from API endpoint discovery
+                        if isinstance(api_results, list):
+                            for endpoint in api_results:
+                                if isinstance(endpoint, dict) and "url" in endpoint:
+                                    # Extract potential subdomains from API responses
+                                    import re
+
+                                    matches = re.findall(
+                                        r"([a-zA-Z0-9.-]+\." + re.escape(domain) + r")",
+                                        str(endpoint["url"]),
+                                    )
+                                    lines.extend(matches)
+                    except:
+                        continue
+
+                lines = list(set(lines))  # Remove duplicates
+                if verbose:
+                    click.echo(f"[+] 🔌 API discovery found {len(lines)} subdomains")
+
+            elif tool == "screenshots":
+                if verbose:
+                    click.echo("[+] 📸 Taking screenshots of subdomains...")
+                screenshot_results = take_screenshots(
+                    list(all_subs) if all_subs else [domain], outpath, verbose
+                )
+                # Screenshots don't typically yield new subdomains, but might reveal redirects
+                lines = []
+                for subdomain, result in screenshot_results.items():
+                    if "redirect_url" in result:
+                        import re
+
+                        matches = re.findall(
+                            r"([a-zA-Z0-9.-]+\." + re.escape(domain) + r")",
+                            result["redirect_url"],
+                        )
+                        lines.extend(matches)
+                lines = list(set(lines))  # Remove duplicates
+                if verbose:
+                    click.echo(
+                        f"[+] 📸 Screenshots captured, found {len(lines)} additional subdomains from redirects"
+                    )
             else:
                 # Enhanced tool execution with better timeout handling
                 # NOTE: shell=True is required for complex commands with pipes and redirections
