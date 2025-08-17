@@ -1,3 +1,10 @@
+#!/usr/bin/env python3
+"""
+🎯 VHostHunter - Standalone Virtual Host Discovery Tool
+Professional virtual host discovery and security assessment tool
+Author: Jarek - Security Researcher & Bug Bounty Hunter
+"""
+
 import json
 import os
 import shutil

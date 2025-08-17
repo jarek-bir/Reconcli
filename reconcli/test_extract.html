@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Test Page</title>
+  </head>
+  <body>
+    <form action="/api/v1/auth/login" method="POST">
+      <input type="text" name="username" />
+      <input type="password" name="password" />
+      <input type="hidden" name="api_key" value="pk_test_abcdef123456" />
+    </form>
+
+    <script>
+      const config = {
+        apiUrl: "https://internal.company.com/api/v2",
+        authToken: "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9",
+        endpoints: {
+          users: "/api/users",
+          admin: "/admin/dashboard",
+          swagger: "/swagger-ui/index.html",
+        },
+      };
+
+      // Secret keys (remove in production)
+      var AWS_KEY = "AKIAIOSFODNN7EXAMPLE";
+      var GITHUB_TOKEN = "ghp_1234567890abcdef1234567890abcdef123456";
+    </script>
+
+    <!-- Internal IPs: 192.168.1.1, 10.0.0.1 -->
+    <!-- Contact: admin@example.com, security@company.internal -->
+  </body>
+</html>

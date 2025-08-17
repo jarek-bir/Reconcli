@@ -1,0 +1,1514 @@
+[
+  {
+    "name": "Fofa Discovery: Example Domain",
+    "url": "http://www.example.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:38:16",
+    "metadata": {
+      "query": "domain=\"example.com\"",
+      "title": "Example Domain",
+      "ip": "203.69.138.223",
+      "port": "80"
+    }
+  },
+  {
+    "name": "Fofa Discovery: Example Domain",
+    "url": "https://https://example.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:38:16",
+    "metadata": {
+      "query": "domain=\"example.com\"",
+      "title": "Example Domain",
+      "ip": "23.192.228.84",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: Example Domain",
+    "url": "https://https://www.example.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:38:16",
+    "metadata": {
+      "query": "domain=\"example.com\"",
+      "title": "Example Domain",
+      "ip": "203.69.138.223",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: Example Domain",
+    "url": "http://example.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:38:16",
+    "metadata": {
+      "query": "domain=\"example.com\"",
+      "title": "Example Domain",
+      "ip": "23.192.228.80",
+      "port": "80"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ",
+    "url": "http://example.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:38:16",
+    "metadata": {
+      "query": "domain=\"example.com\"",
+      "title": "",
+      "ip": "23.192.228.84",
+      "port": "80"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ",
+    "url": "https://https://example.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:38:16",
+    "metadata": {
+      "query": "domain=\"example.com\"",
+      "title": "",
+      "ip": "96.7.128.175",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: Example Domain",
+    "url": "http://www.example.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:38:16",
+    "metadata": {
+      "query": "domain=\"example.com\"",
+      "title": "Example Domain",
+      "ip": "2606:2800:21f:cb07:6820:80da:af6b:8b2c",
+      "port": "80"
+    }
+  },
+  {
+    "name": "Fofa Discovery: Example Domain",
+    "url": "https://https://example.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:38:16",
+    "metadata": {
+      "query": "domain=\"example.com\"",
+      "title": "Example Domain",
+      "ip": "2606:2800:21f:cb07:6820:80da:af6b:8b2c",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: 403 Forbidden",
+    "url": "http://mjx.example.com.majiaxin.com:888",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:38:19",
+    "metadata": {
+      "query": "host=\"example.com\"",
+      "title": "403 Forbidden",
+      "ip": "154.206.201.225",
+      "port": "888"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ",
+    "url": "http://mjx.example.com.majiaxin.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:38:19",
+    "metadata": {
+      "query": "host=\"example.com\"",
+      "title": "",
+      "ip": "154.206.201.225",
+      "port": "80"
+    }
+  },
+  {
+    "name": "Fofa Discovery: Example Domain",
+    "url": "http://www.example.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:38:19",
+    "metadata": {
+      "query": "host=\"example.com\"",
+      "title": "Example Domain",
+      "ip": "203.69.138.223",
+      "port": "80"
+    }
+  },
+  {
+    "name": "Fofa Discovery: Example Domain",
+    "url": "https://https://example.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:38:19",
+    "metadata": {
+      "query": "host=\"example.com\"",
+      "title": "Example Domain",
+      "ip": "23.192.228.84",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: Example Domain",
+    "url": "https://https://www.example.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:38:19",
+    "metadata": {
+      "query": "host=\"example.com\"",
+      "title": "Example Domain",
+      "ip": "203.69.138.223",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ",
+    "url": "http://example.com.majiaxin.com:888",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:38:19",
+    "metadata": {
+      "query": "host=\"example.com\"",
+      "title": "",
+      "ip": "154.206.201.225",
+      "port": "888"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ",
+    "url": "http://mjx.example.com.majiaxin.com:888",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:38:19",
+    "metadata": {
+      "query": "host=\"example.com\"",
+      "title": "",
+      "ip": "154.206.201.225",
+      "port": "888"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ",
+    "url": "http://xri.example.com.xri.net",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:38:19",
+    "metadata": {
+      "query": "host=\"example.com\"",
+      "title": "",
+      "ip": "91.103.3.14",
+      "port": "80"
+    }
+  },
+  {
+    "name": "Fofa Discovery: 502 Bad Gateway",
+    "url": "https://https://www.example.com.mp",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:38:19",
+    "metadata": {
+      "query": "host=\"example.com\"",
+      "title": "502 Bad Gateway",
+      "ip": "140.245.118.82",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ",
+    "url": "https://https://www.example.com.mp",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:38:19",
+    "metadata": {
+      "query": "host=\"example.com\"",
+      "title": "",
+      "ip": "140.245.118.82",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ",
+    "url": "https://https://example.com.tw",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:38:19",
+    "metadata": {
+      "query": "host=\"example.com\"",
+      "title": "",
+      "ip": "185.53.178.50",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ",
+    "url": "https://https://mail.example.com.tw",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:38:19",
+    "metadata": {
+      "query": "host=\"example.com\"",
+      "title": "",
+      "ip": "185.53.178.50",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: 403 Forbidden",
+    "url": "http://example.com.tw",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:38:19",
+    "metadata": {
+      "query": "host=\"example.com\"",
+      "title": "403 Forbidden",
+      "ip": "185.53.178.50",
+      "port": "80"
+    }
+  },
+  {
+    "name": "Fofa Discovery: 403 Forbidden",
+    "url": "http://mail.example.com.tw",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:38:19",
+    "metadata": {
+      "query": "host=\"example.com\"",
+      "title": "403 Forbidden",
+      "ip": "185.53.178.50",
+      "port": "80"
+    }
+  },
+  {
+    "name": "Fofa Discovery: 403 Forbidden",
+    "url": "http://numail.example.com.tw",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:38:19",
+    "metadata": {
+      "query": "host=\"example.com\"",
+      "title": "403 Forbidden",
+      "ip": "185.53.178.50",
+      "port": "80"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ",
+    "url": "https://https://numail.example.com.tw",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:38:19",
+    "metadata": {
+      "query": "host=\"example.com\"",
+      "title": "",
+      "ip": "185.53.178.50",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: Example Domain (example.com.zm)",
+    "url": "http://example.com.zm",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:38:19",
+    "metadata": {
+      "query": "host=\"example.com\"",
+      "title": "Example Domain (example.com.zm)",
+      "ip": "172.105.99.5",
+      "port": "80"
+    }
+  },
+  {
+    "name": "Fofa Discovery: Example Domain (example.com.zm)",
+    "url": "https://https://example.com.zm",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:38:19",
+    "metadata": {
+      "query": "host=\"example.com\"",
+      "title": "Example Domain (example.com.zm)",
+      "ip": "172.105.99.5",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: 302 Found",
+    "url": "http://www.example.com.zm",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:38:19",
+    "metadata": {
+      "query": "host=\"example.com\"",
+      "title": "302 Found",
+      "ip": "172.105.99.5",
+      "port": "80"
+    }
+  },
+  {
+    "name": "Fofa Discovery: Example Domain (example.com.zm)",
+    "url": "https://https://www.example.com.zm",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:38:19",
+    "metadata": {
+      "query": "host=\"example.com\"",
+      "title": "Example Domain (example.com.zm)",
+      "ip": "172.105.99.5",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: Example Domain",
+    "url": "http://example.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:38:19",
+    "metadata": {
+      "query": "host=\"example.com\"",
+      "title": "Example Domain",
+      "ip": "23.192.228.80",
+      "port": "80"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ",
+    "url": "https://https://example.com.tr",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:38:19",
+    "metadata": {
+      "query": "host=\"example.com\"",
+      "title": "",
+      "ip": "130.162.38.147",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ",
+    "url": "http://example.com.tr",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:38:19",
+    "metadata": {
+      "query": "host=\"example.com\"",
+      "title": "",
+      "ip": "130.162.38.147",
+      "port": "80"
+    }
+  },
+  {
+    "name": "Fofa Discovery: 301 Moved Permanently",
+    "url": "https://https://ataxa8881.example.com.nl",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:38:19",
+    "metadata": {
+      "query": "host=\"example.com\"",
+      "title": "301 Moved Permanently",
+      "ip": "185.85.211.231",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ",
+    "url": "https://https://example.com.wasu.yun.wasu.cn",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:38:19",
+    "metadata": {
+      "query": "host=\"example.com\"",
+      "title": "",
+      "ip": "125.210.130.9",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ",
+    "url": "http://example.com.wasu.yun.wasu.cn",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:38:19",
+    "metadata": {
+      "query": "host=\"example.com\"",
+      "title": "",
+      "ip": "125.210.130.9",
+      "port": "80"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ",
+    "url": "https://https://analysis.example.com.wasu.yun.wasu.cn",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:38:19",
+    "metadata": {
+      "query": "host=\"example.com\"",
+      "title": "",
+      "ip": "125.210.130.9",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ",
+    "url": "https://https://monitoring.example.com.wasu.yun.wasu.cn",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:38:19",
+    "metadata": {
+      "query": "host=\"example.com\"",
+      "title": "",
+      "ip": "125.210.130.9",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ",
+    "url": "http://products.example.com.wasu.yun.wasu.cn",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:38:19",
+    "metadata": {
+      "query": "host=\"example.com\"",
+      "title": "",
+      "ip": "125.210.130.9",
+      "port": "80"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ",
+    "url": "https://https://products.example.com.wasu.yun.wasu.cn",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:38:19",
+    "metadata": {
+      "query": "host=\"example.com\"",
+      "title": "",
+      "ip": "125.210.130.9",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ",
+    "url": "http://analysis.example.com.wasu.yun.wasu.cn",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:38:19",
+    "metadata": {
+      "query": "host=\"example.com\"",
+      "title": "",
+      "ip": "125.210.130.9",
+      "port": "80"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ",
+    "url": "http://monitoring.example.com.wasu.yun.wasu.cn",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:38:19",
+    "metadata": {
+      "query": "host=\"example.com\"",
+      "title": "",
+      "ip": "125.210.130.9",
+      "port": "80"
+    }
+  },
+  {
+    "name": "Fofa Discovery: Welkom - Example Website",
+    "url": "http://example.com.cms.bluebear.nl",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:38:19",
+    "metadata": {
+      "query": "host=\"example.com\"",
+      "title": "Welkom - Example Website",
+      "ip": "84.241.139.144",
+      "port": "80"
+    }
+  },
+  {
+    "name": "Fofa Discovery: Inloggen - BlueBear",
+    "url": "https://https://example.com.cms.bluebear.nl",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:38:19",
+    "metadata": {
+      "query": "host=\"example.com\"",
+      "title": "Inloggen - BlueBear",
+      "ip": "84.241.139.144",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ",
+    "url": "https://https://backend.example.com.alerts.sparrowapp.dev",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:38:19",
+    "metadata": {
+      "query": "host=\"example.com\"",
+      "title": "",
+      "ip": "20.244.18.156",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ",
+    "url": "http://backend.example.com.alerts.sparrowapp.dev",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:38:19",
+    "metadata": {
+      "query": "host=\"example.com\"",
+      "title": "",
+      "ip": "20.244.18.156",
+      "port": "80"
+    }
+  },
+  {
+    "name": "Fofa Discovery: Index of /",
+    "url": "https://https://tesla.example.com.stayfirst.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:38:19",
+    "metadata": {
+      "query": "host=\"example.com\"",
+      "title": "Index of /",
+      "ip": "144.208.72.97",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: Index of /",
+    "url": "https://https://www.tesla.example.com.stayfirst.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:38:19",
+    "metadata": {
+      "query": "host=\"example.com\"",
+      "title": "Index of /",
+      "ip": "144.208.72.97",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: Index of /",
+    "url": "http://www.tesla.example.com.stayfirst.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:38:19",
+    "metadata": {
+      "query": "host=\"example.com\"",
+      "title": "Index of /",
+      "ip": "144.208.72.97",
+      "port": "80"
+    }
+  },
+  {
+    "name": "Fofa Discovery: Index of /",
+    "url": "http://tesla.example.com.stayfirst.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:38:19",
+    "metadata": {
+      "query": "host=\"example.com\"",
+      "title": "Index of /",
+      "ip": "144.208.72.97",
+      "port": "80"
+    }
+  },
+  {
+    "name": "Fofa Discovery: Fvfc Visa | FvFc Visa | Apply For Visa Online",
+    "url": "https://https://example.com.pk",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:38:19",
+    "metadata": {
+      "query": "host=\"example.com\"",
+      "title": "Fvfc Visa | FvFc Visa | Apply For Visa Online",
+      "ip": "152.53.113.31",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: Sorry, the website has been stopped",
+    "url": "http://example.com.pk",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:38:19",
+    "metadata": {
+      "query": "host=\"example.com\"",
+      "title": "Sorry, the website has been stopped",
+      "ip": "152.53.113.31",
+      "port": "80"
+    }
+  },
+  {
+    "name": "Fofa Discovery: 404 Not Found",
+    "url": "http://example.com.website.k2.cloud",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:38:19",
+    "metadata": {
+      "query": "host=\"example.com\"",
+      "title": "404 Not Found",
+      "ip": "217.73.63.99",
+      "port": "80"
+    }
+  },
+  {
+    "name": "Fofa Discovery: 403 Forbidden",
+    "url": "http://img.example.com.website.k2.cloud",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:38:19",
+    "metadata": {
+      "query": "host=\"example.com\"",
+      "title": "403 Forbidden",
+      "ip": "217.73.63.99",
+      "port": "80"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ERROR: The request could not be satisfied",
+    "url": "http://example.com.dummy-template.codeenigma.net",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:38:19",
+    "metadata": {
+      "query": "host=\"example.com\"",
+      "title": "ERROR: The request could not be satisfied",
+      "ip": "18.172.52.80",
+      "port": "80"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ERROR: The request could not be satisfied",
+    "url": "https://https://example.com.dummy-template.codeenigma.net",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:38:19",
+    "metadata": {
+      "query": "host=\"example.com\"",
+      "title": "ERROR: The request could not be satisfied",
+      "ip": "13.35.202.128",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: Invalid URL",
+    "url": "https://https://example.com.edgekey-staging88.net",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:38:19",
+    "metadata": {
+      "query": "host=\"example.com\"",
+      "title": "Invalid URL",
+      "ip": "23.45.240.12",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: Invalid URL",
+    "url": "http://example.com.edgekey-staging88.net",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:38:19",
+    "metadata": {
+      "query": "host=\"example.com\"",
+      "title": "Invalid URL",
+      "ip": "23.34.144.12",
+      "port": "80"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ",
+    "url": "http://oevnstu82.example.com.a04.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:38:19",
+    "metadata": {
+      "query": "host=\"example.com\"",
+      "title": "",
+      "ip": "75.2.73.197",
+      "port": "80"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ERROR: The request could not be satisfied",
+    "url": "https://https://ewtkk173-82-173-116.example.com.live",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:38:19",
+    "metadata": {
+      "query": "host=\"example.com\"",
+      "title": "ERROR: The request could not be satisfied",
+      "ip": "65.8.161.61",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ERROR: The request could not be satisfied",
+    "url": "http://ewtkk173-82-173-116.example.com.live",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:38:19",
+    "metadata": {
+      "query": "host=\"example.com\"",
+      "title": "ERROR: The request could not be satisfied",
+      "ip": "65.8.161.65",
+      "port": "80"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ERROR: The request could not be satisfied",
+    "url": "https://https://example.com.email",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:38:19",
+    "metadata": {
+      "query": "host=\"example.com\"",
+      "title": "ERROR: The request could not be satisfied",
+      "ip": "3.173.219.121",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ERROR: The request could not be satisfied",
+    "url": "http://example.com.email",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:38:19",
+    "metadata": {
+      "query": "host=\"example.com\"",
+      "title": "ERROR: The request could not be satisfied",
+      "ip": "18.154.132.66",
+      "port": "80"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ERROR: The request could not be satisfied",
+    "url": "http://artyfomenko.example.com.email",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:38:19",
+    "metadata": {
+      "query": "host=\"example.com\"",
+      "title": "ERROR: The request could not be satisfied",
+      "ip": "3.173.219.121",
+      "port": "80"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ERROR: The request could not be satisfied",
+    "url": "http://ojiang60802.example.com.email",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:38:19",
+    "metadata": {
+      "query": "host=\"example.com\"",
+      "title": "ERROR: The request could not be satisfied",
+      "ip": "3.173.219.69",
+      "port": "80"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ERROR: The request could not be satisfied",
+    "url": "https://https://ojiang60802.example.com.email",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:38:19",
+    "metadata": {
+      "query": "host=\"example.com\"",
+      "title": "ERROR: The request could not be satisfied",
+      "ip": "3.173.219.90",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ERROR: The request could not be satisfied",
+    "url": "https://https://artyfomenko.example.com.email",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:38:19",
+    "metadata": {
+      "query": "host=\"example.com\"",
+      "title": "ERROR: The request could not be satisfied",
+      "ip": "18.154.132.3",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ",
+    "url": "http://www.example.com.184-168-30-223.cprapid.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:38:19",
+    "metadata": {
+      "query": "host=\"example.com\"",
+      "title": "",
+      "ip": "184.168.30.223",
+      "port": "80"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ",
+    "url": "http://example.com.184-168-30-223.cprapid.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:38:19",
+    "metadata": {
+      "query": "host=\"example.com\"",
+      "title": "",
+      "ip": "184.168.30.223",
+      "port": "80"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ",
+    "url": "https://https://www.example.com.184-168-30-223.cprapid.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:38:19",
+    "metadata": {
+      "query": "host=\"example.com\"",
+      "title": "",
+      "ip": "184.168.30.223",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ",
+    "url": "https://https://example.com.184-168-30-223.cprapid.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:38:19",
+    "metadata": {
+      "query": "host=\"example.com\"",
+      "title": "",
+      "ip": "184.168.30.223",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: \u8be5\u7f51\u7ad9\u6682\u65f6\u65e0\u6cd5\u8bbf\u95ee",
+    "url": "https://https://mail.example.com.jiubao-water.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:38:19",
+    "metadata": {
+      "query": "host=\"example.com\"",
+      "title": "\u8be5\u7f51\u7ad9\u6682\u65f6\u65e0\u6cd5\u8bbf\u95ee",
+      "ip": "111.124.200.33",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: Test Page for the Nginx HTTP Server on AlmaLinux",
+    "url": "https://https://example.com.pro2.feisuan.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:38:19",
+    "metadata": {
+      "query": "host=\"example.com\"",
+      "title": "Test Page for the Nginx HTTP Server on AlmaLinux",
+      "ip": "209.99.16.245",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: Test Page for the Nginx HTTP Server on AlmaLinux",
+    "url": "https://https://bank.example.com.pro2.feisuan.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:38:19",
+    "metadata": {
+      "query": "host=\"example.com\"",
+      "title": "Test Page for the Nginx HTTP Server on AlmaLinux",
+      "ip": "67.21.83.156",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: \u4e0a\u6d77\u666e\u5764\u4fe1\u606f\u79d1\u6280\u6709\u9650\u516c\u53f8 - \u9996\u9875",
+    "url": "http://example.com.pk-tech.com.cn",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:38:19",
+    "metadata": {
+      "query": "host=\"example.com\"",
+      "title": "\u4e0a\u6d77\u666e\u5764\u4fe1\u606f\u79d1\u6280\u6709\u9650\u516c\u53f8 - \u9996\u9875",
+      "ip": "106.14.136.108",
+      "port": "80"
+    }
+  },
+  {
+    "name": "Fofa Discovery: \u4e0a\u6d77\u666e\u5764\u4fe1\u606f\u79d1\u6280\u6709\u9650\u516c\u53f8 - \u9996\u9875",
+    "url": "http://tls-host.example.com.pk-tech.com.cn",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:38:19",
+    "metadata": {
+      "query": "host=\"example.com\"",
+      "title": "\u4e0a\u6d77\u666e\u5764\u4fe1\u606f\u79d1\u6280\u6709\u9650\u516c\u53f8 - \u9996\u9875",
+      "ip": "106.14.136.108",
+      "port": "80"
+    }
+  },
+  {
+    "name": "Fofa Discovery: 301 Moved Permanently",
+    "url": "http://wjlagkolchatov.example.com.aminer.cn",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:38:19",
+    "metadata": {
+      "query": "host=\"example.com\"",
+      "title": "301 Moved Permanently",
+      "ip": "47.93.38.204",
+      "port": "80"
+    }
+  },
+  {
+    "name": "Fofa Discovery: 301 Moved Permanently",
+    "url": "http://gvkrdkolchatov.example.com.aminer.cn",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:38:19",
+    "metadata": {
+      "query": "host=\"example.com\"",
+      "title": "301 Moved Permanently",
+      "ip": "47.93.38.204",
+      "port": "80"
+    }
+  },
+  {
+    "name": "Fofa Discovery: 301 Moved Permanently",
+    "url": "https://https://gvkrdkolchatov.example.com.aminer.cn",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:38:19",
+    "metadata": {
+      "query": "host=\"example.com\"",
+      "title": "301 Moved Permanently",
+      "ip": "47.93.38.204",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: \u043e\u043d\u043b\u0430\u0439\u043d \u0442\u0435\u0441\u0442\u044b \u0434\u043b\u044f \u043f\u043e\u0434\u0433\u043e\u0442\u043e\u0432\u043a\u0438 \u043a \u0415\u041d\u0422, \u041c\u041e\u0414\u041e, \u0411\u0418\u041b, \u041d\u0418\u0428",
+    "url": "http://example.com.kz",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:38:19",
+    "metadata": {
+      "query": "host=\"example.com\"",
+      "title": "\u043e\u043d\u043b\u0430\u0439\u043d \u0442\u0435\u0441\u0442\u044b \u0434\u043b\u044f \u043f\u043e\u0434\u0433\u043e\u0442\u043e\u0432\u043a\u0438 \u043a \u0415\u041d\u0422, \u041c\u041e\u0414\u041e, \u0411\u0418\u041b, \u041d\u0418\u0428",
+      "ip": "195.49.210.75",
+      "port": "80"
+    }
+  },
+  {
+    "name": "Fofa Discovery: \u043e\u043d\u043b\u0430\u0439\u043d \u0442\u0435\u0441\u0442\u044b \u0434\u043b\u044f \u043f\u043e\u0434\u0433\u043e\u0442\u043e\u0432\u043a\u0438 \u043a \u0415\u041d\u0422, \u041c\u041e\u0414\u041e, \u0411\u0418\u041b, \u041d\u0418\u0428",
+    "url": "https://https://example.com.kz",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:38:19",
+    "metadata": {
+      "query": "host=\"example.com\"",
+      "title": "\u043e\u043d\u043b\u0430\u0439\u043d \u0442\u0435\u0441\u0442\u044b \u0434\u043b\u044f \u043f\u043e\u0434\u0433\u043e\u0442\u043e\u0432\u043a\u0438 \u043a \u0415\u041d\u0422, \u041c\u041e\u0414\u041e, \u0411\u0418\u041b, \u041d\u0418\u0428",
+      "ip": "195.49.210.75",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: \u043e\u043d\u043b\u0430\u0439\u043d \u0442\u0435\u0441\u0442\u044b \u0434\u043b\u044f \u043f\u043e\u0434\u0433\u043e\u0442\u043e\u0432\u043a\u0438 \u043a \u0415\u041d\u0422, \u041c\u041e\u0414\u041e, \u0411\u0418\u041b, \u041d\u0418\u0428",
+    "url": "http://www.example.com.kz",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:38:19",
+    "metadata": {
+      "query": "host=\"example.com\"",
+      "title": "\u043e\u043d\u043b\u0430\u0439\u043d \u0442\u0435\u0441\u0442\u044b \u0434\u043b\u044f \u043f\u043e\u0434\u0433\u043e\u0442\u043e\u0432\u043a\u0438 \u043a \u0415\u041d\u0422, \u041c\u041e\u0414\u041e, \u0411\u0418\u041b, \u041d\u0418\u0428",
+      "ip": "195.49.210.75",
+      "port": "80"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ",
+    "url": "rdp://tls-host.example.com.pk-tech.com.cn:3389",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:38:19",
+    "metadata": {
+      "query": "host=\"example.com\"",
+      "title": "",
+      "ip": "106.14.136.108",
+      "port": "3389"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ",
+    "url": "rdp://example.com.pk-tech.com.cn:3389",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:38:19",
+    "metadata": {
+      "query": "host=\"example.com\"",
+      "title": "",
+      "ip": "106.14.136.108",
+      "port": "3389"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ERROR: The request could not be satisfied",
+    "url": "http://example.com.dummy-template.codeenigma.net:443",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:38:19",
+    "metadata": {
+      "query": "host=\"example.com\"",
+      "title": "ERROR: The request could not be satisfied",
+      "ip": "18.239.199.94",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: 404 Not Found",
+    "url": "http://gkhlha546519834.example.com.ntzz.cn",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:38:19",
+    "metadata": {
+      "query": "host=\"example.com\"",
+      "title": "404 Not Found",
+      "ip": "58.221.115.246",
+      "port": "80"
+    }
+  },
+  {
+    "name": "Fofa Discovery: 404 Not Found",
+    "url": "https://https://gkhlha546519834.example.com.ntzz.cn",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:38:19",
+    "metadata": {
+      "query": "host=\"example.com\"",
+      "title": "404 Not Found",
+      "ip": "58.221.115.246",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: 404 Not Found",
+    "url": "https://https://kkmgka546519834.example.com.ntzz.cn",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:38:19",
+    "metadata": {
+      "query": "host=\"example.com\"",
+      "title": "404 Not Found",
+      "ip": "58.221.115.246",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: 404 Not Found",
+    "url": "http://kkmgka546519834.example.com.ntzz.cn",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:38:19",
+    "metadata": {
+      "query": "host=\"example.com\"",
+      "title": "404 Not Found",
+      "ip": "58.221.115.246",
+      "port": "80"
+    }
+  },
+  {
+    "name": "Fofa Discovery: Cloud Level",
+    "url": "http://example.com.school",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:38:19",
+    "metadata": {
+      "query": "host=\"example.com\"",
+      "title": "Cloud Level",
+      "ip": "18.65.168.92",
+      "port": "80"
+    }
+  },
+  {
+    "name": "Fofa Discovery: Cloud Level",
+    "url": "http://newuser1.example.com.school",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:38:19",
+    "metadata": {
+      "query": "host=\"example.com\"",
+      "title": "Cloud Level",
+      "ip": "18.65.168.15",
+      "port": "80"
+    }
+  },
+  {
+    "name": "Fofa Discovery: Cloud Level",
+    "url": "https://https://example.com.school",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:38:19",
+    "metadata": {
+      "query": "host=\"example.com\"",
+      "title": "Cloud Level",
+      "ip": "18.65.168.15",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ",
+    "url": "http://example.com.8881999.xyz",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:38:19",
+    "metadata": {
+      "query": "host=\"example.com\"",
+      "title": "",
+      "ip": "104.21.18.245",
+      "port": "80"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ",
+    "url": "http://example.com.8881111.xyz",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:38:19",
+    "metadata": {
+      "query": "host=\"example.com\"",
+      "title": "",
+      "ip": "104.21.59.171",
+      "port": "80"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ",
+    "url": "https://https://example.com.com.ar",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:38:19",
+    "metadata": {
+      "query": "host=\"example.com\"",
+      "title": "",
+      "ip": "185.107.56.193",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ",
+    "url": "http://173-82-120-79.example.com.com.ar",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:38:19",
+    "metadata": {
+      "query": "host=\"example.com\"",
+      "title": "",
+      "ip": "69.162.95.4",
+      "port": "80"
+    }
+  },
+  {
+    "name": "Fofa Discovery: Cloud Level",
+    "url": "http://zyu086201.example.com.email",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:38:19",
+    "metadata": {
+      "query": "host=\"example.com\"",
+      "title": "Cloud Level",
+      "ip": "18.65.229.118",
+      "port": "80"
+    }
+  },
+  {
+    "name": "Fofa Discovery: 403 - Forbidden: Access is denied.",
+    "url": "http://www.example.com.ocqserver.dedicatedserverlive.net",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:38:19",
+    "metadata": {
+      "query": "host=\"example.com\"",
+      "title": "403 - Forbidden: Access is denied.",
+      "ip": "92.53.243.61",
+      "port": "80"
+    }
+  },
+  {
+    "name": "Fofa Discovery: Example &#8211; Just another WordPress site",
+    "url": "http://example.com.developers.getspace.us",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:38:19",
+    "metadata": {
+      "query": "host=\"example.com\"",
+      "title": "Example &#8211; Just another WordPress site",
+      "ip": "144.76.52.46",
+      "port": "80"
+    }
+  },
+  {
+    "name": "Fofa Discovery: Cloud Level",
+    "url": "https://https://newuser1.example.com.school",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:38:19",
+    "metadata": {
+      "query": "host=\"example.com\"",
+      "title": "Cloud Level",
+      "ip": "18.65.3.116",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: Cloud Level",
+    "url": "http://uche64662.example.com.email",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:38:19",
+    "metadata": {
+      "query": "host=\"example.com\"",
+      "title": "Cloud Level",
+      "ip": "3.166.228.34",
+      "port": "80"
+    }
+  },
+  {
+    "name": "Fofa Discovery: Default Web Site Page",
+    "url": "http://my.example.com.irunbuild7.co.uk",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:38:19",
+    "metadata": {
+      "query": "host=\"example.com\"",
+      "title": "Default Web Site Page",
+      "ip": "77.72.5.98",
+      "port": "80"
+    }
+  },
+  {
+    "name": "Fofa Discovery: 3CX Webclient",
+    "url": "https://https://example.com.propositum.uk",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:38:19",
+    "metadata": {
+      "query": "host=\"example.com\"",
+      "title": "3CX Webclient",
+      "ip": "178.62.30.220",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: \u0417\u0430\u0433\u043b\u0443\u0448\u043a\u0430",
+    "url": "https://https://www.example.com.tys.uz",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:38:19",
+    "metadata": {
+      "query": "host=\"example.com\"",
+      "title": "\u0417\u0430\u0433\u043b\u0443\u0448\u043a\u0430",
+      "ip": "83.69.139.151",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: Default Web Site Page",
+    "url": "http://example.com.irunbuild7.co.uk",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:38:19",
+    "metadata": {
+      "query": "host=\"example.com\"",
+      "title": "Default Web Site Page",
+      "ip": "77.72.5.98",
+      "port": "80"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ",
+    "url": "https://https://example.com.irunbuild7.co.uk",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:38:19",
+    "metadata": {
+      "query": "host=\"example.com\"",
+      "title": "",
+      "ip": "77.72.5.98",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: Default Web Site Page",
+    "url": "http://www.my.example.com.irunbuild7.co.uk",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:38:19",
+    "metadata": {
+      "query": "host=\"example.com\"",
+      "title": "Default Web Site Page",
+      "ip": "77.72.5.98",
+      "port": "80"
+    }
+  },
+  {
+    "name": "Fofa Discovery: Welcome to Angie!",
+    "url": "http://www.example.com.mp",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:38:19",
+    "metadata": {
+      "query": "host=\"example.com\"",
+      "title": "Welcome to Angie!",
+      "ip": "140.245.118.82",
+      "port": "80"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ",
+    "url": "http://example.com.com.ar",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:38:19",
+    "metadata": {
+      "query": "host=\"example.com\"",
+      "title": "",
+      "ip": "185.107.56.53",
+      "port": "80"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ",
+    "url": "https://https://173-82-120-79.example.com.com.ar",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:38:19",
+    "metadata": {
+      "query": "host=\"example.com\"",
+      "title": "",
+      "ip": "74.63.241.23",
+      "port": "443"
+    }
+  }
+]

@@ -1,0 +1,14 @@
+[
+  {
+    "name": "Katana Crawl: https://example.com",
+    "url": "https://example.com",
+    "method": "GET",
+    "confidence": 60,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:38:51",
+    "metadata": {
+      "tool": "katana",
+      "depth": 3
+    }
+  }
+]

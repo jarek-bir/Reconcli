@@ -1,0 +1,2606 @@
+[
+  {
+    "name": "Fofa Discovery: ",
+    "url": "https://https://cdn.blablacar.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:36",
+    "metadata": {
+      "query": "domain=\"blablacar.com\"",
+      "title": "",
+      "ip": "35.244.237.205",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: BlaBlaCar",
+    "url": "http://www.blablacar.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:36",
+    "metadata": {
+      "query": "domain=\"blablacar.com\"",
+      "title": "BlaBlaCar",
+      "ip": "34.54.210.251",
+      "port": "80"
+    }
+  },
+  {
+    "name": "Fofa Discovery: BlaBlaCar",
+    "url": "http://blablacar.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:36",
+    "metadata": {
+      "query": "domain=\"blablacar.com\"",
+      "title": "BlaBlaCar",
+      "ip": "34.54.210.251",
+      "port": "80"
+    }
+  },
+  {
+    "name": "Fofa Discovery: 404 Not Found",
+    "url": "http://link.community.blablacar.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:36",
+    "metadata": {
+      "query": "domain=\"blablacar.com\"",
+      "title": "404 Not Found",
+      "ip": "34.160.215.32",
+      "port": "80"
+    }
+  },
+  {
+    "name": "Fofa Discovery: 404 Not Found",
+    "url": "https://https://link.community.blablacar.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:36",
+    "metadata": {
+      "query": "domain=\"blablacar.com\"",
+      "title": "404 Not Found",
+      "ip": "34.160.215.32",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: BlaBlaCar",
+    "url": "https://https://www.blablacar.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:36",
+    "metadata": {
+      "query": "domain=\"blablacar.com\"",
+      "title": "BlaBlaCar",
+      "ip": "34.54.210.251",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: BlaBlaCar",
+    "url": "https://https://blablacar.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:36",
+    "metadata": {
+      "query": "domain=\"blablacar.com\"",
+      "title": "BlaBlaCar",
+      "ip": "34.54.210.251",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ",
+    "url": "https://https://admin-workday-bonsai.corp.blablacar.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:36",
+    "metadata": {
+      "query": "domain=\"blablacar.com\"",
+      "title": "",
+      "ip": "34.111.75.165",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ",
+    "url": "https://https://admin-workday-bonsai.corp.blablacar.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:36",
+    "metadata": {
+      "query": "domain=\"blablacar.com\"",
+      "title": "",
+      "ip": "34.111.75.165",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ",
+    "url": "https://https://design.blablacar.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:36",
+    "metadata": {
+      "query": "domain=\"blablacar.com\"",
+      "title": "",
+      "ip": "130.211.32.203",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ",
+    "url": "https://https://design.blablacar.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:36",
+    "metadata": {
+      "query": "domain=\"blablacar.com\"",
+      "title": "",
+      "ip": "130.211.32.203",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ",
+    "url": "http://ddome-tag.blablacar.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:36",
+    "metadata": {
+      "query": "domain=\"blablacar.com\"",
+      "title": "",
+      "ip": "18.239.199.109",
+      "port": "80"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ",
+    "url": "https://https://ddome-tag.blablacar.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:36",
+    "metadata": {
+      "query": "domain=\"blablacar.com\"",
+      "title": "",
+      "ip": "18.239.199.38",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: S3 Portal",
+    "url": "http://b2bportal.bus.blablacar.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:36",
+    "metadata": {
+      "query": "domain=\"blablacar.com\"",
+      "title": "S3 Portal",
+      "ip": "52.57.65.230",
+      "port": "80"
+    }
+  },
+  {
+    "name": "Fofa Discovery: S3 Portal",
+    "url": "https://https://b2bportal.bus.blablacar.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:36",
+    "metadata": {
+      "query": "domain=\"blablacar.com\"",
+      "title": "S3 Portal",
+      "ip": "52.58.227.35",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: Station display",
+    "url": "https://https://station-display.bus.blablacar.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:36",
+    "metadata": {
+      "query": "domain=\"blablacar.com\"",
+      "title": "Station display",
+      "ip": "34.160.215.32",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: Newsroom - BlaBlaCar",
+    "url": "http://newsroom.blablacar.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:36",
+    "metadata": {
+      "query": "domain=\"blablacar.com\"",
+      "title": "Newsroom - BlaBlaCar",
+      "ip": "199.16.173.41",
+      "port": "80"
+    }
+  },
+  {
+    "name": "Fofa Discovery: Station display",
+    "url": "http://station-display.bus.blablacar.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:36",
+    "metadata": {
+      "query": "domain=\"blablacar.com\"",
+      "title": "Station display",
+      "ip": "34.160.215.32",
+      "port": "80"
+    }
+  },
+  {
+    "name": "Fofa Discovery: Newsroom - BlaBlaCar",
+    "url": "https://https://newsroom.blablacar.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:36",
+    "metadata": {
+      "query": "domain=\"blablacar.com\"",
+      "title": "Newsroom - BlaBlaCar",
+      "ip": "199.16.173.41",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ",
+    "url": "http://d2d-pax-webapp-pp.blablacar.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:36",
+    "metadata": {
+      "query": "domain=\"blablacar.com\"",
+      "title": "",
+      "ip": "34.160.132.133",
+      "port": "80"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ",
+    "url": "https://https://d2d-pax-webapp-pp.blablacar.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:36",
+    "metadata": {
+      "query": "domain=\"blablacar.com\"",
+      "title": "",
+      "ip": "34.160.132.133",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: BlaBlaCar Bus API for developers",
+    "url": "https://https://bus-api.blablacar.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:36",
+    "metadata": {
+      "query": "domain=\"blablacar.com\"",
+      "title": "BlaBlaCar Bus API for developers",
+      "ip": "34.111.193.23",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: BlaBlaCar Bus API for developers",
+    "url": "http://bus-api.blablacar.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:36",
+    "metadata": {
+      "query": "domain=\"blablacar.com\"",
+      "title": "BlaBlaCar Bus API for developers",
+      "ip": "34.111.193.23",
+      "port": "80"
+    }
+  },
+  {
+    "name": "Fofa Discovery: Error",
+    "url": "https://https://public-api.blablacar.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:36",
+    "metadata": {
+      "query": "domain=\"blablacar.com\"",
+      "title": "Error",
+      "ip": "34.160.215.32",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: OUIBORD-TRAINING-LANGUAGE CHOICE",
+    "url": "https://https://ouiboard-training.blablacar.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:36",
+    "metadata": {
+      "query": "domain=\"blablacar.com\"",
+      "title": "OUIBORD-TRAINING-LANGUAGE CHOICE",
+      "ip": "35.227.233.136",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: OUIBORD-TRAINING-LANGUAGE CHOICE",
+    "url": "http://ouiboard-training.blablacar.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:36",
+    "metadata": {
+      "query": "domain=\"blablacar.com\"",
+      "title": "OUIBORD-TRAINING-LANGUAGE CHOICE",
+      "ip": "35.227.233.136",
+      "port": "80"
+    }
+  },
+  {
+    "name": "Fofa Discovery: CRT Help Center",
+    "url": "https://https://support.blablacar.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:36",
+    "metadata": {
+      "query": "domain=\"blablacar.com\"",
+      "title": "CRT Help Center",
+      "ip": "210.71.227.209",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: BlaBlaCar Jobs - Join the ride",
+    "url": "https://https://jobs.blablacar.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:36",
+    "metadata": {
+      "query": "domain=\"blablacar.com\"",
+      "title": "BlaBlaCar Jobs - Join the ride",
+      "ip": "54.238.67.66",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: BlaBlaCar Jobs - Join the ride",
+    "url": "http://jobs.blablacar.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:36",
+    "metadata": {
+      "query": "domain=\"blablacar.com\"",
+      "title": "BlaBlaCar Jobs - Join the ride",
+      "ip": "34.210.109.146",
+      "port": "80"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ",
+    "url": "https://https://cdn-pp.blablacar.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:36",
+    "metadata": {
+      "query": "domain=\"blablacar.com\"",
+      "title": "",
+      "ip": "34.120.162.250",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ",
+    "url": "https://https://t.blablacar.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:36",
+    "metadata": {
+      "query": "domain=\"blablacar.com\"",
+      "title": "",
+      "ip": "34.160.215.32",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ERROR: The request could not be satisfied",
+    "url": "http://zen.blablacar.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:36",
+    "metadata": {
+      "query": "domain=\"blablacar.com\"",
+      "title": "ERROR: The request could not be satisfied",
+      "ip": "54.230.71.88",
+      "port": "80"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ERROR: The request could not be satisfied",
+    "url": "https://https://zen.blablacar.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:36",
+    "metadata": {
+      "query": "domain=\"blablacar.com\"",
+      "title": "ERROR: The request could not be satisfied",
+      "ip": "54.230.71.6",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ",
+    "url": "https://https://cdn-pp.blablacar.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:36",
+    "metadata": {
+      "query": "domain=\"blablacar.com\"",
+      "title": "",
+      "ip": "34.120.162.250",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ",
+    "url": "https://https://cdn.blablacar.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:36",
+    "metadata": {
+      "query": "domain=\"blablacar.com\"",
+      "title": "",
+      "ip": "35.244.237.205",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: 1Password SCIM bridge",
+    "url": "https://https://op-scim-bridge.corp.blablacar.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:36",
+    "metadata": {
+      "query": "domain=\"blablacar.com\"",
+      "title": "1Password SCIM bridge",
+      "ip": "35.246.198.153",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: Sharing is Living - BlaBlaCar",
+    "url": "http://blog.blablacar.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:36",
+    "metadata": {
+      "query": "domain=\"blablacar.com\"",
+      "title": "Sharing is Living - BlaBlaCar",
+      "ip": "141.193.213.21",
+      "port": "80"
+    }
+  },
+  {
+    "name": "Fofa Discovery: blablacar.com",
+    "url": "https://https://m.blablacar.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:36",
+    "metadata": {
+      "query": "domain=\"blablacar.com\"",
+      "title": "blablacar.com",
+      "ip": "34.160.215.32",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: Sharing is Living - BlaBlaCar",
+    "url": "https://https://blog.blablacar.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:36",
+    "metadata": {
+      "query": "domain=\"blablacar.com\"",
+      "title": "Sharing is Living - BlaBlaCar",
+      "ip": "141.193.213.20",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: blablacar.com",
+    "url": "https://https://d2d-api.blablacar.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:36",
+    "metadata": {
+      "query": "domain=\"blablacar.com\"",
+      "title": "blablacar.com",
+      "ip": "34.160.215.32",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: blablacar.com",
+    "url": "http://d2d-api.blablacar.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:36",
+    "metadata": {
+      "query": "domain=\"blablacar.com\"",
+      "title": "blablacar.com",
+      "ip": "34.160.215.32",
+      "port": "80"
+    }
+  },
+  {
+    "name": "Fofa Discovery: 403 Forbidden",
+    "url": "http://ouiboard.bus.blablacar.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:36",
+    "metadata": {
+      "query": "domain=\"blablacar.com\"",
+      "title": "403 Forbidden",
+      "ip": "185.51.218.167",
+      "port": "80"
+    }
+  },
+  {
+    "name": "Fofa Discovery: 403 Forbidden",
+    "url": "https://https://ouiboard-pp.bus.blablacar.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:36",
+    "metadata": {
+      "query": "domain=\"blablacar.com\"",
+      "title": "403 Forbidden",
+      "ip": "185.51.218.178",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: 403 Forbidden",
+    "url": "http://ouiboard-pp.bus.blablacar.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:36",
+    "metadata": {
+      "query": "domain=\"blablacar.com\"",
+      "title": "403 Forbidden",
+      "ip": "185.51.218.178",
+      "port": "80"
+    }
+  },
+  {
+    "name": "Fofa Discovery: 403 Forbidden",
+    "url": "https://https://ouiboard.bus.blablacar.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:36",
+    "metadata": {
+      "query": "domain=\"blablacar.com\"",
+      "title": "403 Forbidden",
+      "ip": "185.51.218.167",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: IIS 10.0 Detailed Error - 403.14 - Forbidden",
+    "url": "http://fin1c.corp.blablacar.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:36",
+    "metadata": {
+      "query": "domain=\"blablacar.com\"",
+      "title": "IIS 10.0 Detailed Error - 403.14 - Forbidden",
+      "ip": "84.201.176.88",
+      "port": "80"
+    }
+  },
+  {
+    "name": "Fofa Discovery: IIS 10.0 Detailed Error - 403.14 - Forbidden",
+    "url": "https://https://fin1c.corp.blablacar.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:36",
+    "metadata": {
+      "query": "domain=\"blablacar.com\"",
+      "title": "IIS 10.0 Detailed Error - 403.14 - Forbidden",
+      "ip": "84.201.176.88",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: Alfred - BO",
+    "url": "https://https://alfred-dev.bus.blablacar.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:36",
+    "metadata": {
+      "query": "domain=\"blablacar.com\"",
+      "title": "Alfred - BO",
+      "ip": "34.96.74.71",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: Alfred - BO",
+    "url": "http://alfred-dev.bus.blablacar.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:36",
+    "metadata": {
+      "query": "domain=\"blablacar.com\"",
+      "title": "Alfred - BO",
+      "ip": "34.96.74.71",
+      "port": "80"
+    }
+  },
+  {
+    "name": "Fofa Discovery: Alfred - BO",
+    "url": "https://https://alfred-pp.bus.blablacar.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:36",
+    "metadata": {
+      "query": "domain=\"blablacar.com\"",
+      "title": "Alfred - BO",
+      "ip": "35.190.6.238",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: Alfred - BO",
+    "url": "http://alfred-pp.bus.blablacar.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:36",
+    "metadata": {
+      "query": "domain=\"blablacar.com\"",
+      "title": "Alfred - BO",
+      "ip": "35.190.6.238",
+      "port": "80"
+    }
+  },
+  {
+    "name": "Fofa Discovery: Just a moment...",
+    "url": "http://blablacommunity.blablacar.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:36",
+    "metadata": {
+      "query": "domain=\"blablacar.com\"",
+      "title": "Just a moment...",
+      "ip": "104.18.227.174",
+      "port": "80"
+    }
+  },
+  {
+    "name": "Fofa Discovery: Just a moment...",
+    "url": "https://https://blablacommunity.blablacar.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:36",
+    "metadata": {
+      "query": "domain=\"blablacar.com\"",
+      "title": "Just a moment...",
+      "ip": "104.18.226.174",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: Tickets",
+    "url": "https://https://booking.blablacar.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:36",
+    "metadata": {
+      "query": "domain=\"blablacar.com\"",
+      "title": "Tickets",
+      "ip": "34.160.19.16",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: Tickets",
+    "url": "http://booking.blablacar.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:36",
+    "metadata": {
+      "query": "domain=\"blablacar.com\"",
+      "title": "Tickets",
+      "ip": "34.160.19.16",
+      "port": "80"
+    }
+  },
+  {
+    "name": "Fofa Discovery: Alfred - BO",
+    "url": "https://https://alfred.bus.blablacar.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:36",
+    "metadata": {
+      "query": "domain=\"blablacar.com\"",
+      "title": "Alfred - BO",
+      "ip": "34.117.42.140",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: Alfred - BO",
+    "url": "http://alfred.bus.blablacar.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:36",
+    "metadata": {
+      "query": "domain=\"blablacar.com\"",
+      "title": "Alfred - BO",
+      "ip": "34.117.42.140",
+      "port": "80"
+    }
+  },
+  {
+    "name": "Fofa Discovery: 302 Found",
+    "url": "https://https://admin.corp.blablacar.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:36",
+    "metadata": {
+      "query": "domain=\"blablacar.com\"",
+      "title": "302 Found",
+      "ip": "34.111.44.146",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ",
+    "url": "http://booking.bus.blablacar.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:36",
+    "metadata": {
+      "query": "domain=\"blablacar.com\"",
+      "title": "",
+      "ip": "13.225.142.119",
+      "port": "80"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ",
+    "url": "http://t-pp.blablacar.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:36",
+    "metadata": {
+      "query": "domain=\"blablacar.com\"",
+      "title": "",
+      "ip": "34.160.132.133",
+      "port": "80"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ",
+    "url": "https://https://t-pp.blablacar.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:36",
+    "metadata": {
+      "query": "domain=\"blablacar.com\"",
+      "title": "",
+      "ip": "34.160.132.133",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ",
+    "url": "http://redirect.blablacar.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:36",
+    "metadata": {
+      "query": "domain=\"blablacar.com\"",
+      "title": "",
+      "ip": "34.160.215.32",
+      "port": "80"
+    }
+  },
+  {
+    "name": "Fofa Discovery: 302 Found",
+    "url": "http://admin.corp.blablacar.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:36",
+    "metadata": {
+      "query": "domain=\"blablacar.com\"",
+      "title": "302 Found",
+      "ip": "34.111.44.146",
+      "port": "80"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ",
+    "url": "http://dev.blablacar.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:36",
+    "metadata": {
+      "query": "domain=\"blablacar.com\"",
+      "title": "",
+      "ip": "34.160.215.32",
+      "port": "80"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ",
+    "url": "http://jenkins.corp.blablacar.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:36",
+    "metadata": {
+      "query": "domain=\"blablacar.com\"",
+      "title": "",
+      "ip": "35.244.242.20",
+      "port": "80"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ",
+    "url": "http://t.blablacar.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:36",
+    "metadata": {
+      "query": "domain=\"blablacar.com\"",
+      "title": "",
+      "ip": "34.160.215.32",
+      "port": "80"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ",
+    "url": "https://https://pro-real-time-api.blablacar.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:36",
+    "metadata": {
+      "query": "domain=\"blablacar.com\"",
+      "title": "",
+      "ip": "34.160.215.32",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ",
+    "url": "https://https://webhooks.blablacar.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:36",
+    "metadata": {
+      "query": "domain=\"blablacar.com\"",
+      "title": "",
+      "ip": "34.160.215.32",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ",
+    "url": "https://https://booking.bus.blablacar.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:36",
+    "metadata": {
+      "query": "domain=\"blablacar.com\"",
+      "title": "",
+      "ip": "13.225.142.119",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ",
+    "url": "https://https://redirect.blablacar.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:36",
+    "metadata": {
+      "query": "domain=\"blablacar.com\"",
+      "title": "",
+      "ip": "34.160.215.32",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ",
+    "url": "http://template.bus.blablacar.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:36",
+    "metadata": {
+      "query": "domain=\"blablacar.com\"",
+      "title": "",
+      "ip": "3.67.122.212",
+      "port": "80"
+    }
+  },
+  {
+    "name": "Fofa Discovery: blablacar.com",
+    "url": "https://https://edge.blablacar.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:36",
+    "metadata": {
+      "query": "domain=\"blablacar.com\"",
+      "title": "blablacar.com",
+      "ip": "34.160.215.32",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: blablacar.com",
+    "url": "http://edge.blablacar.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:36",
+    "metadata": {
+      "query": "domain=\"blablacar.com\"",
+      "title": "blablacar.com",
+      "ip": "34.160.215.32",
+      "port": "80"
+    }
+  },
+  {
+    "name": "Fofa Discovery: Error",
+    "url": "http://public-api.blablacar.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:36",
+    "metadata": {
+      "query": "domain=\"blablacar.com\"",
+      "title": "Error",
+      "ip": "34.160.215.32",
+      "port": "80"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ",
+    "url": "https://https://ticket.bus.blablacar.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:36",
+    "metadata": {
+      "query": "domain=\"blablacar.com\"",
+      "title": "",
+      "ip": "3.67.129.197",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ",
+    "url": "https://https://dev.blablacar.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:36",
+    "metadata": {
+      "query": "domain=\"blablacar.com\"",
+      "title": "",
+      "ip": "34.160.215.32",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: blablacar.com",
+    "url": "http://m.blablacar.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:36",
+    "metadata": {
+      "query": "domain=\"blablacar.com\"",
+      "title": "blablacar.com",
+      "ip": "34.160.215.32",
+      "port": "80"
+    }
+  },
+  {
+    "name": "Fofa Discovery: blablacar.com",
+    "url": "http://auth.blablacar.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:36",
+    "metadata": {
+      "query": "domain=\"blablacar.com\"",
+      "title": "blablacar.com",
+      "ip": "34.160.215.32",
+      "port": "80"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ",
+    "url": "http://pro-real-time-api.blablacar.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:36",
+    "metadata": {
+      "query": "domain=\"blablacar.com\"",
+      "title": "",
+      "ip": "34.160.215.32",
+      "port": "80"
+    }
+  },
+  {
+    "name": "Fofa Discovery: blablacar.com",
+    "url": "https://https://auth.blablacar.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:36",
+    "metadata": {
+      "query": "domain=\"blablacar.com\"",
+      "title": "blablacar.com",
+      "ip": "34.160.215.32",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ",
+    "url": "http://webhooks.blablacar.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:36",
+    "metadata": {
+      "query": "domain=\"blablacar.com\"",
+      "title": "",
+      "ip": "34.160.215.32",
+      "port": "80"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ",
+    "url": "http://ticket.bus.blablacar.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:36",
+    "metadata": {
+      "query": "domain=\"blablacar.com\"",
+      "title": "",
+      "ip": "3.67.122.212",
+      "port": "80"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ",
+    "url": "https://https://template.bus.blablacar.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:36",
+    "metadata": {
+      "query": "domain=\"blablacar.com\"",
+      "title": "",
+      "ip": "3.67.129.197",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ",
+    "url": "https://https://jenkins.corp.blablacar.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:36",
+    "metadata": {
+      "query": "domain=\"blablacar.com\"",
+      "title": "",
+      "ip": "35.244.242.20",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ",
+    "url": "https://https://booking.blablacar.com.ua",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:39",
+    "metadata": {
+      "query": "host=\"blablacar.com\"",
+      "title": "",
+      "ip": "34.8.226.205",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ",
+    "url": "http://booking.blablacar.com.ua",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:39",
+    "metadata": {
+      "query": "host=\"blablacar.com\"",
+      "title": "",
+      "ip": "34.8.226.205",
+      "port": "80"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ",
+    "url": "https://https://cdn.blablacar.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:39",
+    "metadata": {
+      "query": "host=\"blablacar.com\"",
+      "title": "",
+      "ip": "35.244.237.205",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: blablacar.com.tr",
+    "url": "https://https://www.blablacar.com.tr",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:39",
+    "metadata": {
+      "query": "host=\"blablacar.com\"",
+      "title": "blablacar.com.tr",
+      "ip": "34.54.210.251",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: blablacar.com.br",
+    "url": "https://https://www.blablacar.com.br",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:39",
+    "metadata": {
+      "query": "host=\"blablacar.com\"",
+      "title": "blablacar.com.br",
+      "ip": "34.54.210.251",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: blablacar.com.ua",
+    "url": "https://https://www.blablacar.com.ua",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:39",
+    "metadata": {
+      "query": "host=\"blablacar.com\"",
+      "title": "blablacar.com.ua",
+      "ip": "34.54.210.251",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: blablacar.com.br",
+    "url": "http://www.blablacar.com.br",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:39",
+    "metadata": {
+      "query": "host=\"blablacar.com\"",
+      "title": "blablacar.com.br",
+      "ip": "34.54.210.251",
+      "port": "80"
+    }
+  },
+  {
+    "name": "Fofa Discovery: blablacar.com.tr",
+    "url": "http://www.blablacar.com.tr",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:39",
+    "metadata": {
+      "query": "host=\"blablacar.com\"",
+      "title": "blablacar.com.tr",
+      "ip": "34.54.210.251",
+      "port": "80"
+    }
+  },
+  {
+    "name": "Fofa Discovery: blablacar.com.ua",
+    "url": "http://www.blablacar.com.ua",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:39",
+    "metadata": {
+      "query": "host=\"blablacar.com\"",
+      "title": "blablacar.com.ua",
+      "ip": "34.54.210.251",
+      "port": "80"
+    }
+  },
+  {
+    "name": "Fofa Discovery: BlaBlaCar",
+    "url": "http://www.blablacar.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:39",
+    "metadata": {
+      "query": "host=\"blablacar.com\"",
+      "title": "BlaBlaCar",
+      "ip": "34.54.210.251",
+      "port": "80"
+    }
+  },
+  {
+    "name": "Fofa Discovery: BlaBlaCar",
+    "url": "http://blablacar.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:39",
+    "metadata": {
+      "query": "host=\"blablacar.com\"",
+      "title": "BlaBlaCar",
+      "ip": "34.54.210.251",
+      "port": "80"
+    }
+  },
+  {
+    "name": "Fofa Discovery: 404 Not Found",
+    "url": "http://link.community.blablacar.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:39",
+    "metadata": {
+      "query": "host=\"blablacar.com\"",
+      "title": "404 Not Found",
+      "ip": "34.160.215.32",
+      "port": "80"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ",
+    "url": "http://blablacar.com.ua",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:39",
+    "metadata": {
+      "query": "host=\"blablacar.com\"",
+      "title": "",
+      "ip": "34.160.215.32",
+      "port": "80"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ",
+    "url": "http://blablacar.com.tr",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:39",
+    "metadata": {
+      "query": "host=\"blablacar.com\"",
+      "title": "",
+      "ip": "34.160.215.32",
+      "port": "80"
+    }
+  },
+  {
+    "name": "Fofa Discovery: 404 Not Found",
+    "url": "https://https://link.community.blablacar.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:39",
+    "metadata": {
+      "query": "host=\"blablacar.com\"",
+      "title": "404 Not Found",
+      "ip": "34.160.215.32",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: BlaBlaCar",
+    "url": "https://https://www.blablacar.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:39",
+    "metadata": {
+      "query": "host=\"blablacar.com\"",
+      "title": "BlaBlaCar",
+      "ip": "34.54.210.251",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: BlaBlaCar",
+    "url": "https://https://blablacar.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:39",
+    "metadata": {
+      "query": "host=\"blablacar.com\"",
+      "title": "BlaBlaCar",
+      "ip": "34.54.210.251",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ",
+    "url": "https://https://blablacar.com.ua",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:39",
+    "metadata": {
+      "query": "host=\"blablacar.com\"",
+      "title": "",
+      "ip": "34.160.215.32",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ",
+    "url": "http://blablacar.com.br",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:39",
+    "metadata": {
+      "query": "host=\"blablacar.com\"",
+      "title": "",
+      "ip": "34.160.215.32",
+      "port": "80"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ",
+    "url": "https://https://blablacar.com.br",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:39",
+    "metadata": {
+      "query": "host=\"blablacar.com\"",
+      "title": "",
+      "ip": "34.160.215.32",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ",
+    "url": "https://https://blablacar.com.tr",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:39",
+    "metadata": {
+      "query": "host=\"blablacar.com\"",
+      "title": "",
+      "ip": "34.160.215.32",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ",
+    "url": "https://https://gtfs.blablacar.com.br",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:39",
+    "metadata": {
+      "query": "host=\"blablacar.com\"",
+      "title": "",
+      "ip": "35.201.65.183",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ",
+    "url": "http://gtfs.blablacar.com.br",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:39",
+    "metadata": {
+      "query": "host=\"blablacar.com\"",
+      "title": "",
+      "ip": "35.201.65.183",
+      "port": "80"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ",
+    "url": "https://https://admin-workday-bonsai.corp.blablacar.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:39",
+    "metadata": {
+      "query": "host=\"blablacar.com\"",
+      "title": "",
+      "ip": "34.111.75.165",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ",
+    "url": "https://https://admin-workday-bonsai.corp.blablacar.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:39",
+    "metadata": {
+      "query": "host=\"blablacar.com\"",
+      "title": "",
+      "ip": "34.111.75.165",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ",
+    "url": "https://https://design.blablacar.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:39",
+    "metadata": {
+      "query": "host=\"blablacar.com\"",
+      "title": "",
+      "ip": "130.211.32.203",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ",
+    "url": "https://https://design.blablacar.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:39",
+    "metadata": {
+      "query": "host=\"blablacar.com\"",
+      "title": "",
+      "ip": "130.211.32.203",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ",
+    "url": "http://ddome-tag.blablacar.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:39",
+    "metadata": {
+      "query": "host=\"blablacar.com\"",
+      "title": "",
+      "ip": "18.239.199.109",
+      "port": "80"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ",
+    "url": "https://https://ddome-tag.blablacar.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:39",
+    "metadata": {
+      "query": "host=\"blablacar.com\"",
+      "title": "",
+      "ip": "18.239.199.38",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: \u0416\u0438\u0442\u0442\u044f - \u0446\u0435 \u043f\u043e\u0434\u043e\u0440\u043e\u0436 - BlaBlaBlog",
+    "url": "http://blog.blablacar.com.ua",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:39",
+    "metadata": {
+      "query": "host=\"blablacar.com\"",
+      "title": "\u0416\u0438\u0442\u0442\u044f - \u0446\u0435 \u043f\u043e\u0434\u043e\u0440\u043e\u0436 - BlaBlaBlog",
+      "ip": "199.16.172.168",
+      "port": "80"
+    }
+  },
+  {
+    "name": "Fofa Discovery: \u0416\u0438\u0442\u0442\u044f - \u0446\u0435 \u043f\u043e\u0434\u043e\u0440\u043e\u0436 - BlaBlaBlog",
+    "url": "https://https://blog.blablacar.com.ua",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:39",
+    "metadata": {
+      "query": "host=\"blablacar.com\"",
+      "title": "\u0416\u0438\u0442\u0442\u044f - \u0446\u0435 \u043f\u043e\u0434\u043e\u0440\u043e\u0436 - BlaBlaBlog",
+      "ip": "199.16.172.168",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: \u041d\u043e\u0432\u0438\u043d\u0438 \u043f\u0440\u043e BlaBlaCar - BlaBlaCar",
+    "url": "https://https://newsroom.blablacar.com.ua",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:39",
+    "metadata": {
+      "query": "host=\"blablacar.com\"",
+      "title": "\u041d\u043e\u0432\u0438\u043d\u0438 \u043f\u0440\u043e BlaBlaCar - BlaBlaCar",
+      "ip": "199.16.173.30",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: \u041d\u043e\u0432\u0438\u043d\u0438 \u043f\u0440\u043e BlaBlaCar - BlaBlaCar",
+    "url": "http://newsroom.blablacar.com.ua",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:39",
+    "metadata": {
+      "query": "host=\"blablacar.com\"",
+      "title": "\u041d\u043e\u0432\u0438\u043d\u0438 \u043f\u0440\u043e BlaBlaCar - BlaBlaCar",
+      "ip": "199.16.173.30",
+      "port": "80"
+    }
+  },
+  {
+    "name": "Fofa Discovery: S3 Portal",
+    "url": "http://b2bportal.bus.blablacar.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:39",
+    "metadata": {
+      "query": "host=\"blablacar.com\"",
+      "title": "S3 Portal",
+      "ip": "52.57.65.230",
+      "port": "80"
+    }
+  },
+  {
+    "name": "Fofa Discovery: S3 Portal",
+    "url": "https://https://b2bportal.bus.blablacar.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:39",
+    "metadata": {
+      "query": "host=\"blablacar.com\"",
+      "title": "S3 Portal",
+      "ip": "52.58.227.35",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: Station display",
+    "url": "https://https://station-display.bus.blablacar.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:39",
+    "metadata": {
+      "query": "host=\"blablacar.com\"",
+      "title": "Station display",
+      "ip": "34.160.215.32",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: Newsroom - BlaBlaCar",
+    "url": "http://newsroom.blablacar.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:39",
+    "metadata": {
+      "query": "host=\"blablacar.com\"",
+      "title": "Newsroom - BlaBlaCar",
+      "ip": "199.16.173.41",
+      "port": "80"
+    }
+  },
+  {
+    "name": "Fofa Discovery: Station display",
+    "url": "http://station-display.bus.blablacar.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:39",
+    "metadata": {
+      "query": "host=\"blablacar.com\"",
+      "title": "Station display",
+      "ip": "34.160.215.32",
+      "port": "80"
+    }
+  },
+  {
+    "name": "Fofa Discovery: Newsroom - BlaBlaCar",
+    "url": "https://https://newsroom.blablacar.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:39",
+    "metadata": {
+      "query": "host=\"blablacar.com\"",
+      "title": "Newsroom - BlaBlaCar",
+      "ip": "199.16.173.41",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ",
+    "url": "http://d2d-pax-webapp-pp.blablacar.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:39",
+    "metadata": {
+      "query": "host=\"blablacar.com\"",
+      "title": "",
+      "ip": "34.160.132.133",
+      "port": "80"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ",
+    "url": "https://https://d2d-pax-webapp-pp.blablacar.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:39",
+    "metadata": {
+      "query": "host=\"blablacar.com\"",
+      "title": "",
+      "ip": "34.160.132.133",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: BlaBlaCar Bus API for developers",
+    "url": "https://https://bus-api.blablacar.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:39",
+    "metadata": {
+      "query": "host=\"blablacar.com\"",
+      "title": "BlaBlaCar Bus API for developers",
+      "ip": "34.111.193.23",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: BlaBlaCar Bus API for developers",
+    "url": "http://bus-api.blablacar.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:39",
+    "metadata": {
+      "query": "host=\"blablacar.com\"",
+      "title": "BlaBlaCar Bus API for developers",
+      "ip": "34.111.193.23",
+      "port": "80"
+    }
+  },
+  {
+    "name": "Fofa Discovery: Error",
+    "url": "https://https://public-api.blablacar.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:39",
+    "metadata": {
+      "query": "host=\"blablacar.com\"",
+      "title": "Error",
+      "ip": "34.160.215.32",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ",
+    "url": "http://blablacar.com.mx",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:39",
+    "metadata": {
+      "query": "host=\"blablacar.com\"",
+      "title": "",
+      "ip": "34.149.212.4",
+      "port": "80"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ",
+    "url": "http://blablacar.com.hr",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:39",
+    "metadata": {
+      "query": "host=\"blablacar.com\"",
+      "title": "",
+      "ip": "34.149.212.4",
+      "port": "80"
+    }
+  },
+  {
+    "name": "Fofa Discovery: OUIBORD-TRAINING-LANGUAGE CHOICE",
+    "url": "https://https://ouiboard-training.blablacar.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:39",
+    "metadata": {
+      "query": "host=\"blablacar.com\"",
+      "title": "OUIBORD-TRAINING-LANGUAGE CHOICE",
+      "ip": "35.227.233.136",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: OUIBORD-TRAINING-LANGUAGE CHOICE",
+    "url": "http://ouiboard-training.blablacar.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:39",
+    "metadata": {
+      "query": "host=\"blablacar.com\"",
+      "title": "OUIBORD-TRAINING-LANGUAGE CHOICE",
+      "ip": "35.227.233.136",
+      "port": "80"
+    }
+  },
+  {
+    "name": "Fofa Discovery: CRT Help Center",
+    "url": "https://https://support.blablacar.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:39",
+    "metadata": {
+      "query": "host=\"blablacar.com\"",
+      "title": "CRT Help Center",
+      "ip": "210.71.227.209",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: BlaBlaCar Jobs - Join the ride",
+    "url": "https://https://jobs.blablacar.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:39",
+    "metadata": {
+      "query": "host=\"blablacar.com\"",
+      "title": "BlaBlaCar Jobs - Join the ride",
+      "ip": "54.238.67.66",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ",
+    "url": "https://https://checkout.blablacar.com.br",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:39",
+    "metadata": {
+      "query": "host=\"blablacar.com\"",
+      "title": "",
+      "ip": "34.8.226.205",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ",
+    "url": "http://checkout.blablacar.com.br",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:39",
+    "metadata": {
+      "query": "host=\"blablacar.com\"",
+      "title": "",
+      "ip": "34.8.226.205",
+      "port": "80"
+    }
+  },
+  {
+    "name": "Fofa Discovery: BlaBlaCar Jobs - Join the ride",
+    "url": "http://jobs.blablacar.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:39",
+    "metadata": {
+      "query": "host=\"blablacar.com\"",
+      "title": "BlaBlaCar Jobs - Join the ride",
+      "ip": "34.210.109.146",
+      "port": "80"
+    }
+  },
+  {
+    "name": "Fofa Discovery: Sala de Imprensa - BlaBlaCar",
+    "url": "http://newsroom.blablacar.com.br",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:39",
+    "metadata": {
+      "query": "host=\"blablacar.com\"",
+      "title": "Sala de Imprensa - BlaBlaCar",
+      "ip": "199.16.172.23",
+      "port": "80"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ",
+    "url": "https://https://cdn-pp.blablacar.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:39",
+    "metadata": {
+      "query": "host=\"blablacar.com\"",
+      "title": "",
+      "ip": "34.120.162.250",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: Sala de Imprensa - BlaBlaCar",
+    "url": "https://https://newsroom.blablacar.com.br",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:39",
+    "metadata": {
+      "query": "host=\"blablacar.com\"",
+      "title": "Sala de Imprensa - BlaBlaCar",
+      "ip": "199.16.172.23",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: A vida \u00e9 uma viagem - BlaBlaBlog",
+    "url": "http://blog.blablacar.com.br",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:39",
+    "metadata": {
+      "query": "host=\"blablacar.com\"",
+      "title": "A vida \u00e9 uma viagem - BlaBlaBlog",
+      "ip": "199.16.173.189",
+      "port": "80"
+    }
+  },
+  {
+    "name": "Fofa Discovery: A vida \u00e9 uma viagem - BlaBlaBlog",
+    "url": "https://https://blog.blablacar.com.br",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:39",
+    "metadata": {
+      "query": "host=\"blablacar.com\"",
+      "title": "A vida \u00e9 uma viagem - BlaBlaBlog",
+      "ip": "199.16.173.189",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ",
+    "url": "https://https://t.blablacar.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:39",
+    "metadata": {
+      "query": "host=\"blablacar.com\"",
+      "title": "",
+      "ip": "34.160.215.32",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ERROR: The request could not be satisfied",
+    "url": "http://zen.blablacar.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:39",
+    "metadata": {
+      "query": "host=\"blablacar.com\"",
+      "title": "ERROR: The request could not be satisfied",
+      "ip": "54.230.71.88",
+      "port": "80"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ERROR: The request could not be satisfied",
+    "url": "https://https://zen.blablacar.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:39",
+    "metadata": {
+      "query": "host=\"blablacar.com\"",
+      "title": "ERROR: The request could not be satisfied",
+      "ip": "54.230.71.6",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ",
+    "url": "http://sc.blablacar.com.mx",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:39",
+    "metadata": {
+      "query": "host=\"blablacar.com\"",
+      "title": "",
+      "ip": "34.149.212.4",
+      "port": "80"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ",
+    "url": "http://newburberrybags2015.blablacar.com.mx",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:39",
+    "metadata": {
+      "query": "host=\"blablacar.com\"",
+      "title": "",
+      "ip": "34.149.212.4",
+      "port": "80"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ",
+    "url": "https://https://m.blablacar.com.mx",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:39",
+    "metadata": {
+      "query": "host=\"blablacar.com\"",
+      "title": "",
+      "ip": "34.149.212.4",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ",
+    "url": "https://https://temp.blablacar.com.mx",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:39",
+    "metadata": {
+      "query": "host=\"blablacar.com\"",
+      "title": "",
+      "ip": "34.149.212.4",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ",
+    "url": "http://stevesblindsandwallpaper.sc.blablacar.com.mx",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:39",
+    "metadata": {
+      "query": "host=\"blablacar.com\"",
+      "title": "",
+      "ip": "34.149.212.4",
+      "port": "80"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ",
+    "url": "http://lm.dev.blablacar.com.mx",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:39",
+    "metadata": {
+      "query": "host=\"blablacar.com\"",
+      "title": "",
+      "ip": "34.149.212.4",
+      "port": "80"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ",
+    "url": "https://https://cdn-pp.blablacar.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:39",
+    "metadata": {
+      "query": "host=\"blablacar.com\"",
+      "title": "",
+      "ip": "34.120.162.250",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ",
+    "url": "http://feria.blablacar.com.mx",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:39",
+    "metadata": {
+      "query": "host=\"blablacar.com\"",
+      "title": "",
+      "ip": "34.149.212.4",
+      "port": "80"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ",
+    "url": "http://professorbubble.blablacar.com.mx",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:39",
+    "metadata": {
+      "query": "host=\"blablacar.com\"",
+      "title": "",
+      "ip": "34.149.212.4",
+      "port": "80"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ",
+    "url": "http://retoma-bancos-imobiliaria-porto.blablacar.com.mx",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:39",
+    "metadata": {
+      "query": "host=\"blablacar.com\"",
+      "title": "",
+      "ip": "34.149.212.4",
+      "port": "80"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ",
+    "url": "https://https://3972a.blablacar.com.mx",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:39",
+    "metadata": {
+      "query": "host=\"blablacar.com\"",
+      "title": "",
+      "ip": "34.149.212.4",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ",
+    "url": "http://gcc.blablacar.com.mx",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:39",
+    "metadata": {
+      "query": "host=\"blablacar.com\"",
+      "title": "",
+      "ip": "34.149.212.4",
+      "port": "80"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ",
+    "url": "https://https://profile.sfo20.blablacar.com.mx",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:39",
+    "metadata": {
+      "query": "host=\"blablacar.com\"",
+      "title": "",
+      "ip": "34.149.212.4",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ",
+    "url": "https://https://feria.blablacar.com.mx",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:39",
+    "metadata": {
+      "query": "host=\"blablacar.com\"",
+      "title": "",
+      "ip": "34.149.212.4",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ",
+    "url": "https://https://wortimmo-files.s3.blablacar.com.mx",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:39",
+    "metadata": {
+      "query": "host=\"blablacar.com\"",
+      "title": "",
+      "ip": "34.149.212.4",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ",
+    "url": "https://https://webmail.dental.blablacar.com.mx",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:39",
+    "metadata": {
+      "query": "host=\"blablacar.com\"",
+      "title": "",
+      "ip": "34.149.212.4",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ",
+    "url": "https://https://www.the-coffee-shop.blablacar.com.mx",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:39",
+    "metadata": {
+      "query": "host=\"blablacar.com\"",
+      "title": "",
+      "ip": "34.149.212.4",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ",
+    "url": "http://a1d4fb32da1e400a5d6c6bb80f2bfecd5.profile.sfo20.blablacar.com.mx",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:39",
+    "metadata": {
+      "query": "host=\"blablacar.com\"",
+      "title": "",
+      "ip": "34.149.212.4",
+      "port": "80"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ",
+    "url": "https://https://gro.blablacar.com.mx",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:39",
+    "metadata": {
+      "query": "host=\"blablacar.com\"",
+      "title": "",
+      "ip": "34.149.212.4",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ",
+    "url": "https://https://negotiationspeakers.wharton.blablacar.com.mx",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:39",
+    "metadata": {
+      "query": "host=\"blablacar.com\"",
+      "title": "",
+      "ip": "34.149.212.4",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ",
+    "url": "https://https://www.palscollective2.blablacar.com.mx",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:39",
+    "metadata": {
+      "query": "host=\"blablacar.com\"",
+      "title": "",
+      "ip": "34.149.212.4",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ",
+    "url": "https://https://gotexcel.blablacar.com.mx",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:39",
+    "metadata": {
+      "query": "host=\"blablacar.com\"",
+      "title": "",
+      "ip": "34.149.212.4",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ",
+    "url": "http://www.gotexcel.blablacar.com.mx",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:39",
+    "metadata": {
+      "query": "host=\"blablacar.com\"",
+      "title": "",
+      "ip": "34.149.212.4",
+      "port": "80"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ",
+    "url": "https://https://webzer.blablacar.com.mx",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:39",
+    "metadata": {
+      "query": "host=\"blablacar.com\"",
+      "title": "",
+      "ip": "34.149.212.4",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ",
+    "url": "http://webmail.honda.blablacar.com.mx",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:39",
+    "metadata": {
+      "query": "host=\"blablacar.com\"",
+      "title": "",
+      "ip": "34.149.212.4",
+      "port": "80"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ",
+    "url": "https://https://software-gestao-assistencia-informatica.blablacar.com.mx",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:39",
+    "metadata": {
+      "query": "host=\"blablacar.com\"",
+      "title": "",
+      "ip": "34.149.212.4",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ",
+    "url": "http://autodiscover.dck.blablacar.com.mx",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:39",
+    "metadata": {
+      "query": "host=\"blablacar.com\"",
+      "title": "",
+      "ip": "34.149.212.4",
+      "port": "80"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ",
+    "url": "https://https://dcs.adm.blablacar.com.mx",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:39",
+    "metadata": {
+      "query": "host=\"blablacar.com\"",
+      "title": "",
+      "ip": "34.149.212.4",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ",
+    "url": "https://https://bb.ccc.dddd.blablacar.com.mx",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:39",
+    "metadata": {
+      "query": "host=\"blablacar.com\"",
+      "title": "",
+      "ip": "34.149.212.4",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ",
+    "url": "http://www.subscene.blablacar.com.mx",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:39",
+    "metadata": {
+      "query": "host=\"blablacar.com\"",
+      "title": "",
+      "ip": "34.149.212.4",
+      "port": "80"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ",
+    "url": "https://https://www.professorbubble.blablacar.com.mx",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:39",
+    "metadata": {
+      "query": "host=\"blablacar.com\"",
+      "title": "",
+      "ip": "34.149.212.4",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ",
+    "url": "https://https://www.leier.blablacar.com.mx",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:39",
+    "metadata": {
+      "query": "host=\"blablacar.com\"",
+      "title": "",
+      "ip": "34.149.212.4",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ",
+    "url": "http://156-84.blablacar.com.mx",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:39",
+    "metadata": {
+      "query": "host=\"blablacar.com\"",
+      "title": "",
+      "ip": "34.149.212.4",
+      "port": "80"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ",
+    "url": "https://https://dddd.blablacar.com.mx",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:39",
+    "metadata": {
+      "query": "host=\"blablacar.com\"",
+      "title": "",
+      "ip": "34.149.212.4",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ",
+    "url": "https://https://newburberrybags2015.blablacar.com.mx",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:39",
+    "metadata": {
+      "query": "host=\"blablacar.com\"",
+      "title": "",
+      "ip": "34.149.212.4",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ",
+    "url": "https://https://117-238.blablacar.com.mx",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:39",
+    "metadata": {
+      "query": "host=\"blablacar.com\"",
+      "title": "",
+      "ip": "34.149.212.4",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ",
+    "url": "https://https://webmail.blablacar.com.mx",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:39",
+    "metadata": {
+      "query": "host=\"blablacar.com\"",
+      "title": "",
+      "ip": "34.149.212.4",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ",
+    "url": "https://https://www.jerseymail.blablacar.com.mx",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:39",
+    "metadata": {
+      "query": "host=\"blablacar.com\"",
+      "title": "",
+      "ip": "34.149.212.4",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: ",
+    "url": "http://www.newburberrybags2015.blablacar.com.mx",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:39",
+    "metadata": {
+      "query": "host=\"blablacar.com\"",
+      "title": "",
+      "ip": "34.149.212.4",
+      "port": "80"
+    }
+  },
+  {
+    "name": "Fofa Discovery: BlaBlaCar Bus API for developers",
+    "url": "https://https://bus-api.blablacar.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:45",
+    "metadata": {
+      "query": "body=\"api\" && domain=\"blablacar.com\"",
+      "title": "BlaBlaCar Bus API for developers",
+      "ip": "34.111.193.23",
+      "port": "443"
+    }
+  },
+  {
+    "name": "Fofa Discovery: BlaBlaCar Bus API for developers",
+    "url": "http://bus-api.blablacar.com",
+    "method": "GET",
+    "confidence": 70,
+    "source_type": "fofa",
+    "timestamp": "2025-08-05 20:17:45",
+    "metadata": {
+      "query": "body=\"api\" && domain=\"blablacar.com\"",
+      "title": "BlaBlaCar Bus API for developers",
+      "ip": "34.111.193.23",
+      "port": "80"
+    }
+  }
+]

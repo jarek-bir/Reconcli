@@ -575,6 +575,81 @@ reconcli subdocli --domain example.com --cache --cache-max-age 86400 --cache-sta
 reconcli subdocli --domain example.com --bounty-mode --resume --verbose
 ```
 
+### 🧲 **ExtractorCLI - Advanced Data Extraction & Security Analysis** 🔥
+Powerful data extraction tool for security professionals with **15+ extraction categories** and **enhanced secret detection**:
+
+**🔥 NEW: ENHANCED SECRET DETECTION** - 20+ secret types with AI-powered categorization:
+
+```bash
+# 🔍 Comprehensive data extraction from API documentation
+reconcli extractorcli swagger_endpoints.txt --types "api_docs,tech_stack" --verbose
+
+# 🔐 Enhanced secret detection with 20+ secret types
+reconcli extractorcli source_code/ --recursive --types secret --sensitivity paranoid --tagged
+
+# ₿ Cryptocurrency and PII data extraction  
+reconcli extractorcli leaked_data.txt --types "crypto,social,phone,pii" --json --ai-score
+
+# 🚀 Live monitoring for sensitive data exposure
+reconcli extractorcli --live-mode --watch-dir /var/log --types "secret,pii" --tagged --verbose
+
+# 🌐 URL fetching with XSS vulnerability scanning
+reconcli extractorcli urls.txt --fetch-urls --types api --xss-scan --xss-threads 10
+
+# 📊 Pipeline processing with intelligent filtering
+cat endpoints.txt | reconcli extractorcli --types "auth,api,secret" --ai-score --filter-regex "admin|internal"
+```
+
+**🛠️ EXTRACTION CATEGORIES (15+ types):**
+
+**Core Web Data:**
+- `url` - HTTP/HTTPS URLs and endpoints
+- `email` - Email addresses and contacts  
+- `domain` - Domain names and subdomains
+- `ip` - IP addresses (IPv4/IPv6)
+- `form` - HTML forms and input fields
+
+**🔐 Enhanced Security Data:**
+- `secret` - **20+ secret types**: AWS keys, GitHub tokens, OpenAI keys, Stripe keys, Discord tokens, Telegram bots, PayPal clients, Mailgun keys, Twilio SIDs, SendGrid keys, Anthropic keys, Google API keys, Azure keys, Docker tokens, Heroku keys, Cloudflare tokens, private keys, SSH keys, database URLs, connection strings, environment variables
+- `auth` - Authentication endpoints and login pages
+- `api` - API endpoints and REST services
+- `swagger` - OpenAPI/Swagger documentation
+
+**💰 Financial & Personal Data:**
+- `crypto` - **Cryptocurrency wallets**: Bitcoin, Ethereum, Monero addresses
+- `pii` - **Personal data**: Credit cards, Social Security Numbers
+- `phone` - Phone numbers in various formats
+
+**📱 Social Media & Communication:**
+- `social` - **Social profiles**: Twitter, Instagram, YouTube, LinkedIn, Discord, Telegram, Facebook
+
+**📋 Technical Documentation:**
+- `api_docs` - API documentation titles and GraphQL interfaces
+- `tech_stack` - Technology stacks from comma-separated lists
+- `js` - JavaScript variables and functions
+- `comment` - HTML/JS comments and metadata
+
+**🔧 Advanced Features:**
+```bash
+# Custom regex patterns from JSON file
+reconcli extractorcli data.txt --custom-patterns my_patterns.json --types custom
+
+# Export built-in patterns for customization
+reconcli extractorcli --export-patterns standard_patterns.json
+
+# Merge results with existing data and deduplicate
+reconcli extractorcli new_scan.txt --merge-with old_results.json --dedup --output merged.json
+
+# High-sensitivity detection for maximum coverage
+reconcli extractorcli logs/ --recursive --sensitivity paranoid --types "secret,pii,crypto" --tagged
+
+# Cloud storage URL scanning
+reconcli extractorcli s3_buckets.txt --scan-cloud --types "url,secret" --fetch-urls
+
+# Real-time processing with statistics
+reconcli extractorcli large_dataset.txt --benchmark --stats --threads 20 --ai-score
+```
+
 ### � PortCLI - Multi-Scanner Port Discovery & AI Analysis
 Professional port scanning framework with 5 integrated scanners and intelligent service detection:
 

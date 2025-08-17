@@ -1,0 +1,62 @@
+[
+  {
+    "name": "GitHub Pattern: swagger.json",
+    "url": "https://blablacar.com/api/swagger.json",
+    "method": "GET",
+    "confidence": 30,
+    "source_type": "github",
+    "timestamp": "2025-08-05 20:18:53",
+    "metadata": {
+      "pattern_type": "documentation",
+      "source": "common_patterns"
+    }
+  },
+  {
+    "name": "GitHub Pattern: docs",
+    "url": "https://blablacar.com/api/docs",
+    "method": "GET",
+    "confidence": 30,
+    "source_type": "github",
+    "timestamp": "2025-08-05 20:18:53",
+    "metadata": {
+      "pattern_type": "documentation",
+      "source": "common_patterns"
+    }
+  },
+  {
+    "name": "GitHub Pattern: openapi.json",
+    "url": "https://blablacar.com/.well-known/openapi.json",
+    "method": "GET",
+    "confidence": 30,
+    "source_type": "github",
+    "timestamp": "2025-08-05 20:18:53",
+    "metadata": {
+      "pattern_type": "documentation",
+      "source": "common_patterns"
+    }
+  },
+  {
+    "name": "GitHub Pattern: api-docs",
+    "url": "https://blablacar.com/api-docs",
+    "method": "GET",
+    "confidence": 30,
+    "source_type": "github",
+    "timestamp": "2025-08-05 20:18:53",
+    "metadata": {
+      "pattern_type": "documentation",
+      "source": "common_patterns"
+    }
+  },
+  {
+    "name": "GitHub Pattern: swagger-ui.html",
+    "url": "https://blablacar.com/swagger-ui.html",
+    "method": "GET",
+    "confidence": 30,
+    "source_type": "github",
+    "timestamp": "2025-08-05 20:18:53",
+    "metadata": {
+      "pattern_type": "documentation",
+      "source": "common_patterns"
+    }
+  }
+]

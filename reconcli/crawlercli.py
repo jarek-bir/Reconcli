@@ -211,7 +211,7 @@ class CrawlerCacheManager:
 )
 @click.option(
     "--tools",
-    default="waymore,gospider,xnlinkfinder,crawley,crawlergo",
+    default="waymore,gospider,xnLinkFinder,crawley,crawlergo",
     help="Comma-separated tools to use",
 )
 @click.option(
@@ -665,7 +665,7 @@ class CrawlerSession:
                 "tools": [
                     "waymore",
                     "gospider",
-                    "xnlinkfinder",
+                    "xnLinkFinder",
                     "crawley",
                     "crawlergo",
                 ],
@@ -687,7 +687,7 @@ class CrawlerSession:
                 "tools": [
                     "waymore",
                     "gospider",
-                    "xnlinkfinder",
+                    "xnLinkFinder",
                     "crawley",
                     "crawlergo",
                 ],
@@ -904,13 +904,14 @@ class CrawlerSession:
         urls = set()
 
         try:
+
             for target in self.targets:
                 if tool == "waymore":
                     tool_urls = self.run_waymore(target, **kwargs)
                 elif tool == "gospider":
                     tool_urls = self.run_gospider(target, **kwargs)
                 elif tool == "xnlinkfinder":
-                    tool_urls = self.run_xnlinkfinder(target, **kwargs)
+                    tool_urls = self.run_xnLinkFinder(target, **kwargs)
                 elif tool == "crawley":
                     tool_urls = self.run_crawley(target, **kwargs)
                 elif tool == "crawlergo":
@@ -934,7 +935,7 @@ class CrawlerSession:
         proxy = kwargs.get("proxy")
 
         try:
-            cmd = ["waymore", "-i", target, "-mode", "U"]
+            cmd = ["waymore", "-i", target, "-mode", "U", "-r", "3"]
             if proxy:
                 cmd += ["-p", proxy]
 
@@ -942,7 +943,7 @@ class CrawlerSession:
 
             with open(output_file, "w") as f:
                 result = subprocess.run(
-                    cmd, stdout=f, stderr=subprocess.PIPE, text=True, timeout=300
+                    cmd, stdout=f, stderr=subprocess.PIPE, text=True, timeout=1200
                 )
 
             if result.returncode == 0 and output_file.exists():
@@ -967,25 +968,47 @@ class CrawlerSession:
             output_dir = self.output_dir / f"{target}_gospider"
             output_dir.mkdir(exist_ok=True)
 
-            cmd = [
-                "gospider",
-                "-s",
-                f"http://{target}",
-                "-o",
-                str(output_dir),
-                "-c",
-                str(self.threads),
-                "-d",
-                str(max_depth),
-                "--json",
-            ]
-            if proxy:
-                cmd += ["--proxy", proxy]
+            # Try both HTTP and HTTPS
+            target_urls = [f"https://{target}", f"http://{target}"]
 
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
+            for target_url in target_urls:
+                cmd = [
+                    "gospider",
+                    "-s",
+                    target_url,
+                    "-o",
+                    str(output_dir),
+                    "-c",
+                    str(self.threads),
+                    "-d",
+                    str(max_depth),
+                    "--include-subs",
+                    "--other-source",
+                    "--include-other",
+                ]
+                if proxy:
+                    cmd += ["--proxy", proxy]
 
-            # Parse GoSpider output
+                try:
+                    result = subprocess.run(
+                        cmd, capture_output=True, text=True, timeout=1200
+                    )
+                    if self.verbose:
+                        self.log(f"GoSpider command: {' '.join(cmd)}", "INFO")
+                        self.log(f"GoSpider return code: {result.returncode}", "INFO")
+                        if result.stderr:
+                            self.log(
+                                f"GoSpider stderr: {result.stderr[:200]}", "WARNING"
+                            )
+
+                    if result.returncode == 0:
+                        break  # Success, don't try the other protocol
+                except subprocess.TimeoutExpired:
+                    continue  # Try next URL if timeout
+
+            # Parse GoSpider output - check both JSON and TXT files
             if output_dir.exists():
+                # First try JSON files
                 for file_path in output_dir.rglob("*.json"):
                     with open(file_path) as f:
                         for line in f:
@@ -996,27 +1019,55 @@ class CrawlerSession:
                             except:
                                 continue
 
+                # Also try TXT files and other formats
+                for file_path in output_dir.rglob("*"):
+                    if file_path.is_file() and file_path.suffix in [".txt", ".out", ""]:
+                        try:
+                            with open(
+                                file_path, "r", encoding="utf-8", errors="ignore"
+                            ) as f:
+                                for line in f:
+                                    line = line.strip()
+                                    if line and (
+                                        line.startswith("http://")
+                                        or line.startswith("https://")
+                                    ):
+                                        urls.add(line)
+                        except:
+                            continue
+
         except Exception as e:
             self.log(f"GoSpider error: {e}", "ERROR")
 
         return urls
 
-    def run_xnlinkfinder(self, target: str, **kwargs) -> Set[str]:
+    def run_xnLinkFinder(self, target: str, **kwargs) -> Set[str]:
         """Run XnLinkFinder crawler."""
         urls = set()
 
         try:
-            output_json = self.output_dir / f"{target}_xnlinkfinder.json"
-            cmd = [
-                "python3",
-                "XnLinkFinder.py",
-                "-i",
-                f"http://{target}",
-                "-o",
-                str(output_json),
-            ]
+            output_json = self.output_dir / f"{target}_xnLinkFinder.json"
 
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
+            # Try HTTPS first, then HTTP
+            target_urls = [f"https://{target}", f"http://{target}"]
+
+            for target_url in target_urls:
+                cmd = [
+                    "xnLinkFinder",
+                    "-i",
+                    target_url,
+                    "-o",
+                    str(output_json),
+                ]
+
+                try:
+                    result = subprocess.run(
+                        cmd, capture_output=True, text=True, timeout=1200
+                    )
+                    if result.returncode == 0 and output_json.exists():
+                        break  # Success, don't try the other protocol
+                except subprocess.TimeoutExpired:
+                    continue  # Try next URL if timeout
 
             if output_json.exists():
                 with open(output_json) as f:
@@ -1062,7 +1113,7 @@ class CrawlerSession:
 
             with open(output_file, "w") as f:
                 result = subprocess.run(
-                    cmd, stdout=f, stderr=subprocess.PIPE, text=True, timeout=600
+                    cmd, stdout=f, stderr=subprocess.PIPE, text=True, timeout=1200
                 )
 
             if output_file.exists():
@@ -1087,28 +1138,39 @@ class CrawlerSession:
         try:
             output_json = self.output_dir / f"{target}_crawlergo.json"
 
-            cmd = [
-                "crawlergo",
-                "-c",
-                crawlergo_chrome,
-                "--output-mode",
-                "json",
-                "--output-json",
-                str(output_json),
-                "--filter-mode",
-                "smart",
-                "--fuzz-path",
-                "--robots-path",
-                "--max-crawled-count",
-                str(max_pages),
-                "--max-tab-count",
-                "6",
-                f"http://{target}",
-            ]
-            if proxy:
-                cmd += ["--request-proxy", proxy]
+            # Try HTTPS first, then HTTP
+            target_urls = [f"https://{target}", f"http://{target}"]
 
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=900)
+            for target_url in target_urls:
+                cmd = [
+                    "crawlergo",
+                    "-c",
+                    crawlergo_chrome,
+                    "--output-mode",
+                    "json",
+                    "--output-json",
+                    str(output_json),
+                    "--filter-mode",
+                    "smart",
+                    "--fuzz-path",
+                    "--robots-path",
+                    "--max-crawled-count",
+                    str(max_pages),
+                    "--max-tab-count",
+                    "6",
+                    target_url,
+                ]
+                if proxy:
+                    cmd += ["--request-proxy", proxy]
+
+                try:
+                    result = subprocess.run(
+                        cmd, capture_output=True, text=True, timeout=1800
+                    )
+                    if result.returncode == 0 and output_json.exists():
+                        break  # Success, don't try the other protocol
+                except subprocess.TimeoutExpired:
+                    continue  # Try next URL if timeout
 
             if output_json.exists():
                 with open(output_json) as f:

@@ -53,6 +53,7 @@ from reconcli.zonewalkcli import cli as zonewalk_cli
 from reconcli.xsscli import cli as xsscli  # Importing the XSS CLI command
 from reconcli.shodancli import shodancli  # Importing the Shodan CLI command
 from reconcli.fofaxcli import cli as fofax_cli  # FOFA search engine CLI
+from reconcli.ectractorcli import extractor as extractorcli
 
 # Git Operations
 try:
@@ -177,6 +178,12 @@ cnamecli.short_help = "Detects dangling CNAMEs and takeover candidates"
 # Vulnerability Scanning with Jaeles and Nuclei
 cli.add_command(vulncli, name="vulncli")
 vulncli.short_help = "Scan URLs using GF, Dalfox, Jaeles, and Nuclei with filters"
+
+# Enhanced Data Extraction
+cli.add_command(extractorcli, name="extractorcli")
+extractorcli.short_help = (
+    "🧲 Advanced extractor: URLs, APIs, secrets, forms, JS vars with live fetching"
+)
 
 # Directory Bruteforcing
 cli.add_command(dirbcli, name="dirbcli")

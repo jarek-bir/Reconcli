@@ -1031,11 +1031,11 @@ def dns_bruteforce_intensive(domain: str, verbose: bool = False) -> List[str]:
 def search_github_repos(
     domain: str, github_token: Optional[str] = None, verbose: bool = False
 ) -> List[str]:
-    """Search GitHub repositories for subdomains in configuration files.
+    """Search GitHub repositories for subdomains using github-subdomains tool.
 
     Args:
         domain: Target domain
-        github_token: GitHub API token for enhanced access
+        github_token: GitHub API token (optional - tool doesn't require it)
         verbose: Enable verbose output
 
     Returns:
@@ -1044,98 +1044,71 @@ def search_github_repos(
     if verbose:
         click.echo("[+] 📱 Searching GitHub repositories...")
 
-    github_subdomains = set()
+    github_subdomains = []
 
     try:
-        headers = {"User-Agent": "SubdoCLI-BountyHunter"}
-        if github_token:
-            headers["Authorization"] = f"token {github_token}"
+        # Use the github-subdomains tool which we know works
+        cmd = [
+            "github-subdomains",
+            "-d",
+            domain,
+            "-raw",
+            "-q",
+        ]  # Added -q for quick mode
 
-        # Search queries for different file types
-        search_queries = [
-            f'"{domain}" extension:json',
-            f'"{domain}" extension:yml',
-            f'"{domain}" extension:yaml',
-            f'"{domain}" extension:conf',
-            f'"{domain}" extension:config',
-            f'"{domain}" extension:env',
-            f'"{domain}" extension:js',
-            f'"{domain}" extension:py',
-            f'"{domain}" extension:rb',
-            f'"{domain}" extension:php',
-            f'"{domain}" filename:.env',
-            f'"{domain}" filename:config.json',
-            f'"{domain}" filename:settings.yml',
-        ]
+        if verbose:
+            click.echo(f"[GITHUB] 🔍 Running: {' '.join(cmd)}")
 
-        for query in search_queries:
-            try:
-                if verbose:
-                    click.echo(f"[GITHUB] 🔍 Searching: {query}")
+        result = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            timeout=60,  # Shorter timeout for testing
+            check=False,
+        )
 
-                url = f"https://api.github.com/search/code?q={query}&per_page=100"
-                response = requests.get(url, headers=headers, timeout=10)
+        if result.returncode == 0:
+            if verbose:
+                click.echo(
+                    f"[GITHUB] 📊 Raw output lines: {len(result.stdout.strip().split())}"
+                )
 
-                if response.status_code == 200:
-                    data = response.json()
+            # Parse output - each line is a subdomain
+            for line in result.stdout.strip().split("\n"):
+                subdomain = line.strip()
+                if subdomain and (
+                    subdomain == domain or subdomain.endswith("." + domain)
+                ):
+                    github_subdomains.append(subdomain)
 
-                    for item in data.get("items", []):
-                        # Extract potential subdomains using regex
-                        content_url = item.get("url", "")
-                        if content_url:
-                            try:
-                                content_response = requests.get(
-                                    content_url, headers=headers, timeout=5
-                                )
-                                if content_response.status_code == 200:
-                                    content_data = content_response.json()
-                                    content = base64.b64decode(
-                                        content_data.get("content", "")
-                                    ).decode("utf-8", errors="ignore")
+            if verbose:
+                click.echo(f"[GITHUB] ✅ Found {len(github_subdomains)} subdomains")
+                for subdomain in github_subdomains[:5]:  # Show first 5
+                    click.echo(f"[GITHUB] 🎯 {subdomain}")
+                if len(github_subdomains) > 5:
+                    click.echo(f"[GITHUB] ... and {len(github_subdomains) - 5} more")
+        else:
+            if verbose:
+                click.echo(f"[GITHUB] ⚠️ Tool returned error code: {result.returncode}")
+                if result.stderr:
+                    click.echo(f"[GITHUB] ❌ Error: {result.stderr.strip()}")
 
-                                    # Regex to find subdomains
-                                    pattern = (
-                                        r"([a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?\.)*"
-                                        + re.escape(domain)
-                                    )
-                                    matches = re.findall(
-                                        pattern, content, re.IGNORECASE
-                                    )
-
-                                    for match in matches:
-                                        if isinstance(match, tuple):
-                                            match = match[0] if match[0] else ""
-
-                                        subdomain = match.strip().lower()
-                                        if subdomain and subdomain.endswith(domain):
-                                            github_subdomains.add(subdomain)
-
-                            except Exception as e:
-                                if verbose:
-                                    click.echo(
-                                        f"[GITHUB] ❌ Error fetching content: {str(e)}"
-                                    )
-
-                elif response.status_code == 403:
-                    if verbose:
-                        click.echo(
-                            "[GITHUB] ⚠️ Rate limited or need authentication token"
-                        )
-                    break
-
-            except Exception as e:
-                if verbose:
-                    click.echo(f"[GITHUB] ❌ Error with query '{query}': {str(e)}")
-
+    except subprocess.TimeoutExpired:
+        if verbose:
+            click.echo("[GITHUB] ⏰ Timeout - GitHub search took too long")
+    except FileNotFoundError:
+        if verbose:
+            click.echo(
+                "[GITHUB] ❌ github-subdomains tool not found. Install it with: go install github.com/gwen001/github-subdomains@latest"
+            )
     except Exception as e:
         if verbose:
-            click.echo(f"[GITHUB] ❌ General error: {str(e)}")
+            click.echo(f"[GITHUB] ❌ Error: {str(e)}")
 
-    result = list(github_subdomains)
     if verbose:
-        click.echo(f"[GITHUB] 🎯 Found {len(result)} subdomains in repositories")
+        click.echo(f"[GITHUB] 🎯 Total subdomains found: {len(github_subdomains)}")
 
-    return result
+    return github_subdomains
 
 
 def search_pastebin_sites(domain: str, verbose: bool = False) -> List[str]:

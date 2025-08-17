@@ -1,0 +1,2474 @@
+[
+  {
+    "name": "Katana Crawl: https://blablacar.com",
+    "url": "https://blablacar.com",
+    "method": "GET",
+    "confidence": 60,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:42:37",
+    "metadata": {
+      "tool": "katana",
+      "depth": 3
+    }
+  },
+  {
+    "name": "Katana Crawl: https://cdn.blablacar.com/language-selector/assets/index.92a46af74e20a150.js",
+    "url": "https://cdn.blablacar.com/language-selector/assets/index.92a46af74e20a150.js",
+    "method": "GET",
+    "confidence": 60,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:42:37",
+    "metadata": {
+      "tool": "katana",
+      "depth": 3
+    }
+  },
+  {
+    "name": "Katana Crawl: https://cdn.blablacar.com/language-selector/assets/4.bf08d6fba4ebf7fd.css",
+    "url": "https://cdn.blablacar.com/language-selector/assets/4.bf08d6fba4ebf7fd.css",
+    "method": "GET",
+    "confidence": 60,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:42:37",
+    "metadata": {
+      "tool": "katana",
+      "depth": 3
+    }
+  },
+  {
+    "name": "Katana Crawl: https://cdn.blablacar.com/language-selector/assets/4.3600cb2b0d9d338d.js",
+    "url": "https://cdn.blablacar.com/language-selector/assets/4.3600cb2b0d9d338d.js",
+    "method": "GET",
+    "confidence": 60,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:42:37",
+    "metadata": {
+      "tool": "katana",
+      "depth": 3
+    }
+  },
+  {
+    "name": "Katana Crawl: https://cdn.blablacar.com/language-selector/assets/",
+    "url": "https://cdn.blablacar.com/language-selector/assets/",
+    "method": "GET",
+    "confidence": 60,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:42:37",
+    "metadata": {
+      "tool": "katana",
+      "depth": 3
+    }
+  },
+  {
+    "name": "Katana Crawl: https://cdn.blablacar.com/language-selector/assets/index.92a46af74e20a150.js",
+    "url": "https://cdn.blablacar.com/language-selector/assets/index.92a46af74e20a150.js",
+    "method": "GET",
+    "confidence": 60,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:42:37",
+    "metadata": {
+      "tool": "katana",
+      "depth": 3
+    }
+  },
+  {
+    "name": "GAU Discovery: http://blablacar.com/",
+    "url": "http://blablacar.com/",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: https://www.blablacar.com/%22",
+    "url": "https://www.blablacar.com/%22",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/%20",
+    "url": "http://www.blablacar.com/%20",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com:80/%20owners",
+    "url": "http://www.blablacar.com:80/%20owners",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com:80/%23?",
+    "url": "http://www.blablacar.com:80/%23?",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: https://www.blablacar.com/%C2%A9BlaBlaCar",
+    "url": "https://www.blablacar.com/%C2%A9BlaBlaCar",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: https://www.blablacar.com/%C2%A9BlaBlaCarOver",
+    "url": "https://www.blablacar.com/%C2%A9BlaBlaCarOver",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: https://www.blablacar.com/%D0%9A%D1%80%D1%83%D0%BF%D0%BD%D0%B5%D0%B9%D1%88%D0%B8%D0%B9",
+    "url": "https://www.blablacar.com/%D0%9A%D1%80%D1%83%D0%BF%D0%BD%D0%B5%D0%B9%D1%88%D0%B8%D0%B9",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/%EF%83%BC",
+    "url": "http://www.blablacar.com/%EF%83%BC",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/%EF%83%BC%E9%9B%A2%E6%A0%A1%E7%A8%8B%E5%BA%8F",
+    "url": "http://www.blablacar.com/%EF%83%BC%E9%9B%A2%E6%A0%A1%E7%A8%8B%E5%BA%8F",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/%EF%83%BC%E9%9B%A2%E6%A0%A1%E7%A8%8B%E5%BA%8F%EF%83%BC",
+    "url": "http://www.blablacar.com/%EF%83%BC%E9%9B%A2%E6%A0%A1%E7%A8%8B%E5%BA%8F%EF%83%BC",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/%EF%83%BC%E9%9B%A2%E6%A0%A1%E7%A8%8B%E5%BA%8F%EF%83%BCetc",
+    "url": "http://www.blablacar.com/%EF%83%BC%E9%9B%A2%E6%A0%A1%E7%A8%8B%E5%BA%8F%EF%83%BCetc",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/%EF%83%BC%E9%9B%A2%E6%A0%A1%E7%A8%8B%E5%BA%8F%EF%83%BCetc.",
+    "url": "http://www.blablacar.com/%EF%83%BC%E9%9B%A2%E6%A0%A1%E7%A8%8B%E5%BA%8F%EF%83%BCetc.",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/%EF%BC%89%E3%81%AF%EF%BC%8C%E9%81%8B%E8%BB%A2%E8%80%85%E3%81%A8%E5%90%8C%E4%B9%97%E8%80%85%E3%81%AE%E3%82%B3%E3%83%9F%E3%83%A5%E3%83%8B",
+    "url": "http://www.blablacar.com/%EF%BC%89%E3%81%AF%EF%BC%8C%E9%81%8B%E8%BB%A2%E8%80%85%E3%81%A8%E5%90%8C%E4%B9%97%E8%80%85%E3%81%AE%E3%82%B3%E3%83%9F%E3%83%A5%E3%83%8B",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/%EF%BC%89%E3%81%AF%EF%BC%8C%E9%81%8B%E8%BB%A2%E8%80%85%E3%81%A8%E5%90%8C%E4%B9%97%E8%80%85%E3%81%AE%E3%82%B3%E3%83%9F%E3%83%A5%E3%83%8B%E3%82%B1%E3%83%BC%E3%82%B7%E3%83%A7%E3%83%B3%E3%81%AB%E9%87%8D%E7%82%B9%E3%82%92%E3%81%8A%E3%81%84%E3%81%A6%E3%81%84%E3%81%A6%EF%BC%8C%E8%BB%8A%E5%86%85%E3%81%A7%E3%81%A9%E3%81%AE%E7%A8%8B%E5%BA%A6%E3%82%B3%E3%83%9F%E3%83%A5%E3%83%8B%E3%82%B1%E3%83%BC%E3%82%B7%E3%83%A7%E3%83%B3%E3%81%97%E3%81%9F%E3%81%84%E3%81%8B%E4%BA%8B%E5%89%8D%E3%81%AB%E7%99%BB%E9%8C%B2%E3%81%99%E3%82%8B",
+    "url": "http://www.blablacar.com/%EF%BC%89%E3%81%AF%EF%BC%8C%E9%81%8B%E8%BB%A2%E8%80%85%E3%81%A8%E5%90%8C%E4%B9%97%E8%80%85%E3%81%AE%E3%82%B3%E3%83%9F%E3%83%A5%E3%83%8B%E3%82%B1%E3%83%BC%E3%82%B7%E3%83%A7%E3%83%B3%E3%81%AB%E9%87%8D%E7%82%B9%E3%82%92%E3%81%8A%E3%81%84%E3%81%A6%E3%81%84%E3%81%A6%EF%BC%8C%E8%BB%8A%E5%86%85%E3%81%A7%E3%81%A9%E3%81%AE%E7%A8%8B%E5%BA%A6%E3%82%B3%E3%83%9F%E3%83%A5%E3%83%8B%E3%82%B1%E3%83%BC%E3%82%B7%E3%83%A7%E3%83%B3%E3%81%97%E3%81%9F%E3%81%84%E3%81%8B%E4%BA%8B%E5%89%8D%E3%81%AB%E7%99%BB%E9%8C%B2%E3%81%99%E3%82%8B",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/%EF%BC%89%E3%81%AF%EF%BC%8C%E9%81%8B%E8%BB%A2%E8%80%85%E3%81%A8%E5%90%8C%E4%B9%97%E8%80%85%E3%81%AE%E3%82%B3%E3%83%9F%E3%83%A5%E3%83%8B%E3%82%B1%E3%83%BC%E3%82%B7%E3%83%A7%E3%83%B3%E3%81%AB%E9%87%8D%E7%82%B9%E3%82%92%E3%81%8A%E3%81%84%E3%81%A6%E3%81%84%E3%81%A6%EF%BC%8C%E8%BB%8A%E5%86%85%E3%81%A7%E3%81%A9%E3%81%AE%E7%A8%8B%E5%BA%A6%E3%82%B3%E3%83%9F%E3%83%A5%E3%83%8B%E3%82%B1%E3%83%BC%E3%82%B7%E3%83%A7%E3%83%B3%E3%81%97%E3%81%9F%E3%81%84%E3%81%8B%E4%BA%8B%E5%89%8D%E3%81%AB%E7%99%BB%E9%8C%B2%E3%81%99%E3%82%8B%E3%82%88%E3%81%86%E3%81%AB%E3%81%AA%E3%81%A3%E3%81%A6%E3%81%84%E3%82%8B%E3%80%82BlaBlaCar",
+    "url": "http://www.blablacar.com/%EF%BC%89%E3%81%AF%EF%BC%8C%E9%81%8B%E8%BB%A2%E8%80%85%E3%81%A8%E5%90%8C%E4%B9%97%E8%80%85%E3%81%AE%E3%82%B3%E3%83%9F%E3%83%A5%E3%83%8B%E3%82%B1%E3%83%BC%E3%82%B7%E3%83%A7%E3%83%B3%E3%81%AB%E9%87%8D%E7%82%B9%E3%82%92%E3%81%8A%E3%81%84%E3%81%A6%E3%81%84%E3%81%A6%EF%BC%8C%E8%BB%8A%E5%86%85%E3%81%A7%E3%81%A9%E3%81%AE%E7%A8%8B%E5%BA%A6%E3%82%B3%E3%83%9F%E3%83%A5%E3%83%8B%E3%82%B1%E3%83%BC%E3%82%B7%E3%83%A7%E3%83%B3%E3%81%97%E3%81%9F%E3%81%84%E3%81%8B%E4%BA%8B%E5%89%8D%E3%81%AB%E7%99%BB%E9%8C%B2%E3%81%99%E3%82%8B%E3%82%88%E3%81%86%E3%81%AB%E3%81%AA%E3%81%A3%E3%81%A6%E3%81%84%E3%82%8B%E3%80%82BlaBlaCar",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/*/*",
+    "url": "http://www.blablacar.com/*/*",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/,opacity:0.6,cursor:",
+    "url": "http://www.blablacar.com/,opacity:0.6,cursor:",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/,overlayOpacity:0.8,fixedNavigation:false,imageLoading:",
+    "url": "http://www.blablacar.com/,overlayOpacity:0.8,fixedNavigation:false,imageLoading:",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/,showOtherMonths:false,selectOtherMonths:false,showWeek:false,calculateWeek:this.iso8601Week,shortYearCutoff:",
+    "url": "http://www.blablacar.com/,showOtherMonths:false,selectOtherMonths:false,showWeek:false,calculateWeek:this.iso8601Week,shortYearCutoff:",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: https://www.blablacar.com/.106",
+    "url": "https://www.blablacar.com/.106",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/.2",
+    "url": "http://www.blablacar.com/.2",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: https://www.blablacar.com/.3",
+    "url": "https://www.blablacar.com/.3",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: https://www.blablacar.com/.[3",
+    "url": "https://www.blablacar.com/.[3",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/.autoresize",
+    "url": "http://www.blablacar.com/.autoresize",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/.blablacar.com",
+    "url": "http://www.blablacar.com/.blablacar.com",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/.blockUI",
+    "url": "http://www.blablacar.com/.blockUI",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/.blog_show_parag",
+    "url": "http://www.blablacar.com/.blog_show_parag",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/.blog_show_title",
+    "url": "http://www.blablacar.com/.blog_show_title",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/.booking-manage-action-buttons-cancel",
+    "url": "http://www.blablacar.com/.booking-manage-action-buttons-cancel",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/.booking-manage-action-cancel-reason",
+    "url": "http://www.blablacar.com/.booking-manage-action-cancel-reason",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/.booking-ok",
+    "url": "http://www.blablacar.com/.booking-ok",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: https://blablacar.com/.Canetti",
+    "url": "https://blablacar.com/.Canetti",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/.city_address",
+    "url": "http://www.blablacar.com/.city_address",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/.clicked",
+    "url": "http://www.blablacar.com/.clicked",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/.clubbutton",
+    "url": "http://www.blablacar.com/.clubbutton",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/.co-datepicker",
+    "url": "http://www.blablacar.com/.co-datepicker",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/.co_enabler",
+    "url": "http://www.blablacar.com/.co_enabler",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/.co_error",
+    "url": "http://www.blablacar.com/.co_error",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/.co_event_info",
+    "url": "http://www.blablacar.com/.co_event_info",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/.co_slide",
+    "url": "http://www.blablacar.com/.co_slide",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/.co_slideshow",
+    "url": "http://www.blablacar.com/.co_slideshow",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/.co_switcher",
+    "url": "http://www.blablacar.com/.co_switcher",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/.co_toggle",
+    "url": "http://www.blablacar.com/.co_toggle",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/.co_viewers_follow_link",
+    "url": "http://www.blablacar.com/.co_viewers_follow_link",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/.comuto_activealert",
+    "url": "http://www.blablacar.com/.comuto_activealert",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/.comuto_autocity",
+    "url": "http://www.blablacar.com/.comuto_autocity",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/.comuto_calendar_managedayname",
+    "url": "http://www.blablacar.com/.comuto_calendar_managedayname",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/.comuto_cityid",
+    "url": "http://www.blablacar.com/.comuto_cityid",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/.comuto_dailyselection",
+    "url": "http://www.blablacar.com/.comuto_dailyselection",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/.comuto_digits",
+    "url": "http://www.blablacar.com/.comuto_digits",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/.comuto_driversendmessage",
+    "url": "http://www.blablacar.com/.comuto_driversendmessage",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/.comuto_emailchkbx",
+    "url": "http://www.blablacar.com/.comuto_emailchkbx",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/.comuto_emailchkbx:checked",
+    "url": "http://www.blablacar.com/.comuto_emailchkbx:checked",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/.comuto_example",
+    "url": "http://www.blablacar.com/.comuto_example",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/.comuto_favorite_star",
+    "url": "http://www.blablacar.com/.comuto_favorite_star",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/.comuto_formulaire",
+    "url": "http://www.blablacar.com/.comuto_formulaire",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/.comuto_hidden_actions",
+    "url": "http://www.blablacar.com/.comuto_hidden_actions",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/.comuto_hideonchangeform",
+    "url": "http://www.blablacar.com/.comuto_hideonchangeform",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/.comuto_infos_invisible",
+    "url": "http://www.blablacar.com/.comuto_infos_invisible",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/.comuto_merci_",
+    "url": "http://www.blablacar.com/.comuto_merci_",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/.comuto_merci_country",
+    "url": "http://www.blablacar.com/.comuto_merci_country",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/.comuto_message_formulaire",
+    "url": "http://www.blablacar.com/.comuto_message_formulaire",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/.comuto_messages_selector_All",
+    "url": "http://www.blablacar.com/.comuto_messages_selector_All",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/.comuto_messages_selector_None",
+    "url": "http://www.blablacar.com/.comuto_messages_selector_None",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/.comuto_messages_selector_Read",
+    "url": "http://www.blablacar.com/.comuto_messages_selector_Read",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/.comuto_messages_selector_Unread",
+    "url": "http://www.blablacar.com/.comuto_messages_selector_Unread",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/.comuto_more",
+    "url": "http://www.blablacar.com/.comuto_more",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/.comuto_msgunread",
+    "url": "http://www.blablacar.com/.comuto_msgunread",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/.comuto_nbseats_",
+    "url": "http://www.blablacar.com/.comuto_nbseats_",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/.comuto_post_refresh_map",
+    "url": "http://www.blablacar.com/.comuto_post_refresh_map",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/.comuto_publier",
+    "url": "http://www.blablacar.com/.comuto_publier",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/.comuto_quitformulaire",
+    "url": "http://www.blablacar.com/.comuto_quitformulaire",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/.comuto_recherche_inputs_hidden",
+    "url": "http://www.blablacar.com/.comuto_recherche_inputs_hidden",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/.comuto_rechercher",
+    "url": "http://www.blablacar.com/.comuto_rechercher",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/.comuto_rib_fr",
+    "url": "http://www.blablacar.com/.comuto_rib_fr",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/.comuto_same_address",
+    "url": "http://www.blablacar.com/.comuto_same_address",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/.comuto_toggleable",
+    "url": "http://www.blablacar.com/.comuto_toggleable",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/.comuto_triplistsendmessage",
+    "url": "http://www.blablacar.com/.comuto_triplistsendmessage",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/.comuto_tripmsg",
+    "url": "http://www.blablacar.com/.comuto_tripmsg",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/.comuto_usemy_address",
+    "url": "http://www.blablacar.com/.comuto_usemy_address",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/.comuto_viacity_suggest",
+    "url": "http://www.blablacar.com/.comuto_viacity_suggest",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/.comuto_viewtip",
+    "url": "http://www.blablacar.com/.comuto_viewtip",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/.comuto_viewtiptext",
+    "url": "http://www.blablacar.com/.comuto_viewtiptext",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/.default_confirm",
+    "url": "http://www.blablacar.com/.default_confirm",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/.description",
+    "url": "http://www.blablacar.com/.description",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/.dialog",
+    "url": "http://www.blablacar.com/.dialog",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/.dialog-overlay",
+    "url": "http://www.blablacar.com/.dialog-overlay",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/.driver_passenger",
+    "url": "http://www.blablacar.com/.driver_passenger",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/.editInPlace",
+    "url": "http://www.blablacar.com/.editInPlace",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/.event_color_chooser",
+    "url": "http://www.blablacar.com/.event_color_chooser",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/.filter-link",
+    "url": "http://www.blablacar.com/.filter-link",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/.fromlat",
+    "url": "http://www.blablacar.com/.fromlat",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/.fromlon",
+    "url": "http://www.blablacar.com/.fromlon",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/.google-analytics.com/ga.js",
+    "url": "http://www.blablacar.com/.google-analytics.com/ga.js",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/.inplace_cancel",
+    "url": "http://www.blablacar.com/.inplace_cancel",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/.inplace_field",
+    "url": "http://www.blablacar.com/.inplace_field",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/.inplace_save",
+    "url": "http://www.blablacar.com/.inplace_save",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/.jfmfs-button",
+    "url": "http://www.blablacar.com/.jfmfs-button",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/.jfmfs-friend",
+    "url": "http://www.blablacar.com/.jfmfs-friend",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/.jfmfs-friend.selected",
+    "url": "http://www.blablacar.com/.jfmfs-friend.selected",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/.last_place_confirm",
+    "url": "http://www.blablacar.com/.last_place_confirm",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/.latitude",
+    "url": "http://www.blablacar.com/.latitude",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/.longitude",
+    "url": "http://www.blablacar.com/.longitude",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/.modal",
+    "url": "http://www.blablacar.com/.modal",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/.more_infos",
+    "url": "http://www.blablacar.com/.more_infos",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/.pac-container",
+    "url": "http://www.blablacar.com/.pac-container",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/.phone_country_prefix",
+    "url": "http://www.blablacar.com/.phone_country_prefix",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/.placeholder",
+    "url": "http://www.blablacar.com/.placeholder",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/.post_city_autocomplete",
+    "url": "http://www.blablacar.com/.post_city_autocomplete",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/.preventClickEvent",
+    "url": "http://www.blablacar.com/.preventClickEvent",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/.profile_phone_international",
+    "url": "http://www.blablacar.com/.profile_phone_international",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/.selected",
+    "url": "http://www.blablacar.com/.selected",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/.specialChange",
+    "url": "http://www.blablacar.com/.specialChange",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/.specialSubmit",
+    "url": "http://www.blablacar.com/.specialSubmit",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/.tab-content",
+    "url": "http://www.blablacar.com/.tab-content",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/.TEST",
+    "url": "http://www.blablacar.com/.TEST",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/.tolat",
+    "url": "http://www.blablacar.com/.tolat",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/.tolon",
+    "url": "http://www.blablacar.com/.tolon",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/.tooltip_content",
+    "url": "http://www.blablacar.com/.tooltip_content",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/.trip-details-bloc-address-from",
+    "url": "http://www.blablacar.com/.trip-details-bloc-address-from",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/.trip-details-bloc-address-to",
+    "url": "http://www.blablacar.com/.trip-details-bloc-address-to",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/.ui-button-text",
+    "url": "http://www.blablacar.com/.ui-button-text",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/.ui-datepicker-calendar",
+    "url": "http://www.blablacar.com/.ui-datepicker-calendar",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/.ui-datepicker-rtl",
+    "url": "http://www.blablacar.com/.ui-datepicker-rtl",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/.ui-dialog",
+    "url": "http://www.blablacar.com/.ui-dialog",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/.ui-dialog-buttonpane",
+    "url": "http://www.blablacar.com/.ui-dialog-buttonpane",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/.ui-dialog-buttonset",
+    "url": "http://www.blablacar.com/.ui-dialog-buttonset",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/.ui-dialog-content",
+    "url": "http://www.blablacar.com/.ui-dialog-content",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/.ui-dialog-title",
+    "url": "http://www.blablacar.com/.ui-dialog-title",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/.ui-dialog-titlebar",
+    "url": "http://www.blablacar.com/.ui-dialog-titlebar",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/.ui-disableSelection",
+    "url": "http://www.blablacar.com/.ui-disableSelection",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/.ui-menu-item",
+    "url": "http://www.blablacar.com/.ui-menu-item",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/.ui-resizable-se",
+    "url": "http://www.blablacar.com/.ui-resizable-se",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/.ui-widget-content",
+    "url": "http://www.blablacar.com/.ui-widget-content",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: https://www.blablacar.com/.well-known/ai-plugin.json",
+    "url": "https://www.blablacar.com/.well-known/ai-plugin.json",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: https://blablacar.com/.well-known/apple-app-site-association",
+    "url": "https://blablacar.com/.well-known/apple-app-site-association",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: https://blablacar.com/.well-known/assetlinks.json",
+    "url": "https://blablacar.com/.well-known/assetlinks.json",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: https://www.blablacar.com/.well-known/dnt-policy.txt",
+    "url": "https://www.blablacar.com/.well-known/dnt-policy.txt",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: https://www.blablacar.com/.well-known/gpc.json",
+    "url": "https://www.blablacar.com/.well-known/gpc.json",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: https://www.blablacar.com/.well-known/nodeinfo",
+    "url": "https://www.blablacar.com/.well-known/nodeinfo",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: https://www.blablacar.com/.well-known/openid-configuration",
+    "url": "https://www.blablacar.com/.well-known/openid-configuration",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: https://www.blablacar.com/.well-known/security.txt",
+    "url": "https://www.blablacar.com/.well-known/security.txt",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: https://www.blablacar.com/.well-known/trust.txt",
+    "url": "https://www.blablacar.com/.well-known/trust.txt",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/.youtube-embed-link",
+    "url": "http://www.blablacar.com/.youtube-embed-link",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/.youtube-popin-custom",
+    "url": "http://www.blablacar.com/.youtube-popin-custom",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/.youtube-popin-link",
+    "url": "http://www.blablacar.com/.youtube-popin-link",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/.zoom",
+    "url": "http://www.blablacar.com/.zoom",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/01/01/1977",
+    "url": "http://www.blablacar.com/01/01/1977",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: https://www.blablacar.com/1.11.2",
+    "url": "https://www.blablacar.com/1.11.2",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/1.4.4",
+    "url": "http://www.blablacar.com/1.4.4",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/1.8.13",
+    "url": "http://www.blablacar.com/1.8.13",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/1/1/",
+    "url": "http://www.blablacar.com/1/1/",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com:80/10368581",
+    "url": "http://www.blablacar.com:80/10368581",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/189",
+    "url": "http://www.blablacar.com/189",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/2",
+    "url": "http://www.blablacar.com/2",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/2.9999.3",
+    "url": "http://www.blablacar.com/2.9999.3",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: https://www.blablacar.com/2http://www.autostradecarpooling.it",
+    "url": "https://www.blablacar.com/2http://www.autostradecarpooling.it",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/3",
+    "url": "http://www.blablacar.com/3",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: https://www.blablacar.com/3.3.2",
+    "url": "https://www.blablacar.com/3.3.2",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/3.9.4",
+    "url": "http://www.blablacar.com/3.9.4",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: https://www.blablacar.com/3.The",
+    "url": "https://www.blablacar.com/3.The",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: https://www.blablacar.com/33",
+    "url": "https://www.blablacar.com/33",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com:80/618078",
+    "url": "http://www.blablacar.com:80/618078",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/:c.support.cssFloat",
+    "url": "http://www.blablacar.com/:c.support.cssFloat",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/:d.primary",
+    "url": "http://www.blablacar.com/:d.primary",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/;a.yearshtml+=",
+    "url": "http://www.blablacar.com/;a.yearshtml+=",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/;b.dataType=",
+    "url": "http://www.blablacar.com/;b.dataType=",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/;d.innerHTML=",
+    "url": "http://www.blablacar.com/;d.innerHTML=",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/;d.style.overflow=",
+    "url": "http://www.blablacar.com/;d.style.overflow=",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/;d.style.position=",
+    "url": "http://www.blablacar.com/;d.style.position=",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/;Date.fullYearStart=",
+    "url": "http://www.blablacar.com/;Date.fullYearStart=",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/;e.style.top=",
+    "url": "http://www.blablacar.com/;e.style.top=",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/;link.id=",
+    "url": "http://www.blablacar.com/;link.id=",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/;link.innerHTML=",
+    "url": "http://www.blablacar.com/;link.innerHTML=",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/;r.innerHTML=",
+    "url": "http://www.blablacar.com/;r.innerHTML=",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/;r.style.zoom=1;c.support.inlineBlockNeedsLayout=r.offsetWidth===2;r.style.display=",
+    "url": "http://www.blablacar.com/;r.style.zoom=1;c.support.inlineBlockNeedsLayout=r.offsetWidth===2;r.style.display=",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/;this._appendClass=",
+    "url": "http://www.blablacar.com/;this._appendClass=",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/;this._currentClass=",
+    "url": "http://www.blablacar.com/;this._currentClass=",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/;this._dayOverClass=",
+    "url": "http://www.blablacar.com/;this._dayOverClass=",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/;this._dialogClass=",
+    "url": "http://www.blablacar.com/;this._dialogClass=",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/;this._disableClass=",
+    "url": "http://www.blablacar.com/;this._disableClass=",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/;this._inlineClass=",
+    "url": "http://www.blablacar.com/;this._inlineClass=",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/;this._triggerClass=",
+    "url": "http://www.blablacar.com/;this._triggerClass=",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/;this._unselectableClass=",
+    "url": "http://www.blablacar.com/;this._unselectableClass=",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/%3Chtml%3E%3C/html%3E",
+    "url": "http://www.blablacar.com/%3Chtml%3E%3C/html%3E",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: https://www.blablacar.com/?affmn=0&affmt=0&awc=13698_1725584964_67019339bb82230f2fd2a952c07e74be&comuto_cmkt=DE_AWIN_ALL_STANDARD_EZPR&ref=653819-&sv1=affiliate&sv_campaign_id=653819&utm_campaign=DE_AWIN_ALL_STANDARD_EZPR&utm_content=653819&utm_medium=Link&utm_source=AWIN",
+    "url": "https://www.blablacar.com/?affmn=0&affmt=0&awc=13698_1725584964_67019339bb82230f2fd2a952c07e74be&comuto_cmkt=DE_AWIN_ALL_STANDARD_EZPR&ref=653819-&sv1=affiliate&sv_campaign_id=653819&utm_campaign=DE_AWIN_ALL_STANDARD_EZPR&utm_content=653819&utm_medium=Link&utm_source=AWIN",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: https://www.blablacar.com/?utm_source=gohobo&amp;utm_medium=adventuredirectory&amp;utm_campaign=gohobo",
+    "url": "https://www.blablacar.com/?utm_source=gohobo&amp;utm_medium=adventuredirectory&amp;utm_campaign=gohobo",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com:80/?flash.email_certified=*&comuto_cmkt=",
+    "url": "http://www.blablacar.com:80/?flash.email_certified=*&comuto_cmkt=",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com:80/?flash.email_certified=1&comuto_cmkt=;GB_tra_log_2",
+    "url": "http://www.blablacar.com:80/?flash.email_certified=1&comuto_cmkt=;GB_tra_log_2",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com:80/?flash.email_certified=1&comuto_cmkt=;GB_tra_reg_1",
+    "url": "http://www.blablacar.com:80/?flash.email_certified=1&comuto_cmkt=;GB_tra_reg_1",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/?comuto_cmkt=BE_ESN_BE-BRUS-ESN&utm_source=ESN&utm_campaign=BE_ESN_BE-BRUS-ESN",
+    "url": "http://www.blablacar.com/?comuto_cmkt=BE_ESN_BE-BRUS-ESN&utm_source=ESN&utm_campaign=BE_ESN_BE-BRUS-ESN",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: https://www.blablacar.com/?comuto_cmkt=BE_ESN_BE-GENT-ESN&utm_source=ESN&utm_campaign=BE_ESN_BE-GENT-ESN",
+    "url": "https://www.blablacar.com/?comuto_cmkt=BE_ESN_BE-GENT-ESN&utm_source=ESN&utm_campaign=BE_ESN_BE-GENT-ESN",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: https://www.blablacar.com/?comuto_cmkt=GB_ESN_GB-SOUT-ESN&utm_source=ESN&utm_campaign=GB_ESN_GB-SOUT-ESN",
+    "url": "https://www.blablacar.com/?comuto_cmkt=GB_ESN_GB-SOUT-ESN&utm_source=ESN&utm_campaign=GB_ESN_GB-SOUT-ESN",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/?comuto_cmkt=PL_WID_JOBPROFIP_PSGR",
+    "url": "http://www.blablacar.com/?comuto_cmkt=PL_WID_JOBPROFIP_PSGR",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/?comuto_cmkt=PL_WID_JOBPROFIPL",
+    "url": "http://www.blablacar.com/?comuto_cmkt=PL_WID_JOBPROFIPL",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/?comuto_cmkt=PL_WID_NASKROTYPL_DRVR",
+    "url": "http://www.blablacar.com/?comuto_cmkt=PL_WID_NASKROTYPL_DRVR",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/?comuto_cmkt=PL_WID_NASKROTYPL_PSGR",
+    "url": "http://www.blablacar.com/?comuto_cmkt=PL_WID_NASKROTYPL_PSGR",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/?comuto_cmkt=UK_AEGEE_ALL_Europe_none&utm_campaign=UK_AEGEE_ALL_Europe_none&utm_medium=Link&utm_source=AEGEE",
+    "url": "http://www.blablacar.com/?comuto_cmkt=UK_AEGEE_ALL_Europe_none&utm_campaign=UK_AEGEE_ALL_Europe_none&utm_medium=Link&utm_source=AEGEE",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  },
+  {
+    "name": "GAU Discovery: http://www.blablacar.com/?comuto_cmkt=UK_COMPAREANDSHARE",
+    "url": "http://www.blablacar.com/?comuto_cmkt=UK_COMPAREANDSHARE",
+    "method": "GET",
+    "confidence": 55,
+    "source_type": "crawl",
+    "timestamp": "2025-08-05 20:43:26",
+    "metadata": {
+      "tool": "gau",
+      "aggregated": true
+    }
+  }
+]
