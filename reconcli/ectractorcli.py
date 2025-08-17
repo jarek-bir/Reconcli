@@ -287,6 +287,8 @@ API_ENDPOINT_SECRET_REGEX = re.compile(
 @click.option("--xss-payloads", help="Custom XSS payloads file")
 @click.option("--report", is_flag=True, help="Generate comprehensive report")
 @click.option("--report-format", default="html", help="Report format: html,pdf,txt")
+@click.option("--store-db", is_flag=True, help="Store results in SQLite database")
+@click.option("--db-path", default="extractorcli_results.db", help="Database file path")
 @click.option("--config", type=click.Path(), help="Configuration file path")
 @click.option(
     "--save-config", type=click.Path(), help="Save current options to config file"
@@ -379,6 +381,8 @@ def extractor(
     xss_payloads,
     report,
     report_format,
+    store_db,
+    db_path,
     config,
     save_config,
     stats,
@@ -1200,6 +1204,45 @@ def extractor(
                     2 for indicator in api_indicators if indicator in entry_lower
                 )
 
+            elif category == "api_docs":
+                # High-value API documentation indicators
+                high_value_api_terms = [
+                    "management",
+                    "admin",
+                    "internal",
+                    "private",
+                    "enterprise",
+                    "control",
+                    "dashboard",
+                ]
+                score += sum(3 for term in high_value_api_terms if term in entry_lower)
+
+                # API technology stack scoring
+                api_tech_terms = [
+                    "graphql",
+                    "swagger",
+                    "openapi",
+                    "rest api",
+                    "web api",
+                    "api explorer",
+                    "api gateway",
+                ]
+                score += sum(2 for term in api_tech_terms if term in entry_lower)
+
+                # Specific API service indicators
+                service_indicators = [
+                    "trading",
+                    "payment",
+                    "banking",
+                    "crypto",
+                    "financial",
+                    "security",
+                    "auth",
+                ]
+                score += sum(
+                    1 for indicator in service_indicators if indicator in entry_lower
+                )
+
             # Universal high-value indicators
             high_value_general = [
                 "private",
@@ -1477,6 +1520,100 @@ def extractor(
             )
     else:
         click.echo(output_data)
+
+    # ═══════════════════════════════════════════════════════════════════════════════
+    # 💾 DATABASE STORAGE
+    # ═══════════════════════════════════════════════════════════════════════════════
+
+    if store_db:
+        import sqlite3
+        from datetime import datetime
+
+        if verbose:
+            click.echo(f"💾 [DATABASE] Storing results to {db_path}")
+
+        try:
+            conn = sqlite3.connect(db_path)
+            cursor = conn.cursor()
+
+            # Create tables if they don't exist
+            cursor.execute(
+                """
+                CREATE TABLE IF NOT EXISTS extraction_runs (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    timestamp TEXT,
+                    input_source TEXT,
+                    types TEXT,
+                    total_items INTEGER,
+                    ai_score_enabled BOOLEAN,
+                    score_threshold INTEGER
+                )
+            """
+            )
+
+            cursor.execute(
+                """
+                CREATE TABLE IF NOT EXISTS extracted_items (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    run_id INTEGER,
+                    category TEXT,
+                    value TEXT,
+                    score INTEGER,
+                    timestamp TEXT,
+                    FOREIGN KEY (run_id) REFERENCES extraction_runs (id)
+                )
+            """
+            )
+
+            # Insert run record
+            timestamp = datetime.now().isoformat()
+            total_items = sum(len(v) for v in final.values())
+
+            cursor.execute(
+                """
+                INSERT INTO extraction_runs 
+                (timestamp, input_source, types, total_items, ai_score_enabled, score_threshold)
+                VALUES (?, ?, ?, ?, ?, ?)
+            """,
+                (
+                    timestamp,
+                    input if input else "stdin",
+                    types,
+                    total_items,
+                    ai_score,
+                    score_threshold,
+                ),
+            )
+
+            run_id = cursor.lastrowid
+
+            # Insert individual items
+            for category, items in final.items():
+                for item in items:
+                    score = 0
+                    if ai_score and "calculate_score" in locals():
+                        score = calculate_score(item, category)
+
+                    cursor.execute(
+                        """
+                        INSERT INTO extracted_items 
+                        (run_id, category, value, score, timestamp)
+                        VALUES (?, ?, ?, ?, ?)
+                    """,
+                        (run_id, category, item, score, timestamp),
+                    )
+
+            conn.commit()
+            conn.close()
+
+            if verbose:
+                click.echo(
+                    f"✅ [DATABASE] Stored {total_items} items in run ID {run_id}"
+                )
+
+        except Exception as e:
+            if verbose:
+                click.echo(f"❌ [DATABASE] Error storing to database: {e}")
 
 
 if __name__ == "__main__":
