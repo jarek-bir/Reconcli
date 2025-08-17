@@ -142,3 +142,11 @@ TOMORROW_COMMANDS.md
 
 # XSS test results
 brutelogic_xss_results_*.json
+
+# ExtractorCLI test files and databases
+*.db
+*test*.json
+ai_test_data.txt
+final_test.db
+test_results.db
+advanced_test.txt
