@@ -1,3 +1,5 @@
+from typing import Optional, List
+
 import base64
 import hashlib
 import json
@@ -14,6 +16,48 @@ import click
 import requests
 import urllib3
 import yaml
+
+# Disable SSL warnings for insecure requests
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+# Configuration constants
+DEFAULT_USER_AGENT = "APICLI/1.0 ReconCLI API Scanner"
+DEFAULT_TIMEOUT = 5
+MAX_WORKERS = 10
+
+# Test configuration for security testing
+TEST_ORIGINS = [
+    "https://evil.com",
+    "https://attacker.com",
+    "http://localhost:8080",
+    "https://test.com",
+    "null",
+    "*",
+]
+
+# Common authentication bypass headers
+AUTH_BYPASS_HEADERS = [
+    {"X-Forwarded-For": "127.0.0.1"},
+    {"X-Real-IP": "127.0.0.1"},
+    {"X-Originating-IP": "127.0.0.1"},
+    {"X-Remote-IP": "127.0.0.1"},
+    {"X-Remote-Addr": "127.0.0.1"},
+    {"X-Forwarded-Host": "localhost"},
+    {"X-Rewrite-URL": "/admin"},
+    {"X-Original-URL": "/admin"},
+    {"X-Override-URL": "/admin"},
+    {"Authorization": "Bearer invalid_token"},
+    {"Authorization": "Basic " + base64.b64encode("admin:admin".encode()).decode()},
+    {"Authorization": "Basic " + base64.b64encode("test:test".encode()).decode()},
+    {"X-User-ID": "1"},
+    {"X-User-ID": "admin"},
+    {"X-Role": "admin"},
+    {"X-Admin": "true"},
+    {"X-Authenticated": "true"},
+    {
+        "User-Agent": "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)"
+    },
+]
 
 # Import AI Cache Manager from vulncli for AI-powered analysis
 try:
@@ -46,7 +90,12 @@ class APICacheManager:
         return {}
 
     def _save_cache_index(self):
-        """Save cache index to disk."""
+        """
+        Save cache index to disk for persistence across sessions.
+
+        Saves the in-memory cache index containing metadata about cached
+        scan results to a JSON file for persistence and recovery.
+        """
         try:
             with open(self.cache_index_file, "w") as f:
                 json.dump(self.cache_index, f, indent=2)
@@ -57,19 +106,47 @@ class APICacheManager:
         self,
         url: str,
         scan_type: str,
-        endpoints: list = None,
-        custom_headers: str = None,
+        endpoints: Optional[List[str]] = None,
+        custom_headers: Optional[str] = None,
         auth_bypass: bool = False,
         cors_test: bool = False,
         injection_test: bool = False,
     ) -> str:
-        """Generate SHA256 cache key from API scan parameters."""
+        """
+        Generate SHA256 cache key from API scan parameters.
+
+        Creates a unique cache key based on scan parameters to ensure
+        cache consistency and avoid conflicts between different scan configurations.
+
+        Args:
+            url (str): Target API URL
+            scan_type (str): Type of security scan being performed
+            endpoints (list, optional): List of specific endpoints to test
+            custom_headers (str, optional): Custom HTTP headers for requests
+            auth_bypass (bool, optional): Whether authentication bypass testing is enabled
+            cors_test (bool, optional): Whether CORS testing is enabled
+            injection_test (bool, optional): Whether injection testing is enabled
+
+        Returns:
+            str: SHA256 hash string to use as cache key
+        """
         endpoints_str = ",".join(sorted(endpoints)) if endpoints else ""
         key_data = f"{url}|{scan_type}|{endpoints_str}|{custom_headers or ''}|{auth_bypass}|{cors_test}|{injection_test}"
         return hashlib.sha256(key_data.encode("utf-8")).hexdigest()
 
     def _is_cache_valid(self, timestamp_str: str) -> bool:
-        """Check if cache entry is still valid."""
+        """
+        Check if cache entry is still valid based on timestamp.
+
+        Validates cache entries against the configured maximum age
+        to ensure cached results are still current and relevant.
+
+        Args:
+            timestamp_str (str): ISO format timestamp string from cache entry
+
+        Returns:
+            bool: True if cache entry is still valid, False if expired
+        """
         try:
             cache_time = datetime.fromisoformat(timestamp_str)
             return datetime.now() - cache_time < self.max_age
@@ -77,7 +154,20 @@ class APICacheManager:
             return False
 
     def get(self, url: str, scan_type: str, **kwargs) -> dict:
-        """Retrieve cached API scan results if available and valid."""
+        """
+        Retrieve cached API scan results if available and valid.
+
+        Attempts to retrieve previously cached scan results for the given
+        parameters if they exist and are still within the valid age limit.
+
+        Args:
+            url (str): Target API URL that was scanned
+            scan_type (str): Type of security scan that was performed
+            **kwargs: Additional scan parameters used for cache key generation
+
+        Returns:
+            dict: Cached scan results if found and valid, empty dict otherwise
+        """
         cache_key = self._generate_cache_key(url, scan_type, **kwargs)
 
         if cache_key in self.cache_index:
@@ -96,7 +186,18 @@ class APICacheManager:
         return {}
 
     def set(self, url: str, scan_type: str, results: dict, **kwargs):
-        """Cache API scan results."""
+        """
+        Cache API scan results for future retrieval.
+
+        Stores scan results in the cache system with appropriate metadata
+        for efficient retrieval and validation in future runs.
+
+        Args:
+            url (str): Target API URL that was scanned
+            scan_type (str): Type of security scan that was performed
+            results (dict): Complete scan results to be cached
+            **kwargs: Additional scan parameters used for cache key generation
+        """
         cache_key = self._generate_cache_key(url, scan_type, **kwargs)
         timestamp = datetime.now().isoformat()
 
@@ -118,7 +219,15 @@ class APICacheManager:
             pass
 
     def clear_cache(self):
-        """Clear all cached data."""
+        """
+        Clear all cached API scan data and reset cache index.
+
+        Removes all cached scan results from disk and resets the cache
+        index to provide a clean state for new caching operations.
+
+        Returns:
+            bool: True if cache was successfully cleared, False on error
+        """
         try:
             if self.cache_dir.exists():
                 for cache_file in self.cache_dir.glob("*.json"):
@@ -130,7 +239,15 @@ class APICacheManager:
             return False
 
     def get_cache_stats(self) -> dict:
-        """Get cache performance statistics."""
+        """
+        Get cache performance statistics and metrics.
+
+        Returns comprehensive statistics about cache performance including
+        hit rates, cache size, and entry counts for monitoring and optimization.
+
+        Returns:
+            dict: Cache statistics including hits, misses, hit rate, size, and entry count
+        """
         total_requests = self.hits + self.misses
         hit_rate = (self.hits / total_requests * 100) if total_requests > 0 else 0
 
@@ -151,7 +268,19 @@ class APICacheManager:
 
 
 def send_notification(webhook_url, message, service="slack"):
-    """Send notification to Slack or Discord webhook."""
+    """Send notification to Slack or Discord webhook.
+
+    Args:
+        webhook_url (str): Webhook URL for Slack or Discord
+        message (str): Message content to send
+        service (str): Service type ('slack' or 'discord')
+
+    Returns:
+        bool: True if notification sent successfully, False otherwise
+
+    Example:
+        >>> success = send_notification("https://hooks.slack.com/...", "Scan completed")
+    """
     try:
         if "discord" in webhook_url.lower() or service == "discord":
             payload = {"content": message}
@@ -167,7 +296,17 @@ def send_notification(webhook_url, message, service="slack"):
 
 
 def initialize_database(db_path):
-    """Initialize SQLite database for storing results."""
+    """Initialize SQLite database for storing API scan results.
+
+    Args:
+        db_path (str): Path to SQLite database file
+
+    Returns:
+        str: Database path if successful
+
+    Example:
+        >>> db_path = initialize_database("api_scan_results.db")
+    """
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
 
@@ -233,7 +372,22 @@ def initialize_database(db_path):
 
 
 def store_scan_result(db_path, scan_data):
-    """Store scan result in database."""
+    """Store API scan result in SQLite database.
+
+    Args:
+        db_path (str): Path to SQLite database file
+        scan_data (dict): Scan result data to store
+
+    Returns:
+        bool: True if successfully stored, False otherwise
+
+    Example:
+        >>> result = store_scan_result("results.db", {
+        ...     "scan_type": "api_scan",
+        ...     "target_url": "https://api.example.com",
+        ...     "status_code": 200
+        ... })
+    """
     try:
         conn = sqlite3.connect(db_path)
         cursor = conn.cursor()
@@ -312,7 +466,20 @@ def store_scan_result(db_path, scan_data):
 
 
 def check_api_accessibility(url, timeout=5):
-    """Check if API endpoint is accessible."""
+    """Check if API endpoint is accessible and gather basic information.
+
+    Args:
+        url (str): Target API URL to check
+        timeout (int): Request timeout in seconds
+
+    Returns:
+        dict: Accessibility information including status, server, response time
+
+    Example:
+        >>> info = check_api_accessibility("https://api.example.com")
+        >>> if info["accessible"]:
+        ...     print(f"API is accessible with status {info['status_code']}")
+    """
     try:
         response = requests.get(url, timeout=timeout, verify=True)
         return {
@@ -338,9 +505,22 @@ def check_api_accessibility(url, timeout=5):
 
 
 def detect_api_technology(url, timeout=3):
-    """Detect API technology stack and framework."""
+    """Detect API technology stack and framework from response patterns.
+
+    Args:
+        url (str): Target API URL to analyze
+        timeout (int): Request timeout in seconds
+
+    Returns:
+        dict: Technology detection results with frameworks, server info, CORS status
+
+    Example:
+        >>> tech = detect_api_technology("https://api.example.com")
+        >>> if "rest" in tech["technologies"]:
+        ...     print("REST API detected")
+    """
     try:
-        headers = {"User-Agent": "APICLI/1.0 ReconCLI API Scanner"}
+        headers = {"User-Agent": DEFAULT_USER_AGENT}
         response = requests.get(url, headers=headers, timeout=timeout, verify=True)
 
         api_indicators = {
@@ -418,7 +598,20 @@ def detect_api_technology(url, timeout=3):
 
 
 def discover_api_endpoints(base_url, common_paths=None, timeout=3):
-    """Discover common API endpoints."""
+    """Discover common API endpoints by testing predefined paths.
+
+    Args:
+        base_url (str): Base URL to test for API endpoints
+        common_paths (list, optional): List of paths to test. Uses default if None
+        timeout (int): Request timeout in seconds
+
+    Returns:
+        list: List of discovered accessible endpoints with metadata
+
+    Example:
+        >>> endpoints = discover_api_endpoints("https://example.com")
+        >>> accessible = [e for e in endpoints if e["accessible"]]
+    """
     if common_paths is None:
         common_paths = [
             "/api",
@@ -520,7 +713,19 @@ def discover_api_endpoints(base_url, common_paths=None, timeout=3):
 
 
 def test_http_methods(url, timeout=3):
-    """Test different HTTP methods on an endpoint."""
+    """Test different HTTP methods on an API endpoint.
+
+    Args:
+        url (str): Target URL to test HTTP methods
+        timeout (int): Request timeout in seconds
+
+    Returns:
+        dict: Results for each HTTP method with status codes and metadata
+
+    Example:
+        >>> results = test_http_methods("https://api.example.com/users")
+        >>> allowed_methods = [m for m, r in results.items() if r["allowed"]]
+    """
     methods = ["GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS", "TRACE"]
     results = {}
 
@@ -548,34 +753,22 @@ def test_http_methods(url, timeout=3):
 
 
 def test_authentication_bypass(url, timeout=3):
-    """Test for authentication bypass vulnerabilities."""
+    """Test for authentication bypass vulnerabilities.
+
+    Args:
+        url (str): Target URL to test
+        timeout (int): Request timeout in seconds
+
+    Returns:
+        list: List of bypass test results with status and bypass information
+
+    Example:
+        >>> results = test_authentication_bypass("https://api.example.com/admin")
+        >>> vulnerable_count = sum(1 for r in results if r.get("bypassed"))
+    """
     bypass_tests = []
 
-    # Test different authentication bypass techniques
-    bypass_headers = [
-        {"X-Forwarded-For": "127.0.0.1"},
-        {"X-Real-IP": "127.0.0.1"},
-        {"X-Originating-IP": "127.0.0.1"},
-        {"X-Remote-IP": "127.0.0.1"},
-        {"X-Remote-Addr": "127.0.0.1"},
-        {"X-Forwarded-Host": "localhost"},
-        {"X-Rewrite-URL": "/admin"},
-        {"X-Original-URL": "/admin"},
-        {"X-Override-URL": "/admin"},
-        {"Authorization": "Bearer invalid_token"},
-        {"Authorization": "Basic " + base64.b64encode("admin:admin".encode()).decode()},
-        {"Authorization": "Basic " + base64.b64encode("test:test".encode()).decode()},
-        {"X-User-ID": "1"},
-        {"X-User-ID": "admin"},
-        {"X-Role": "admin"},
-        {"X-Admin": "true"},
-        {"X-Authenticated": "true"},
-        {
-            "User-Agent": "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)"
-        },
-    ]
-
-    for headers in bypass_headers:
+    for headers in AUTH_BYPASS_HEADERS:
         try:
             response = requests.get(url, headers=headers, timeout=timeout, verify=True)
             test_name = f"Header: {list(headers.keys())[0]}"
@@ -606,7 +799,19 @@ def test_authentication_bypass(url, timeout=3):
 
 
 def test_parameter_pollution(url, timeout=3):
-    """Test for HTTP Parameter Pollution vulnerabilities."""
+    """Test for HTTP Parameter Pollution (HPP) vulnerabilities.
+
+    Args:
+        url (str): Target URL to test for parameter pollution
+        timeout (int): Request timeout in seconds
+
+    Returns:
+        list: Test results for different parameter pollution scenarios
+
+    Example:
+        >>> results = test_parameter_pollution("https://api.example.com/search")
+        >>> vulnerable = [r for r in results if r.get("potentially_vulnerable")]
+    """
     test_params = [
         {"id": ["1", "2"]},  # HPP with same parameter
         {"user": ["admin", "guest"]},
@@ -646,7 +851,20 @@ def test_parameter_pollution(url, timeout=3):
 
 
 def test_rate_limiting(url, requests_count=10, timeout=3):
-    """Test rate limiting implementation."""
+    """Test rate limiting implementation on API endpoint.
+
+    Args:
+        url (str): Target URL to test rate limiting
+        requests_count (int): Number of requests to send for testing
+        timeout (int): Request timeout in seconds
+
+    Returns:
+        list: Results showing rate limiting behavior and headers
+
+    Example:
+        >>> results = test_rate_limiting("https://api.example.com", 15)
+        >>> rate_limited = any(r.get("rate_limited") for r in results)
+    """
     rate_limit_results = []
 
     for i in range(requests_count):
@@ -692,20 +910,22 @@ def test_rate_limiting(url, requests_count=10, timeout=3):
 
 
 def test_cors_configuration(url, timeout=3):
-    """Test CORS configuration."""
+    """Test CORS configuration for potential security misconfigurations.
+
+    Args:
+        url (str): Target URL to test CORS configuration
+        timeout (int): Request timeout in seconds
+
+    Returns:
+        list: List of CORS test results with origin and vulnerability information
+
+    Example:
+        >>> results = test_cors_configuration("https://api.example.com")
+        >>> vulnerable = [r for r in results if r.get("vulnerable")]
+    """
     cors_tests = []
 
-    # Test different origins
-    test_origins = [
-        "https://evil.com",
-        "https://attacker.com",
-        "http://localhost:8080",
-        "https://test.com",
-        "null",
-        "*",
-    ]
-
-    for origin in test_origins:
+    for origin in TEST_ORIGINS:
         try:
             headers = {
                 "Origin": origin,
@@ -761,7 +981,20 @@ def test_cors_configuration(url, timeout=3):
 
 
 def test_injection_vulnerabilities(url, timeout=3):
-    """Test for common injection vulnerabilities."""
+    """Test for common injection vulnerabilities in API endpoints.
+
+    Args:
+        url (str): Target URL to test for injection vulnerabilities
+        timeout (int): Request timeout in seconds
+
+    Returns:
+        dict: Results organized by injection type with vulnerability indicators
+
+    Example:
+        >>> results = test_injection_vulnerabilities("https://api.example.com/search")
+        >>> sql_vulns = results.get("sql_injection", [])
+        >>> potential_issues = [r for r in sql_vulns if r.get("potential_vulnerability")]
+    """
     injection_payloads = {
         "sql_injection": [
             "' OR '1'='1",
@@ -868,7 +1101,20 @@ def test_injection_vulnerabilities(url, timeout=3):
 
 
 def analyze_api_security(url, timeout=3):
-    """Comprehensive API security analysis."""
+    """Perform comprehensive API security analysis on a single endpoint.
+
+    Args:
+        url (str): Target API URL to analyze
+        timeout (int): Request timeout in seconds
+
+    Returns:
+        dict: Complete security analysis results including all test types
+
+    Example:
+        >>> analysis = analyze_api_security("https://api.example.com/admin")
+        >>> if analysis["cors_configuration"]:
+        ...     print("CORS issues detected")
+    """
     security_analysis = {
         "endpoint": url,
         "timestamp": datetime.now().isoformat(),
@@ -886,7 +1132,25 @@ def analyze_api_security(url, timeout=3):
 
 
 def ai_smart_api_analysis(api_results, cache_manager=None):
-    """AI-powered smart analysis of API scanning results"""
+    """
+    AI-powered smart analysis of API scanning results with caching support.
+
+    Analyzes API scan results using pattern recognition and risk assessment
+    algorithms to identify high-priority security issues and potential vulnerabilities.
+
+    Args:
+        api_results (list): List of API endpoint analysis results from security scans
+        cache_manager (APICacheManager, optional): Cache manager for storing analysis results
+
+    Returns:
+        list: Analyzed endpoints with risk scores, prioritization, and security recommendations
+
+    Example:
+        >>> results = [{"endpoint": "/api/admin", "accessibility": {"status_code": 200}}]
+        >>> analysis = ai_smart_api_analysis(results, cache_manager)
+        >>> print(analysis[0]["risk_score"])
+        95
+    """
     try:
         if not api_results:
             return []
@@ -1134,7 +1398,25 @@ def ai_reduce_false_positives(
 
 
 def generate_ai_recommendation(risk_factors, priority):
-    """Generate AI-powered recommendations based on risk factors"""
+    """
+    Generate AI-powered security recommendations based on identified risk factors.
+
+    Analyzes risk factors and generates specific, actionable security recommendations
+    to address identified vulnerabilities and security misconfigurations.
+
+    Args:
+        risk_factors (list): List of identified security risk factors and vulnerabilities
+        priority (str): Priority level for recommendations ("high", "medium", "low")
+
+    Returns:
+        list: List of specific security recommendations and remediation steps
+
+    Example:
+        >>> risks = ["authentication bypass", "cors misconfiguration"]
+        >>> recommendations = generate_ai_recommendation(risks, "high")
+        >>> print(recommendations[0])
+        '🔒 Implement proper authentication and authorization controls'
+    """
     recommendations = []
 
     if any("authentication bypass" in factor.lower() for factor in risk_factors):
@@ -1178,7 +1460,25 @@ def generate_ai_recommendation(risk_factors, priority):
 
 
 def ai_executive_summary(analysis_results, confidence_threshold=0.7):
-    """Generate AI-powered executive summary with risk assessment"""
+    """
+    Generate AI-powered executive summary with comprehensive risk assessment.
+
+    Creates a high-level executive summary of API security analysis results,
+    including risk metrics, key findings, and strategic recommendations for leadership.
+
+    Args:
+        analysis_results (dict): Comprehensive API security analysis results
+        confidence_threshold (float, optional): Minimum confidence level for findings (default: 0.7)
+
+    Returns:
+        dict: Executive summary with risk assessment, key findings, and strategic recommendations
+
+    Example:
+        >>> results = {"vulnerabilities": [{"severity": "HIGH", "type": "auth_bypass"}]}
+        >>> summary = ai_executive_summary(results, confidence_threshold=0.8)
+        >>> print(summary["risk_assessment"]["overall_risk"])
+        'HIGH'
+    """
     try:
         summary = {
             "executive_overview": "",
@@ -1316,7 +1616,24 @@ Immediate attention required for authentication, authorization, and input valida
 
 
 def generate_security_report(analysis_results):
-    """Generate a comprehensive security report."""
+    """
+    Generate a comprehensive security report from API analysis results.
+
+    Creates a detailed security report with vulnerability categorization,
+    risk assessment, and actionable recommendations based on API security testing results.
+
+    Args:
+        analysis_results (list): List of API endpoint analysis results from security scans
+
+    Returns:
+        dict: Comprehensive security report with summary, detailed results, and recommendations
+
+    Example:
+        >>> results = [{"endpoint": "/api/admin", "vulnerabilities": ["auth_bypass"]}]
+        >>> report = generate_security_report(results)
+        >>> print(report["summary"]["total_endpoints"])
+        1
+    """
     report = {
         "summary": {
             "total_endpoints": len(analysis_results),
@@ -1425,7 +1742,26 @@ def generate_security_report(analysis_results):
 
 
 def save_results(results, output_dir, format_type="json"):
-    """Save scan results to files."""
+    """
+    Save API scan results to files in various formats.
+
+    Saves comprehensive API security scan results to output files with timestamps,
+    supporting multiple output formats for integration with different tools and workflows.
+
+    Args:
+        results (dict): Complete API scan results and analysis data
+        output_dir (str): Directory path where results should be saved
+        format_type (str, optional): Output format type ("json", "yaml", "csv", "xml", "html") (default: "json")
+
+    Returns:
+        str: Path to the saved output file
+
+    Example:
+        >>> results = {"endpoints": [{"url": "/api/test", "status": "secure"}]}
+        >>> filepath = save_results(results, "./output", format_type="json")
+        >>> print(filepath)
+        './output/apicli_results_20240101_120000.json'
+    """
     output_path = Path(output_dir)
     output_path.mkdir(parents=True, exist_ok=True)
 
@@ -1491,7 +1827,26 @@ def save_results(results, output_dir, format_type="json"):
 
 
 def scan_javascript_secrets(js_content, js_url="", confidence_threshold=0.7):
-    """Enhanced JavaScript secret scanning with SJ-like patterns."""
+    """
+    Enhanced JavaScript secret scanning with comprehensive pattern detection.
+
+    Scans JavaScript content for exposed secrets, API keys, tokens, and sensitive data
+    using advanced pattern matching with confidence scoring and false positive reduction.
+
+    Args:
+        js_content (str): JavaScript source code content to scan for secrets
+        js_url (str, optional): URL of the JavaScript file for context (default: "")
+        confidence_threshold (float, optional): Minimum confidence level for findings (default: 0.7)
+
+    Returns:
+        dict: Secret scan results with findings, confidence scores, and remediation advice
+
+    Example:
+        >>> js_code = "const api_key = 'AKIA1234567890123456';"
+        >>> results = scan_javascript_secrets(js_code, confidence_threshold=0.8)
+        >>> print(results["secrets_found"])
+        1
+    """
 
     # Comprehensive secret patterns with confidence scoring
     secret_patterns = {
@@ -1655,7 +2010,25 @@ def scan_javascript_secrets(js_content, js_url="", confidence_threshold=0.7):
 
 
 def extract_js_urls_from_html(html_content, base_url):
-    """Extract JavaScript URLs from HTML content."""
+    """
+    Extract JavaScript file URLs from HTML content.
+
+    Parses HTML content to identify and extract all JavaScript file references,
+    including external scripts and inline JavaScript code blocks for security analysis.
+
+    Args:
+        html_content (str): HTML content to parse for JavaScript references
+        base_url (str): Base URL for resolving relative JavaScript file paths
+
+    Returns:
+        list: List of JavaScript file URLs found in the HTML content
+
+    Example:
+        >>> html = '<script src="/js/app.js"></script>'
+        >>> urls = extract_js_urls_from_html(html, "https://example.com")
+        >>> print(urls[0])
+        'https://example.com/js/app.js'
+    """
     js_urls = set()
 
     # Find script tags with src attributes
@@ -1693,7 +2066,29 @@ def extract_js_urls_from_html(html_content, base_url):
 
 
 def scan_javascript_files(url, session, ssl_verify=True, store_db=False, db_path=None):
-    """Scan JavaScript files for secrets and sensitive information."""
+    """
+    Scan JavaScript files for secrets and sensitive information.
+
+    Performs comprehensive security analysis of JavaScript files to identify
+    exposed secrets, API keys, tokens, and other sensitive data that could lead to security breaches.
+
+    Args:
+        url (str): Target URL to scan for JavaScript files
+        session (requests.Session): HTTP session object for making requests
+        ssl_verify (bool, optional): Whether to verify SSL certificates (default: True)
+        store_db (bool, optional): Whether to store results in database (default: False)
+        db_path (str, optional): Database path for storing results (default: None)
+
+    Returns:
+        dict: JavaScript scan results with secrets found, risk summary, and file analysis
+
+    Example:
+        >>> import requests
+        >>> session = requests.Session()
+        >>> results = scan_javascript_files("https://example.com", session)
+        >>> print(results["total_secrets"])
+        0
+    """
     results = {
         "js_files_scanned": 0,
         "secrets_found": [],
@@ -1807,7 +2202,25 @@ def scan_javascript_files(url, session, ssl_verify=True, store_db=False, db_path
 
 
 def parse_swagger_openapi(swagger_content, base_url):
-    """Parse Swagger/OpenAPI definition file and extract API endpoints."""
+    """
+    Parse Swagger/OpenAPI definition file and extract API endpoints.
+
+    Parses Swagger/OpenAPI specification files to extract comprehensive API endpoint
+    information including paths, methods, parameters, and security requirements for testing.
+
+    Args:
+        swagger_content (str): Swagger/OpenAPI specification content (JSON or YAML)
+        base_url (str): Base URL of the API for endpoint construction
+
+    Returns:
+        dict: Parsed API specification with endpoints, methods, parameters, and security info
+
+    Example:
+        >>> swagger_yaml = "swagger: '2.0'\\ninfo:\\n  title: 'Test API'"
+        >>> spec = parse_swagger_openapi(swagger_yaml, "https://api.example.com")
+        >>> print(spec["api_info"]["title"])
+        'Test API'
+    """
     try:
         import json
 
@@ -1880,7 +2293,28 @@ def parse_swagger_openapi(swagger_content, base_url):
 
 
 def swagger_brute_force(base_url, session, rate_limit=15, ssl_verify=True):
-    """Brute force discover Swagger/OpenAPI definition files."""
+    """
+    Brute force discover Swagger/OpenAPI definition files.
+
+    Systematically searches for Swagger/OpenAPI specification files using common
+    paths and endpoints to discover API documentation and endpoint definitions.
+
+    Args:
+        base_url (str): Target base URL to search for Swagger/OpenAPI files
+        session (requests.Session): HTTP session object for making requests
+        rate_limit (int, optional): Request rate limit per second (default: 15)
+        ssl_verify (bool, optional): Whether to verify SSL certificates (default: True)
+
+    Returns:
+        dict: Discovery results with found Swagger/OpenAPI files and parsed endpoints
+
+    Example:
+        >>> import requests
+        >>> session = requests.Session()
+        >>> results = swagger_brute_force("https://api.example.com", session)
+        >>> print(len(results["discovered_files"]))
+        2
+    """
     import time
 
     # Common Swagger/OpenAPI paths (from SJ tool)
@@ -2002,7 +2436,26 @@ def swagger_brute_force(base_url, session, rate_limit=15, ssl_verify=True):
 
 
 def generate_swagger_commands(endpoints, prepare_tool="curl", base_url=""):
-    """Generate testing commands from Swagger endpoints (SJ prepare mode)."""
+    """
+    Generate testing commands from Swagger endpoints for security testing.
+
+    Converts Swagger/OpenAPI endpoint definitions into executable testing commands
+    for various security tools and manual testing approaches.
+
+    Args:
+        endpoints (list): List of API endpoint definitions from Swagger/OpenAPI spec
+        prepare_tool (str, optional): Tool to generate commands for ("curl", "sqlmap", "custom") (default: "curl")
+        base_url (str, optional): Base URL for constructing complete endpoint URLs (default: "")
+
+    Returns:
+        list: List of generated testing commands with endpoint metadata
+
+    Example:
+        >>> endpoints = [{"path": "/api/users", "method": "GET"}]
+        >>> commands = generate_swagger_commands(endpoints, "curl", "https://api.example.com")
+        >>> print(commands[0]["command"])
+        "curl -sk -X GET 'https://api.example.com/api/users'"
+    """
     commands = []
 
     for endpoint in endpoints:
@@ -2394,7 +2847,37 @@ def main(
     ffuf_output,
     filter_status,
 ):
-    """API security testing and analysis tool."""
+    """
+    APICLI - Advanced API Security Testing and Analysis Tool
+
+    Comprehensive command-line tool for API security testing, vulnerability scanning,
+    and automated analysis. Supports endpoint discovery, security testing, secret scanning,
+    Swagger/OpenAPI analysis, and AI-powered assessment capabilities.
+
+    Features:
+    - Endpoint discovery and fuzzing
+    - Security vulnerability testing (CORS, injection, auth bypass)
+    - JavaScript secret scanning
+    - Swagger/OpenAPI analysis and parsing
+    - AI-powered smart analysis and risk assessment
+    - Database storage and caching capabilities
+    - Multiple output formats (JSON, YAML, Markdown)
+    - Resume functionality for large scans
+    - Webhook notifications for Slack/Discord
+
+    Examples:
+        Basic API testing:
+        $ reconcli apicli --url https://api.example.com --security-test
+
+        Comprehensive scan with AI analysis:
+        $ reconcli apicli --url https://api.example.com --security-test --ai-mode --cache
+
+        Swagger analysis and endpoint extraction:
+        $ reconcli apicli --swagger-url https://api.example.com/swagger.json --swagger-endpoints
+
+        JavaScript secret scanning:
+        $ reconcli apicli --url https://example.com --secret-scan --store-db results.db
+    """
 
     # ========== Cache System ==========
     if cache or cache_stats or clear_cache:
