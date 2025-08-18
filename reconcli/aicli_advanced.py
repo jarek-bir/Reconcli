@@ -1743,8 +1743,8 @@ Provide structured, phase-based reconnaissance plans with specific tools and tec
                         recon_data["subdomains"] = [
                             line.strip() for line in f if line.strip()
                         ][:50]
-                except:
-                    pass
+                except IOError:
+                    pass  # File might not be readable
 
         # Look for technology detection file
         tech_files = [f"{base_name}_technologies.json", "tech_detection.json"]
@@ -1759,8 +1759,8 @@ Provide structured, phase-based reconnaissance plans with specific tools and tec
                             recon_data["technologies"] = tech_data["technologies"]
                         elif isinstance(tech_data, list):
                             recon_data["technologies"] = tech_data
-                except:
-                    pass
+                except (IOError, json.JSONDecodeError):
+                    pass  # Invalid or missing technology files
 
         return recon_data
 

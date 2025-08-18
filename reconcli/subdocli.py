@@ -8,6 +8,7 @@ import re
 import socket
 import ssl
 import subprocess
+import tempfile
 import time
 import urllib.parse
 import base64
@@ -2635,7 +2636,14 @@ def subdocli(
     amass_cmd = f"timeout {min(120, amass_timeout)}s amass enum --passive -d {domain}"
     if final_amass_config and os.path.exists(final_amass_config):
         amass_cmd += f" -config {final_amass_config}"
-    amass_cmd += " -o /tmp/amass_output.txt && cat /tmp/amass_output.txt"
+    import tempfile
+
+    temp_file = tempfile.mktemp(suffix="_amass_output.txt")
+    amass_cmd += f" -o {temp_file} && cat {temp_file}"
+
+    # Generate temp files once for reuse
+    sublist3r_temp = tempfile.mktemp(suffix="_sublist3r_output.txt")
+    github_temp = tempfile.mktemp(suffix=f"_github_subdomains_{domain}.txt")
 
     base_passive_tools = {
         "subfinder": f"timeout {traditional_timeout}s subfinder -all -d {domain} -silent",
@@ -2643,8 +2651,8 @@ def subdocli(
         "assetfinder": f"timeout {traditional_timeout}s assetfinder --subs-only {domain}",
         "chaos": f"timeout {traditional_timeout}s chaos -d {domain} -silent",
         "amass": amass_cmd,
-        "sublist3r": f"timeout {traditional_timeout}s sublist3r -d {domain} -o /tmp/sublist3r_output.txt -n && cat /tmp/sublist3r_output.txt",
-        "github-subdomains": f"timeout {int(300 * 1.2)}s github-subdomains -d {domain} -raw -o /tmp/github_subdomains_{domain}.txt && cat /tmp/github_subdomains_{domain}.txt 2>/dev/null || echo ''",
+        "sublist3r": f"timeout {traditional_timeout}s sublist3r -d {domain} -o {sublist3r_temp} -n && cat {sublist3r_temp}",
+        "github-subdomains": f"timeout {int(300 * 1.2)}s github-subdomains -d {domain} -raw -o {github_temp} && cat {github_temp} 2>/dev/null || echo ''",
         "wayback": f"timeout {int(90 * 1.2)}s curl -s 'http://web.archive.org/cdx/search/cdx?url=*.{domain}/*&output=text&fl=original&collapse=urlkey' | sed -e 's_https*://__' -e 's_/.*__' | grep -E '^[a-zA-Z0-9.-]+\\.{domain}$' | sort -u",
         "otx": f"timeout {int(90 * 1.2)}s curl -s 'https://otx.alienvault.com/api/v1/indicators/domain/{domain}/url_list?limit=100&page=1' | jq -r '.url_list[].hostname' 2>/dev/null | grep -E '^[a-zA-Z0-9.-]+\\.{domain}$' | sort -u",
         "hackertarget": f"timeout {int(90 * 1.2)}s curl -s 'https://api.hackertarget.com/hostsearch/?q={domain}' | cut -d',' -f1 | grep -E '^[a-zA-Z0-9.-]+\\.{domain}$' | sort -u",

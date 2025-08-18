@@ -3919,7 +3919,9 @@ def knoxnl(
         click.echo(f"📁 Input file: {input}")
     else:
         # Create temp file for single URL
-        temp_input = "/tmp/knoxnl_input.txt"
+        import tempfile
+
+        temp_input = tempfile.mktemp(suffix="_knoxnl_input.txt")
         with open(temp_input, "w") as f:
             f.write(url + "\n")
         cmd.extend(["-i", temp_input])
@@ -4115,8 +4117,8 @@ def knoxnl(
 
     finally:
         # Cleanup temp file if created
-        if url and os.path.exists("/tmp/knoxnl_input.txt"):
-            os.remove("/tmp/knoxnl_input.txt")
+        if url and os.path.exists(temp_input):
+            os.remove(temp_input)
 
 
 @cli.command()

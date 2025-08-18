@@ -555,13 +555,23 @@ class AIReconAssistant:
                     try:
                         with open(self.cache_index_file, "r") as f:
                             return json.load(f)
-                    except (FileNotFoundError, json.JSONDecodeError, PermissionError) as e:
+                    except (
+                        FileNotFoundError,
+                        json.JSONDecodeError,
+                        PermissionError,
+                    ) as e:
                         # Cache file corrupted, not found, or unreadable - start fresh
-                        click.secho(f"Warning: Cache index file issue ({e}), starting fresh", fg="yellow")
+                        click.secho(
+                            f"Warning: Cache index file issue ({e}), starting fresh",
+                            fg="yellow",
+                        )
                         return {}
                     except Exception as e:
                         # Unexpected error - log and start fresh
-                        click.secho(f"Warning: Unexpected cache error ({e}), starting fresh", fg="yellow")
+                        click.secho(
+                            f"Warning: Unexpected cache error ({e}), starting fresh",
+                            fg="yellow",
+                        )
                         return {}
                 return {}
 
@@ -601,13 +611,25 @@ class AIReconAssistant:
                         with open(cache_file, "r") as f:
                             cache_data = json.load(f)
                             return cache_data["response"]
-                    except (FileNotFoundError, json.JSONDecodeError, PermissionError) as e:
+                    except (
+                        FileNotFoundError,
+                        json.JSONDecodeError,
+                        PermissionError,
+                    ) as e:
                         # Cache file corrupted or inaccessible - remove invalid entry
-                        click.secho(f"Warning: Removing corrupted cache entry: {e}", fg="yellow", err=True)
+                        click.secho(
+                            f"Warning: Removing corrupted cache entry: {e}",
+                            fg="yellow",
+                            err=True,
+                        )
                         self._remove_cache_entry(cache_key)
                     except Exception as e:
                         # Unexpected error - remove cache entry and log
-                        click.secho(f"Warning: Unexpected cache error: {e}", fg="yellow", err=True)
+                        click.secho(
+                            f"Warning: Unexpected cache error: {e}",
+                            fg="yellow",
+                            err=True,
+                        )
                         self._remove_cache_entry(cache_key)
 
                 return None
@@ -930,12 +952,12 @@ class AIReconAssistant:
             # Safe table names - validated list to prevent SQL injection
             safe_tables = [
                 "ai_queries",
-                "payload_results", 
+                "payload_results",
                 "vuln_scan_results",
                 "recon_plans",
                 "attack_chains",
             ]
-            
+
             for table in safe_tables:
                 # Use parameterized query with table name validation
                 if table in safe_tables:  # Double validation for security
@@ -4294,11 +4316,19 @@ Provide structured, phase-based reconnaissance plans with specific tools and tec
                     break  # Successfully read file, no need to try others
                 except (FileNotFoundError, PermissionError, UnicodeDecodeError) as e:
                     # Subdomain file not accessible or corrupted - try next file
-                    click.secho(f"Warning: Could not read {sub_file}: {e}", fg="yellow", err=True)
+                    click.secho(
+                        f"Warning: Could not read {sub_file}: {e}",
+                        fg="yellow",
+                        err=True,
+                    )
                     continue
                 except Exception as e:
                     # Unexpected error reading subdomain file
-                    click.secho(f"Warning: Unexpected error reading {sub_file}: {e}", fg="yellow", err=True)
+                    click.secho(
+                        f"Warning: Unexpected error reading {sub_file}: {e}",
+                        fg="yellow",
+                        err=True,
+                    )
                     continue
 
         # Look for technology detection file
@@ -4317,11 +4347,19 @@ Provide structured, phase-based reconnaissance plans with specific tools and tec
                     break  # Successfully read file, no need to try others
                 except (FileNotFoundError, PermissionError, json.JSONDecodeError) as e:
                     # Technology file not accessible or corrupted - try next file
-                    click.secho(f"Warning: Could not read {tech_file}: {e}", fg="yellow", err=True)
+                    click.secho(
+                        f"Warning: Could not read {tech_file}: {e}",
+                        fg="yellow",
+                        err=True,
+                    )
                     continue
                 except Exception as e:
                     # Unexpected error reading technology file
-                    click.secho(f"Warning: Unexpected error reading {tech_file}: {e}", fg="yellow", err=True)
+                    click.secho(
+                        f"Warning: Unexpected error reading {tech_file}: {e}",
+                        fg="yellow",
+                        err=True,
+                    )
                     continue
 
         return recon_data
@@ -4944,13 +4982,25 @@ Provide structured, phase-based reconnaissance plans with specific tools and tec
 
                         recon_data["sources"].append(json_file)
 
-                    except (FileNotFoundError, PermissionError, json.JSONDecodeError) as e:
+                    except (
+                        FileNotFoundError,
+                        PermissionError,
+                        json.JSONDecodeError,
+                    ) as e:
                         # JSON file not accessible or corrupted - skip this file
-                        click.secho(f"Warning: Could not read {json_file}: {e}", fg="yellow", err=True)
+                        click.secho(
+                            f"Warning: Could not read {json_file}: {e}",
+                            fg="yellow",
+                            err=True,
+                        )
                         continue
                     except Exception as e:
                         # Unexpected error reading JSON file
-                        click.secho(f"Warning: Unexpected error reading {json_file}: {e}", fg="yellow", err=True)
+                        click.secho(
+                            f"Warning: Unexpected error reading {json_file}: {e}",
+                            fg="yellow",
+                            err=True,
+                        )
                         continue
 
             # Look for text files with common reconnaissance data
@@ -4973,11 +5023,19 @@ Provide structured, phase-based reconnaissance plans with specific tools and tec
 
                 except (FileNotFoundError, PermissionError, UnicodeDecodeError) as e:
                     # Text file not accessible or corrupted - skip this file
-                    click.secho(f"Warning: Could not read {txt_file}: {e}", fg="yellow", err=True)
+                    click.secho(
+                        f"Warning: Could not read {txt_file}: {e}",
+                        fg="yellow",
+                        err=True,
+                    )
                     continue
                 except Exception as e:
                     # Unexpected error reading text file
-                    click.secho(f"Warning: Unexpected error reading {txt_file}: {e}", fg="yellow", err=True)
+                    click.secho(
+                        f"Warning: Unexpected error reading {txt_file}: {e}",
+                        fg="yellow",
+                        err=True,
+                    )
                     continue
 
             # Remove duplicates and empty values
@@ -5320,7 +5378,9 @@ Provide structured, phase-based reconnaissance plans with specific tools and tec
                     # Simulate success/failure (realistic rates)
                     import secrets
 
-                    if secrets.randbelow(100) < 30:  # 30% success rate for demo (cryptographically secure)
+                    if (
+                        secrets.randbelow(100) < 30
+                    ):  # 30% success rate for demo (cryptographically secure)
                         exploit_results["successful_exploits"] += 1
                         exploit_results["successful"].append(
                             {
@@ -5347,7 +5407,9 @@ Provide structured, phase-based reconnaissance plans with specific tools and tec
                     exploit_results["exploits_attempted"] += 1
                     exploit_results["tools_used"].append("sqlmap")
 
-                    if secrets.randbelow(100) < 20:  # 20% success rate for demo (cryptographically secure)
+                    if (
+                        secrets.randbelow(100) < 20
+                    ):  # 20% success rate for demo (cryptographically secure)
                         exploit_results["successful_exploits"] += 1
                         exploit_results["successful"].append(
                             {
@@ -6003,8 +6065,8 @@ def aicli(
                     try:
                         cache_file.unlink()
                         count += 1
-                    except Exception:
-                        pass
+                    except OSError:
+                        pass  # File deletion can fail safely
             click.secho(
                 f"🗑️  Cleared {count} cached responses from {cache_dir_path}",
                 fg="green",
@@ -7562,7 +7624,9 @@ Available commands:
                                 ]
                                 for table in safe_tables:
                                     # Use safe table name concatenation instead of f-string
-                                    if table in safe_tables:  # Double validation for security
+                                    if (
+                                        table in safe_tables
+                                    ):  # Double validation for security
                                         cursor.execute("SELECT COUNT(*) FROM " + table)
                                         count = cursor.fetchone()[0]
                                     table_display = table.replace("_", " ").title()
@@ -7866,11 +7930,19 @@ class AdvancedPayloadMutator:
                 variants.append(encoded)
             except (TypeError, UnicodeError, ValueError) as e:
                 # Encoding failed for this payload - skip this encoder
-                click.secho(f"Warning: Encoding {encoder_name} failed: {e}", fg="yellow", err=True)
+                click.secho(
+                    f"Warning: Encoding {encoder_name} failed: {e}",
+                    fg="yellow",
+                    err=True,
+                )
                 continue
             except Exception as e:
                 # Unexpected encoding error
-                click.secho(f"Warning: Unexpected encoding error with {encoder_name}: {e}", fg="yellow", err=True)
+                click.secho(
+                    f"Warning: Unexpected encoding error with {encoder_name}: {e}",
+                    fg="yellow",
+                    err=True,
+                )
                 continue
 
         # Double encodings
@@ -7883,11 +7955,19 @@ class AdvancedPayloadMutator:
                             variants.append(double_encoded)
                         except (TypeError, UnicodeError, ValueError) as e:
                             # Double encoding failed - skip this combination
-                            click.secho(f"Warning: Double encoding {encoder1_name}+{encoder2_name} failed: {e}", fg="yellow", err=True)
+                            click.secho(
+                                f"Warning: Double encoding {encoder1_name}+{encoder2_name} failed: {e}",
+                                fg="yellow",
+                                err=True,
+                            )
                             continue
                         except Exception as e:
                             # Unexpected double encoding error
-                            click.secho(f"Warning: Unexpected double encoding error {encoder1_name}+{encoder2_name}: {e}", fg="yellow", err=True)
+                            click.secho(
+                                f"Warning: Unexpected double encoding error {encoder1_name}+{encoder2_name}: {e}",
+                                fg="yellow",
+                                err=True,
+                            )
                             continue
 
         return variants[:10]  # Limit to 10 variants

@@ -88,7 +88,9 @@ def freq(csv_file, field, top, sort_by_count):
             ]
             if top:
                 # Use pipe with separate process for head command
-                proc1 = subprocess.Popen(cmd, stdout=subprocess.PIPE, text=True)  # nosec: B603 - controlled command with validated args
+                proc1 = subprocess.Popen(
+                    cmd, stdout=subprocess.PIPE, text=True
+                )  # nosec: B603 - controlled command with validated args
                 proc2 = subprocess.run(  # nosec: B603 - controlled csvtk command
                     [find_executable("csvtk"), "head", "-n", str(top)],
                     stdin=proc1.stdout,
@@ -415,8 +417,8 @@ def _run_comprehensive_analysis(csv_file, output_stream, verbose):
                     lines = result.stdout.strip().split("\n")
                     for line in lines[:11]:  # Show top 10 + header
                         write(f"  {line}")
-                except:
-                    write(f"  (Could not analyze {header})")
+                except Exception as e:
+                    write(f"  (Could not analyze {header}: {e})")
 
         # Security-focused analysis
         domain_field = _detect_domain_field(csv_file)
@@ -462,8 +464,8 @@ def _run_comprehensive_analysis(csv_file, output_stream, verbose):
                     count = int(proc2.stdout.strip()) - 1  # Subtract header
                     if count > 0:
                         write(f"  {desc}: {count} entries")
-                except:
-                    pass
+                except Exception as e:
+                    write(f"  Error analyzing pattern: {e}")
 
         write(f"\n✅ Analysis complete for {os.path.basename(csv_file)}")
 
@@ -592,8 +594,8 @@ def _security_categorization(csv_file, field, output_file):
             ]:
                 try:
                     os.unlink(temp_file)
-                except:
-                    pass
+                except OSError:
+                    pass  # File deletion can fail safely
 
         # Show category statistics
         file_to_analyze = output_file if output_file else csv_file
@@ -667,8 +669,8 @@ def _general_categorization(csv_file, field, output_file):
             count = int(proc2.stdout.strip()) - 1
             if count > 0:
                 click.echo(f"  {desc}: {count} entries")
-        except:
-            pass
+        except Exception as e:
+            click.echo(f"  Error analyzing pattern: {e}", err=True)
 
 
 def _detect_domain_field(csv_file):
@@ -692,7 +694,7 @@ def _detect_domain_field(csv_file):
         # Return first field if no standard names found
         return headers[0] if headers else None
 
-    except:
+    except (subprocess.CalledProcessError, OSError):
         return None
 
 
@@ -779,8 +781,8 @@ def _generate_security_summary(csv_file, summary_file, target_domain):
                         count = int(proc2.stdout.strip()) - 1
                         if count > 0:
                             f.write(f"- {desc}: **{count}** entries\n")
-                    except:
-                        pass
+                    except Exception as e:
+                        f.write(f"- Error analyzing pattern: {e}\n")
 
                 f.write("\n## Recommendations\n\n")
                 f.write(
@@ -809,8 +811,8 @@ def _run_quick_stats(csv_file):
         click.echo(f"\n📊 Quick stats for {os.path.basename(csv_file)}:")
         subprocess.run([find_executable("csvtk"), "nrow", csv_file], check=True)
         subprocess.run([find_executable("csvtk"), "ncol", csv_file], check=True)
-    except:
-        pass
+    except subprocess.CalledProcessError as e:
+        click.echo(f"Error running csvtk: {e}", err=True)
 
 
 if __name__ == "__main__":
