@@ -10,6 +10,7 @@ import hashlib
 import json
 import os
 import re
+import sqlite3
 import threading
 import time
 import urllib.parse
@@ -54,7 +55,31 @@ except ImportError:
 
 @dataclass
 class AIProviderConfig:
-    """Configuration for AI providers"""
+    """
+    Configuration settings for AI providers.
+
+    This class manages the configuration for different AI service providers
+    including API keys, model settings, and connection parameters.
+
+    Attributes:
+        name (str): Provider name (e.g., 'openai', 'anthropic', 'gemini')
+        api_key (str): API authentication key for the provider
+        model (str): Model name to use (e.g., 'gpt-4', 'claude-3-opus')
+        available (bool): Whether this provider is available for use
+        endpoint (Optional[str]): Custom endpoint URL for local LLMs
+        timeout (int): Request timeout in seconds (default: 30)
+        max_tokens (int): Maximum tokens per response (default: 2000)
+        temperature (float): Model creativity/randomness (0.0-2.0, default: 0.7)
+
+    Example:
+        >>> config = AIProviderConfig(
+        ...     name="openai",
+        ...     api_key="sk-...",
+        ...     model="gpt-4",
+        ...     available=True,
+        ...     timeout=30
+        ... )
+    """
 
     name: str
     api_key: str
@@ -68,7 +93,27 @@ class AIProviderConfig:
 
 @dataclass
 class CacheConfig:
-    """Configuration for AI response caching"""
+    """
+    Configuration for AI response caching system.
+
+    Manages caching settings to improve performance and reduce API costs
+    by storing and reusing AI responses for identical queries.
+
+    Attributes:
+        enabled (bool): Whether caching is enabled (default: False)
+        cache_dir (str): Directory path for cache storage (default: "")
+        max_age_hours (int): Cache expiration time in hours (default: 24)
+        max_size_mb (int): Maximum cache size in MB (default: 100)
+        cleanup_interval_hours (int): Cache cleanup frequency (default: 6)
+
+    Example:
+        >>> cache_config = CacheConfig(
+        ...     enabled=True,
+        ...     cache_dir="/tmp/ai_cache",
+        ...     max_age_hours=12,
+        ...     max_size_mb=50
+        ... )
+    """
 
     enabled: bool = False
     cache_dir: str = ""
@@ -159,7 +204,43 @@ class ReconStep:
 
 @dataclass
 class ReconSession:
-    """Enhanced reconnaissance session tracking with chatlog functionality"""
+    """
+    Enhanced reconnaissance session tracking with chatlog functionality.
+
+    Tracks comprehensive reconnaissance session data including steps performed,
+    AI analyses, discovered assets, and vulnerability findings. Supports
+    chatlog-driven reconnaissance with AI-powered next step suggestions.
+
+    Attributes:
+        session_id (str): Unique session identifier
+        target (str): Primary target being analyzed
+        start_time (datetime): Session start timestamp
+        queries (List[Dict]): List of AI queries made during session
+        results (List[Dict]): List of AI responses received
+        plan (Optional[Dict]): Reconnaissance plan if generated
+        recon_steps (List[ReconStep]): Detailed reconnaissance steps performed
+        ai_suggestions (List[Dict]): AI-generated next step suggestions
+        current_phase (str): Current reconnaissance phase
+        completion_percentage (float): Session completion percentage (0-100)
+        discovered_assets (Dict[str, List]): Categorized discovered assets
+        vulnerability_summary (Dict): Summary of found vulnerabilities
+
+    Session Phases:
+        - initial: Starting reconnaissance
+        - discovery: Subdomain/asset discovery
+        - active_enumeration: Active scanning and enumeration
+        - vulnerability_assessment: Security testing
+        - reporting: Documentation and analysis
+
+    Example:
+        >>> session = ReconSession(
+        ...     session_id="abc123",
+        ...     target="example.com",
+        ...     start_time=datetime.now(),
+        ...     queries=[],
+        ...     results=[]
+        ... )
+    """
 
     session_id: str
     target: str
@@ -176,9 +257,53 @@ class ReconSession:
 
 
 class AIReconAssistant:
-    """Enterprise AI-powered reconnaissance assistant with advanced features"""
+    """
+    Enterprise AI-powered reconnaissance assistant with advanced features.
+
+    This is the main class that provides comprehensive AI assistance for
+    security reconnaissance, payload generation, vulnerability analysis,
+    and attack simulation. Supports multiple AI providers and specialized
+    security personas.
+
+    Features:
+        - Multi-provider AI support (OpenAI, Anthropic, Gemini, Local LLMs)
+        - Specialized security personas (RedTeam, BugBounty, Pentester, etc.)
+        - Advanced caching system for performance optimization
+        - Session management and chat history persistence
+        - Payload generation with WAF bypass techniques
+        - Attack chain prediction and automated exploitation
+        - Compliance reporting and MITRE ATT&CK mapping
+        - Interactive chat mode with context awareness
+
+    Attributes:
+        config (ReconCLIConfig): Main configuration settings
+        providers (List[AIProviderConfig]): Available AI providers
+        current_session (Optional[ReconSession]): Active session if any
+        cache_manager: Caching system manager
+        executor: Thread pool for parallel processing
+        rate_limiter: API rate limiting manager
+        performance_metrics (Dict): Performance monitoring data
+
+    Example:
+        >>> assistant = AIReconAssistant()
+        >>> response = assistant.ask_ai(
+        ...     "Generate XSS payloads for HTML context",
+        ...     persona="bugbounty"
+        ... )
+        >>> plan = assistant.generate_recon_plan(
+        ...     "example.com",
+        ...     scope="comprehensive"
+        ... )
+    """
 
     def __init__(self, config_file: Optional[str] = None):
+        """
+        Initialize the AI reconnaissance assistant.
+
+        Args:
+            config_file (Optional[str]): Path to configuration file.
+                If None, uses default configuration.
+        """
         # Initialize session directory first
         self.session_dir = Path.home() / ".reconcli" / "ai_sessions"
         self.session_dir.mkdir(parents=True, exist_ok=True)
@@ -277,7 +402,17 @@ class AIReconAssistant:
         }
 
     def update_cache_config(self):
-        """Update cache configuration after config changes"""
+        """
+        Update cache configuration after config changes.
+
+        Re-initializes or disables the cache manager based on current
+        configuration settings. Useful when cache settings are modified
+        at runtime.
+
+        Note:
+            This method is called automatically when configuration changes
+            are detected, but can also be called manually if needed.
+        """
         # Re-initialize cache manager if cache is now enabled
         if self.config.cache.enabled and not self.cache_manager:
             self.cache_manager = self._initialize_cache()
@@ -535,6 +670,270 @@ class AIReconAssistant:
                             break
 
         return CacheManager(self.config.cache)
+
+    def _init_database_storage(self, db_path: str):
+        """Initialize SQLite database for storing AI results and analysis data"""
+        import sqlite3
+
+        try:
+            # Create database directory if it doesn't exist
+            db_file = Path(db_path)
+            db_file.parent.mkdir(parents=True, exist_ok=True)
+
+            # Initialize database connection
+            self.db_connection = sqlite3.connect(db_path)
+            self.db_path = db_path
+
+            # Create tables for AI results storage
+            cursor = self.db_connection.cursor()
+
+            # Main AI queries table
+            cursor.execute(
+                """
+                CREATE TABLE IF NOT EXISTS ai_queries (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    session_id TEXT,
+                    target TEXT,
+                    prompt TEXT,
+                    context TEXT,
+                    persona TEXT,
+                    provider TEXT,
+                    response TEXT,
+                    response_time_ms INTEGER,
+                    tokens_used INTEGER,
+                    cached BOOLEAN DEFAULT FALSE
+                )
+            """
+            )
+
+            # Payload generation results
+            cursor.execute(
+                """
+                CREATE TABLE IF NOT EXISTS payload_results (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    session_id TEXT,
+                    payload_type TEXT,
+                    context TEXT,
+                    technique TEXT,
+                    persona TEXT,
+                    payload TEXT,
+                    variants TEXT,
+                    bypass_techniques TEXT,
+                    effectiveness_score REAL,
+                    tested BOOLEAN DEFAULT FALSE,
+                    success_rate REAL
+                )
+            """
+            )
+
+            # Vulnerability scan results
+            cursor.execute(
+                """
+                CREATE TABLE IF NOT EXISTS vuln_scan_results (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    session_id TEXT,
+                    target TEXT,
+                    scan_type TEXT,
+                    vulnerability_type TEXT,
+                    severity TEXT,
+                    description TEXT,
+                    payload_used TEXT,
+                    confidence_score REAL,
+                    remediation TEXT,
+                    mitre_techniques TEXT
+                )
+            """
+            )
+
+            # Reconnaissance plans
+            cursor.execute(
+                """
+                CREATE TABLE IF NOT EXISTS recon_plans (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    session_id TEXT,
+                    target TEXT,
+                    scope TEXT,
+                    persona TEXT,
+                    plan_json TEXT,
+                    ai_recommendations TEXT,
+                    execution_status TEXT DEFAULT 'planned'
+                )
+            """
+            )
+
+            # Attack chain predictions
+            cursor.execute(
+                """
+                CREATE TABLE IF NOT EXISTS attack_chains (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    session_id TEXT,
+                    target TEXT,
+                    chain_name TEXT,
+                    attack_path TEXT,
+                    success_probability REAL,
+                    impact_assessment TEXT,
+                    mitre_mapping TEXT,
+                    detection_difficulty TEXT
+                )
+            """
+            )
+
+            self.db_connection.commit()
+
+            if self.config.verbose_logging:
+                print(f"✅ Database initialized: {db_path}")
+
+        except Exception as e:
+            print(f"❌ Database initialization failed: {e}")
+            self.db_connection = None
+
+    def _store_ai_query(
+        self,
+        prompt: str,
+        context: str,
+        persona: str,
+        provider: str,
+        response: str,
+        response_time_ms: int,
+        cached: bool = False,
+    ):
+        """Store AI query and response in database"""
+        if not hasattr(self, "db_connection") or not self.db_connection:
+            return
+
+        try:
+            cursor = self.db_connection.cursor()
+            cursor.execute(
+                """
+                INSERT INTO ai_queries 
+                (session_id, target, prompt, context, persona, provider, response, response_time_ms, cached)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+                (
+                    (
+                        self.current_session.session_id
+                        if self.current_session
+                        else "no_session"
+                    ),
+                    self.current_session.target if self.current_session else "unknown",
+                    prompt,
+                    context,
+                    persona or "default",
+                    provider,
+                    response,
+                    response_time_ms,
+                    cached,
+                ),
+            )
+            self.db_connection.commit()
+        except Exception as e:
+            if self.config.verbose_logging:
+                print(f"Database storage error: {e}")
+
+    def _store_payload_result(
+        self,
+        payload_type: str,
+        context: str,
+        technique: str,
+        persona: str,
+        payload_data: Dict,
+    ):
+        """Store payload generation results in database"""
+        if not hasattr(self, "db_connection") or not self.db_connection:
+            return
+
+        try:
+            cursor = self.db_connection.cursor()
+            cursor.execute(
+                """
+                INSERT INTO payload_results 
+                (session_id, payload_type, context, technique, persona, payload, variants, bypass_techniques)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+                (
+                    (
+                        self.current_session.session_id
+                        if self.current_session
+                        else "no_session"
+                    ),
+                    payload_type,
+                    context or "general",
+                    technique or "default",
+                    persona or "default",
+                    str(payload_data.get("payloads", [])),
+                    str(payload_data.get("variants", [])),
+                    str(payload_data.get("bypass_techniques", [])),
+                ),
+            )
+            self.db_connection.commit()
+        except Exception as e:
+            if self.config.verbose_logging:
+                print(f"Database storage error: {e}")
+
+    def _store_recon_plan(self, target: str, scope: str, persona: str, plan_data: Dict):
+        """Store reconnaissance plan in database"""
+        if not hasattr(self, "db_connection") or not self.db_connection:
+            return
+
+        try:
+            cursor = self.db_connection.cursor()
+            cursor.execute(
+                """
+                INSERT INTO recon_plans 
+                (session_id, target, scope, persona, plan_json, ai_recommendations)
+                VALUES (?, ?, ?, ?, ?, ?)
+            """,
+                (
+                    (
+                        self.current_session.session_id
+                        if self.current_session
+                        else "no_session"
+                    ),
+                    target,
+                    scope,
+                    persona or "default",
+                    json.dumps(plan_data, default=str),
+                    plan_data.get("ai_recommendations", ""),
+                ),
+            )
+            self.db_connection.commit()
+        except Exception as e:
+            if self.config.verbose_logging:
+                print(f"Database storage error: {e}")
+
+    def get_database_stats(self) -> Dict:
+        """Get database statistics"""
+        if not hasattr(self, "db_connection") or not self.db_connection:
+            return {"error": "No database connection"}
+
+        try:
+            cursor = self.db_connection.cursor()
+            stats = {}
+
+            # Count records in each table
+            for table in [
+                "ai_queries",
+                "payload_results",
+                "vuln_scan_results",
+                "recon_plans",
+                "attack_chains",
+            ]:
+                cursor.execute(f"SELECT COUNT(*) FROM {table}")
+                stats[f"{table}_count"] = cursor.fetchone()[0]
+
+            # Get database file size
+            if hasattr(self, "db_path"):
+                db_size = Path(self.db_path).stat().st_size
+                stats["database_size_mb"] = round(db_size / (1024 * 1024), 2)
+
+            return stats
+        except Exception as e:
+            return {"error": str(e)}
 
     def _initialize_rate_limiter(self):
         """Initialize rate limiter for parallel processing"""
@@ -911,7 +1310,35 @@ reconcli vulncli --target {message}
         persona: Optional[str] = None,
         use_cache: bool = True,
     ) -> Optional[str]:
-        """Ask AI with caching, performance monitoring, and enhanced provider support"""
+        """
+        Ask AI with caching, performance monitoring, and enhanced provider support.
+
+        This is the main method for interacting with AI providers. It handles
+        provider selection, caching, rate limiting, and performance monitoring.
+
+        Args:
+            message (str): The question or prompt to send to the AI
+            provider (Optional[str]): Specific provider to use (openai, anthropic, gemini, local)
+            context (str): Context type (recon, payload, planning) for appropriate prompting
+            persona (Optional[str]): Security persona (redteam, bugbounty, pentester, trainer, osint)
+            use_cache (bool): Whether to use cached responses if available
+
+        Returns:
+            Optional[str]: AI response text, or None if all providers fail
+
+        Example:
+            >>> response = assistant.ask_ai(
+            ...     "Generate XSS payloads for HTML context",
+            ...     provider="openai",
+            ...     context="payload",
+            ...     persona="bugbounty"
+            ... )
+            >>> print(response)
+
+        Note:
+            Falls back to mock responses if no AI providers are available.
+            All queries and responses are tracked in the current session.
+        """
 
         start_time = time.time()
 
@@ -940,6 +1367,20 @@ reconcli vulncli --target {message}
             if cached_response:
                 if self.config.performance_monitoring:
                     self.performance_metrics["cache_hits"] += 1
+
+                # Store cached response in database if enabled
+                if hasattr(self, "db_connection") and self.db_connection:
+                    response_time_ms = int((time.time() - start_time) * 1000)
+                    self._store_ai_query(
+                        message,
+                        context,
+                        persona or "default",
+                        selected_provider.name,
+                        cached_response,
+                        response_time_ms,
+                        True,
+                    )
+
                 return cached_response
             elif self.config.performance_monitoring:
                 self.performance_metrics["cache_misses"] += 1
@@ -966,6 +1407,19 @@ reconcli vulncli --target {message}
                         persona or "default",
                         selected_provider.name,
                         response,
+                    )
+
+                # Store in database if enabled
+                if hasattr(self, "db_connection") and self.db_connection:
+                    response_time_ms = int((time.time() - start_time) * 1000)
+                    self._store_ai_query(
+                        message,
+                        context,
+                        persona or "default",
+                        selected_provider.name,
+                        response,
+                        response_time_ms,
+                        False,
                     )
 
                 # Log query and result
@@ -1178,7 +1632,172 @@ reconcli vulncli --target {message}
     def generate_recon_plan(
         self, target: str, scope: str = "comprehensive", persona: Optional[str] = None
     ) -> Dict:
-        """Generate comprehensive reconnaissance plan"""
+        """Advanced AI-powered reconnaissance planning and methodology generation.
+
+        Creates comprehensive, persona-specific reconnaissance strategies using AI to
+        optimize attack surface discovery, minimize detection, and maximize intelligence
+        gathering based on target characteristics and assessment objectives.
+
+        Args:
+            target (str): Primary reconnaissance target
+                        - Domain names (example.com, sub.example.com)
+                        - IP addresses (192.168.1.1, 10.0.0.0/24)
+                        - IP ranges (192.168.1.1-254)
+                        - Company names (for OSINT reconnaissance)
+                        - ASN numbers (AS1234 for infrastructure mapping)
+                        - URLs (https://app.example.com/api)
+
+            scope (str): Reconnaissance depth and methodology
+                       - "basic": Essential discovery (subdomains, basic web enum)
+                       - "comprehensive": Full attack surface mapping
+                       - "cloud": Cloud-focused reconnaissance (AWS, Azure, GCP)
+                       - "api": API endpoint discovery and testing
+                       - "mobile": Mobile application assessment
+                       - "iot": Internet of Things device enumeration
+                       - "osint": Open Source Intelligence gathering
+                       - "stealth": Low-detection passive reconnaissance
+                       - "enterprise": Corporate infrastructure assessment
+                       - "startup": Lean organization reconnaissance
+                       - "government": Government entity assessment
+                       - "financial": Financial services reconnaissance
+                       - "healthcare": Healthcare organization assessment
+
+            persona (Optional[str]): Reconnaissance approach and constraints
+                                   - "redteam": APT-style stealth operations
+                                   - "bugbounty": Efficient vulnerability discovery
+                                   - "pentester": Methodical professional assessment
+                                   - "trainer": Educational step-by-step approach
+                                   - "osint": Passive intelligence collection only
+                                   - "researcher": Academic/research methodology
+                                   - "compliance": Audit-focused assessment
+
+        Returns:
+            Dict: Comprehensive reconnaissance plan and execution strategy
+                {
+                    "target_analysis": {
+                        "target_type": str,                  # Domain/IP/Company classification
+                        "organization_profile": str,         # Company/entity details
+                        "technology_stack": List[str],       # Predicted technologies
+                        "attack_surface_estimate": str,      # Expected surface size
+                        "threat_landscape": List[str],       # Relevant threat actors
+                        "compliance_requirements": List[str], # Regulatory considerations
+                        "geographic_presence": List[str],    # Physical/legal jurisdictions
+                        "industry_classification": str       # Business sector
+                    },
+                    "reconnaissance_phases": [
+                        {
+                            "phase_name": str,               # Human-readable phase name
+                            "phase_number": int,             # Execution order
+                            "description": str,              # Phase objectives
+                            "tools_required": List[str],     # ReconCLI modules needed
+                            "commands": List[str],           # Specific commands to run
+                            "expected_duration": str,        # Time estimate
+                            "stealth_level": str,            # Detection risk level
+                            "data_sources": List[str],       # Information sources
+                            "success_criteria": List[str],   # How to measure success
+                            "failure_indicators": List[str], # Signs of problems
+                            "next_phase_triggers": List[str], # Conditions for next phase
+                            "parallel_execution": bool,      # Can run concurrently
+                            "dependencies": List[str],       # Required previous phases
+                            "output_artifacts": List[str],   # Files/data generated
+                            "quality_checks": List[str]      # Validation steps
+                        }
+                    ],
+                    "methodology": {
+                        "approach": str,                     # Overall strategy
+                        "priority_targets": List[str],       # High-value assets
+                        "exclusions": List[str],             # Out-of-scope items
+                        "detection_avoidance": List[str],    # Stealth techniques
+                        "noise_reduction": List[str],        # Traffic minimization
+                        "timing_considerations": List[str],  # Optimal execution times
+                        "backup_strategies": List[str],      # Alternative approaches
+                        "escalation_paths": List[str]        # Next steps if blocked
+                    },
+                    "toolchain_integration": {
+                        "reconcli_modules": List[str],       # ReconCLI tools to use
+                        "external_tools": List[str],         # Third-party tools
+                        "automation_scripts": List[str],     # Custom automation
+                        "data_correlation": List[str],       # Cross-module analysis
+                        "reporting_pipeline": List[str],     # Results aggregation
+                        "quality_assurance": List[str],      # Data validation
+                        "continuous_monitoring": List[str],  # Ongoing surveillance
+                        "alert_mechanisms": List[str]        # Change detection
+                    },
+                    "risk_assessment": {
+                        "legal_considerations": List[str],   # Legal compliance
+                        "detection_probability": str,        # Likelihood of detection
+                        "impact_on_target": str,            # Potential target impact
+                        "attribution_risks": List[str],      # Identity exposure risks
+                        "operational_security": List[str],   # OpSec recommendations
+                        "emergency_procedures": List[str],   # Incident response
+                        "evidence_handling": List[str],      # Data protection
+                        "disclosure_timeline": str           # Vulnerability disclosure
+                    },
+                    "success_metrics": {
+                        "coverage_targets": Dict[str, str], # Coverage percentage goals
+                        "quality_indicators": List[str],   # Data quality measures
+                        "time_benchmarks": Dict[str, str], # Performance targets
+                        "detection_limits": Dict[str, str], # Acceptable detection levels
+                        "intelligence_value": List[str],   # Information value metrics
+                        "actionability_score": str,        # Actionable findings ratio
+                        "false_positive_rate": str,        # Data accuracy measures
+                        "comprehensive_score": str         # Overall assessment quality
+                    },
+                    "deliverables": {
+                        "executive_summary": str,          # High-level findings
+                        "technical_report": str,           # Detailed technical analysis
+                        "attack_surface_map": str,         # Visual attack surface
+                        "vulnerability_matrix": str,       # Risk prioritization
+                        "remediation_roadmap": str,        # Security improvements
+                        "monitoring_recommendations": str,  # Ongoing security
+                        "compliance_assessment": str,      # Regulatory status
+                        "threat_intelligence": str         # Threat landscape analysis
+                    }
+                }
+
+        Examples:
+            # Basic bug bounty reconnaissance plan
+            plan = assistant.generate_recon_plan(
+                "example.com",
+                scope="basic",
+                persona="bugbounty"
+            )
+
+            # Comprehensive penetration test planning
+            plan = assistant.generate_recon_plan(
+                "target-corp.com",
+                scope="comprehensive",
+                persona="pentester"
+            )
+
+            # Stealth red team operation
+            plan = assistant.generate_recon_plan(
+                "192.168.1.0/24",
+                scope="stealth",
+                persona="redteam"
+            )
+
+            # Cloud infrastructure assessment
+            plan = assistant.generate_recon_plan(
+                "cloud-app.com",
+                scope="cloud",
+                persona="pentester"
+            )
+
+            # Execute reconnaissance phases
+            for phase in plan["reconnaissance_phases"]:
+                print(f"Phase {phase['phase_number']}: {phase['phase_name']}")
+                print(f"Duration: {phase['expected_duration']}")
+                print(f"Tools: {', '.join(phase['tools_required'])}")
+
+        Note:
+            - Automatically adapts methodology based on target characteristics
+            - Integrates seamlessly with all ReconCLI modules
+            - Provides detailed timing and stealth considerations
+            - Includes legal and compliance guidance
+            - Supports both manual and automated execution
+            - Generates professional deliverables and reporting
+        """
         scope_templates = {
             "basic": ["subdomain_enum", "web_discovery"],
             "comprehensive": ["subdomain_enum", "web_discovery", "vulnerability_scan"],
@@ -1279,7 +1898,162 @@ reconcli vulncli --target {message}
         technique: Optional[str] = None,
         persona: Optional[str] = None,
     ) -> Dict:
-        """Generate advanced payload with context and technique specification"""
+        """Advanced AI-powered payload generation with context-aware optimization.
+
+        Generates sophisticated, context-specific security testing payloads using AI
+        to create novel attack vectors, bypass techniques, and evasion mechanisms
+        tailored to specific environments and defensive measures.
+
+        Args:
+            payload_type (str): Primary vulnerability class to target
+                              - "xss": Cross-Site Scripting (DOM, Reflected, Stored)
+                              - "sqli": SQL Injection (Union, Boolean, Time-based, Error)
+                              - "lfi": Local File Inclusion (Directory traversal, Filter bypass)
+                              - "rfi": Remote File Inclusion (HTTP, FTP, SMB wrappers)
+                              - "ssti": Server-Side Template Injection (Jinja2, Twig, Freemarker)
+                              - "ssrf": Server-Side Request Forgery (HTTP, Gopher, File protocols)
+                              - "idor": Insecure Direct Object Reference (Sequential, GUID)
+                              - "csrf": Cross-Site Request Forgery (GET, POST, SameSite bypass)
+                              - "xxe": XML External Entity (Classic, Blind, SOAP)
+                              - "nosqli": NoSQL Injection (MongoDB, CouchDB, Redis)
+                              - "ldapi": LDAP Injection (Authentication bypass, Enumeration)
+                              - "cmdi": Command Injection (OS command execution)
+                              - "deserialization": Unsafe deserialization exploits
+
+            context (Optional[str]): Execution environment and constraints
+                                   - "html": HTML document context, DOM manipulation
+                                   - "javascript": JS execution environment
+                                   - "mysql": MySQL database system specifics
+                                   - "postgresql": PostgreSQL syntax and features
+                                   - "mssql": Microsoft SQL Server functions
+                                   - "oracle": Oracle Database procedures
+                                   - "mongodb": MongoDB NoSQL operations
+                                   - "redis": Redis in-memory data store
+                                   - "linux": Linux OS command execution
+                                   - "windows": Windows command prompt/PowerShell
+                                   - "cloud": Cloud service SSRF contexts (AWS, Azure, GCP)
+                                   - "api": REST/GraphQL API endpoint testing
+                                   - "mobile": Mobile application contexts
+                                   - "iot": Internet of Things device constraints
+
+            technique (Optional[str]): Specific attack methodology
+                                     - "reflection": Reflected XSS techniques
+                                     - "stored": Persistent XSS storage
+                                     - "dom": DOM-based XSS manipulation
+                                     - "union": SQL UNION-based injection
+                                     - "boolean": Boolean-based blind SQLi
+                                     - "time": Time-based blind SQLi
+                                     - "error": Error-based SQLi information disclosure
+                                     - "obfuscation": WAF/filter bypass obfuscation
+                                     - "encoding": Multiple encoding layer bypass
+                                     - "polyglot": Multi-context payload compatibility
+                                     - "steganography": Hidden payload embedding
+                                     - "mutation": Evolutionary payload development
+
+            persona (Optional[str]): Attack perspective and constraints
+                                   - "redteam": Stealth, evasion, persistence focus
+                                   - "bugbounty": High-impact, quick validation payloads
+                                   - "pentester": Methodical, documented approach
+                                   - "trainer": Educational, explainable techniques
+                                   - "researcher": Novel, experimental approaches
+
+        Returns:
+            Dict: Comprehensive payload generation results
+                {
+                    "payloads": [
+                        {
+                            "payload": str,                    # Primary attack payload
+                            "variants": List[str],             # Alternative forms
+                            "encoded_versions": List[str],     # Bypass encoded variants
+                            "description": str,                # Technical explanation
+                            "attack_vector": str,              # How to deliver payload
+                            "expected_behavior": str,          # What should happen
+                            "detection_signatures": List[str], # Known detection patterns
+                            "bypass_techniques": List[str],    # WAF/filter evasion
+                            "success_indicators": List[str],   # How to verify success
+                            "false_positive_risk": str,        # Risk assessment
+                            "remediation": str,                # How to fix vulnerability
+                            "references": List[str],           # CVE/research links
+                            "mitre_techniques": List[str],     # MITRE ATT&CK mapping
+                            "severity_score": float,           # CVSS-like scoring
+                            "exploit_complexity": str,         # LOW/MEDIUM/HIGH
+                            "privilege_required": str,         # User interaction needed
+                            "scope_impact": str                # Impact scope assessment
+                        }
+                    ],
+                    "context_analysis": {
+                        "target_technology": str,            # Detected tech stack
+                        "input_validation": str,             # Validation mechanisms
+                        "output_encoding": str,              # Encoding protections
+                        "security_headers": List[str],       # Present security headers
+                        "waf_detection": str,                # WAF presence/type
+                        "recommended_approach": str          # Best attack strategy
+                    },
+                    "advanced_techniques": {
+                        "polyglot_payloads": List[str],      # Multi-context payloads
+                        "mutation_seeds": List[str],         # Evolutionary base payloads
+                        "steganographic_variants": List[str], # Hidden/obfuscated forms
+                        "protocol_manipulation": List[str],  # Protocol-level attacks
+                        "encoding_chains": List[str],        # Multi-layer encoding
+                        "sandbox_escapes": List[str]         # Sandbox bypass techniques
+                    },
+                    "defense_evasion": {
+                        "signature_evasion": List[str],      # IDS/IPS bypass methods
+                        "behavior_mimicry": List[str],       # Legitimate traffic mimicking
+                        "timing_attacks": List[str],         # Time-based evasion
+                        "fragmentation": List[str],          # Payload fragmentation
+                        "protocol_tunneling": List[str],     # Protocol abuse techniques
+                        "social_engineering": List[str]      # Human factor exploitation
+                    },
+                    "testing_guidance": {
+                        "verification_steps": List[str],     # How to test payloads
+                        "automation_scripts": List[str],     # Testing automation
+                        "manual_testing_tips": List[str],    # Manual verification
+                        "false_positive_checks": List[str],  # Avoiding false results
+                        "impact_demonstration": List[str],   # Proof of concept steps
+                        "reporting_templates": List[str]     # Vulnerability reporting
+                    }
+                }
+
+        Examples:
+            # Basic XSS payload for HTML context
+            result = assistant.generate_payload("xss", "html", "reflection")
+
+            # Advanced SQL injection with database-specific techniques
+            result = assistant.generate_payload(
+                "sqli",
+                context="mysql",
+                technique="union",
+                persona="pentester"
+            )
+
+            # Stealth SSRF for cloud environments
+            result = assistant.generate_payload(
+                "ssrf",
+                context="cloud",
+                technique="obfuscation",
+                persona="redteam"
+            )
+
+            # Educational SSTI demonstration
+            result = assistant.generate_payload(
+                "ssti",
+                context="jinja2",
+                persona="trainer"
+            )
+
+            for payload_data in result["payloads"]:
+                print(f"Payload: {payload_data['payload']}")
+                print(f"Bypass techniques: {payload_data['bypass_techniques']}")
+
+        Note:
+            - Generates multiple payload variants for comprehensive testing
+            - Includes WAF/filter bypass techniques automatically
+            - Provides detailed remediation guidance for each payload
+            - Maps to MITRE ATT&CK framework for threat intelligence
+            - Supports both manual and automated testing workflows
+            - Includes detection signature analysis for evasion planning
+        """
         if payload_type not in self.payload_categories:
             return {"error": f"Unknown payload type: {payload_type}"}
 
@@ -2492,7 +3266,186 @@ Provide structured, phase-based reconnaissance plans with specific tools and tec
     def generate_report_from_flow(
         self, json_file_path: str, persona: Optional[str] = None
     ) -> Dict:
-        """Generate comprehensive report from attack flow JSON file"""
+        """Professional security assessment report generation from attack flow data.
+
+        Transforms attack flow JSON files into comprehensive, persona-specific security
+        reports suitable for executive briefings, technical documentation, compliance
+        audits, and vulnerability management programs.
+
+        Args:
+            json_file_path (str): Path to attack flow JSON file containing:
+                                - attack_types: List of vulnerability types discovered
+                                - attack_flow: Multi-stage attack chain data
+                                - mitre_mapping: MITRE ATT&CK technique mapping
+                                - vulnerabilities: Detailed vulnerability information
+                                - impact_assessment: Business impact analysis
+                                - remediation: Security improvement recommendations
+                                - timeline: Attack progression timeline
+                                - evidence: Supporting evidence and artifacts
+
+            persona (Optional[str]): Report perspective and target audience
+                                   - "pentester": Technical penetration test report
+                                   - "redteam": Red team operation summary
+                                   - "bugbounty": Bug bounty submission format
+                                   - "compliance": Regulatory compliance assessment
+                                   - "executive": C-level executive summary
+                                   - "technical": Engineering team detailed report
+                                   - "auditor": Internal/external audit format
+                                   - "researcher": Academic/research publication
+
+        Returns:
+            Dict: Comprehensive professional security report
+                {
+                    "report_metadata": {
+                        "report_id": str,                    # Unique report identifier
+                        "generation_timestamp": str,         # ISO 8601 timestamp
+                        "report_type": str,                  # Report classification
+                        "persona_used": str,                 # Target audience
+                        "classification_level": str,        # Confidentiality level
+                        "version": str,                      # Report version
+                        "author": str,                       # Generated by AI indicator
+                        "review_status": str,                # Draft/Final status
+                        "distribution_list": List[str],      # Intended recipients
+                        "retention_period": str              # Data retention policy
+                    },
+                    "executive_summary": {
+                        "assessment_overview": str,          # High-level findings
+                        "critical_findings": List[str],      # Most severe issues
+                        "business_impact": str,              # Risk to organization
+                        "recommendations_summary": List[str], # Key action items
+                        "risk_rating": str,                  # Overall risk score
+                        "compliance_status": str,            # Regulatory compliance
+                        "remediation_timeline": str,         # Required fix timeframe
+                        "investment_required": str           # Resource requirements
+                    },
+                    "attack_analysis": {
+                        "attack_surface_summary": str,       # Attack surface overview
+                        "vulnerability_distribution": Dict[str, int], # Vuln by severity
+                        "attack_vectors": List[Dict],        # Entry points identified
+                        "exploitation_chains": List[Dict],   # Multi-stage attacks
+                        "privilege_escalation_paths": List[Dict], # Escalation routes
+                        "lateral_movement_analysis": str,    # Network movement
+                        "data_exfiltration_risks": List[str], # Data theft scenarios
+                        "persistence_mechanisms": List[str], # Maintaining access
+                        "detection_evasion": List[str]       # Security bypass methods
+                    },
+                    "technical_findings": {
+                        "vulnerabilities": [
+                            {
+                                "vulnerability_id": str,     # CVE or internal ID
+                                "title": str,                # Vulnerability name
+                                "severity": str,             # Critical/High/Medium/Low
+                                "cvss_score": float,         # CVSS 3.1 score
+                                "description": str,          # Technical description
+                                "affected_systems": List[str], # Impacted assets
+                                "exploit_scenario": str,     # Attack walkthrough
+                                "evidence": List[str],       # Proof of concept
+                                "remediation": str,          # Fix recommendations
+                                "timeline": str,             # Discovery timeline
+                                "references": List[str]      # CVE/research links
+                            }
+                        ],
+                        "attack_chains": List[Dict],         # Complex attack scenarios
+                        "security_controls_bypassed": List[str], # Defeated protections
+                        "false_positives": List[str],        # Excluded findings
+                        "testing_limitations": List[str]     # Assessment constraints
+                    },
+                    "mitre_attack_mapping": {
+                        "tactics_observed": List[str],       # MITRE tactics used
+                        "techniques_demonstrated": List[Dict], # Specific techniques
+                        "sub_techniques": List[str],         # Detailed sub-techniques
+                        "detection_coverage": Dict[str, str], # Detection capabilities
+                        "threat_actor_similarity": List[str], # Similar APT groups
+                        "defensive_gaps": List[str],         # Missing protections
+                        "purple_team_scenarios": List[Dict], # Testing scenarios
+                        "ioc_patterns": List[str]            # Indicators of compromise
+                    },
+                    "risk_assessment": {
+                        "risk_matrix": Dict[str, str],       # Risk scoring matrix
+                        "business_impact_analysis": str,     # Financial/operational impact
+                        "threat_likelihood": str,            # Probability assessment
+                        "attack_complexity": str,            # Difficulty analysis
+                        "asset_criticality": List[Dict],     # Asset value assessment
+                        "regulatory_implications": List[str], # Compliance impact
+                        "reputational_risk": str,            # Brand damage potential
+                        "competitive_intelligence": str      # Intelligence value
+                    },
+                    "remediation_roadmap": {
+                        "immediate_actions": [
+                            {
+                                "action": str,               # Required action
+                                "priority": str,             # Critical/High/Medium/Low
+                                "estimated_effort": str,     # Time/resource estimate
+                                "responsible_team": str,     # Assignment
+                                "dependencies": List[str],   # Prerequisites
+                                "success_criteria": str,     # Completion definition
+                                "validation_method": str,    # How to verify fix
+                                "timeline": str              # Completion deadline
+                            }
+                        ],
+                        "strategic_improvements": List[Dict], # Long-term enhancements
+                        "process_improvements": List[str],   # Procedural changes
+                        "technology_investments": List[str], # Tool/system upgrades
+                        "training_requirements": List[str],  # Staff education needs
+                        "monitoring_enhancements": List[str], # Detection improvements
+                        "incident_response_updates": List[str], # IR plan changes
+                        "compliance_actions": List[str]      # Regulatory compliance
+                    },
+                    "appendices": {
+                        "methodology": str,                  # Assessment approach
+                        "tools_used": List[str],            # Testing tools
+                        "scope_definition": str,            # Assessment boundaries
+                        "assumptions_limitations": List[str], # Assessment constraints
+                        "evidence_catalog": List[Dict],     # Supporting evidence
+                        "glossary": Dict[str, str],         # Technical terms
+                        "references": List[str],            # External references
+                        "contact_information": Dict[str, str] # Follow-up contacts
+                    }
+                }
+
+        Examples:
+            # Generate technical penetration test report
+            report = assistant.generate_report_from_flow(
+                "attack_flow_comprehensive_1234567890.json",
+                persona="pentester"
+            )
+
+            # Executive summary for C-level presentation
+            report = assistant.generate_report_from_flow(
+                "redteam_assessment.json",
+                persona="executive"
+            )
+
+            # Compliance audit report
+            report = assistant.generate_report_from_flow(
+                "vulnerability_assessment.json",
+                persona="compliance"
+            )
+
+            # Bug bounty submission format
+            report = assistant.generate_report_from_flow(
+                "bounty_findings.json",
+                persona="bugbounty"
+            )
+
+            # Save report to file
+            import json
+            with open("security_assessment_report.json", "w") as f:
+                json.dump(report, f, indent=2)
+
+            # Print executive summary
+            print("Executive Summary:")
+            print(report["executive_summary"]["assessment_overview"])
+            print(f"Risk Rating: {report['executive_summary']['risk_rating']}")
+
+        Note:
+            - Automatically formats reports based on target persona
+            - Includes professional security assessment standards
+            - Provides actionable remediation guidance with timelines
+            - Maps findings to regulatory compliance requirements
+            - Generates evidence-based technical documentation
+            - Supports multiple output formats (JSON, PDF, HTML)
+        """
 
         if not os.path.exists(json_file_path):
             return {"error": f"File not found: {json_file_path}"}
@@ -3094,7 +4047,128 @@ Provide structured, phase-based reconnaissance plans with specific tools and tec
         persona: Optional[str] = None,
         integration_mode: bool = True,
     ) -> Dict:
-        """Scan endpoints from ReconCLI output files with AI analysis"""
+        """Advanced AI-powered vulnerability scanner with ReconCLI integration.
+
+        Performs intelligent vulnerability assessments on endpoints discovered by ReconCLI modules,
+        using AI to analyze patterns, predict attack vectors, and generate targeted payloads.
+
+        Args:
+            endpoints_file (str): Path to ReconCLI output file (JSON/TXT formats supported)
+                                 - urlcli output with HTTP/HTTPS endpoints
+                                 - subdocli output with discovered subdomains
+                                 - dirbcli output with directory/file discoveries
+                                 - httpcli output with HTTP service details
+
+            scan_type (str): Vulnerability scan depth and focus
+                           - "quick": Fast common vulnerability scan (XSS, SQLi, CSRF)
+                           - "comprehensive": Complete assessment with advanced techniques
+                           - "focused": Technology-specific vulnerability testing
+                           - "deep": APT simulation, zero-day discovery, advanced threats
+                           - "compliance": OWASP Top 10, PCI DSS, GDPR compliance assessment
+
+            persona (Optional[str]): AI persona for specialized methodology
+                                   - "redteam": Stealth operations, evasion techniques
+                                   - "bugbounty": Quick wins, high-impact vulnerabilities
+                                   - "pentester": Professional methodology, compliance
+                                   - "trainer": Educational approach with explanations
+                                   - "osint": Passive intelligence, minimal footprint
+
+            integration_mode (bool): Enable ReconCLI integration features
+                                   - Cross-reference with other ReconCLI module outputs
+                                   - Intelligent context correlation
+                                   - Enhanced attack surface mapping
+
+        Returns:
+            Dict: Comprehensive vulnerability assessment results
+                {
+                    "scan_summary": {
+                        "total_endpoints": int,
+                        "vulnerable_endpoints": int,
+                        "critical_vulnerabilities": int,
+                        "high_vulnerabilities": int,
+                        "medium_vulnerabilities": int,
+                        "low_vulnerabilities": int,
+                        "scan_duration": str,
+                        "scan_type": str,
+                        "persona_used": str
+                    },
+                    "vulnerabilities": [
+                        {
+                            "endpoint": str,
+                            "vulnerability_type": str,
+                            "severity": str,
+                            "description": str,
+                            "payload": str,
+                            "mitigation": str,
+                            "references": List[str],
+                            "confidence_score": float,
+                            "attack_complexity": str,
+                            "exploit_availability": bool,
+                            "mitre_techniques": List[str]
+                        }
+                    ],
+                    "attack_chains": [
+                        {
+                            "chain_id": str,
+                            "vulnerabilities": List[str],
+                            "attack_path": str,
+                            "impact_assessment": str,
+                            "likelihood": str,
+                            "mitigation_priority": str
+                        }
+                    ],
+                    "compliance_assessment": {
+                        "owasp_top10_coverage": Dict[str, str],
+                        "compliance_score": float,
+                        "failed_controls": List[str],
+                        "remediation_roadmap": List[str]
+                    },
+                    "recommendations": {
+                        "immediate_actions": List[str],
+                        "strategic_improvements": List[str],
+                        "monitoring_suggestions": List[str],
+                        "next_assessment_timeline": str
+                    }
+                }
+
+        Examples:
+            # Quick vulnerability scan for bug bounty
+            results = assistant.scan_endpoints_with_ai(
+                "urlcli_output.json",
+                scan_type="quick",
+                persona="bugbounty"
+            )
+
+            # Comprehensive penetration test assessment
+            results = assistant.scan_endpoints_with_ai(
+                "discovered_endpoints.txt",
+                scan_type="comprehensive",
+                persona="pentester",
+                integration_mode=True
+            )
+
+            # Compliance-focused security assessment
+            results = assistant.scan_endpoints_with_ai(
+                "http_services.json",
+                scan_type="compliance",
+                persona="pentester"
+            )
+
+            # Advanced red team simulation
+            results = assistant.scan_endpoints_with_ai(
+                "target_endpoints.txt",
+                scan_type="deep",
+                persona="redteam",
+                integration_mode=True
+            )
+
+        Note:
+            - Supports multiple ReconCLI output formats automatically
+            - Integrates with existing ReconCLI session data when available
+            - Generates detailed compliance reports for enterprise environments
+            - Provides actionable remediation guidance with priority scoring
+            - Uses AI to correlate vulnerabilities across attack surface
+        """
 
         if not os.path.exists(endpoints_file):
             return {"error": f"Endpoints file not found: {endpoints_file}"}
@@ -3881,7 +4955,135 @@ Provide structured, phase-based reconnaissance plans with specific tools and tec
     def predict_attack_chains(
         self, recon_data: Dict, persona: str = "pentester"
     ) -> Dict:
-        """Predict possible attack chains based on reconnaissance data"""
+        """Advanced AI-powered attack chain prediction and planning system.
+
+        Analyzes reconnaissance data to predict viable multi-stage attack paths,
+        correlate vulnerabilities, and generate comprehensive attack scenarios
+        based on MITRE ATT&CK framework and real-world attack patterns.
+
+        Args:
+            recon_data (Dict): Comprehensive reconnaissance data from ReconCLI modules
+                {
+                    "domains": List[str],           # Discovered domains
+                    "subdomains": List[str],        # Enumerated subdomains
+                    "urls": List[str],              # HTTP/HTTPS endpoints
+                    "ports": List[Dict],            # Open ports and services
+                    "technologies": List[Dict],     # Detected tech stack
+                    "vulnerabilities": List[Dict],  # Known vulnerabilities
+                    "directories": List[str],       # Directory discoveries
+                    "files": List[str],            # Interesting files found
+                    "headers": List[Dict],         # HTTP security headers
+                    "certificates": List[Dict],    # SSL/TLS certificate info
+                    "dns_records": List[Dict],     # DNS enumeration results
+                    "social_media": List[Dict],    # OSINT social profiles
+                    "employees": List[Dict],       # Employee information
+                    "leaked_credentials": List[Dict] # Credential leaks found
+                }
+
+            persona (str): Attack perspective and methodology
+                         - "pentester": Professional methodical approach
+                         - "redteam": APT-style stealth operations
+                         - "bugbounty": Quick impact vulnerability chains
+                         - "trainer": Educational step-by-step analysis
+                         - "osint": Passive intelligence correlation
+
+        Returns:
+            Dict: Comprehensive attack chain predictions and analysis
+                {
+                    "attack_chains": [
+                        {
+                            "chain_id": str,                    # Unique chain identifier
+                            "name": str,                        # Human-readable chain name
+                            "attack_vector": str,               # Initial access method
+                            "kill_chain_phases": List[str],     # MITRE ATT&CK phases
+                            "techniques": List[str],            # Specific MITRE techniques
+                            "vulnerabilities_exploited": List[str], # CVEs/vulns used
+                            "attack_path": List[Dict],          # Step-by-step progression
+                            "success_probability": float,       # Likelihood (0.0-1.0)
+                            "detection_difficulty": str,        # LOW/MEDIUM/HIGH/CRITICAL
+                            "impact_assessment": {
+                                "confidentiality": str,         # Impact level
+                                "integrity": str,               # Impact level
+                                "availability": str,            # Impact level
+                                "business_impact": str          # Critical/High/Medium/Low
+                            },
+                            "prerequisites": List[str],         # Required conditions
+                            "defensive_gaps": List[str],        # Security weaknesses
+                            "recommended_mitigations": List[str], # Countermeasures
+                            "tools_required": List[str],        # Attack tools needed
+                            "stealth_rating": int,              # 1-10 stealth score
+                            "complexity": str,                  # LOW/MEDIUM/HIGH
+                            "timeframe": str                    # Estimated duration
+                        }
+                    ],
+                    "attack_surface_analysis": {
+                        "external_facing_assets": int,
+                        "high_value_targets": List[str],
+                        "critical_vulnerabilities": int,
+                        "attack_vectors": List[str],
+                        "privilege_escalation_paths": int,
+                        "lateral_movement_opportunities": int,
+                        "data_exfiltration_routes": List[str]
+                    },
+                    "threat_modeling": {
+                        "threat_actors": List[str],           # Relevant threat actors
+                        "attack_motivations": List[str],      # Likely motivations
+                        "threat_landscape": str,              # Current threat environment
+                        "seasonal_trends": List[str],         # Time-based patterns
+                        "industry_specific_threats": List[str] # Sector-specific risks
+                    },
+                    "defense_recommendations": {
+                        "immediate_actions": List[str],        # Urgent security fixes
+                        "strategic_improvements": List[str],   # Long-term enhancements
+                        "monitoring_enhancements": List[str],  # Detection improvements
+                        "incident_response_updates": List[str], # IR plan updates
+                        "security_awareness_topics": List[str] # Training focus areas
+                    },
+                    "compliance_implications": {
+                        "regulatory_concerns": List[str],      # Compliance violations
+                        "audit_findings": List[str],          # Audit implications
+                        "remediation_timeline": str,          # Required fix timeline
+                        "business_risk_rating": str           # Overall risk level
+                    },
+                    "attack_simulation_data": {
+                        "purple_team_scenarios": List[Dict],  # Testing scenarios
+                        "red_team_objectives": List[str],     # Attack goals
+                        "blue_team_detection_rules": List[str], # SIEM rules
+                        "tabletop_exercise_scenarios": List[Dict] # Exercise plans
+                    }
+                }
+
+        Examples:
+            # Basic attack chain prediction for penetration test
+            recon_results = assistant.gather_recon_data()
+            chains = assistant.predict_attack_chains(recon_results, "pentester")
+
+            # Red team operation planning
+            chains = assistant.predict_attack_chains(
+                recon_data,
+                persona="redteam"
+            )
+            print(f"Found {len(chains['attack_chains'])} viable attack paths")
+
+            # Bug bounty chain analysis
+            chains = assistant.predict_attack_chains(recon_data, "bugbounty")
+            high_impact = [c for c in chains['attack_chains']
+                          if c['impact_assessment']['business_impact'] == 'Critical']
+
+            # Educational attack analysis
+            chains = assistant.predict_attack_chains(recon_data, "trainer")
+            for chain in chains['attack_chains']:
+                print(f"Chain: {chain['name']}")
+                print(f"Steps: {len(chain['attack_path'])}")
+
+        Note:
+            - Integrates with all ReconCLI module outputs automatically
+            - Uses MITRE ATT&CK framework for standardized attack mapping
+            - Provides probabilistic success scoring based on defensive posture
+            - Generates actionable defensive recommendations
+            - Supports purple team exercise planning
+            - Correlates attack chains with compliance requirements
+        """
         import time
 
         try:
@@ -4257,6 +5459,7 @@ ai_assistant = AIReconAssistant()
 @click.option("--cache-max-age", default=24, type=int, help="Cache max age in hours")
 @click.option("--clear-cache", is_flag=True, help="Clear all cached AI responses")
 @click.option("--cache-stats", is_flag=True, help="Show cache statistics")
+@click.option("--store-db", help="Store results in database (SQLite file path)")
 @click.option("--parallel", is_flag=True, help="Enable parallel processing")
 @click.option("--max-workers", default=4, type=int, help="Maximum parallel workers")
 @click.option("--local-llm", is_flag=True, help="Enable local LLM support (Ollama)")
@@ -4387,6 +5590,7 @@ def aicli(
     cache_max_age,
     clear_cache,
     cache_stats,
+    store_db,
     parallel,
     max_workers,
     local_llm,
@@ -4419,112 +5623,241 @@ def aicli(
     Advanced AI module for intelligent recon planning, payload generation, and security analysis.
     Supports multiple AI providers (OpenAI, Anthropic, Gemini) with session management and specialized personas.
 
-    Examples:
-        # Generate XSS payload for HTML context with bug bounty persona
-        reconcli aicli --payload xss --context html --technique reflection --persona bugbounty
+    🎯 QUICK START EXAMPLES:
 
-        # Advanced payload mutations with mutation engine
-        reconcli aicli --payload sqli --context mysql --mutate --mutations 15 --persona redteam
+    BASIC USAGE:
+        # Ask AI anything about reconnaissance
+        reconcli aicli --prompt "How to enumerate subdomains effectively?"
+        
+        # Interactive AI chat mode
+        reconcli aicli --interactive --persona pentester
+        
+        # Generate reconnaissance plan for a domain
+        reconcli aicli --plan example.com --scope comprehensive
 
-        # Generate WAF bypass XSS mutations
-        reconcli aicli --payload xss --context html --mutate --mutations 20 --technique obfuscation
+    PAYLOAD GENERATION:
+        # Generate XSS payload for HTML context
+        reconcli aicli --payload xss --context html --persona bugbounty
 
-        # SSRF payload mutations for cloud environments
-        reconcli aicli --payload ssrf --context cloud --mutate --persona pentester
+        # SQL injection payloads for MySQL with mutations
+        reconcli aicli --payload sqli --context mysql --mutate --mutations 15
 
-        # Create comprehensive recon plan with red team persona
-        reconcli aicli --plan example.com --scope comprehensive --persona redteam
+        # SSRF payloads with WAF bypass techniques
+        reconcli aicli --payload ssrf --context cloud --waf-profile cloudflare
 
-        # Analyze target with pentester methodology
-        reconcli aicli --analyze example.com --persona pentester --provider openai
+        # Advanced steganographic payload obfuscation
+        reconcli aicli --payload xss --context html --steganography --encoding-chains 3
 
-        # Multi-stage attack flow with SSRF -> XSS -> LFI chain
+    ATTACK FLOW DEVELOPMENT:
+        # Multi-stage attack: SSRF → XSS → LFI
         reconcli aicli --attack-flow ssrf,xss,lfi --technique gopher --persona redteam
 
-        # Generate comprehensive report from attack flow
-        reconcli aicli --report attack_flow_ssrf_xss_lfi_1234567890.json --persona pentester
+        # Complex attack chain with specific techniques
+        reconcli aicli --attack-flow sqli,lfi,ssti --technique union --persona pentester
 
-        # AI-Powered Vulnerability Scanner with ReconCLI integration
-        reconcli aicli --vuln-scan endpoints.txt --scan-type comprehensive --persona pentester
+        # Generate professional report from attack flow
+        reconcli aicli --report attack_flow_data.json --persona pentester
 
-        # Quick vulnerability scan for bug bounty hunting
-        reconcli aicli --vuln-scan urlcli_output.json --scan-type quick --persona bugbounty --integration
+    VULNERABILITY SCANNING:
+        # AI-powered vulnerability scan with ReconCLI integration
+        reconcli aicli --vuln-scan endpoints.txt --scan-type comprehensive --integration
 
-        # Deep vulnerability assessment with compliance focus
-        reconcli aicli --vuln-scan discovered_urls.txt --scan-type compliance --persona pentester
+        # Quick bug bounty scan
+        reconcli aicli --vuln-scan urlcli_output.json --scan-type quick --persona bugbounty
 
-        # Advanced prompt mode for deep reconnaissance
-        reconcli aicli --prompt-mode --prompt "threat modeling for banking app" --persona pentester
+        # Compliance-focused assessment
+        reconcli aicli --vuln-scan targets.txt --scan-type compliance --compliance-framework owasp
 
-        # Educational session for learning reconnaissance
-        reconcli aicli --prompt "Explain subdomain enumeration" --persona trainer
+        # Deep threat simulation
+        reconcli aicli --vuln-scan endpoints.txt --scan-type deep --persona redteam
 
-        # OSINT-focused passive reconnaissance with chat saving
-        reconcli aicli --plan target.com --persona osint --save-chat osint_session_2025
+    ADVANCED FEATURES:
+        # Attack chain prediction from reconnaissance data
+        reconcli aicli --chain-predict --persona bugbounty --verbose
 
-        # Load previous chat and continue analysis
-        reconcli aicli --load-chat osint_session_2025 --interactive
+        # Automated exploitation attempts
+        reconcli aicli --auto-exploit --persona pentester --cache
 
-        # Chatlog-driven reconnaissance with AI suggestions
-        reconcli aicli --plan target.com --enable-chatlog --auto-analyze --suggest-next
+        # Advanced attack simulation scenarios
+        reconcli aicli --attack-simulation webapp --simulation-scenarios apt,redteam
 
-        # View detailed session insights and AI recommendations
-        reconcli aicli --chatlog-insights --session existing_session_id
+        # Generate compliance reports
+        reconcli aicli --compliance-report scan_results.json --compliance-framework nist
 
-        # Auto-analyze results with custom confidence threshold
-        reconcli aicli --vuln-scan endpoints.txt --enable-chatlog --auto-analyze --chatlog-threshold 0.8
+    PERFORMANCE & CACHING:
+        # Enable caching for faster responses
+        reconcli aicli --prompt "Generate payloads" --cache --cache-max-age 12
 
-        # Enable caching to save tokens and speed up repeated queries
-        reconcli aicli --prompt "Generate XSS payloads" --cache --cache-dir /tmp/ai_cache
-
-        # Use cache with custom max age (12 hours instead of default 24)
-        reconcli aicli --payload sqli --context mysql --cache --cache-max-age 12
+        # View cache statistics
+        reconcli aicli --cache-stats
 
         # Clear all cached responses
         reconcli aicli --clear-cache
 
-        # Show cache statistics
+        # Custom cache directory
+        reconcli aicli --payload xss --cache --cache-dir /tmp/my_cache
+
+    DATABASE STORAGE:
+        # Store all AI results in SQLite database
+        reconcli aicli --store-db /path/to/analysis.db --prompt "Analyze target"
+
+        # Combined cache and database storage
+        reconcli aicli --cache --store-db results.db --payload sqli --context mysql
+
+        # Store vulnerability scan results
+        reconcli aicli --vuln-scan endpoints.txt --store-db vuln_assessment.db
+
+        # Store reconnaissance plans with database tracking
+        reconcli aicli --plan example.com --store-db recon_plans.db --persona pentester
+
+        # View database statistics (includes DB stats when --store-db used)
         reconcli aicli --cache-stats
 
-    Advanced Features:
-        --attack-flow       - Multi-vulnerability attack chains (ssrf,xss,lfi,sqli)
-        --report            - Generate professional reports from attack flow JSON files
-        --vuln-scan         - AI-powered vulnerability scanner with ReconCLI integration
-        --scan-type         - Vulnerability scan depth (quick/comprehensive/focused/deep/compliance)
-        --integration       - Enable ReconCLI integration mode for enhanced context
-        --prompt-mode       - Advanced prompt templates for specialized scenarios
-        --save-chat         - Persistent chat history management
-        --enable-chatlog    - Enable chatlog-driven recon mode with AI analysis
-        --auto-analyze      - Automatically analyze recon results and provide insights
-        --suggest-next      - AI suggests next reconnaissance steps based on findings
-        --chatlog-insights  - Show detailed session progress and AI recommendations
-        --load-chat      - Resume previous analysis sessions
-        --technique      - Specific techniques like gopher, reflection, union, etc.
-        --cache          - Enable AI response caching to save tokens and improve performance
-        --cache-dir      - Custom cache directory path (default: ~/.reconcli/ai_sessions/cache)
-        --cache-max-age  - Cache expiration time in hours (default: 24)
-        --clear-cache    - Clear all cached AI responses
-        --cache-stats    - Show cache statistics and usage information
+    SESSION MANAGEMENT:
+        # Create new session for target
+        reconcli aicli --new-session example.com --plan example.com --persona pentester
 
-    Personas:
-        redteam    - Stealth operations, evasion techniques, APT-style tactics
-        bugbounty  - Quick wins, high-impact vulnerabilities, automation focus
-        pentester  - Professional methodology, compliance, documentation
-        trainer    - Educational approach, step-by-step explanations
-        osint      - Passive intelligence, public sources, no footprint
+        # Resume existing session
+        reconcli aicli --session abc123 --interactive
 
-    Scan Types:
-        quick          - Fast scan for common vulnerabilities (XSS, SQLi, CSRF)
-        comprehensive  - Complete vulnerability assessment with advanced techniques
-        focused        - Technology-specific vulnerability testing
-        deep           - Advanced persistent threat simulation and zero-day discovery
-        compliance     - OWASP Top 10, PCI DSS, GDPR compliance assessment
+        # Save chat history
+        reconcli aicli --interactive --save-chat my_analysis_session
+
+        # Load previous chat
+        reconcli aicli --load-chat my_analysis_session --interactive
+
+    CHATLOG-DRIVEN RECON:
+        # Enable AI-powered next step suggestions
+        reconcli aicli --plan target.com --enable-chatlog --auto-analyze --suggest-next
+
+        # View detailed session insights
+        reconcli aicli --chatlog-insights --session session_id
+
+        # Custom confidence threshold for suggestions
+        reconcli aicli --vuln-scan endpoints.txt --enable-chatlog --chatlog-threshold 0.8
+
+    SPECIALIZED PERSONAS:
+        # Red Team operations (stealth, evasion, APT tactics)
+        reconcli aicli --payload xss --persona redteam --steganography
+
+        # Bug Bounty hunting (quick wins, automation)
+        reconcli aicli --vuln-scan targets.txt --persona bugbounty --scan-type quick
+
+        # Professional penetration testing
+        reconcli aicli --plan corporate.com --persona pentester --scope comprehensive
+
+        # Educational/training mode
+        reconcli aicli --prompt "Explain OWASP Top 10" --persona trainer
+
+        # OSINT operations (passive intelligence)
+        reconcli aicli --analyze target.com --persona osint --save-chat osint_analysis
+
+    WAF BYPASS & EVASION:
+        # Cloudflare WAF bypass
+        reconcli aicli --payload sqli --waf-profile cloudflare --encoding url
+
+        # Multiple encoding chains
+        reconcli aicli --payload xss --encoding-chains 3 --steganography
+
+        # Advanced obfuscation techniques
+        reconcli aicli --payload ssti --mutate --effectiveness-scoring
+
+    LOCAL LLM SUPPORT:
+        # Use local Ollama instance
+        reconcli aicli --local-llm --local-llm-model llama2 --prompt "Analyze target"
+
+        # Custom local LLM endpoint
+        reconcli aicli --local-llm --local-llm-endpoint http://192.168.1.100:11434
+
+    🎭 PERSONAS GUIDE:
+        redteam    → Stealth operations, evasion techniques, APT-style tactics
+        bugbounty  → Quick wins, high-impact vulnerabilities, automation focus  
+        pentester  → Professional methodology, compliance, detailed documentation
+        trainer    → Educational approach, step-by-step explanations, learning
+        osint      → Passive intelligence, public sources, zero footprint
+
+    📊 SCAN TYPES:
+        quick          → Fast common vulnerability scan (XSS, SQLi, CSRF)
+        comprehensive  → Complete assessment with advanced techniques
+        focused        → Technology-specific vulnerability testing
+        deep           → APT simulation, zero-day discovery, advanced threats
+        compliance     → OWASP Top 10, PCI DSS, GDPR, NIST assessments
+
+    🛡️ WAF PROFILES:
+        auto       → Automatic WAF detection and bypass selection
+        cloudflare → Cloudflare-specific bypass techniques
+        aws        → AWS WAF evasion methods
+        azure      → Azure Application Gateway bypasses
+        akamai     → Akamai security evasion techniques
+
+    ⚙️ CONFIGURATION:
+        # Save current configuration
+        reconcli aicli --save-config /path/to/config.json
+
+        # Load custom configuration
+        reconcli aicli --config /path/to/config.json --interactive
+
+        # Enable performance monitoring
+        reconcli aicli --performance-monitoring --verbose
+
+    📋 INTEGRATION WITH OTHER RECONCLI MODULES:
+        # Use with subdomain enumeration results
+        reconcli subdocli --domain example.com --export json
+        reconcli aicli --vuln-scan subdomains.json --integration
+
+        # Chain with HTTP discovery
+        reconcli httpcli --input domains.txt --export json  
+        reconcli aicli --vuln-scan http_results.json --scan-type comprehensive
+
+        # Analyze directory brute force results
+        reconcli dirbcli --url https://example.com --export json
+        reconcli aicli --vuln-scan directories.json --persona bugbounty
+
+    🔧 ADVANCED CONFIGURATION EXAMPLES:
+        # Maximum performance configuration
+        reconcli aicli --cache --parallel --max-workers 8 --rate-limit 120 \\
+                       --performance-monitoring --effectiveness-scoring
+
+        # Security-focused stealth configuration  
+        reconcli aicli --persona redteam --steganography --encoding-chains 3 \\
+                       --waf-profile auto --local-llm
+
+        # Bug bounty optimization
+        reconcli aicli --persona bugbounty --scan-type quick --cache \\
+                       --parallel --auto-exploit --chain-predict
+
+        # Professional pentest setup
+        reconcli aicli --persona pentester --scan-type comprehensive \\
+                       --compliance-framework comprehensive --enable-chatlog \\
+                       --auto-analyze --suggest-next
+
+    📈 PERFORMANCE TIPS:
+        • Enable caching (--cache) for repeated similar queries
+        • Use parallel processing (--parallel) for multiple targets
+        • Set appropriate cache max age based on assessment timeline
+        • Use local LLMs for sensitive environments
+        • Enable performance monitoring to track usage patterns
+
+    🔐 SECURITY CONSIDERATIONS:
+        • API keys are read from environment variables
+        • Local LLM support for air-gapped environments
+        • Chat history encryption available
+        • Steganographic payload obfuscation for evasion
+        • Multiple encoding chains for advanced WAF bypass
+
+    💡 PRO TIPS:
+        • Start with --persona trainer to learn techniques
+        • Use --interactive mode for exploratory analysis
+        • Combine --chain-predict with --auto-exploit for automated workflows
+        • Save important sessions with --save-chat for later reference
+        • Use --compliance-report for formal assessment documentation
+        • Enable --chatlog-driven mode for AI-guided reconnaissance
     """
     # Initialize configuration
     global ai_assistant
 
     # Update configuration from CLI options
-    if config or cache or parallel or local_llm or performance_monitoring:
+    if config or cache or parallel or local_llm or performance_monitoring or store_db:
         # Create new assistant with updated config
         config_updates = ReconCLIConfig()
 
@@ -4539,6 +5872,12 @@ def aicli(
                     Path.home() / ".reconcli" / "ai_sessions" / "cache"
                 )
             config_updates.cache.max_age_hours = cache_max_age
+
+        # Database storage configuration - store path for later initialization
+        db_path_to_init = None
+        if store_db:
+            db_path_to_init = store_db if store_db.endswith(".db") else f"{store_db}.db"
+            click.echo(f"🗄️  Database storage enabled: {db_path_to_init}")
 
         # Parallel processing configuration
         if parallel:
@@ -4587,6 +5926,10 @@ def aicli(
                     ai_assistant.config, attr_name, getattr(config_updates, attr_name)
                 )
 
+        # Initialize database storage AFTER creating new assistant
+        if db_path_to_init:
+            ai_assistant._init_database_storage(db_path_to_init)
+
         # Update cache configuration after config changes
         ai_assistant.update_cache_config()
 
@@ -4631,42 +5974,8 @@ def aicli(
         return
 
     if cache_stats:
-        # Initialize cache manager for stats even if cache flag is not set
-        if not ai_assistant.cache_manager:
-            # Try to get default cache directory
-            cache_dir_path = Path.home() / ".reconcli" / "ai_sessions" / "cache"
-        else:
-            cache_dir_path = Path(ai_assistant.config.cache.cache_dir)
-
-        try:
-            if cache_dir_path.exists():
-                cache_files = list(cache_dir_path.glob("*.json"))
-                total_size = (
-                    sum(f.stat().st_size for f in cache_files) if cache_files else 0
-                )
-                click.secho("📊 Cache Statistics", fg="cyan", bold=True)
-                click.secho(f"Cache directory: {cache_dir_path}", fg="blue")
-                click.secho(f"Cached responses: {len(cache_files)}", fg="blue")
-                click.secho(f"Total size: {total_size / 1024:.1f} KB", fg="blue")
-
-                if ai_assistant.cache_manager:
-                    click.secho(
-                        f"Max age: {ai_assistant.config.cache.max_age_hours} hours",
-                        fg="blue",
-                    )
-                else:
-                    click.secho("Max age: 24 hours (default)", fg="blue")
-
-                click.secho("Cache status: Available", fg="green")
-            else:
-                click.secho("📊 Cache Statistics", fg="cyan", bold=True)
-                click.secho(f"Cache directory: {cache_dir_path}", fg="blue")
-                click.secho("Cached responses: 0", fg="blue")
-                click.secho("Total size: 0.0 KB", fg="blue")
-                click.secho("Cache status: No cache directory found", fg="yellow")
-        except Exception as e:
-            click.secho(f"❌ Failed to get cache stats: {e}", fg="red")
-        return
+        # Handle cache stats at the end after all initializations
+        pass
 
     # Save configuration if requested
     if save_config:
@@ -5904,6 +7213,7 @@ Available commands:
         response = ai_assistant.ask_ai(
             prompt,
             provider=provider,
+            context="prompt",
             persona=persona,
             use_cache=(ai_assistant.cache_manager is not None),
         )
@@ -6138,6 +7448,146 @@ Available commands:
             click.secho("  export OPENAI_API_KEY='your-key'", fg="white")
             click.secho("  export ANTHROPIC_API_KEY='your-key'", fg="white")
             click.secho("  export GOOGLE_API_KEY='your-key'", fg="white")
+
+    # Handle cache stats at the end after all initializations
+    if cache_stats:
+        # Initialize cache manager for stats even if cache flag is not set
+        if not ai_assistant.cache_manager:
+            # Try to get default cache directory
+            cache_dir_path = Path.home() / ".reconcli" / "ai_sessions" / "cache"
+        else:
+            cache_dir_path = Path(ai_assistant.config.cache.cache_dir)
+
+        try:
+            if cache_dir_path.exists():
+                cache_files = list(cache_dir_path.glob("*.json"))
+                total_size = (
+                    sum(f.stat().st_size for f in cache_files) if cache_files else 0
+                )
+                click.secho("📊 Cache Statistics", fg="cyan", bold=True)
+                click.secho(f"Cache directory: {cache_dir_path}", fg="blue")
+                click.secho(f"Cached responses: {len(cache_files)}", fg="blue")
+                click.secho(f"Total size: {total_size / 1024:.1f} KB", fg="blue")
+
+                if ai_assistant.cache_manager:
+                    click.secho(
+                        f"Max age: {ai_assistant.config.cache.max_age_hours} hours",
+                        fg="blue",
+                    )
+                else:
+                    click.secho("Max age: 24 hours (default)", fg="blue")
+
+                # Show database statistics if available
+                # Check if database files exist and try to connect
+                db_files_found = []
+                search_paths = [
+                    cache_dir_path.parent,  # Session directory
+                    Path.cwd(),  # Current working directory
+                    Path.home()
+                    / ".reconcli"
+                    / "databases",  # Default database location
+                ]
+
+                for search_path in search_paths:
+                    if search_path.exists():
+                        db_files = list(search_path.glob("*.db"))
+                        db_files_found.extend(db_files)
+
+                if db_files_found:
+                    click.secho("\n🗄️  Database Statistics", fg="cyan", bold=True)
+                    for db_file in db_files_found:
+                        try:
+                            # Try to connect to database and get stats
+                            db_conn = sqlite3.connect(str(db_file))
+                            cursor = db_conn.cursor()
+
+                            # Check if it's an AI database (has our tables)
+                            cursor.execute(
+                                """
+                                SELECT name FROM sqlite_master 
+                                WHERE type='table' AND name='ai_queries'
+                            """
+                            )
+                            if cursor.fetchone():
+                                click.secho(f"Database file: {db_file}", fg="blue")
+
+                                # Get table counts
+                                tables = [
+                                    "ai_queries",
+                                    "payload_results",
+                                    "vuln_scan_results",
+                                    "recon_plans",
+                                    "attack_chains",
+                                ]
+                                for table in tables:
+                                    cursor.execute(f"SELECT COUNT(*) FROM {table}")
+                                    count = cursor.fetchone()[0]
+                                    table_display = table.replace("_", " ").title()
+                                    click.secho(f"{table_display}: {count}", fg="blue")
+
+                                # Get database size
+                                db_size_mb = db_file.stat().st_size / (1024 * 1024)
+                                click.secho(
+                                    f"Database size: {db_size_mb:.2f} MB", fg="blue"
+                                )
+                                click.secho("", fg="blue")  # Empty line for spacing
+
+                            db_conn.close()
+                        except Exception as e:
+                            click.secho(
+                                f"Error reading database {db_file.name}: {e}",
+                                fg="yellow",
+                            )
+                elif (
+                    hasattr(ai_assistant, "db_connection")
+                    and ai_assistant.db_connection
+                ):
+                    # Fallback to current connection if available
+                    db_stats = ai_assistant.get_database_stats()
+                    if "error" not in db_stats:
+                        click.secho("\n🗄️  Database Statistics", fg="cyan", bold=True)
+                        click.secho(
+                            f"Database file: {getattr(ai_assistant, 'db_path', 'Unknown')}",
+                            fg="blue",
+                        )
+                        click.secho(
+                            f"AI queries: {db_stats.get('ai_queries_count', 0)}",
+                            fg="blue",
+                        )
+                        click.secho(
+                            f"Payload results: {db_stats.get('payload_results_count', 0)}",
+                            fg="blue",
+                        )
+                        click.secho(
+                            f"Vuln scan results: {db_stats.get('vuln_scan_results_count', 0)}",
+                            fg="blue",
+                        )
+                        click.secho(
+                            f"Recon plans: {db_stats.get('recon_plans_count', 0)}",
+                            fg="blue",
+                        )
+                        click.secho(
+                            f"Attack chains: {db_stats.get('attack_chains_count', 0)}",
+                            fg="blue",
+                        )
+                        if "database_size_mb" in db_stats:
+                            click.secho(
+                                f"Database size: {db_stats['database_size_mb']} MB",
+                                fg="blue",
+                            )
+                    else:
+                        click.secho(f"Database error: {db_stats['error']}", fg="red")
+
+                click.secho("Cache status: Available", fg="green")
+            else:
+                click.secho("📊 Cache Statistics", fg="cyan", bold=True)
+                click.secho(f"Cache directory: {cache_dir_path}", fg="blue")
+                click.secho("Cached responses: 0", fg="blue")
+                click.secho("Total size: 0.0 KB", fg="blue")
+                click.secho("Cache status: No cache directory found", fg="yellow")
+        except Exception as e:
+            click.secho(f"❌ Failed to get cache stats: {e}", fg="red")
+        return
 
 
 # === Payload Mutation Engine ===

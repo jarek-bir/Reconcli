@@ -55,11 +55,26 @@ except ImportError:
 )
 @click.option(
     "--engine",
-    type=click.Choice(["ffuf", "httpx", "gobuster", "vhostfinder"]),
+    type=click.Choice(["ffuf", "httpx", "gobuster", "vhostfinder", "vhostscan"]),
     default="ffuf",
-    help="Engine to use for VHOST fuzzing (ffuf, httpx, gobuster, vhostfinder)",
+    help="Engine to use for VHOST fuzzing (ffuf, httpx, gobuster, vhostfinder, vhostscan)",
 )
 @click.option("--verbose", is_flag=True, help="Enable verbose output")
+@click.option(
+    "--ssl",
+    is_flag=True,
+    help="Use HTTPS instead of HTTP for virtual host scanning",
+)
+@click.option(
+    "--raw-hosts",
+    is_flag=True,
+    help="Use raw hostnames from wordlist without appending domain",
+)
+@click.option(
+    "--use-hostname",
+    is_flag=True,
+    help="Use domain hostname in URL instead of IP address (useful for SNI/SSL)",
+)
 @click.option(
     "--rate-limit",
     type=int,
@@ -186,6 +201,9 @@ def cli(
     show_all,
     engine,
     verbose,
+    ssl,
+    raw_hosts,
+    use_hostname,
     rate_limit,
     timeout,
     retries,
@@ -258,6 +276,8 @@ def cli(
     engine_path = engine
     if engine == "vhostfinder":
         engine_path = "/usr/local/bin/VhostFinder"
+    elif engine == "vhostscan":
+        engine_path = "VHostScan"
 
     if not shutil.which(engine) and not os.path.exists(engine_path):
         click.echo(f"❌ Error: {engine} is not installed or not in PATH")
@@ -271,6 +291,8 @@ def cli(
             click.echo(
                 "💡 Install VhostFinder or ensure it's at /usr/local/bin/VhostFinder"
             )
+        elif engine == "vhostscan":
+            click.echo("💡 Install with: pip install VHostScan")
         return
 
     Path(output_dir).mkdir(parents=True, exist_ok=True)
@@ -381,6 +403,9 @@ def cli(
                 verbose,
                 rate_limit,
                 timeout,
+                raw_hosts,
+                ssl,
+                use_hostname,
             )
         elif engine == "gobuster":
             results = run_gobuster_scan(
@@ -421,6 +446,21 @@ def cli(
                 rate_limit,
                 timeout,
                 retries,
+            )
+        elif engine == "vhostscan":
+            results = run_vhostscan_scan(
+                target_ip,
+                domain,
+                words,
+                ip_output_dir,
+                timestamp,
+                proxy,
+                show_all,
+                verbose,
+                rate_limit,
+                timeout,
+                retries,
+                ssl,
             )
 
         # AI Analysis
@@ -880,6 +920,9 @@ def run_ffuf_scan(
     verbose,
     rate_limit,
     timeout,
+    raw_hosts,
+    ssl,
+    use_hostname,
 ):
     """Run VHOST scan using ffuf"""
     results = []
@@ -890,14 +933,22 @@ def run_ffuf_scan(
 
     with open(vhost_file, "w") as vf:
         for word in words:
-            vf.write(f"{word}.{domain}\n")
+            if raw_hosts:
+                vf.write(f"{word}\n")  # Raw hostname without domain
+            else:
+                vf.write(f"{word}.{domain}\n")  # Traditional subdomain format
+
+    protocol = "https" if ssl else "http"
+    target_url = (
+        f"{protocol}://{domain}/" if use_hostname else f"{protocol}://{target_ip}/"
+    )
 
     ffuf_cmd = [
         "ffuf",
         "-w",
         vhost_file,
         "-u",
-        f"http://{target_ip}/",
+        target_url,
         "-H",
         "Host: FUZZ",
         "-mc",
@@ -1549,6 +1600,207 @@ def run_aquatone_screenshots(
         )
 
     return report_dir
+
+
+def run_vhostscan_scan(
+    target_ip,
+    domain,
+    words,
+    output_dir,
+    timestamp,
+    proxy,
+    show_all,
+    verbose,
+    rate_limit,
+    timeout,
+    retries,
+    ssl,
+):
+    """Run VHOST scan using VHostScan"""
+    results = []
+    wordlist_file = os.path.join(output_dir, f"vhostscan_wordlist_{timestamp}.txt")
+    output_file = os.path.join(output_dir, f"vhostscan_output_{timestamp}.json")
+
+    # Create wordlist file for VHostScan (prefixes only)
+    with open(wordlist_file, "w") as f:
+        for word in words:
+            f.write(f"{word}\n")
+
+    vhostscan_cmd = [
+        "VHostScan",
+        "-t",
+        target_ip,
+        "-w",
+        wordlist_file,
+        "-b",
+        domain,
+        "-p",
+        "443" if ssl else "80",  # Use port 443 for SSL, 80 for HTTP
+        "-oJ",
+        output_file,  # JSON output
+        "--rate-limit",
+        str(rate_limit) if rate_limit > 0 else "0",
+    ]
+
+    # Add SSL flag if enabled
+    if ssl:
+        vhostscan_cmd.append("--ssl")
+
+    # Add ignore codes parameter only if not showing all results
+    if not show_all:
+        vhostscan_cmd.extend(["--ignore-http-codes", "404"])
+
+    # Add verbose flag if enabled
+    if verbose:
+        vhostscan_cmd.append("-v")
+
+    # VHostScan doesn't have direct proxy support, but we can use environment variables
+    env = os.environ.copy()
+    if proxy:
+        env["HTTP_PROXY"] = proxy
+        env["HTTPS_PROXY"] = proxy
+
+    if verbose:
+        click.echo(f"🚀 Command: {' '.join(vhostscan_cmd)}")
+
+    click.echo(f"⚡ Running VHostScan on {target_ip}...")
+    start_time = time.time()
+
+    try:
+        result = subprocess.run(
+            vhostscan_cmd,
+            capture_output=True,
+            text=True,
+            timeout=300,  # 5 minute timeout
+            env=env,
+        )
+        elapsed = round(time.time() - start_time, 2)
+
+        if result.returncode == 0:
+            click.echo(f"✅ VHostScan completed successfully in {elapsed}s")
+        else:
+            click.echo(f"⚠️ VHostScan completed with warnings in {elapsed}s")
+
+        # Parse JSON output if available
+        if os.path.exists(output_file):
+            try:
+                with open(output_file, "r") as f:
+                    vhostscan_data = json.load(f)
+
+                # VHostScan JSON structure may vary, handle different formats
+                scan_results = vhostscan_data.get("results", [])
+                if not scan_results and isinstance(vhostscan_data, list):
+                    scan_results = vhostscan_data
+
+                for entry in scan_results:
+                    # Handle different JSON structures
+                    if isinstance(entry, dict):
+                        hostname = (
+                            entry.get("hostname")
+                            or entry.get("host")
+                            or entry.get("vhost")
+                        )
+                        status_code = (
+                            entry.get("status_code")
+                            or entry.get("status")
+                            or entry.get("response_code")
+                        )
+
+                        if hostname and status_code:
+                            # Filter results based on show_all flag
+                            if show_all or status_code in [200, 403, 401]:
+                                results.append(
+                                    {
+                                        "host": hostname,
+                                        "status": int(status_code),
+                                        "length": entry.get("content_length", 0),
+                                        "source": "vhostscan",
+                                    }
+                                )
+
+                                if verbose:
+                                    status_emoji = (
+                                        "✅"
+                                        if status_code == 200
+                                        else "⚠️" if status_code in [403, 401] else "ℹ️"
+                                    )
+                                    click.echo(
+                                        f"{status_emoji} Found: {hostname} -> {status_code}"
+                                    )
+
+                if verbose:
+                    click.echo(
+                        f"📊 Parsed {len(results)} results from VHostScan JSON output"
+                    )
+
+            except (json.JSONDecodeError, FileNotFoundError) as e:
+                if verbose:
+                    click.echo(f"⚠️ Could not parse VHostScan JSON output: {e}")
+
+                # Fallback: try to parse stdout output
+                if result.stdout:
+                    lines = result.stdout.split("\n")
+                    for line in lines:
+                        line = line.strip()
+                        # Look for lines with discovered vhosts
+                        if (
+                            "Found:" in line or "discovered:" in line.lower()
+                        ) and domain in line:
+                            try:
+                                # Parse lines like: "Found: admin.example.com (200)"
+                                parts = line.split()
+                                for i, part in enumerate(parts):
+                                    if "." in part and domain in part:
+                                        hostname = part.rstrip("(),:")
+                                        # Look for status code in nearby parts
+                                        status_code = 200  # default
+                                        for j in range(
+                                            max(0, i - 2), min(len(parts), i + 3)
+                                        ):
+                                            if (
+                                                parts[j].isdigit()
+                                                and len(parts[j]) == 3
+                                            ):
+                                                status_code = int(parts[j])
+                                                break
+
+                                        if show_all or status_code in [200, 403, 401]:
+                                            results.append(
+                                                {
+                                                    "host": hostname,
+                                                    "status": status_code,
+                                                    "source": "vhostscan",
+                                                }
+                                            )
+
+                                            if verbose:
+                                                click.echo(
+                                                    f"✅ Found: {hostname} -> {status_code}"
+                                                )
+                                        break
+                            except (ValueError, IndexError) as parse_error:
+                                if verbose:
+                                    click.echo(
+                                        f"⚠️ Could not parse line: {line} ({parse_error})"
+                                    )
+
+        if verbose and result.stdout:
+            click.echo(f"📄 VHostScan stdout:\n{result.stdout}")
+        if verbose and result.stderr:
+            click.echo(f"📄 VHostScan stderr:\n{result.stderr}")
+
+    except subprocess.TimeoutExpired:
+        click.echo("⏰ VHostScan timed out after 5 minutes")
+    except subprocess.CalledProcessError as e:
+        click.echo(f"❌ VHostScan failed: {e.stderr}")
+    except FileNotFoundError:
+        click.echo("❌ VHostScan not found. Please install VHostScan.")
+        click.echo("💡 Install with: pip install VHostScan")
+
+    if verbose:
+        click.echo(f"📊 VHostScan discovered {len(results)} virtual hosts")
+
+    return results
 
 
 if __name__ == "__main__":

@@ -1,6 +1,7 @@
 import click
 
 from reconcli.aicli import aicli  # Importing the aicli command
+from reconcli.ansicleancli import main as ansiclean_cli  # ANSI escape code cleaner
 from reconcli.apicli import main as api_cli
 from reconcli.bypasscli import (
     bypasscli,
@@ -244,6 +245,12 @@ openredirectcli.short_help = "🔄 Open redirect vulnerability detection"
 # AI-Powered Reconnaissance
 cli.add_command(aicli, name="aicli")
 aicli.short_help = "AI-powered reconnaissance and analysis tools"
+
+# ANSI Code Cleaner and Text Processor
+cli.add_command(ansiclean_cli, name="ansicleancli")
+ansiclean_cli.short_help = (
+    "🧹 Advanced ANSI code cleaning and text processing with AI analysis"
+)
 
 # Web Crawler Suite
 cli.add_command(crawlercli, name="crawlercli")

@@ -1537,35 +1537,133 @@ reconcli graphqlcli --cache-dir /tmp/graphql_cache      # Custom cache directory
 - **Schema Analysis**: Parse types, queries, mutations
 - **Transport Support**: HTTP, WebSocket, and proxy configurations
 
-### 🎯 Virtual Host Discovery (`vhostcli`)
-- **Engines**: FFuf, HTTPx, Gobuster, and VhostFinder support
-- **Flexible Input**: Single IP or IP list
-- **Output Formats**: JSON and Markdown reports
-- **Proxy Support**: HTTP/HTTPS proxy configuration
-- **Notifications**: Slack/Discord webhook integration
-- **Verbose Mode**: Detailed progress tracking
-- **📸 Screenshot Capture**: Automated screenshots of discovered virtual hosts
-- **Screenshot Tools**: Gowitness and Aquatone integration
-- **Advanced Options**: Full-page screenshots, custom timeouts and threads
+### 🎯 **Virtual Host Discovery (`vhostcli`) - Enhanced with VHostScan Integration** ⭐ **UPGRADED!**
+
+Professional virtual host discovery framework with **5 scanning engines**, **SSL/HTTPS support**, and **advanced CTF-specific features**.
+
+#### 🔧 **Multi-Engine Support (5 Scanners)**
+- **ffuf**: Fast web fuzzer with advanced filtering and rate limiting
+- **httpx**: HTTP toolkit with technology detection and response analysis
+- **gobuster**: Go-based directory/vhost brute forcer with pattern matching
+- **vhostfinder**: Specialized virtual host discovery with smart detection
+- **vhostscan**: Python-based virtual host scanner with comprehensive analysis ⭐ **NEW!**
+
+#### ✨ **Advanced Features**
+- **🔒 SSL/HTTPS Support**: Complete protocol switching across all engines with SNI handling
+- **🎯 Raw Hostname Scanning**: Host header injection capabilities for CTF scenarios
+- **🌐 Hostname URL Support**: SNI-compatible scanning for SSL/TLS virtual hosts
+- **📸 Screenshot Capture**: Automated screenshots with Gowitness and Aquatone integration
+- **🔔 Real-time Notifications**: Slack/Discord webhook integration with detailed findings
+- **📊 Professional Reports**: JSON and enhanced Markdown output with comprehensive analysis
+- **🎭 CTF-Optimized**: Specialized options for Capture The Flag competitions
+- **⚡ Performance Optimized**: Rate limiting, timeouts, and concurrent processing
+
+#### 🎯 **CTF & Penetration Testing Features**
+- **Raw Hostname Scanning**: `--raw-hosts` for Host header manipulation
+- **SSL Protocol Support**: `--ssl` for HTTPS virtual host discovery
+- **Hostname URLs**: `--use-hostname` for SNI-compatible scanning
+- **Custom Wordlists**: Specialized wordlists for different scenarios
+
+#### 🔧 **Advanced CLI Options**
 
 ```bash
-# Basic VHOST discovery
-reconcli vhostcli --domain example.com --ip 1.2.3.4 --wordlist wordlist.txt
+# Basic virtual host discovery with multiple engines
+reconcli vhostcli --domain example.com --ip 192.168.1.100 --wordlist common.txt --engine ffuf --verbose
 
-# With screenshots using gowitness
-reconcli vhostcli --domain example.com --ip 1.2.3.4 --wordlist wordlist.txt \
-  --screenshot --screenshot-tool gowitness --fullpage
+# VHostScan integration with comprehensive analysis
+reconcli vhostcli --domain target.local --ip 172.25.0.10 --wordlist vhost.txt --engine vhostscan --verbose
 
-# With aquatone for HTML reports
-reconcli vhostcli --domain example.com --ip 1.2.3.4 --wordlist wordlist.txt \
-  --screenshot --screenshot-tool aquatone --screenshot-timeout 30
+# SSL/HTTPS virtual host discovery
+reconcli vhostcli --domain secure.example.com --ip 203.0.113.10 --wordlist ssl_vhosts.txt \
+  --engine httpx --ssl --verbose
 
-# With notifications
-reconcli vhostcli --domain example.com --ip 1.2.3.4 --wordlist wordlist.txt \
-  --slack-webhook "https://hooks.slack.com/..." \
+# CTF-specific scanning with raw hostnames and SSL
+reconcli vhostcli --domain ctf.local --ip 10.0.0.50 --wordlist ctf_wordlist.txt \
+  --engine ffuf --ssl --raw-hosts --use-hostname --verbose
+
+# Advanced httpx scanning with technology detection
+reconcli vhostcli --domain example.com --ip 192.168.1.100 --wordlist discovery.txt \
+  --engine httpx --rate-limit 10 --timeout 15 --verbose
+
+# Gobuster with custom patterns and filtering
+reconcli vhostcli --domain target.com --ip 203.0.113.20 --wordlist patterns.txt \
+  --engine gobuster --timeout 20 --show-all --verbose
+
+# VhostFinder with specialized detection
+reconcli vhostcli --domain example.org --ip 198.51.100.30 --wordlist specialized.txt \
+  --engine vhostfinder --rate-limit 5 --verbose
+
+# Screenshot capture with gowitness
+reconcli vhostcli --domain example.com --ip 192.168.1.100 --wordlist wordlist.txt \
+  --engine ffuf --screenshot --screenshot-tool gowitness --fullpage --verbose
+
+# Screenshot capture with aquatone for HTML reports
+reconcli vhostcli --domain example.com --ip 192.168.1.100 --wordlist wordlist.txt \
+  --engine httpx --screenshot --screenshot-tool aquatone --screenshot-timeout 30 --verbose
+
+# Enterprise scanning with notifications and comprehensive reporting
+reconcli vhostcli --domain corporate.com --ip 203.0.113.100 --wordlist enterprise.txt \
+  --engine vhostscan --ssl --screenshot --screenshot-tool gowitness \
+  --slack-webhook "https://hooks.slack.com/services/..." \
   --discord-webhook "https://discord.com/api/webhooks/..." \
-  --verbose
+  --output-dir /results/vhost_scan --verbose
+
+# Multi-IP scanning from file with rate limiting
+reconcli vhostcli --domain example.com --ip-list target_ips.txt --wordlist large_wordlist.txt \
+  --engine ffuf --rate-limit 15 --timeout 10 --show-all --verbose
+
+# Proxy-enabled scanning for stealth operations
+reconcli vhostcli --domain target.local --ip 10.0.0.100 --wordlist stealth.txt \
+  --engine httpx --proxy http://127.0.0.1:8080 --ssl --verbose
 ```
+
+#### 🏆 **CTF Competition Examples**
+
+```bash
+# Standard CTF virtual host discovery
+reconcli vhostcli --domain challenge.ctf --ip 172.16.0.50 --wordlist ctf_common.txt \
+  --engine ffuf --ssl --verbose
+
+# Advanced CTF with raw hostname scanning for Host header injection
+reconcli vhostcli --domain ctf.local --ip 10.10.10.100 --wordlist localhost_admin.txt \
+  --engine ffuf --ssl --raw-hosts --use-hostname --rate-limit 5 --verbose
+
+# Competition-ready scan with comprehensive coverage
+reconcli vhostcli --domain target.ctfio.com --ip 206.189.27.250 --wordlist ctf_extended.txt \
+  --engine vhostscan --ssl --raw-hosts --screenshot --verbose
+```
+
+#### 🔒 **Security Features**
+
+- **Input Validation**: Comprehensive validation of domains, IPs, and wordlists
+- **Rate Limiting**: Configurable request rates to avoid overwhelming targets
+- **Timeout Controls**: Prevent hanging requests with customizable timeouts
+- **Proxy Support**: HTTP/HTTPS proxy integration for anonymized scanning
+- **SSL Certificate Validation**: Proper SSL/TLS handling with certificate verification options
+
+#### 📊 **Professional Reporting**
+
+- **JSON Output**: Structured data with detailed scan metadata and results
+- **Enhanced Markdown**: Professional reports with scan statistics and findings summary
+- **Screenshot Integration**: Automated visual verification of discovered virtual hosts
+- **Progress Tracking**: Real-time progress indicators and scan statistics
+- **Notification Integration**: Instant alerts for discovered virtual hosts via webhooks
+
+#### 🎯 **VHostScan Engine Specific Features** ⭐ **NEW!**
+
+- **Comprehensive Analysis**: Advanced virtual host detection with pattern recognition
+- **Response Analysis**: Detailed HTTP response analysis with content-based detection
+- **Custom Headers**: Support for custom headers and authentication methods
+- **Multi-threading**: Optimized concurrent scanning for faster results
+- **False Positive Filtering**: Advanced filtering to reduce noise in results
+
+#### 🚀 **Performance Optimizations**
+
+- **Smart Caching**: Results caching for repeated scans of same targets
+- **Concurrent Processing**: Multi-threaded scanning across all engines
+- **Rate Limiting**: Intelligent rate limiting to optimize speed vs. target load
+- **Connection Pooling**: Efficient connection reuse for HTTPS scanning
+- **Memory Management**: Optimized memory usage for large wordlist scanning
 
 ### 🔍 Virtual Host Check (`vhostcheck`)
 - **Individual VHOST Testing**: Test specific virtual hosts on target IPs
@@ -1593,6 +1691,61 @@ reconcli vhostcheckcli --ip 192.168.1.100:8443 --domain example.com --vhost api 
 # Batch processing with results saving
 reconcli vhostcheckcli --input target_ips.txt --domain example.com --vhost store \
   --save-output --output-format json --verbose
+```
+
+### 🎨 **ANSI Output Formatting (`ansicleancli`)** ⭐ **NEW!**
+
+Professional ANSI escape sequence cleaning and output formatting utility for clean terminal output processing.
+
+#### ✨ **Core Features**
+
+- **🧹 ANSI Code Removal**: Complete removal of ANSI escape sequences from text output
+- **📄 Clean Text Processing**: Strip color codes, cursor controls, and formatting sequences
+- **📊 Terminal Output Cleaning**: Perfect for parsing command output and log files
+- **🔧 Format Preservation**: Maintains original text structure while removing formatting
+- **⚡ High Performance**: Optimized regex-based cleaning for large text processing
+
+#### 🔧 **CLI Usage**
+
+```bash
+# Clean ANSI codes from command output
+command_with_colors | reconcli ansicleancli
+
+# Process file with ANSI sequences
+reconcli ansicleancli --input colored_output.txt --output clean_output.txt
+
+# Clean terminal logs for analysis
+reconcli ansicleancli --input terminal_session.log --output analysis_ready.txt
+
+# Remove formatting from scan results
+reconcli ansicleancli --input scan_results.txt --verbose
+
+# Batch processing of multiple files
+reconcli ansicleancli --input-dir logs/ --output-dir clean_logs/ --recursive
+```
+
+#### 🎯 **Use Cases**
+
+- **🔍 Scan Result Processing**: Clean colorized output from security tools for analysis
+- **📊 Log File Analysis**: Remove formatting from logs before parsing or database storage
+- **🤖 Automation Pipelines**: Prepare command output for further processing
+- **📄 Report Generation**: Clean terminal output for inclusion in professional reports
+- **🔧 Data Pipeline Integration**: Sanitize text data before database insertion
+
+#### 🚀 **Integration Examples**
+
+```bash
+# Clean nmap output for database storage
+nmap -sV target.com | reconcli ansicleancli | sqlite3 scan_results.db
+
+# Process multiple tool outputs
+reconcli portcli --domain example.com --verbose | reconcli ansicleancli > clean_ports.txt
+
+# Clean VHost scan results
+reconcli vhostcli --domain example.com --ip 1.2.3.4 | reconcli ansicleancli > vhosts_clean.txt
+
+# Batch clean all scan outputs
+find ./scans -name "*.txt" -exec reconcli ansicleancli --input {} --output {}_clean \;
 ```
 
 ### 🛠️ Port Scanning (`portcli`) - Now with Performance Cache!
