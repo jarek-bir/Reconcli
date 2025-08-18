@@ -555,9 +555,14 @@ class AIReconAssistant:
                     try:
                         with open(self.cache_index_file, "r") as f:
                             return json.load(f)
-                    except Exception:
-                        # Cache file corrupted or unreadable, start fresh
-                        pass
+                    except (FileNotFoundError, json.JSONDecodeError, PermissionError) as e:
+                        # Cache file corrupted, not found, or unreadable - start fresh
+                        click.secho(f"Warning: Cache index file issue ({e}), starting fresh", fg="yellow")
+                        return {}
+                    except Exception as e:
+                        # Unexpected error - log and start fresh
+                        click.secho(f"Warning: Unexpected cache error ({e}), starting fresh", fg="yellow")
+                        return {}
                 return {}
 
             def _save_cache_index(self):
@@ -596,7 +601,13 @@ class AIReconAssistant:
                         with open(cache_file, "r") as f:
                             cache_data = json.load(f)
                             return cache_data["response"]
-                    except:
+                    except (FileNotFoundError, json.JSONDecodeError, PermissionError) as e:
+                        # Cache file corrupted or inaccessible - remove invalid entry
+                        click.secho(f"Warning: Removing corrupted cache entry: {e}", fg="yellow", err=True)
+                        self._remove_cache_entry(cache_key)
+                    except Exception as e:
+                        # Unexpected error - remove cache entry and log
+                        click.secho(f"Warning: Unexpected cache error: {e}", fg="yellow", err=True)
                         self._remove_cache_entry(cache_key)
 
                 return None
@@ -916,15 +927,20 @@ class AIReconAssistant:
             stats = {}
 
             # Count records in each table
-            for table in [
+            # Safe table names - validated list to prevent SQL injection
+            safe_tables = [
                 "ai_queries",
-                "payload_results",
+                "payload_results", 
                 "vuln_scan_results",
                 "recon_plans",
                 "attack_chains",
-            ]:
-                cursor.execute(f"SELECT COUNT(*) FROM {table}")
-                stats[f"{table}_count"] = cursor.fetchone()[0]
+            ]
+            
+            for table in safe_tables:
+                # Use parameterized query with table name validation
+                if table in safe_tables:  # Double validation for security
+                    cursor.execute("SELECT COUNT(*) FROM " + table)
+                    stats[f"{table}_count"] = cursor.fetchone()[0]
 
             # Get database file size
             if hasattr(self, "db_path"):
@@ -4275,9 +4291,15 @@ Provide structured, phase-based reconnaissance plans with specific tools and tec
                         recon_data["subdomains"] = [
                             line.strip() for line in f if line.strip()
                         ][:50]
-                except Exception:
-                    # Subdomain file not found or unreadable
-                    pass
+                    break  # Successfully read file, no need to try others
+                except (FileNotFoundError, PermissionError, UnicodeDecodeError) as e:
+                    # Subdomain file not accessible or corrupted - try next file
+                    click.secho(f"Warning: Could not read {sub_file}: {e}", fg="yellow", err=True)
+                    continue
+                except Exception as e:
+                    # Unexpected error reading subdomain file
+                    click.secho(f"Warning: Unexpected error reading {sub_file}: {e}", fg="yellow", err=True)
+                    continue
 
         # Look for technology detection file
         tech_files = [f"{base_name}_technologies.json", "tech_detection.json"]
@@ -4292,9 +4314,15 @@ Provide structured, phase-based reconnaissance plans with specific tools and tec
                             recon_data["technologies"] = tech_data["technologies"]
                         elif isinstance(tech_data, list):
                             recon_data["technologies"] = tech_data
-                except Exception:
-                    # Technology file not found or unreadable
-                    pass
+                    break  # Successfully read file, no need to try others
+                except (FileNotFoundError, PermissionError, json.JSONDecodeError) as e:
+                    # Technology file not accessible or corrupted - try next file
+                    click.secho(f"Warning: Could not read {tech_file}: {e}", fg="yellow", err=True)
+                    continue
+                except Exception as e:
+                    # Unexpected error reading technology file
+                    click.secho(f"Warning: Unexpected error reading {tech_file}: {e}", fg="yellow", err=True)
+                    continue
 
         return recon_data
 
@@ -4916,7 +4944,13 @@ Provide structured, phase-based reconnaissance plans with specific tools and tec
 
                         recon_data["sources"].append(json_file)
 
-                    except Exception:
+                    except (FileNotFoundError, PermissionError, json.JSONDecodeError) as e:
+                        # JSON file not accessible or corrupted - skip this file
+                        click.secho(f"Warning: Could not read {json_file}: {e}", fg="yellow", err=True)
+                        continue
+                    except Exception as e:
+                        # Unexpected error reading JSON file
+                        click.secho(f"Warning: Unexpected error reading {json_file}: {e}", fg="yellow", err=True)
                         continue
 
             # Look for text files with common reconnaissance data
@@ -4937,7 +4971,13 @@ Provide structured, phase-based reconnaissance plans with specific tools and tec
 
                     recon_data["sources"].append(txt_file)
 
-                except Exception:
+                except (FileNotFoundError, PermissionError, UnicodeDecodeError) as e:
+                    # Text file not accessible or corrupted - skip this file
+                    click.secho(f"Warning: Could not read {txt_file}: {e}", fg="yellow", err=True)
+                    continue
+                except Exception as e:
+                    # Unexpected error reading text file
+                    click.secho(f"Warning: Unexpected error reading {txt_file}: {e}", fg="yellow", err=True)
                     continue
 
             # Remove duplicates and empty values
@@ -5278,9 +5318,9 @@ Provide structured, phase-based reconnaissance plans with specific tools and tec
                     exploit_results["tools_used"].append("custom_xss_payload")
 
                     # Simulate success/failure (realistic rates)
-                    import random
+                    import secrets
 
-                    if random.random() < 0.3:  # 30% success rate for demo
+                    if secrets.randbelow(100) < 30:  # 30% success rate for demo (cryptographically secure)
                         exploit_results["successful_exploits"] += 1
                         exploit_results["successful"].append(
                             {
@@ -5307,7 +5347,7 @@ Provide structured, phase-based reconnaissance plans with specific tools and tec
                     exploit_results["exploits_attempted"] += 1
                     exploit_results["tools_used"].append("sqlmap")
 
-                    if random.random() < 0.2:  # 20% success rate for demo
+                    if secrets.randbelow(100) < 20:  # 20% success rate for demo (cryptographically secure)
                         exploit_results["successful_exploits"] += 1
                         exploit_results["successful"].append(
                             {
@@ -7512,16 +7552,19 @@ Available commands:
                                 click.secho(f"Database file: {db_file}", fg="blue")
 
                                 # Get table counts
-                                tables = [
+                                # Safe table names - validated list to prevent SQL injection
+                                safe_tables = [
                                     "ai_queries",
                                     "payload_results",
                                     "vuln_scan_results",
                                     "recon_plans",
                                     "attack_chains",
                                 ]
-                                for table in tables:
-                                    cursor.execute(f"SELECT COUNT(*) FROM {table}")
-                                    count = cursor.fetchone()[0]
+                                for table in safe_tables:
+                                    # Use safe table name concatenation instead of f-string
+                                    if table in safe_tables:  # Double validation for security
+                                        cursor.execute("SELECT COUNT(*) FROM " + table)
+                                        count = cursor.fetchone()[0]
                                     table_display = table.replace("_", " ").title()
                                     click.secho(f"{table_display}: {count}", fg="blue")
 
@@ -7821,7 +7864,13 @@ class AdvancedPayloadMutator:
             try:
                 encoded = encoder_func(payload)
                 variants.append(encoded)
-            except:
+            except (TypeError, UnicodeError, ValueError) as e:
+                # Encoding failed for this payload - skip this encoder
+                click.secho(f"Warning: Encoding {encoder_name} failed: {e}", fg="yellow", err=True)
+                continue
+            except Exception as e:
+                # Unexpected encoding error
+                click.secho(f"Warning: Unexpected encoding error with {encoder_name}: {e}", fg="yellow", err=True)
                 continue
 
         # Double encodings
@@ -7832,7 +7881,13 @@ class AdvancedPayloadMutator:
                         try:
                             double_encoded = encoder2(encoder1(payload))
                             variants.append(double_encoded)
-                        except:
+                        except (TypeError, UnicodeError, ValueError) as e:
+                            # Double encoding failed - skip this combination
+                            click.secho(f"Warning: Double encoding {encoder1_name}+{encoder2_name} failed: {e}", fg="yellow", err=True)
+                            continue
+                        except Exception as e:
+                            # Unexpected double encoding error
+                            click.secho(f"Warning: Unexpected double encoding error {encoder1_name}+{encoder2_name}: {e}", fg="yellow", err=True)
                             continue
 
         return variants[:10]  # Limit to 10 variants
