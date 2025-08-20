@@ -1,9 +1,35 @@
 #!/usr/bin/env python3
 """
 FOFA CLI - Advanced Python implementation of FOFA search tool
-A command-line interface for querying FOFA search engine with AI, caching, and database features
+
+A command-line interface for querying FOFA search engine with AI, caching, and database features.
+This module provides comprehensive FOFA API integration with advanced features including:
+
+- Intelligent query enhancement with fuzzy matching and smart context
+- High-performance caching system with TTL management
+- Database storage for persistent result management
+- AI-powered query optimization and result analysis
+- Multi-tool chaining with httpx, nuclei, kscan, and uncover
+- FX rules system for cybersecurity pattern discovery
+- Certificate and icon hash calculations for fingerprinting
+- Rich terminal output with progress tracking and statistics
+
 Author: ReconCLI Team
 Version: 2.0.0
+License: MIT
+
+Example Usage:
+    Basic search:
+        reconcli fofacli search --query "apache" --fetch-size 100
+
+    Enhanced search with AI and caching:
+        reconcli fofacli advanced-search --query "jenkins" --ai --cache --store-db
+
+    Tool chaining workflow:
+        reconcli fofacli chain --query "gitlab" --httpx --nuclei --fuzzy
+
+    FX rules for cybersecurity patterns:
+        reconcli fofacli fx search "jenkins-unauth" --fetch-size 50
 """
 
 import json
@@ -38,7 +64,24 @@ console = Console()
 
 @dataclass
 class FOFAConfig:
-    """FOFA configuration dataclass"""
+    """FOFA configuration dataclass
+
+    Stores configuration parameters for FOFA API client including authentication,
+    caching, database, and AI features.
+
+    Attributes:
+        email: FOFA account email address
+        key: FOFA API key
+        fofa_url: FOFA base URL (default: https://fofa.info)
+        proxy: HTTP/HTTPS proxy URL (optional)
+        debug: Enable debug logging
+        cache_enabled: Enable result caching
+        cache_ttl: Cache time-to-live in seconds
+        ai_enabled: Enable AI-powered features
+        ai_model: AI model to use for analysis
+        db_enabled: Enable database storage
+        db_path: SQLite database file path
+    """
 
     email: str = ""
     key: str = ""
@@ -55,7 +98,22 @@ class FOFAConfig:
 
 @dataclass
 class FOFAResult:
-    """FOFA search result dataclass"""
+    """FOFA search result dataclass
+
+    Represents a single result from FOFA search API with all available fields.
+
+    Attributes:
+        protocol: Service protocol (http, https, ftp, etc.)
+        ip: IP address of the target
+        port: Port number
+        host: Hostname or domain
+        title: HTTP page title
+        domain: Domain name
+        server: Server software banner
+        country: Country code/name
+        city: City name
+        lastupdatetime: Last update timestamp
+    """
 
     protocol: str = ""
     ip: str = ""
@@ -241,7 +299,19 @@ class FOFADatabaseManager:
     def store_search(
         self, query: str, results: List[FOFAResult], search_params: Dict[str, Any]
     ) -> int:
-        """Store search results in database"""
+        """Store search results in database
+
+        Args:
+            query: The FOFA search query
+            results: List of FOFA search results
+            search_params: Additional search parameters
+
+        Returns:
+            Database ID of the stored search
+
+        Raises:
+            sqlite3.Error: If database operation fails
+        """
         with sqlite3.connect(self.db_path) as conn:
             cursor = conn.cursor()
 
@@ -260,6 +330,8 @@ class FOFADatabaseManager:
             )
 
             search_id = cursor.lastrowid
+            if search_id is None:
+                raise sqlite3.Error("Failed to get search ID from database")
 
             # Insert results
             for result in results:
@@ -394,11 +466,27 @@ class FOFADatabaseManager:
 
 
 class FOFAAIAssistant:
-    """AI assistant for FOFA query optimization and result analysis"""
+    """AI assistant for FOFA query optimization and result analysis
+
+    Provides intelligent query enhancement and result analysis using OpenAI's API.
+    Gracefully handles missing dependencies and provides fallback behavior.
+
+    Attributes:
+        model: The AI model to use (default: gpt-3.5-turbo)
+        enabled: Whether AI features are available
+        client: OpenAI client instance if available
+    """
 
     def __init__(self, model: str = "gpt-3.5-turbo"):
+        """Initialize AI assistant
+
+        Args:
+            model: OpenAI model to use for analysis
+        """
         self.model = model
         self.enabled = False
+        self.client = None
+
         try:
             import openai
 
@@ -408,10 +496,20 @@ class FOFAAIAssistant:
             console.print(
                 "[yellow]OpenAI library not available. AI features disabled.[/yellow]"
             )
+            console.print("[dim]Install with: pip install openai[/dim]")
+        except Exception as e:
+            console.print(f"[yellow]Failed to initialize OpenAI client: {e}[/yellow]")
 
     def optimize_query(self, user_query: str) -> str:
-        """Optimize user query for better FOFA results"""
-        if not self.enabled:
+        """Optimize user query for better FOFA results
+
+        Args:
+            user_query: Original FOFA query string
+
+        Returns:
+            Optimized query string (original if AI unavailable)
+        """
+        if not self.enabled or not self.client:
             return user_query
 
         prompt = f"""
@@ -442,8 +540,15 @@ class FOFAAIAssistant:
             return user_query
 
     def analyze_results(self, results: List[FOFAResult]) -> Dict[str, Any]:
-        """Analyze FOFA results and provide insights"""
-        if not self.enabled or not results:
+        """Analyze FOFA results and provide insights
+
+        Args:
+            results: List of FOFA search results
+
+        Returns:
+            Dictionary containing analysis summary and AI insights
+        """
+        if not self.enabled or not results or not self.client:
             return {}
 
         # Prepare summary data
@@ -1046,12 +1151,38 @@ class FOFAClient:
         use_cache: bool = True,
         store_db: Optional[bool] = None,
     ) -> Dict[str, Any]:
-        """Execute FOFA search with caching and database storage"""
+        """Execute FOFA search with caching and database storage
 
+        Args:
+            query: FOFA search query string
+            size: Maximum number of results to fetch (1-10000)
+            page: Page number for pagination (1-based)
+            fields: Comma-separated list of fields to fetch
+            use_cache: Whether to use cached results if available
+            store_db: Whether to store results in database (None = use config)
+
+        Returns:
+            Dictionary containing search results and metadata
+
+        Raises:
+            ValueError: If credentials are missing or invalid parameters
+            Exception: If FOFA API request fails
+        """
+
+        # Validate inputs
         if not self.config.email or not self.config.key:
             raise ValueError(
                 "FOFA email and key are required. Please configure them first."
             )
+
+        if not query or not query.strip():
+            raise ValueError("Query cannot be empty")
+
+        if not (1 <= size <= 10000):
+            raise ValueError("Size must be between 1 and 10000")
+
+        if page < 1:
+            raise ValueError("Page must be >= 1")
 
         # AI query optimization
         original_query = query
@@ -1099,6 +1230,12 @@ class FOFAClient:
             )
 
             result = response.json()
+
+            # Check for API errors
+            if result.get("error"):
+                raise Exception(
+                    f"FOFA API Error: {result.get('errmsg', 'Unknown error')}"
+                )
 
             # Store in cache
             if use_cache and self.cache_manager:
@@ -1175,11 +1312,49 @@ class FOFAClient:
 
             return result
 
+        except requests.exceptions.Timeout:
+            raise Exception("FOFA API request timed out. Please try again.")
+        except requests.exceptions.ConnectionError:
+            raise Exception(
+                "Failed to connect to FOFA API. Check your internet connection."
+            )
+        except requests.exceptions.HTTPError as e:
+            if e.response.status_code == 401:
+                raise Exception(
+                    "FOFA API authentication failed. Check your credentials."
+                )
+            elif e.response.status_code == 403:
+                raise Exception(
+                    "FOFA API access forbidden. Check your account permissions."
+                )
+            elif e.response.status_code == 429:
+                raise Exception(
+                    "FOFA API rate limit exceeded. Please wait and try again."
+                )
+            else:
+                raise Exception(f"FOFA API HTTP error {e.response.status_code}: {e}")
         except requests.exceptions.RequestException as e:
             raise Exception(f"FOFA API request failed: {str(e)}")
 
     def get_userinfo(self) -> Dict[str, Any]:
-        """Get FOFA user information"""
+        """Get FOFA user information and account details
+
+        Returns:
+            Dictionary containing user account information including:
+            - Username and email
+            - Remaining query quota
+            - Account type and permissions
+            - Avatar and other profile data
+
+        Raises:
+            ValueError: If credentials are not configured
+            Exception: If FOFA API request fails
+        """
+        if not self.config.email or not self.config.key:
+            raise ValueError(
+                "FOFA email and key are required. Please configure them first."
+            )
+
         api_url = f"{self.config.fofa_url}/api/v1/info/my"
 
         params = {"email": self.config.email, "key": self.config.key}
@@ -1187,42 +1362,136 @@ class FOFAClient:
         try:
             response = self.session.get(api_url, params=params, timeout=30)
             response.raise_for_status()
-            return response.json()
+
+            result = response.json()
+
+            # Check for API errors
+            if result.get("error"):
+                raise Exception(
+                    f"FOFA API Error: {result.get('errmsg', 'Unknown error')}"
+                )
+
+            return result
+
+        except requests.exceptions.Timeout:
+            raise Exception("FOFA API request timed out. Please try again.")
+        except requests.exceptions.ConnectionError:
+            raise Exception(
+                "Failed to connect to FOFA API. Check your internet connection."
+            )
+        except requests.exceptions.HTTPError as e:
+            if e.response.status_code == 401:
+                raise Exception(
+                    "FOFA API authentication failed. Check your credentials."
+                )
+            elif e.response.status_code == 403:
+                raise Exception(
+                    "FOFA API access forbidden. Check your account permissions."
+                )
+            else:
+                raise Exception(f"FOFA API HTTP error {e.response.status_code}: {e}")
         except requests.exceptions.RequestException as e:
             raise Exception(f"Failed to get user info: {str(e)}")
 
 
 class IconHashCalculator:
-    """Calculate icon hash for FOFA queries"""
+    """Calculate icon hash for FOFA queries
+
+    Provides methods to calculate FOFA-compatible icon hashes from various sources.
+    Icon hashes are used in FOFA queries to find websites with matching favicons.
+
+    The hash algorithm uses MD5 of base64-encoded icon content, which is compatible
+    with FOFA's icon_hash search syntax.
+    """
 
     @staticmethod
     def calculate_from_url(url: str) -> str:
-        """Calculate icon hash from URL"""
+        """Calculate icon hash from URL
+
+        Downloads favicon from URL and calculates FOFA-compatible hash.
+
+        Args:
+            url: URL to download favicon from
+
+        Returns:
+            MD5 hash of base64-encoded icon content
+
+        Raises:
+            Exception: If URL fetch fails or invalid content
+        """
         try:
             response = requests.get(url, timeout=10)
             response.raise_for_status()
+
+            if not response.content:
+                raise Exception("Empty response from URL")
+
             return IconHashCalculator.calculate_from_content(response.content)
+        except requests.exceptions.Timeout:
+            raise Exception("Request timed out while fetching icon")
+        except requests.exceptions.ConnectionError:
+            raise Exception("Failed to connect to URL")
+        except requests.exceptions.HTTPError as e:
+            raise Exception(f"HTTP error {e.response.status_code} while fetching icon")
         except Exception as e:
             raise Exception(f"Failed to fetch icon from URL: {str(e)}")
 
     @staticmethod
     def calculate_from_file(file_path: str) -> str:
-        """Calculate icon hash from local file"""
+        """Calculate icon hash from local file
+
+        Reads local icon file and calculates FOFA-compatible hash.
+
+        Args:
+            file_path: Path to local icon file
+
+        Returns:
+            MD5 hash of base64-encoded icon content
+
+        Raises:
+            Exception: If file read fails or invalid content
+        """
         try:
             with open(file_path, "rb") as f:
                 content = f.read()
+
+            if not content:
+                raise Exception("File is empty")
+
             return IconHashCalculator.calculate_from_content(content)
+        except FileNotFoundError:
+            raise Exception(f"Icon file not found: {file_path}")
+        except PermissionError:
+            raise Exception(f"Permission denied reading file: {file_path}")
         except Exception as e:
             raise Exception(f"Failed to read icon file: {str(e)}")
 
     @staticmethod
     def calculate_from_content(content: bytes) -> str:
-        """Calculate icon hash from content"""
+        """Calculate icon hash from content
+
+        Calculates FOFA-compatible icon hash from raw icon bytes.
+
+        Args:
+            content: Raw icon file bytes
+
+        Returns:
+            MD5 hash of base64-encoded content
+
+        Raises:
+            Exception: If content is invalid
+        """
+        if not content:
+            raise Exception("Content cannot be empty")
+
         # FOFA icon hash algorithm - MD5 used for compatibility with FOFA API, not for security
-        icon_hash = hashlib.md5(
-            base64.encodebytes(content), usedforsecurity=False
-        ).hexdigest()
-        return icon_hash
+        try:
+            icon_hash = hashlib.md5(
+                base64.encodebytes(content), usedforsecurity=False
+            ).hexdigest()
+            return icon_hash
+        except Exception as e:
+            raise Exception(f"Failed to calculate hash: {str(e)}")
 
 
 class CertificateCalculator:
@@ -1672,7 +1941,44 @@ def cli(ctx, config, email, key, proxy, fofa_url, debug, version):
     """
     FOFAX CLI - Python implementation of FOFA search tool
 
-    A command-line interface for querying FOFA search engine with rich features.
+    A comprehensive command-line interface for querying FOFA search engine with advanced features:
+
+    🔍 SEARCH CAPABILITIES:
+    • Basic and advanced search with fuzzy matching
+    • AI-powered query optimization and enhancement
+    • Multi-engine search integration (Shodan, Censys, etc.)
+    • FX rules for cybersecurity pattern discovery
+
+    🚀 PERFORMANCE FEATURES:
+    • Intelligent caching system with TTL management
+    • Database storage for persistent results
+    • Resume functionality for long-running scans
+    • Parallel processing and rate limiting
+
+    🔧 TOOL INTEGRATION:
+    • httpx for HTTP probing and technology detection
+    • nuclei for vulnerability scanning
+    • uncover for multi-platform reconnaissance
+    • kscan for port scanning and fingerprinting
+
+    📊 OUTPUT FORMATS:
+    • JSON, CSV, and TXT export formats
+    • Rich terminal output with progress tracking
+    • Database storage with search history
+    • Professional reporting capabilities
+
+    QUICK START:
+        # Configure credentials
+        reconcli fofacli config
+
+        # Basic search
+        reconcli fofacli search --query "apache" --fetch-size 100
+
+        # Advanced search with AI and caching
+        reconcli fofacli advanced-search --query "jenkins" --ai --cache --store-db
+
+        # Multi-tool workflow
+        reconcli fofacli chain --query "gitlab" --httpx --nuclei --fuzzy
     """
 
     if version:
@@ -1770,7 +2076,42 @@ def search(
     smart_query,
     show_suggestions,
 ):
-    """Execute FOFA search query"""
+    """Execute FOFA search query with advanced options
+
+    This command performs FOFA searches with intelligent enhancement capabilities:
+
+    🔍 QUERY ENHANCEMENT:
+    • --fuzzy: Expands keywords with related terms and variations
+    • --smart-query: Adds contextual filters and noise reduction
+    • --show-suggestions: Displays related query recommendations
+
+    📊 OUTPUT OPTIONS:
+    • --format: Choose between JSON, CSV, or TXT output
+    • --output: Save results to file instead of displaying
+    • --open-browser: Open results directly in web browser
+
+    🎯 FILTERING:
+    • --exclude: Filter out known honeypots
+    • --exclude-country-cn: Exclude results from China
+    • --fetch-size: Limit number of results (1-10000)
+
+    📈 ENHANCED DATA:
+    • --fetch-fullhost-info: Include complete host information
+    • --fetch-titles-ofdomain: Extract website titles
+
+    EXAMPLES:
+        # Basic search
+        reconcli fofacli search -q "apache" --fetch-size 50
+
+        # Enhanced search with fuzzy matching
+        reconcli fofacli search -q "jenkins" --fuzzy --smart-query
+
+        # Export results with full information
+        reconcli fofacli search -q "gitlab" --fetch-fullhost-info --format json -o results.json
+
+        # Quick browser preview
+        reconcli fofacli search -q "grafana" --open-browser
+    """
 
     if not query:
         # Try to read from stdin
@@ -2177,7 +2518,43 @@ def fx_show(fofa_config, fx_id):
 @cli.command()
 @click.pass_obj
 def config(fofa_config):
-    """Configure FOFA credentials"""
+    """Configure FOFA credentials and settings
+
+    This command helps you set up FOFA API credentials and configuration:
+
+    📋 CONFIGURATION STEPS:
+    1. Creates default config file if none exists
+    2. Shows current configuration status
+    3. Provides instructions for credential setup
+    4. Validates configuration format
+
+    🔑 REQUIRED CREDENTIALS:
+    • FOFA email address (account identifier)
+    • FOFA API key (get from https://fofa.info/userCenter)
+
+    📁 CONFIG FILE LOCATIONS:
+    • ./fofax.yaml (current directory)
+    • ~/.config/fofax/fofax.yaml (user config)
+    • /etc/fofax.yaml (system-wide)
+
+    ⚙️ CONFIGURATION OPTIONS:
+    • fofa-email: Your FOFA account email
+    • fofakey: Your FOFA API key
+    • fofa-url: FOFA server URL (default: https://fofa.info)
+    • proxy: HTTP/HTTPS proxy settings
+    • debug: Enable debug logging
+    • cache-enabled: Enable result caching
+    • cache-ttl: Cache expiration time
+    • ai-enabled: Enable AI features
+    • db-enabled: Enable database storage
+
+    AFTER CONFIGURATION:
+        # Test your setup
+        reconcli fofacli userinfo
+
+        # Run your first search
+        reconcli fofacli search -q "apache" --fetch-size 10
+    """
     config_path = FOFAConfigManager.get_config_path()
 
     if os.path.exists(config_path):
@@ -2594,7 +2971,51 @@ def search_ip(ctx, ip):
 def advanced_search(
     ctx, query, fetch_size, ai, cache, store_db, output, format_type, full_host, title
 ):
-    """Advanced search with AI, caching, and database features"""
+    """Advanced search with AI, caching, and database features
+
+    This command provides comprehensive FOFA search with enterprise features:
+
+    🤖 AI-POWERED FEATURES:
+    • --ai: Intelligent query optimization using machine learning
+    • Automatic result analysis with security insights
+    • Context-aware query enhancement suggestions
+
+    ⚡ PERFORMANCE OPTIMIZATION:
+    • --cache: High-speed result caching (100x+ faster repeat searches)
+    • Intelligent cache invalidation and management
+    • Configurable TTL and cache statistics
+
+    💾 DATABASE INTEGRATION:
+    • --store-db: Persistent storage in SQLite database
+    • Search history tracking and management
+    • Result correlation and analytics
+    • Export capabilities from stored data
+
+    📊 ENHANCED OUTPUT:
+    • --full-host: Complete URL construction with protocols
+    • --title: Website title extraction and display
+    • Multiple format support (JSON, CSV, TXT)
+    • Rich terminal output with progress tracking
+
+    🔍 ANALYSIS FEATURES:
+    • Geographic distribution analysis
+    • Technology stack identification
+    • Security risk assessment
+    • Vulnerability correlation insights
+
+    EXAMPLES:
+        # AI-optimized search with caching
+        reconcli fofacli advanced-search -q "jenkins" --ai --cache
+
+        # Enterprise workflow with database storage
+        reconcli fofacli advanced-search -q "elasticsearch" --ai --cache --store-db --format json
+
+        # Quick analysis with full host information
+        reconcli fofacli advanced-search -q "grafana" --full-host --title --ai
+
+        # Large-scale reconnaissance with all features
+        reconcli fofacli advanced-search -q "mongodb" --ai --cache --store-db --full-host --format json -o results.json
+    """
     config = ctx.obj
 
     if not query:
@@ -3542,7 +3963,13 @@ def tag(ctx, tag):
 def display_results(
     results: List[Dict], with_fullhost: bool = False, with_titles: bool = False
 ):
-    """Display search results"""
+    """Display search results in formatted output
+
+    Args:
+        results: List of search result dictionaries
+        with_fullhost: Whether to show full URLs with protocols
+        with_titles: Whether to include website titles
+    """
     for result in results:
         if with_fullhost and "protocol" in result:
             url = f"{result.get('protocol', 'http')}://{result.get('host', result.get('ip', ''))}"
@@ -3569,7 +3996,18 @@ def save_results(
     with_fullhost: bool = False,
     with_titles: bool = False,
 ):
-    """Save results to file"""
+    """Save results to file in specified format
+
+    Args:
+        results: List of search result dictionaries
+        output_path: File path to save results
+        format_type: Output format (json, csv, txt)
+        with_fullhost: Whether to include full URLs with protocols
+        with_titles: Whether to include website titles
+
+    Raises:
+        Exception: If file write operation fails
+    """
     try:
         if format_type == "json":
             with open(output_path, "w", encoding="utf-8") as f:
@@ -3608,6 +4046,7 @@ def save_results(
 
     except Exception as e:
         console.print(f"[red]❌ Error saving results: {str(e)}[/red]")
+        raise
 
 
 if __name__ == "__main__":

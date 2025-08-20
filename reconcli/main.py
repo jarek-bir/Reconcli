@@ -204,7 +204,9 @@ shodancli.short_help = "Shodan API integration for IoT and device reconnaissance
 
 # FOFA Search Engine Integration
 cli.add_command(fofax_cli, name="fofacli")
-fofax_cli.short_help = "🔍 FOFA search engine integration for cyberspace mapping"
+fofax_cli.short_help = (
+    "🔍 Advanced FOFA search engine with AI analysis, caching, and database integration"
+)
 
 # SQL Injection Vulnerability Scanner
 cli.add_command(vulnsql_cli, name="vulnsqlicli")

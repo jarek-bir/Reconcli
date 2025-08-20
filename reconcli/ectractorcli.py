@@ -37,15 +37,21 @@ API_REGEX = re.compile(r"/(api|v1|v2|v3|rest|graphql)[^\"'\s<>]*", re.IGNORECASE
 SWAGGER_REGEX = re.compile(r"/(swagger|openapi|docs|redoc)[^\"'\s<>]*", re.IGNORECASE)
 
 # Enhanced patterns for API documentation - more precise matching
+# Enhanced GraphQL patterns - includes common variations and typos
 GRAPHQL_REGEX = re.compile(
-    r"\bGraphQL\s+(playground|explorer|interface|endpoint|API)\b", re.IGNORECASE
+    r"\b(graphql|grahql|grafql|graphq|takgraphql|graphiql|graphql.*(?:playground|explorer|interface|endpoint|api|ui|ide))\b",
+    re.IGNORECASE,
+)
+GRAPHQL_FULL_REGEX = re.compile(
+    r"\b(GraphQL|GrahQL|GrafQL|GraphQ|takGraphQL|GraphiQL)\s+(playground|explorer|interface|endpoint|API|UI|IDE)\b",
+    re.IGNORECASE,
 )
 API_DOCS_REGEX = re.compile(
     r"\b(Swagger\s+UI|OpenAPI|API\s+Docs|LiteLLM\s+API|uCrawler\s+Agent\s+API\s+Docs)\b",
     re.IGNORECASE,
 )
 API_TITLE_REGEX = re.compile(
-    r"https?://[^\s]+\s+\[([^\]]+(?:API|OpenAPI|Swagger|GraphQL)[^\]]*)\]",
+    r"https?://[^\s]+\s+\[([^\]]+(?:API|OpenAPI|Swagger|GraphQL|GrahQL|GraphiQL)[^\]]*)\]",
     re.IGNORECASE,
 )  # API-related titles only
 TECH_STACK_REGEX = re.compile(
@@ -149,8 +155,8 @@ API_ENDPOINT_SECRET_REGEX = re.compile(
 @click.option(
     "--types",
     "-t",
-    default="url,email,form,auth,api,swagger,api_docs,tech_stack,ip,domain,subdomain,secret,js,comment",
-    help="Types to extract: url,email,form,auth,api,swagger,api_docs,tech_stack,ip,domain,subdomain,secret,js,comment,hash,base64,phone,crypto,social,pii",
+    default="url,email,form,auth,api,swagger,graphql,api_docs,tech_stack,ip,domain,subdomain,secret,js,comment",
+    help="Types to extract: url,email,form,auth,api,swagger,graphql,api_docs,tech_stack,ip,domain,subdomain,secret,js,comment,hash,base64,phone,crypto,social,pii",
 )
 @click.option("--target-domain", "-d", help="Domain for subdomain extraction")
 @click.option("--output", "-o", type=click.Path(), help="Output file path")
@@ -420,7 +426,8 @@ def extractor(
       phone      - Phone numbers in various formats
       social     - Twitter, Instagram, YouTube, LinkedIn, Discord, Telegram
       pii        - Credit cards, SSN and other personally identifiable info
-      api_docs   - API documentation titles and GraphQL interfaces
+      graphql    - GraphQL endpoints, playgrounds, schemas, and introspection
+      api_docs   - API documentation titles and interfaces
       tech_stack - Technology stacks from comma-separated lists
 
     ENHANCED SECRET DETECTION:
@@ -528,6 +535,7 @@ def extractor(
             "auth",
             "api",
             "swagger",
+            "graphql",  # New: Dedicated GraphQL extraction
             "api_docs",  # New: API documentation titles
             "tech_stack",  # New: Technology stacks
             "ip",
@@ -589,6 +597,78 @@ def extractor(
             if verbose and swagger_paths:
                 click.echo(f"   📚 Found {len(swagger_paths)} documentation endpoints")
 
+        # Dedicated GraphQL extraction
+        if "graphql" in selected:
+            clean_text = clean_ansi_codes(text)
+
+            # Extract full lines containing GraphQL URLs (with variations and typos)
+            graphql_lines = re.findall(
+                r"https?://[^\s]+.*\[(.*(?:graphql|grahql|grafql|graphq|takgraphql|graphiql).*)\].*",
+                text,
+                re.IGNORECASE,
+            )
+            results["graphql"].update([f"[{line}]" for line in graphql_lines])
+
+            # Also get full lines for context
+            full_graphql_lines = re.findall(
+                r"https?://[^\s]+.*\[.*(?:graphql|grahql|grafql|graphq|takgraphql|graphiql).*\].*",
+                text,
+                re.IGNORECASE,
+            )
+            results["graphql"].update(full_graphql_lines)
+
+            # Extract GraphQL endpoints from URLs (with variations)
+            graphql_urls = re.findall(
+                r"https?://[^\s]*(?:graphql|grahql|grafql|graphq|takgraphql|graphiql)[^\s]*",
+                text,
+                re.IGNORECASE,
+            )
+            results["graphql"].update(graphql_urls)
+
+            # Extract GraphQL mentions and interfaces (both patterns)
+            graphql_mentions = GRAPHQL_REGEX.findall(clean_text)
+            results["graphql"].update(graphql_mentions)
+
+            graphql_full_mentions = GRAPHQL_FULL_REGEX.findall(clean_text)
+            results["graphql"].update(
+                [f"{match[0]} {match[1]}" for match in graphql_full_mentions]
+            )
+
+            # Look for common GraphQL patterns with variations
+            graphql_patterns = re.findall(
+                r'/(?:graphql|grahql|grafql|graphq|takgraphql|graphiql)[^\s"\'<>]*',
+                text,
+                re.IGNORECASE,
+            )
+            results["graphql"].update(graphql_patterns)
+
+            # GraphQL introspection endpoints with variations
+            introspection_patterns = re.findall(
+                r"[^\s]*(?:graphql|grahql|grafql|graphq|takgraphql|graphiql)[^\s]*query[^\s]*",
+                text,
+                re.IGNORECASE,
+            )
+            results["graphql"].update(introspection_patterns)
+
+            if verbose and (
+                graphql_lines
+                or full_graphql_lines
+                or graphql_urls
+                or graphql_mentions
+                or graphql_full_mentions
+                or graphql_patterns
+            ):
+                total = (
+                    len(graphql_lines)
+                    + len(full_graphql_lines)
+                    + len(graphql_urls)
+                    + len(graphql_mentions)
+                    + len(graphql_full_mentions)
+                    + len(graphql_patterns)
+                    + len(introspection_patterns)
+                )
+                click.echo(f"   🔮 Found {total} GraphQL endpoints/references")
+
         # New: API Documentation titles and tech stacks
         if "api_docs" in selected:
             # Clean ANSI first, then extract
@@ -598,19 +678,26 @@ def extractor(
             api_titles = API_TITLE_REGEX.findall(text)
             results["api_docs"].update(api_titles)
 
-            # Extract GraphQL mentions (more precise)
-            graphql_matches = GRAPHQL_REGEX.findall(clean_text)
-            results["api_docs"].update(
-                [f"GraphQL {match}" for match in graphql_matches]
-            )
+            # Extract GraphQL mentions (more precise) - only if graphql not selected separately
+            if "graphql" not in selected:
+                graphql_matches = GRAPHQL_REGEX.findall(clean_text)
+                results["api_docs"].update(
+                    [f"GraphQL {match}" for match in graphql_matches]
+                )
 
             # Extract general API docs mentions (more specific)
             docs_matches = API_DOCS_REGEX.findall(clean_text)
             results["api_docs"].update(docs_matches)
 
-            if verbose and (api_titles or graphql_matches or docs_matches):
-                total = len(api_titles) + len(graphql_matches) + len(docs_matches)
-                click.echo(f"   📋 Found {total} API documentation references")
+            if verbose:
+                graphql_count = (
+                    len(GRAPHQL_REGEX.findall(clean_text))
+                    if "graphql" not in selected
+                    else 0
+                )
+                total = len(api_titles) + graphql_count + len(docs_matches)
+                if total > 0:
+                    click.echo(f"   📋 Found {total} API documentation references")
 
         if "tech_stack" in selected:
             # Extract tech stack from end of lines
