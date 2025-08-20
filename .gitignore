@@ -151,3 +151,10 @@ final_test.db
 test_results.db
 advanced_test.txt
 live_swagger.txt
+
+# FOFA scan results and test data
+swagger_*.json
+swagger_*_scan/
+nuclei_results.jsonl
+httpx_results.json
+rdp_analysis.json
