@@ -575,29 +575,55 @@ reconcli subdocli --domain example.com --cache --cache-max-age 86400 --cache-sta
 reconcli subdocli --domain example.com --bounty-mode --resume --verbose
 ```
 
-### 🧲 **ExtractorCLI - Advanced Data Extraction & Security Analysis** 🔥
-Powerful data extraction tool for security professionals with **15+ extraction categories** and **enhanced secret detection**:
+### 🧲 **ExtractorCLI - Advanced Data Extraction & Multi-Format Output** 🔥⭐ **MAJOR UPDATE v0.3.0!**
 
-**🔥 NEW: ENHANCED SECRET DETECTION** - 20+ secret types with AI-powered categorization:
+**🚀 Complete Overhaul** - Professional data extraction platform with **multi-format output support**, **TruffleHog integration**, and **interactive HTML reports**:
+
+**✨ NEW in v0.3.0:**
+- **🎯 Multi-Format Output**: JSON, JSONL, HTML, TXT formats for different use cases
+- **🔒 TruffleHog Integration**: Advanced secret detection with 1000+ patterns
+- **📊 Interactive HTML Reports**: Bootstrap 5 + DataTables with real-time filtering
+- **⚡ Smart Output Logic**: Optimized HTML generation only when needed
+- **🧮 Entropy Calculation**: Shannon entropy scoring for randomness detection  
+- **🏷️ Risk Scoring System**: CRITICAL/HIGH/MEDIUM/LOW risk classifications
+- **🔍 Enhanced Secret Detection**: 25+ secret types with context-aware tagging
+
+**🎯 OUTPUT FORMAT OPTIONS:**
 
 ```bash
-# 🔍 Comprehensive data extraction from API documentation
-reconcli extractorcli swagger_endpoints.txt --types "api_docs,tech_stack" --verbose
+# � Text format (clean terminal output)
+reconcli ectractorcli -l swagger_urls.txt --report-format txt
 
-# 🔐 Enhanced secret detection with 20+ secret types
-reconcli extractorcli source_code/ --recursive --types secret --sensitivity paranoid --tagged
+# 📊 JSON format (structured data export)  
+reconcli ectractorcli -l api_docs.txt --json --output results.json
 
-# ₿ Cryptocurrency and PII data extraction  
-reconcli extractorcli leaked_data.txt --types "crypto,social,phone,pii" --json --ai-score
+# 📋 JSONL format (line-by-line JSON for stream processing)
+reconcli ectractorcli -l endpoints.txt --to-jsonl --output data.jsonl
 
-# 🚀 Live monitoring for sensitive data exposure
-reconcli extractorcli --live-mode --watch-dir /var/log --types "secret,pii" --tagged --verbose
+# 🌐 HTML format (interactive web report - default)
+reconcli ectractorcli -l sources.txt  # Generates interactive HTML report
+```
 
-# 🌐 URL fetching with XSS vulnerability scanning
-reconcli extractorcli urls.txt --fetch-urls --types api --xss-scan --xss-threads 10
+**� ADVANCED DATA EXTRACTION:**
 
-# 📊 Pipeline processing with intelligent filtering
-cat endpoints.txt | reconcli extractorcli --types "auth,api,secret" --ai-score --filter-regex "admin|internal"
+```bash
+# 🔒 TruffleHog-powered secret detection with risk scoring
+reconcli ectractorcli -l source_files.txt --secret-scan --risk-scoring --entropy
+
+# 📊 Multi-format comprehensive analysis
+reconcli ectractorcli -l swagger_endpoints.txt --types "api_docs,tech_stack,secret" \
+  --json --output comprehensive_analysis.json
+
+# ₿ Cryptocurrency and PII extraction with HTML reporting
+reconcli ectractorcli -l leaked_data.txt --types "crypto,social,phone,pii" \
+  --auto-tag --entropy --risk-scoring
+
+# � Live URL fetching with TruffleHog secret scanning
+reconcli ectractorcli -l urls.txt --fetch-urls --secret-scan --to-jsonl --output live_scan.jsonl
+
+# 🧠 AI-enhanced analysis with entropy scoring
+reconcli ectractorcli -l large_dataset.txt --ai-score --entropy --risk-scoring \
+  --report-format txt --output clean_analysis.txt
 ```
 
 **🛠️ EXTRACTION CATEGORIES (15+ types):**
@@ -609,8 +635,8 @@ cat endpoints.txt | reconcli extractorcli --types "auth,api,secret" --ai-score -
 - `ip` - IP addresses (IPv4/IPv6)
 - `form` - HTML forms and input fields
 
-**🔐 Enhanced Security Data:**
-- `secret` - **20+ secret types**: AWS keys, GitHub tokens, OpenAI keys, Stripe keys, Discord tokens, Telegram bots, PayPal clients, Mailgun keys, Twilio SIDs, SendGrid keys, Anthropic keys, Google API keys, Azure keys, Docker tokens, Heroku keys, Cloudflare tokens, private keys, SSH keys, database URLs, connection strings, environment variables
+**🔐 Enhanced Security Data (TruffleHog Integration):**
+- `secret` - **1000+ TruffleHog patterns**: AWS keys, GitHub tokens, OpenAI keys, Stripe keys, Discord tokens, Telegram bots, PayPal clients, Mailgun keys, Twilio SIDs, SendGrid keys, Anthropic keys, Google API keys, Azure keys, Docker tokens, Heroku keys, Cloudflare tokens, private keys, SSH keys, database URLs, connection strings, JWT tokens, and more
 - `auth` - Authentication endpoints and login pages
 - `api` - API endpoints and REST services
 - `swagger` - OpenAPI/Swagger documentation
@@ -629,26 +655,44 @@ cat endpoints.txt | reconcli extractorcli --types "auth,api,secret" --ai-score -
 - `js` - JavaScript variables and functions
 - `comment` - HTML/JS comments and metadata
 
-**🔧 Advanced Features:**
+**⚡ ADVANCED FEATURES:**
+
 ```bash
-# Custom regex patterns from JSON file
-reconcli extractorcli data.txt --custom-patterns my_patterns.json --types custom
+# 🔧 Custom patterns with multi-format output
+reconcli ectractorcli -l data.txt --custom-patterns patterns.json --json --output custom_results.json
 
-# Export built-in patterns for customization
-reconcli extractorcli --export-patterns standard_patterns.json
+# 🔄 Data merging and deduplication with JSONL output
+reconcli ectractorcli -l new_scan.txt --merge-with old_results.json --to-jsonl --output merged.jsonl
 
-# Merge results with existing data and deduplicate
-reconcli extractorcli new_scan.txt --merge-with old_results.json --dedup --output merged.json
+# 🎯 High-sensitivity detection with entropy analysis
+reconcli ectractorcli -l logs/ --recursive --sensitivity paranoid --entropy --risk-scoring --json
 
-# High-sensitivity detection for maximum coverage
-reconcli extractorcli logs/ --recursive --sensitivity paranoid --types "secret,pii,crypto" --tagged
+# ☁️ Cloud storage scanning with TruffleHog integration
+reconcli ectractorcli -l s3_buckets.txt --secret-scan --fetch-urls --auto-tag --report-format txt
 
-# Cloud storage URL scanning
-reconcli extractorcli s3_buckets.txt --scan-cloud --types "url,secret" --fetch-urls
+# 📊 Performance benchmarking with structured output
+reconcli ectractorcli -l large_dataset.txt --benchmark --stats --threads 20 --to-jsonl --output performance.jsonl
 
-# Real-time processing with statistics
-reconcli extractorcli large_dataset.txt --benchmark --stats --threads 20 --ai-score
+# 🌐 Interactive HTML dashboard (default behavior)
+reconcli ectractorcli -l comprehensive_scan.txt --secret-scan --entropy --risk-scoring --auto-tag
+# ↳ Generates beautiful HTML report with DataTables, filtering, and export options
 ```
+
+**🎨 INTERACTIVE HTML FEATURES:**
+- **📊 Bootstrap 5 Interface**: Modern, responsive design with professional styling
+- **🔍 DataTables Integration**: Real-time search, filtering, sorting, and pagination
+- **📈 Risk-Based Filtering**: Filter by CRITICAL/HIGH/MEDIUM/LOW risk levels
+- **⚡ Entropy Highlighting**: Visual indicators for high-entropy (random) data
+- **📤 Export Options**: CSV, Excel, JSON export directly from web interface
+- **📋 Copy-to-Clipboard**: Quick copying of extracted data
+- **🎯 Category Breakdown**: Visual statistics and categorized results
+
+**🏆 Use Cases:**
+- **🔍 Bug Bounty**: Extract secrets and endpoints from Swagger files (`--json`)
+- **🔒 Security Audits**: Comprehensive secret scanning with risk assessment (`--secret-scan`)
+- **📊 Data Analysis**: Stream processing with JSONL format (`--to-jsonl`)
+- **📄 Reporting**: Clean text output for documentation (`--report-format txt`)
+- **🌐 Interactive Analysis**: HTML dashboard for team collaboration (default)
 
 ### � PortCLI - Multi-Scanner Port Discovery & AI Analysis
 Professional port scanning framework with 5 integrated scanners and intelligent service detection:
