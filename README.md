@@ -1514,9 +1514,9 @@ reconcli dirbcli --cache-max-age 6                      # 6-hour cache expiry
 - **Cache Hit**: Near-instant results (0.1-0.5 seconds)
 - **Performance Gain**: 20-150x faster for repeated scans
 
-### �🔮 **GraphQL Security Assessment (`graphqlcli`)** (NEW!)
+### 🔮 **GraphQL Security Assessment (`graphqlcli`)** (NEW!)
 
-Advanced GraphQL reconnaissance and security testing with multiple engines and comprehensive vulnerability assessment.
+Advanced GraphQL reconnaissance and security testing with multiple engines, bulk URL processing, and comprehensive vulnerability assessment.
 
 **🛡️ Multi-Engine Support:**
 - **GraphW00F**: GraphQL fingerprinting and engine detection
@@ -1525,13 +1525,28 @@ Advanced GraphQL reconnaissance and security testing with multiple engines and c
 - **GQL**: Python client with introspection analysis
 - **GQL-CLI**: Schema downloading and query execution
 
+**🚀 NEW: Bulk URL Processing & Advanced Discovery:**
+- **📂 File-based URL Extraction**: Extract URLs from text files with regex patterns
+- **🎯 GraphQL Context Filtering**: Smart filtering for GraphQL-related endpoints
+- **🔍 40+ Common Endpoints**: Comprehensive GraphQL endpoint discovery
+- **⚡ Bulk Testing**: Process multiple targets with all engines simultaneously
+- **🧠 IP Address Detection**: Automatic conversion of IPs to testable URLs
+
 ```bash
 # Complete GraphQL security assessment with caching
 reconcli graphqlcli --domain api.example.com --endpoint /graphql --engine all \
   --threat-matrix --batch-queries --sqli-test --nosqli-test --cache --report
 
-# Schema download and analysis with cache
-reconcli graphqlcli --domain api.example.com --engine gql-cli --print-schema \
+# NEW: Bulk URL extraction and testing from file
+reconcli graphqlcli --input targets.txt --extract-urls --filter-graphql \
+  --max-urls 10 --engine all --common-endpoints --insecure --cache --verbose
+
+# NEW: Single domain with all 40+ common GraphQL endpoints
+reconcli graphqlcli --url https://api.example.com --common-endpoints \
+  --engine all --cache --threat-matrix --verbose
+
+# Schema download with JSON export
+reconcli graphqlcli --domain api.example.com --schema-json --schema-introspect \
   --schema-file schema.graphql --cache --verbose
 
 # GraphW00F fingerprinting with caching for repeated scans
@@ -1550,6 +1565,22 @@ reconcli graphqlcli --domain api.example.com --engine gql-cli \
 reconcli graphqlcli --cache-stats                        # View cache statistics
 reconcli graphqlcli --clear-cache                       # Clear all cached results
 reconcli graphqlcli --cache-dir /tmp/graphql_cache      # Custom cache directory
+```
+
+**🔥 NEW Bulk Processing Features:**
+- **📄 Input File Processing**: `--input file.txt` - Extract URLs from any text file
+- **🎯 Smart URL Extraction**: `--extract-urls --filter-graphql` - Context-aware GraphQL URL detection
+- **🌐 40+ Endpoint Discovery**: `--common-endpoints` - Test all common GraphQL paths
+- **⚡ Multi-Target Testing**: Process hundreds of targets with intelligent caching
+- **🔢 Limit Control**: `--max-urls N` - Control bulk processing scale
+
+**📍 Common GraphQL Endpoints Tested:**
+```
+/graphql, /api/graphql, /gql, /v1/graphql, /v2/graphql
+/graphql-dev, /graphql-playground, /graphiql, /altair, /voyager
+/__graphql, /q/graphql, /apollo, /graphql/query, /graphql/mutation
+/query, /api/query, /graphql/v1, /api/v1/graphql, /graphql-api
+... and 20+ more variants
 ```
 
 **⚡ Performance Caching:**

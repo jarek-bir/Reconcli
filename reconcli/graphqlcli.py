@@ -164,6 +164,14 @@ class GraphQLCacheManager:
 @click.command()
 @click.option("--domain", required=False, help="Target domain (e.g. target.com)")
 @click.option(
+    "--url",
+    required=False,
+    help="Full GraphQL URL (e.g. https://api.target.com/graphql)",
+)
+@click.option(
+    "--input", "-i", "input_file", help="File with URLs or domains (one per line)"
+)
+@click.option(
     "--engine",
     default="graphw00f",
     type=click.Choice(
@@ -180,6 +188,19 @@ class GraphQLCacheManager:
     help='Custom headers: --header "Authorization: Bearer xyz" (use multiple times)',
 )
 @click.option("--wordlist", help="Path to custom endpoint wordlist")
+@click.option(
+    "--common-endpoints",
+    is_flag=True,
+    help="Test common GraphQL endpoints (/graphql, /api/graphql, /v1/graphql, etc.)",
+)
+@click.option("--schema-dump", is_flag=True, help="Dump GraphQL schema to file")
+@click.option("--schema-json", is_flag=True, help="Dump GraphQL schema to JSON format")
+@click.option(
+    "--schema-introspect", is_flag=True, help="Full introspection schema dump"
+)
+@click.option("--introspection-query", help="Custom introspection query file")
+@click.option("--mutations-only", is_flag=True, help="Focus only on mutation testing")
+@click.option("--queries-only", is_flag=True, help="Focus only on query testing")
 @click.option("--threads", default=10, help="Number of threads for scanning")
 @click.option("--timeout", default=30, help="Request timeout in seconds")
 @click.option("--output-dir", default="output", help="Output directory")
@@ -245,14 +266,68 @@ class GraphQLCacheManager:
 @click.option("--cache-max-age", type=int, default=24, help="Cache TTL in hours")
 @click.option("--cache-stats", is_flag=True, help="Show cache statistics and exit")
 @click.option("--clear-cache", is_flag=True, help="Clear all cached results and exit")
+@click.option("--ai", is_flag=True, help="Enable AI-powered GraphQL security analysis")
+@click.option(
+    "--ai-provider",
+    type=click.Choice(["openai", "anthropic", "gemini"]),
+    default="openai",
+    help="AI provider for analysis",
+)
+@click.option(
+    "--ai-context",
+    help="Additional context for AI analysis (e.g., 'financial API', 'social media')",
+)
+@click.option(
+    "--format",
+    "output_format",
+    type=click.Choice(["json", "csv", "table", "rich"]),
+    default="table",
+    help="Output format",
+)
+@click.option(
+    "--concurrency", type=int, default=10, help="Number of concurrent requests"
+)
+@click.option("--user-agent", help="Custom User-Agent header")
+@click.option(
+    "--cookies", help="Cookies to include (format: 'name1=value1; name2=value2')"
+)
+@click.option(
+    "--extract-urls", is_flag=True, help="Extract URLs from input file/text using regex"
+)
+@click.option(
+    "--url-pattern",
+    default=r"https?://[a-zA-Z0-9\.\-_:/]+",
+    help="Custom regex pattern for URL extraction",
+)
+@click.option("--bulk-test", is_flag=True, help="Bulk test all extracted/provided URLs")
+@click.option(
+    "--max-urls",
+    type=int,
+    default=100,
+    help="Maximum number of URLs to test in bulk mode",
+)
+@click.option(
+    "--filter-graphql",
+    is_flag=True,
+    help="Only test URLs that look like GraphQL endpoints",
+)
 def graphqlcli(
     domain,
+    url,
+    input_file,
     engine,
     endpoint,
     proxy,
     tor,
     header,
     wordlist,
+    common_endpoints,
+    schema_dump,
+    schema_json,
+    schema_introspect,
+    introspection_query,
+    mutations_only,
+    queries_only,
     threads,
     timeout,
     output_dir,
@@ -286,6 +361,18 @@ def graphqlcli(
     cache_max_age,
     cache_stats,
     clear_cache,
+    ai,
+    ai_provider,
+    ai_context,
+    output_format,
+    concurrency,
+    user_agent,
+    cookies,
+    extract_urls,
+    url_pattern,
+    bulk_test,
+    max_urls,
+    filter_graphql,
 ):
     """GraphQL recon & audit module using multiple engines and advanced techniques"""
 
@@ -321,12 +408,169 @@ def graphqlcli(
         return
 
     # Validate required parameters
-    if not domain:
-        print(
-            "❌ Error: Domain is required for GraphQL scanning. Use --help for options."
-        )
+    targets = []
+
+    if url:
+        targets.append(url)
+    elif domain:
+        targets.append(f"https://{domain}/graphql")
+    elif input_file:
+        if not Path(input_file).exists():
+            print(f"❌ Error: Input file '{input_file}' not found")
+            return
+
+        with open(input_file, "r") as f:
+            if extract_urls:
+                # If extracting URLs, read entire file as text for regex processing
+                file_content = f.read()
+                targets = [file_content]  # Will be processed later in URL extraction
+            else:
+                # Normal line-by-line processing
+                lines = f.read().strip().split("\n")
+                for line in lines:
+                    line = line.strip()
+                    if line and not line.startswith("#"):
+                        if line.startswith("http"):
+                            targets.append(line)
+                        else:
+                            targets.append(f"https://{line}/graphql")
+
+    if not targets:
+        print("❌ Error: Target is required. Use --url, --domain, or --input")
         print("💡 Available cache-only commands: --cache-stats, --clear-cache")
         return
+
+    # ========== URL Extraction & Bulk Processing ==========
+    if extract_urls or bulk_test:
+        import re
+
+        all_extracted_urls = []
+
+        # Extract URLs from targets (treating them as text sources)
+        for target in targets:
+            if extract_urls:
+                if verbose:
+                    print(f"🔍 [URL-EXTRACT] Extracting URLs from: {target}")
+
+                # Try to read as file first, then as text
+                try:
+                    if Path(target).exists():
+                        with open(target, "r", encoding="utf-8", errors="ignore") as f:
+                            content = f.read()
+                    else:
+                        content = target
+                except:
+                    content = target
+
+                # Extract URLs using regex
+                extracted_urls = re.findall(url_pattern, content)
+
+                # Also extract IP addresses from GraphQL context and convert to URLs
+                lines = content.split("\n")
+                for line in lines:
+                    line_lower = line.lower()
+                    # Check if line mentions GraphQL
+                    if any(
+                        keyword in line_lower
+                        for keyword in ["graphql", "playground", "gql"]
+                    ):
+                        # Extract IP addresses from this line
+                        ip_pattern = r"\b(?:[0-9]{1,3}\.){3}[0-9]{1,3}(?::[0-9]+)?\b"
+                        ips = re.findall(ip_pattern, line)
+                        for ip in ips:
+                            # Add both HTTP and HTTPS versions
+                            if ":" in ip:  # Has port
+                                extracted_urls.append(f"http://{ip}")
+                                extracted_urls.append(f"https://{ip}")
+                            else:  # No port, try common GraphQL ports
+                                extracted_urls.append(f"http://{ip}")
+                                extracted_urls.append(f"https://{ip}")
+                                extracted_urls.append(f"http://{ip}:4000")
+                                extracted_urls.append(f"https://{ip}:4000")
+
+                # Filter GraphQL-like URLs if requested
+                if filter_graphql:
+                    # For GraphQL filtering, check both URL patterns and content context
+                    graphql_patterns = [
+                        r"/graphql",
+                        r"/api/graphql",
+                        r"/v1/graphql",
+                        r"/v2/graphql",
+                        r"/query",
+                        r"/api/query",
+                        r"/gql",
+                        r"/api/gql",
+                        r"/graphql-api",
+                        r"/graphql-dev",
+                        r"/graphql-playground",
+                        r"/graphiql",
+                        r"/altair",
+                        r"/voyager",
+                        r"/__graphql",
+                        r"/q/graphql",
+                        r"/graphql/api",
+                        r"/apollo",
+                        r"/graphql/query",
+                        r"/graphql/mutation",
+                    ]
+
+                    filtered_urls = []
+                    for url in extracted_urls:
+                        # Check if URL has GraphQL path
+                        if any(pattern in url.lower() for pattern in graphql_patterns):
+                            filtered_urls.append(url)
+                            continue
+
+                        # For URLs without GraphQL paths, check if they came from GraphQL context
+                        # Find the URL in content and check surrounding context
+                        url_index = content.lower().find(url.lower())
+                        if url_index != -1:
+                            # Get context around the URL
+                            context_start = max(0, url_index - 200)
+                            context_end = min(len(content), url_index + len(url) + 200)
+                            context = content[context_start:context_end].lower()
+
+                            # Check if context mentions GraphQL
+                            if any(
+                                keyword in context
+                                for keyword in ["graphql", "playground", "gql"]
+                            ):
+                                filtered_urls.append(url)
+
+                    extracted_urls = filtered_urls
+
+                all_extracted_urls.extend(extracted_urls)
+
+                if verbose:
+                    print(f"🎯 [URL-EXTRACT] Found {len(extracted_urls)} URLs")
+            else:
+                all_extracted_urls.append(target)
+
+        # Remove duplicates and limit
+        unique_urls = list(set(all_extracted_urls))
+        if max_urls and len(unique_urls) > max_urls:
+            unique_urls = unique_urls[:max_urls]
+            if verbose:
+                print(
+                    f"⚠️  [BULK] Limited to {max_urls} URLs (use --max-urls to change)"
+                )
+
+        targets = unique_urls
+
+        if verbose:
+            print(f"🎯 [BULK] Final target count: {len(targets)} URLs")
+            if len(targets) <= 10:
+                for i, target in enumerate(targets, 1):
+                    print(f"    [{i}] {target}")
+            else:
+                print(f"    [Sample] {targets[0]}")
+                print(f"    [Sample] {targets[1]}")
+                print(f"    [...] {len(targets)-4} more")
+                print(f"    [Sample] {targets[-2]}")
+                print(f"    [Sample] {targets[-1]}")
+
+    if verbose:
+        print(f"🎯 [TARGETS] Found {len(targets)} target(s) to scan")
 
     # Security warning for insecure mode
     if insecure:
@@ -340,6 +584,91 @@ def graphqlcli(
 
     output_path = Path(output_dir)
     output_path.mkdir(parents=True, exist_ok=True)
+
+    # Expand targets with common endpoints if requested
+    if common_endpoints:
+        expanded_targets = []
+        common_paths = [
+            "/graphql",
+            "/graphql/",
+            "/api/graphql",
+            "/api/graphql/",
+            "/gql",
+            "/gql/",
+            "/v1/graphql",
+            "/v1/graphql/",
+            "/v2/graphql",
+            "/v2/graphql/",
+            "/graphql-dev",
+            "/graphql-dev/",
+            "/graphql-playground",
+            "/graphql-playground/",
+            "/graphiql",
+            "/graphiql/",
+            "/altair",
+            "/altair/",
+            "/voyager",
+            "/voyager/",
+            "/__graphql",
+            "/__graphql/",
+            "/q/graphql",
+            "/q/graphql/",
+            "/api",
+            "/api/",
+            "/graphql/api",
+            "/graphql/api/",
+            "/apollo",
+            "/apollo/",
+            "/graphql/query",
+            "/graphql/query/",
+            "/graphql/mutation",
+            "/graphql/mutation/",
+            "/query",
+            "/api/query",
+            "/graphql/v1",
+            "/api/v1/graphql",
+            "/graphql-api",
+            "/api/gql",
+        ]
+
+        for target in targets:
+            # Extract base URL - handle different URL formats
+            if target.endswith("/graphql"):
+                base_url = target.replace("/graphql", "")
+            elif target.endswith("/"):
+                base_url = target.rstrip("/")
+            else:
+                base_url = target
+
+            # Add all common paths to the base URL
+            for path in common_paths:
+                expanded_targets.append(f"{base_url}{path}")
+
+        targets = expanded_targets
+        if verbose:
+            print(
+                f"🔍 [ENDPOINTS] Expanded to {len(targets)} endpoints with common paths"
+            )
+
+    # Set up User-Agent
+    headers_dict = {}
+    if user_agent:
+        headers_dict["User-Agent"] = user_agent
+    else:
+        headers_dict["User-Agent"] = "ReconCLI-GraphQLCLI/1.0"
+
+    # Set up cookies
+    if cookies:
+        headers_dict["Cookie"] = cookies
+
+    # Merge with existing headers
+    for h in header:
+        if ":" in h:
+            k, v = h.split(":", 1)
+            headers_dict[k.strip()] = v.strip()
+
+    # Convert back to header list format for compatibility
+    header = [f"{k}: {v}" for k, v in headers_dict.items()]
 
     state_file = output_path / f"graphqlcli_state_{domain}.json"
     json_output_file = output_path / f"graphql_audit_{domain}.json"
@@ -387,91 +716,144 @@ def graphqlcli(
     if verbose:
         click.echo(f"[+] Target URL: {target_url}")
 
-    # Run selected engine(s)
-    results = {}
+    # Run selected engine(s) on all targets
+    all_results = {}
 
-    if engine == "all":
-        engines = ["graphw00f", "graphql-cop", "graphqlmap", "gql", "gql-cli"]
-    else:
-        engines = [engine]
+    for target_idx, target_url in enumerate(targets, 1):
+        if verbose and len(targets) > 1:
+            print(f"\n[{target_idx}/{len(targets)}] 🔍 Processing: {target_url}")
 
-    for eng in engines:
+        # Extract domain from URL for file naming
+        from urllib.parse import urlparse
+
+        parsed_url = urlparse(target_url)
+        target_domain = parsed_url.netloc or domain or "unknown"
+
         if verbose:
-            click.echo(f"[+] Running {eng} engine...")
+            print(f"[+] Target URL: {target_url}")
+            print(f"[+] Target domain: {target_domain}")
 
-        # ========== Cache Check ==========
-        cache_options = {
-            "endpoint": endpoint,
-            "proxy": proxy,
-            "tor": tor,
-            "headers": header,
-            "wordlist": wordlist,
-            "threads": threads,
-            "timeout": timeout,
-            "fingerprint": fingerprint,
-            "threat_matrix": threat_matrix,
-            "detect_engines": detect_engines,
-            "batch_queries": batch_queries,
-            "field_suggestions": field_suggestions,
-            "depth_limit": depth_limit,
-            "rate_limit": rate_limit,
-            "sqli_test": sqli_test,
-            "nosqli_test": nosqli_test,
-        }
+        state_file = output_path / f"graphqlcli_state_{target_domain}.json"
+        json_output_file = output_path / f"graphql_audit_{target_domain}.json"
+        csv_output_file = output_path / f"graphql_audit_{target_domain}.csv"
+        md_output = output_path / f"graphql_report_{target_domain}.md"
 
-        if cache_manager:
-            cached_result = cache_manager.get_cached_result(
-                target_url, eng, cache_options
-            )
-            if cached_result:
-                if verbose:
-                    click.echo(f"💾 [CACHE] Using cached result for {eng} engine")
-                results[eng] = cached_result["result"]
-                continue
-            elif verbose:
-                click.echo(f"💾 [CACHE] No cache found for {eng} engine, scanning...")
-
-        if eng == "graphw00f":
-            result = run_graphw00f(
-                domain, header, proxy, fingerprint, detect_engines, verbose, ssl_verify
-            )
-        elif eng == "gql":
-            result = run_gql_engine(domain, header, proxy, endpoint, timeout, verbose)
-        elif eng == "gql-cli":
-            # Run gql-cli as engine
-            schema_output_file = schema_file or f"{domain}_schema.graphql"
-            schema_path = output_path / schema_output_file
-            result = run_gql_cli_operations(
-                target_url,
-                header,
-                proxy,
-                True,
-                schema_path,
-                gql_variables,
-                gql_operation,
-                False,
-                gql_transport,
-                verbose,
-            )
-        elif eng == "graphqlmap":
-            result = run_graphqlmap(
-                domain, header, proxy, endpoint, timeout, verbose, ssl_verify
-            )
-        elif eng == "graphql-cop":
-            result = run_graphqlcop(
-                domain, header, proxy, tor, endpoint, timeout, verbose
-            )
-        else:
-            click.echo(f"[!] Unknown engine: {eng}")
+        # Resume logic for each target
+        if resume_reset:
+            if state_file.exists():
+                state_file.unlink()
+                click.echo(f"[+] Reset state file for {target_domain}")
+            continue
+        if resume_stat:
+            if state_file.exists():
+                click.echo(state_file.read_text())
+            else:
+                click.echo(f"[!] No session found for {target_domain}")
+            continue
+        if resume and state_file.exists():
+            with state_file.open() as f:
+                session_data = json.load(f)
+                click.echo(f"[+] Resuming previous session for {target_domain}")
+                engine = session_data.get("engine", engine)
+        elif resume:
+            click.echo(f"[!] No previous session found for {target_domain}")
             continue
 
-        results[eng] = result
+        results = {}
 
-        # ========== Cache Storage ==========
-        if cache_manager and result:
-            cache_manager.store_result(target_url, eng, cache_options, result)
+        if engine == "all":
+            engines = ["graphw00f", "graphql-cop", "graphqlmap", "gql", "gql-cli"]
+        else:
+            engines = [engine]
+
+        for eng in engines:
             if verbose:
-                click.echo(f"💾 [CACHE] Stored {eng} result in cache")
+                click.echo(f"[+] Running {eng} engine...")
+
+            # ========== Cache Check ==========
+            cache_options = {
+                "endpoint": endpoint,
+                "proxy": proxy,
+                "tor": tor,
+                "headers": header,
+                "wordlist": wordlist,
+                "threads": threads,
+                "timeout": timeout,
+                "fingerprint": fingerprint,
+                "threat_matrix": threat_matrix,
+                "detect_engines": detect_engines,
+                "batch_queries": batch_queries,
+                "field_suggestions": field_suggestions,
+                "depth_limit": depth_limit,
+                "rate_limit": rate_limit,
+                "sqli_test": sqli_test,
+                "nosqli_test": nosqli_test,
+            }
+
+            if cache_manager:
+                cached_result = cache_manager.get_cached_result(
+                    target_url, eng, cache_options
+                )
+                if cached_result:
+                    if verbose:
+                        click.echo(f"💾 [CACHE] Using cached result for {eng} engine")
+                    results[eng] = cached_result["result"]
+                    continue
+                elif verbose:
+                    click.echo(
+                        f"💾 [CACHE] No cache found for {eng} engine, scanning..."
+                    )
+
+            if eng == "graphw00f":
+                result = run_graphw00f(
+                    target_domain,
+                    header,
+                    proxy,
+                    fingerprint,
+                    detect_engines,
+                    verbose,
+                    ssl_verify,
+                )
+                result["url"] = target_url  # Add the URL to results
+            elif eng == "gql":
+                result = run_gql_engine_enhanced(
+                    target_url, header, proxy, endpoint, timeout, verbose
+                )
+            elif eng == "gql-cli":
+                # Run gql-cli as engine
+                schema_output_file = schema_file or f"{target_domain}_schema.graphql"
+                schema_path = output_path / schema_output_file
+                result = run_gql_cli_operations(
+                    target_url,
+                    header,
+                    proxy,
+                    True,
+                    schema_path,
+                    gql_variables,
+                    gql_operation,
+                    False,
+                    gql_transport,
+                    verbose,
+                )
+            elif eng == "graphqlmap":
+                result = run_graphqlmap_enhanced(
+                    target_url, header, proxy, endpoint, timeout, verbose, ssl_verify
+                )
+            elif eng == "graphql-cop":
+                result = run_graphqlcop_enhanced(
+                    target_url, header, proxy, tor, endpoint, timeout, verbose
+                )
+            else:
+                click.echo(f"[!] Unknown engine: {eng}")
+                continue
+
+            results[eng] = result
+
+            # ========== Cache Storage ==========
+            if cache_manager and result:
+                cache_manager.store_result(target_url, eng, cache_options, result)
+                if verbose:
+                    click.echo(f"💾 [CACHE] Stored {eng} result in cache")
 
         # Run advanced tests if requested
         if threat_matrix:
@@ -489,65 +871,150 @@ def graphqlcli(
                 target_url, header, proxy, timeout, verbose, ssl_verify
             )
 
-        if nosqli_test:
-            results[f"{eng}_nosqli"] = test_nosql_injection(
-                target_url, header, proxy, timeout, verbose, ssl_verify
+            if nosqli_test:
+                results[f"{eng}_nosqli"] = test_nosql_injection(
+                    target_url, header, proxy, timeout, verbose, ssl_verify
+                )
+
+        # AI Analysis if requested
+        if ai and results:
+            if verbose:
+                print(f"🧠 [AI] Running AI analysis with {ai_provider}...")
+
+            ai_analysis = run_ai_analysis(
+                target_url, results, ai_provider, ai_context, verbose
+            )
+            results["ai_analysis"] = ai_analysis
+
+        # Handle schema dumping requests
+        if schema_dump or schema_json or schema_introspect or print_schema:
+            schema_results = {}
+
+            if schema_json or schema_introspect:
+                # JSON schema dump using introspection
+                schema_results.update(
+                    dump_schema_json(target_url, header, proxy, verbose, ssl_verify)
+                )
+
+            if schema_dump or print_schema:
+                # GraphQL schema dump
+                schema_output_file = schema_file or f"{target_domain}_schema.graphql"
+                schema_path = output_path / schema_output_file
+
+                gql_result = run_gql_cli_operations(
+                    target_url,
+                    header,
+                    proxy,
+                    True,  # print_schema
+                    schema_path,
+                    gql_variables,
+                    gql_operation,
+                    False,  # interactive_gql
+                    gql_transport,
+                    verbose,
+                )
+                schema_results.update(gql_result)
+
+            # Save schema results
+            if schema_json:
+                json_schema_file = output_path / f"{target_domain}_schema.json"
+                if schema_results.get("introspection_result"):
+                    json_schema_file.write_text(
+                        json.dumps(schema_results["introspection_result"], indent=2)
+                    )
+                    if verbose:
+                        print(f"📄 [SCHEMA] JSON schema saved to: {json_schema_file}")
+
+            results["schema_dump"] = schema_results
+            schema_output_file = schema_file or f"{target_domain}_schema.graphql"
+            schema_path = output_path / schema_output_file
+
+            gql_result = run_gql_cli_operations(
+                target_url,
+                header,
+                proxy,
+                print_schema,
+                schema_path,
+                gql_variables,
+                gql_operation,
+                interactive_gql,
+                gql_transport,
+                verbose,
             )
 
-    # Handle gql-cli specific operations
-    if print_schema or interactive_gql or gql_cli:
-        schema_output_file = schema_file or f"{domain}_schema.graphql"
-        schema_path = output_path / schema_output_file
+            if print_schema and not interactive_gql:
+                # If only schema download was requested, save and exit
+                if gql_result.get("schema_downloaded"):
+                    click.echo(f"[+] Schema saved to: {schema_path}")
+                    all_results[target_url] = gql_result
+                    continue
+                else:
+                    click.echo(
+                        f"[!] Failed to download schema: {gql_result.get('error', 'Unknown error')}"
+                    )
+                    continue
 
-        gql_result = run_gql_cli_operations(
-            target_url,
-            header,
-            proxy,
-            print_schema,
-            schema_path,
-            gql_variables,
-            gql_operation,
-            interactive_gql,
-            gql_transport,
-            verbose,
-        )
+        # Save results in different formats
+        if json_output or not csv_output:
+            json_output_file.write_text(json.dumps(results, indent=2))
+            if verbose:
+                click.echo(f"[+] Saved JSON: {json_output_file}")
 
-        if print_schema and not interactive_gql:
-            # If only schema download was requested, save and exit
-            if gql_result.get("schema_downloaded"):
-                click.echo(f"[+] Schema saved to: {schema_path}")
-                return gql_result
-            else:
-                click.echo(
-                    f"[!] Failed to download schema: {gql_result.get('error', 'Unknown error')}"
-                )
-                return gql_result
+        if csv_output:
+            save_csv_results(results, csv_output_file)
+            if verbose:
+                click.echo(f"[+] Saved CSV: {csv_output_file}")
 
-    # Save results in different formats
-    if json_output or not csv_output:
-        json_output_file.write_text(json.dumps(results, indent=2))
-        click.echo(f"[+] Saved JSON: {json_output_file}")
+        # Save session
+        if store_db:
+            state = {
+                "domain": target_domain,
+                "url": target_url,
+                "engine": engine,
+                "timestamp": datetime.utcnow().isoformat(),
+                "results": results,
+            }
+            state_file.write_text(json.dumps(state, indent=2))
+            if verbose:
+                click.echo(f"[+] Session saved: {state_file}")
 
-    if csv_output:
-        save_csv_results(results, csv_output_file)
-        click.echo(f"[+] Saved CSV: {csv_output_file}")
+        # Generate report
+        if report:
+            md_content = generate_markdown_report(
+                target_domain, engines, results, verbose
+            )
+            md_output.write_text(md_content)
+            if verbose:
+                click.echo(f"[+] Markdown report saved: {md_output}")
 
-    # Save session
-    if store_db:
-        state = {
-            "domain": domain,
-            "engine": engine,
-            "timestamp": datetime.utcnow().isoformat(),
-            "results": results,
-        }
-        state_file.write_text(json.dumps(state, indent=2))
-        click.echo(f"[+] Session saved: {state_file}")
+        # Store results for this target
+        all_results[target_url] = results
 
-    # Generate report
-    if report:
-        md_content = generate_markdown_report(domain, engines, results, verbose)
-        md_output.write_text(md_content)
-        click.echo(f"[+] Markdown report saved: {md_output}")
+    # Handle special commands that should exit early
+    if resume_reset or resume_stat:
+        return all_results
+
+    # Handle multi-target output
+    if len(targets) > 1:
+        # Save combined results
+        combined_json = output_path / "graphql_audit_combined.json"
+        combined_json.write_text(json.dumps(all_results, indent=2))
+
+        if verbose:
+            print(f"\n📊 [SUMMARY] Processed {len(targets)} targets")
+            print(f"📁 [COMBINED] Results saved to: {combined_json}")
+
+    # Display formatted output
+    if len(targets) == 1:
+        final_results = list(all_results.values())[0] if all_results else {}
+    else:
+        final_results = all_results
+
+    # Format and display results
+    if final_results:
+        formatted_output = format_output(final_results, output_format, verbose)
+        if output_format not in ["rich"]:  # Rich already prints directly
+            print(formatted_output)
 
     # ========== Cache Statistics ==========
     if cache_manager and verbose:
@@ -559,7 +1026,467 @@ def graphqlcli(
         click.echo(f"    Cache files: {stats['cache_files']}")
         click.echo(f"    Cache size: {stats['cache_size']} bytes")
 
-    return results
+    return all_results
+
+
+def run_ai_analysis(target_url, results, ai_provider, ai_context, verbose):
+    """Run AI-powered analysis of GraphQL security results"""
+    try:
+        # Import AI libraries based on provider
+        if ai_provider == "openai":
+            import openai
+
+            client = openai.OpenAI()
+        elif ai_provider == "anthropic":
+            import anthropic
+
+            client = anthropic.Anthropic()
+        elif ai_provider == "gemini":
+            import google.generativeai as genai
+
+            client = genai
+        else:
+            return {"error": f"Unsupported AI provider: {ai_provider}"}
+
+        # Prepare analysis prompt
+        context = ai_context or "general GraphQL API security assessment"
+
+        prompt = f"""
+You are a GraphQL security expert analyzing scan results for: {target_url}
+
+Context: {context}
+
+Scan Results:
+{json.dumps(results, indent=2)}
+
+Please provide a comprehensive security analysis including:
+1. Risk Assessment (CRITICAL/HIGH/MEDIUM/LOW)
+2. Identified Vulnerabilities
+3. Attack Vectors
+4. Specific Recommendations
+5. Business Impact
+6. Remediation Priority
+
+Format as JSON with these keys: risk_level, vulnerabilities, attack_vectors, recommendations, business_impact, priority_actions
+"""
+
+        if verbose:
+            print(f"🧠 [AI] Sending {len(prompt)} characters to {ai_provider}")
+
+        # Make AI request based on provider
+        if ai_provider == "openai":
+            response = client.chat.completions.create(
+                model="gpt-4",
+                messages=[{"role": "user", "content": prompt}],
+                max_tokens=2000,
+                temperature=0.3,
+            )
+            ai_response = response.choices[0].message.content
+
+        elif ai_provider == "anthropic":
+            response = client.messages.create(
+                model="claude-3-sonnet-20240229",
+                messages=[{"role": "user", "content": prompt}],
+                max_tokens=2000,
+                temperature=0.3,
+            )
+            ai_response = response.content[0].text
+
+        elif ai_provider == "gemini":
+            model = genai.GenerativeModel("gemini-pro")
+            response = model.generate_content(prompt)
+            ai_response = response.text
+
+        # Try to parse JSON response
+        try:
+            analysis = json.loads(ai_response)
+        except json.JSONDecodeError:
+            # If not JSON, wrap as text response
+            analysis = {
+                "raw_response": ai_response,
+                "provider": ai_provider,
+                "context": context,
+            }
+
+        analysis.update(
+            {
+                "provider": ai_provider,
+                "context": context,
+                "timestamp": datetime.utcnow().isoformat(),
+                "target_url": target_url,
+            }
+        )
+
+        return analysis
+
+    except ImportError:
+        return {
+            "error": f"AI provider '{ai_provider}' library not installed",
+            "install_hint": f"pip install {ai_provider}",
+        }
+    except Exception as e:
+        return {"error": f"AI analysis failed: {str(e)}", "provider": ai_provider}
+
+
+def format_output(results, output_format, verbose):
+    """Format results according to specified output format"""
+    if output_format == "json":
+        return json.dumps(results, indent=2)
+    elif output_format == "csv":
+        # Convert to CSV-friendly format
+        csv_data = []
+        for engine, data in results.items():
+            if isinstance(data, dict):
+                csv_data.append(
+                    {
+                        "engine": engine,
+                        "url": data.get("url", "N/A"),
+                        "status": "success" if not data.get("error") else "error",
+                        "details": str(data)[:100],
+                    }
+                )
+        return csv_data
+    elif output_format == "rich":
+        try:
+            from rich.console import Console
+            from rich.table import Table
+            from rich.json import JSON
+
+            console = Console()
+            table = Table(title="GraphQL Security Analysis")
+            table.add_column("Engine", style="cyan")
+            table.add_column("URL", style="magenta")
+            table.add_column("Status", style="green")
+            table.add_column("Key Findings", style="white")
+
+            for engine, data in results.items():
+                if isinstance(data, dict):
+                    url = data.get("url", "N/A")
+                    status = "✅ Success" if not data.get("error") else "❌ Error"
+                    findings = str(
+                        data.get("introspection", data.get("vulnerable", "Unknown"))
+                    )
+                    table.add_row(engine, url, status, findings)
+
+            console.print(table)
+            return "Rich output displayed above"
+        except ImportError:
+            return format_output(results, "table", verbose)
+    else:  # table format
+        output = []
+        output.append("=" * 80)
+        output.append("GraphQL Security Analysis Results")
+        output.append("=" * 80)
+
+        for engine, data in results.items():
+            output.append(f"\n🔍 Engine: {engine.upper()}")
+            output.append("-" * 40)
+
+            if isinstance(data, dict):
+                if data.get("error"):
+                    output.append(f"❌ Error: {data['error']}")
+                elif data.get("introspection"):
+                    output.append("✅ Introspection: Enabled")
+                    if data.get("types_count"):
+                        output.append(f"   Types: {data['types_count']}")
+                elif "threats" in data:
+                    for threat, result in data["threats"].items():
+                        status = (
+                            "⚠️  VULNERABLE" if result.get("vulnerable") else "✅ Safe"
+                        )
+                        output.append(f"   {threat}: {status}")
+                else:
+                    output.append(f"   Status: Completed")
+
+        return "\n".join(output)
+
+
+def dump_schema_json(target_url, headers, proxy, verbose, ssl_verify=True):
+    """Dump GraphQL schema to JSON using introspection query"""
+
+    header_dict = {}
+    for h in headers:
+        if ":" in h:
+            k, v = h.split(":", 1)
+            header_dict[k.strip()] = v.strip()
+
+    proxies = {"http": proxy, "https": proxy} if proxy else None
+
+    # Full introspection query
+    full_introspection_query = {
+        "query": """
+        query IntrospectionQuery {
+          __schema {
+            queryType { name }
+            mutationType { name }
+            subscriptionType { name }
+            types {
+              ...FullType
+            }
+            directives {
+              name
+              description
+              locations
+              args {
+                ...InputValue
+              }
+            }
+          }
+        }
+
+        fragment FullType on __Type {
+          kind
+          name
+          description
+          fields(includeDeprecated: true) {
+            name
+            description
+            args {
+              ...InputValue
+            }
+            type {
+              ...TypeRef
+            }
+            isDeprecated
+            deprecationReason
+          }
+          inputFields {
+            ...InputValue
+          }
+          interfaces {
+            ...TypeRef
+          }
+          enumValues(includeDeprecated: true) {
+            name
+            description
+            isDeprecated
+            deprecationReason
+          }
+          possibleTypes {
+            ...TypeRef
+          }
+        }
+
+        fragment InputValue on __InputValue {
+          name
+          description
+          type { ...TypeRef }
+          defaultValue
+        }
+
+        fragment TypeRef on __Type {
+          kind
+          name
+          ofType {
+            kind
+            name
+            ofType {
+              kind
+              name
+              ofType {
+                kind
+                name
+                ofType {
+                  kind
+                  name
+                  ofType {
+                    kind
+                    name
+                    ofType {
+                      kind
+                      name
+                      ofType {
+                        kind
+                        name
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+        """
+    }
+
+    try:
+        if verbose:
+            print(f"📄 [SCHEMA] Executing full introspection query on {target_url}")
+
+        response = requests.post(
+            target_url,
+            json=full_introspection_query,
+            headers=header_dict,
+            proxies=proxies,
+            timeout=60,
+            verify=ssl_verify,
+        )
+
+        if response.status_code == 200:
+            introspection_data = response.json()
+
+            # Parse schema statistics
+            schema_stats = parse_schema_statistics(introspection_data)
+
+            return {
+                "introspection_result": introspection_data,
+                "schema_statistics": schema_stats,
+                "status": "success",
+                "url": target_url,
+            }
+        else:
+            return {
+                "error": f"HTTP {response.status_code}: {response.text[:200]}",
+                "status": "failed",
+                "url": target_url,
+            }
+
+    except Exception as e:
+        return {"error": str(e), "status": "failed", "url": target_url}
+
+
+def parse_schema_statistics(introspection_data):
+    """Parse statistics from introspection result"""
+    stats = {}  # Use regular dict for flexibility
+
+    try:
+        schema = introspection_data.get("data", {}).get("__schema", {})
+        types = schema.get("types", [])
+
+        built_in_types = {
+            "__Schema",
+            "__Type",
+            "__TypeKind",
+            "__Field",
+            "__InputValue",
+            "__EnumValue",
+            "__Directive",
+            "__DirectiveLocation",
+            "String",
+            "Int",
+            "Float",
+            "Boolean",
+            "ID",
+        }
+
+        stats["total_types"] = len(types)
+        stats["directives"] = len(schema.get("directives", []))
+        stats["query_fields"] = 0
+        stats["mutation_fields"] = 0
+        stats["subscription_fields"] = 0
+        stats["custom_types"] = 0
+        stats["built_in_types"] = 0
+        stats["enum_types"] = 0
+        stats["interface_types"] = 0
+        stats["union_types"] = 0
+        stats["input_types"] = 0
+
+        for type_def in types:
+            type_name = type_def.get("name", "")
+            type_kind = type_def.get("kind", "")
+
+            if type_name in built_in_types or type_name.startswith("__"):
+                stats["built_in_types"] += 1
+            else:
+                stats["custom_types"] += 1
+
+            if type_kind == "ENUM":
+                stats["enum_types"] += 1
+            elif type_kind == "INTERFACE":
+                stats["interface_types"] += 1
+            elif type_kind == "UNION":
+                stats["union_types"] += 1
+            elif type_kind == "INPUT_OBJECT":
+                stats["input_types"] += 1
+
+        # Count fields in root types
+        query_type = schema.get("queryType", {}).get("name")
+        mutation_type = (
+            schema.get("mutationType", {}).get("name")
+            if schema.get("mutationType")
+            else None
+        )
+        subscription_type = (
+            schema.get("subscriptionType", {}).get("name")
+            if schema.get("subscriptionType")
+            else None
+        )
+
+        for type_def in types:
+            type_name = type_def.get("name")
+            fields = type_def.get("fields", [])
+
+            if type_name == query_type:
+                stats["query_fields"] = len(fields)
+            elif type_name == mutation_type:
+                stats["mutation_fields"] = len(fields)
+            elif type_name == subscription_type:
+                stats["subscription_fields"] = len(fields)
+
+    except Exception as e:
+        stats["parsing_error"] = str(e)
+
+    return stats
+
+
+def run_gql_engine_enhanced(
+    target_url, headers, proxy, endpoint=None, timeout=30, verbose=False
+):
+    """Enhanced wrapper for run_gql_engine with URL support"""
+    from urllib.parse import urlparse
+
+    parsed_url = urlparse(target_url)
+    domain = parsed_url.netloc
+
+    # Override endpoint if URL has a specific path
+    if parsed_url.path and parsed_url.path != "/":
+        endpoint = parsed_url.path
+
+    result = run_gql_engine(domain, headers, proxy, endpoint, timeout, verbose)
+    result["url"] = target_url
+    return result
+
+
+def run_graphqlmap_enhanced(
+    target_url,
+    headers,
+    proxy,
+    endpoint=None,
+    timeout=30,
+    verbose=False,
+    ssl_verify=True,
+):
+    """Enhanced wrapper for run_graphqlmap with URL support"""
+    from urllib.parse import urlparse
+
+    parsed_url = urlparse(target_url)
+    domain = parsed_url.netloc
+
+    if parsed_url.path and parsed_url.path != "/":
+        endpoint = parsed_url.path
+
+    result = run_graphqlmap(
+        domain, headers, proxy, endpoint, timeout, verbose, ssl_verify
+    )
+    result["url"] = target_url
+    return result
+
+
+def run_graphqlcop_enhanced(
+    target_url, headers, proxy, tor, endpoint=None, timeout=30, verbose=False
+):
+    """Enhanced wrapper for run_graphqlcop with URL support"""
+    from urllib.parse import urlparse
+
+    parsed_url = urlparse(target_url)
+    domain = parsed_url.netloc
+
+    if parsed_url.path and parsed_url.path != "/":
+        endpoint = parsed_url.path
+
+    result = run_graphqlcop(domain, headers, proxy, tor, endpoint, timeout, verbose)
+    result["url"] = target_url
+    return result
 
 
 def run_graphw00f(
