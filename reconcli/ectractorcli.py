@@ -6,7 +6,38 @@ import click
 import mimetypes
 import requests
 import time
+import math
+import subprocess
+import tempfile
+import os
+import zipfile
+import string
+from collections import Counter
 from pathlib import Path
+
+# Import tagging functions from tagger module
+try:
+    from .tagger import (
+        auto_tag as tagger_auto_tag,
+        calculate_risk_score,
+        load_custom_rules,
+        apply_custom_rules,
+    )
+except ImportError:
+    # Fallback if tagger module not available
+    def auto_tag(entry):
+        return []
+
+    def calculate_risk_score(domain, tags):
+        return 0
+
+    def load_custom_rules(rules_file):
+        return {}
+
+    def apply_custom_rules(entry, custom_rules):
+        return []
+
+
 from urllib.parse import urlparse, urljoin
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
@@ -25,6 +56,437 @@ def clean_ansi_codes(text):
     return text
 
 
+def shannon_entropy(string):
+    """
+    Calculate Shannon entropy of a string.
+
+    Shannon entropy measures the randomness or information content in data.
+    Higher entropy values indicate more randomness, which can be useful for
+    detecting encoded data, encrypted content, or high-entropy secrets.
+
+    Args:
+        string (str): Input string to calculate entropy for
+
+    Returns:
+        float: Shannon entropy value (0.0 to ~8.0 for typical strings)
+
+    Examples:
+        >>> shannon_entropy("aaaa")
+        0.0
+        >>> shannon_entropy("abcd")
+        2.0
+        >>> shannon_entropy("random_string_123")
+        # Returns higher entropy value
+    """
+    if not string:
+        return 0.0
+
+    # Count frequency of each character
+    char_counts = Counter(string)
+    string_length = len(string)
+
+    # Calculate entropy
+    entropy = 0.0
+    for count in char_counts.values():
+        # Calculate probability of each character
+        probability = count / string_length
+        # Add to entropy calculation
+        entropy -= probability * math.log2(probability)
+
+    return round(entropy, 2)
+
+
+def detect_entropy_strings(strings, threshold=4.0, min_length=20):
+    """
+    Detect high-entropy strings that might be secrets, keys, or encoded data.
+
+    Args:
+        strings (list): List of strings to analyze
+        threshold (float): Minimum entropy threshold (default: 4.0)
+        min_length (int): Minimum string length to consider (default: 20)
+
+    Returns:
+        list: List of dictionaries with structure:
+              [{"value": str, "entropy": float, "source": str}, ...]
+
+    Examples:
+        >>> detect_entropy_strings(["aaaaaaaa", "AKIAEXAMPLE123"])
+        # Returns strings with entropy >= threshold and length >= min_length
+    """
+    results = []
+
+    for string in strings:
+        # Skip strings that are too short
+        if len(string) < min_length:
+            continue
+
+        # Calculate entropy
+        string_entropy = shannon_entropy(string)
+
+        # Check if entropy meets threshold
+        if string_entropy >= threshold:
+            results.append(
+                {
+                    "value": string,
+                    "entropy": string_entropy,
+                    "source": "entropy_detection",
+                }
+            )
+
+    return results
+
+
+def generate_hex_dump(file_path, max_bytes=1024):
+    """
+    Generate hex dump of a file using xxd command.
+
+    Args:
+        file_path (str): Path to the file to dump
+        max_bytes (int): Maximum number of bytes to dump (default: 1024)
+
+    Returns:
+        dict: Dictionary containing hex dump data:
+              {
+                "file_path": str,
+                "hex_dump": str,
+                "file_size": int,
+                "truncated": bool,
+                "error": str (if any)
+              }
+    """
+    result = {
+        "file_path": file_path,
+        "hex_dump": "",
+        "file_size": 0,
+        "truncated": False,
+        "error": None,
+    }
+
+    try:
+        # Check if file exists and get size
+        if not os.path.exists(file_path):
+            result["error"] = f"File not found: {file_path}"
+            return result
+
+        file_size = os.path.getsize(file_path)
+        result["file_size"] = file_size
+
+        # Check if we need to truncate
+        if file_size > max_bytes:
+            result["truncated"] = True
+
+        # Use xxd to generate hex dump with limit
+        cmd = ["xxd", "-l", str(max_bytes), file_path]
+
+        try:
+            process_result = subprocess.run(
+                cmd, capture_output=True, text=True, timeout=30
+            )
+
+            if process_result.returncode == 0:
+                result["hex_dump"] = process_result.stdout
+            else:
+                result["error"] = f"xxd failed: {process_result.stderr}"
+
+        except subprocess.TimeoutExpired:
+            result["error"] = "xxd command timed out"
+        except FileNotFoundError:
+            result["error"] = "xxd command not found - please install xxd utility"
+
+    except Exception as e:
+        result["error"] = f"Error generating hex dump: {str(e)}"
+
+    return result
+
+
+def generate_hex_dumps_for_files(file_paths, max_bytes=1024):
+    """
+    Generate hex dumps for multiple files.
+
+    Args:
+        file_paths (list): List of file paths to dump
+        max_bytes (int): Maximum bytes per file dump
+
+    Returns:
+        list: List of hex dump results
+    """
+    dumps = []
+
+    for file_path in file_paths:
+        dump_result = generate_hex_dump(file_path, max_bytes)
+        dumps.append(dump_result)
+
+    return dumps
+
+
+def extract_strings_from_file(file_path, min_length=4):
+    """
+    Extract ASCII/UTF-8 strings from binary files.
+
+    Args:
+        file_path (str): Path to the file to extract strings from
+        min_length (int): Minimum string length to extract (default: 4)
+
+    Returns:
+        dict: Dictionary containing extracted strings:
+              {
+                "file_path": str,
+                "strings": list,
+                "count": int,
+                "error": str (if any)
+              }
+    """
+    result = {"file_path": file_path, "strings": [], "count": 0, "error": None}
+
+    try:
+        if not os.path.exists(file_path):
+            result["error"] = f"File not found: {file_path}"
+            return result
+
+        # Read file in binary mode
+        with open(file_path, "rb") as f:
+            data = f.read()
+
+        # Extract printable ASCII strings
+        ascii_strings = []
+        current_string = ""
+
+        for byte in data:
+            char = chr(byte) if byte < 128 else None
+            if char and char in string.printable and char not in "\t\r\n\x0b\x0c":
+                current_string += char
+            else:
+                if len(current_string) >= min_length:
+                    ascii_strings.append(current_string)
+                current_string = ""
+
+        # Don't forget the last string
+        if len(current_string) >= min_length:
+            ascii_strings.append(current_string)
+
+        # Try to extract UTF-8 strings as well
+        try:
+            text = data.decode("utf-8", errors="ignore")
+            # Find sequences of printable characters
+            import re
+
+            utf8_strings = re.findall(r"[^\x00-\x1f\x7f-\x9f]{4,}", text)
+
+            # Combine and deduplicate
+            all_strings = list(set(ascii_strings + utf8_strings))
+            all_strings = [
+                s.strip() for s in all_strings if len(s.strip()) >= min_length
+            ]
+
+            result["strings"] = sorted(all_strings)
+            result["count"] = len(all_strings)
+
+        except Exception as e:
+            result["strings"] = ascii_strings
+            result["count"] = len(ascii_strings)
+
+    except Exception as e:
+        result["error"] = f"Error extracting strings: {str(e)}"
+
+    return result
+
+
+def extract_and_scan_zip(zip_path, temp_dir=None):
+    """
+    Extract ZIP/JAR/APK archives and scan contents with ExtractorCLI.
+
+    Args:
+        zip_path (str): Path to the ZIP archive
+        temp_dir (str): Temporary directory for extraction
+
+    Returns:
+        dict: Dictionary containing extraction results:
+              {
+                "archive_path": str,
+                "extracted_files": list,
+                "scan_results": dict,
+                "error": str (if any)
+              }
+    """
+    result = {
+        "archive_path": zip_path,
+        "extracted_files": [],
+        "scan_results": {},
+        "error": None,
+    }
+
+    try:
+        if not os.path.exists(zip_path):
+            result["error"] = f"Archive not found: {zip_path}"
+            return result
+
+        # Create temporary directory
+        if temp_dir is None:
+            temp_dir = tempfile.mkdtemp(prefix="extractorcli_zip_")
+
+        # Extract archive
+        with zipfile.ZipFile(zip_path, "r") as zip_ref:
+            zip_ref.extractall(temp_dir)
+            result["extracted_files"] = zip_ref.namelist()
+
+        # Scan extracted files
+        extracted_content = {}
+        for root, dirs, files in os.walk(temp_dir):
+            for file in files:
+                file_path = os.path.join(root, file)
+                rel_path = os.path.relpath(file_path, temp_dir)
+
+                try:
+                    # Read file content for scanning
+                    with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
+                        content = f.read()
+                        if content.strip():
+                            extracted_content[rel_path] = content
+                except Exception:
+                    # For binary files, just note their presence
+                    extracted_content[rel_path] = f"[Binary file: {file_path}]"
+
+        result["scan_results"] = extracted_content
+
+    except zipfile.BadZipFile:
+        result["error"] = f"Invalid ZIP archive: {zip_path}"
+    except Exception as e:
+        result["error"] = f"Error extracting archive: {str(e)}"
+
+    return result
+
+
+def check_cors_headers(headers_text):
+    """
+    Check for CORS vulnerabilities in HTTP headers.
+
+    Args:
+        headers_text (str): HTTP headers as text
+
+    Returns:
+        dict: CORS analysis results
+    """
+    result = {"cors_issues": [], "headers_found": [], "vulnerabilities": []}
+
+    # Look for CORS headers
+    cors_headers = [
+        "Access-Control-Allow-Origin",
+        "Access-Control-Allow-Credentials",
+        "Access-Control-Allow-Methods",
+        "Access-Control-Allow-Headers",
+    ]
+
+    lines = headers_text.split("\n")
+    for line in lines:
+        line = line.strip()
+        for header in cors_headers:
+            if line.lower().startswith(header.lower() + ":"):
+                value = line.split(":", 1)[1].strip()
+                result["headers_found"].append(f"{header}: {value}")
+
+                # Check for dangerous configurations
+                if header == "Access-Control-Allow-Origin" and value == "*":
+                    result["vulnerabilities"].append(
+                        {
+                            "type": "Wildcard CORS Origin",
+                            "header": f"{header}: {value}",
+                            "severity": "HIGH",
+                            "description": "Allows any domain to make cross-origin requests",
+                        }
+                    )
+
+                if (
+                    header == "Access-Control-Allow-Credentials"
+                    and value.lower() == "true"
+                ):
+                    # Check if also has wildcard origin
+                    for other_line in lines:
+                        if (
+                            "access-control-allow-origin" in other_line.lower()
+                            and "*" in other_line
+                        ):
+                            result["vulnerabilities"].append(
+                                {
+                                    "type": "CORS Credentials with Wildcard",
+                                    "header": f"{header}: {value}",
+                                    "severity": "CRITICAL",
+                                    "description": "Allows credentials with wildcard origin",
+                                }
+                            )
+
+    return result
+
+
+def analyze_csp_header(csp_header):
+    """
+    Analyze Content-Security-Policy headers for security issues.
+
+    Args:
+        csp_header (str): CSP header value
+
+    Returns:
+        dict: CSP analysis results
+    """
+    result = {"directives": {}, "unsafe_items": [], "sources": [], "issues": []}
+
+    if not csp_header:
+        return result
+
+    # Parse CSP directives
+    directives = csp_header.split(";")
+
+    for directive in directives:
+        directive = directive.strip()
+        if not directive:
+            continue
+
+        parts = directive.split()
+        if not parts:
+            continue
+
+        directive_name = parts[0]
+        sources = parts[1:] if len(parts) > 1 else []
+
+        result["directives"][directive_name] = sources
+        result["sources"].extend(sources)
+
+        # Check for unsafe configurations
+        for source in sources:
+            if source == "*":
+                result["unsafe_items"].append(
+                    {
+                        "directive": directive_name,
+                        "value": source,
+                        "type": "Wildcard source",
+                        "severity": "HIGH",
+                    }
+                )
+                result["issues"].append(f"⚠️  {directive_name} allows wildcard (*)")
+
+            elif source in ["'unsafe-inline'", "'unsafe-eval'"]:
+                result["unsafe_items"].append(
+                    {
+                        "directive": directive_name,
+                        "value": source,
+                        "type": "Unsafe directive",
+                        "severity": "MEDIUM",
+                    }
+                )
+                result["issues"].append(f"⚠️  {directive_name} allows {source}")
+
+            elif source.startswith("data:"):
+                result["unsafe_items"].append(
+                    {
+                        "directive": directive_name,
+                        "value": source,
+                        "type": "Data URI",
+                        "severity": "LOW",
+                    }
+                )
+
+    return result
+
+
 # Enhanced regex patterns for better extraction
 URL_REGEX = re.compile(r"https?://[^\s\"'<>\[\](){}]+")
 EMAIL_REGEX = re.compile(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b")
@@ -35,6 +497,15 @@ AUTH_REGEX = re.compile(
 )
 API_REGEX = re.compile(r"/(api|v1|v2|v3|rest|graphql)[^\"'\s<>]*", re.IGNORECASE)
 SWAGGER_REGEX = re.compile(r"/(swagger|openapi|docs|redoc)[^\"'\s<>]*", re.IGNORECASE)
+
+# JWT pattern - three Base64 segments separated by dots
+JWT_REGEX = re.compile(r"\b[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+\b")
+
+# Base64 pattern - at least 20 characters
+BASE64_REGEX = re.compile(r"\b[A-Za-z0-9+/]{20,}={0,2}\b")
+
+# WebSocket endpoints
+WS_REGEX = re.compile(r"\bwss?://[^\s\"'<>\[\](){}]+", re.IGNORECASE)
 
 # Enhanced patterns for API documentation - more precise matching
 # Enhanced GraphQL patterns - includes common variations and typos
@@ -131,6 +602,266 @@ CRYPTO_WALLET_REGEX = re.compile(
 API_ENDPOINT_SECRET_REGEX = re.compile(
     r"(?:secret|key|token|password|pwd|api_key)[\"\']?\s*:\s*[\"\']([a-zA-Z0-9+/=_-]{10,})[\"\']?"
 )
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# 🔍 TRUFFLEHOG INTEGRATION FUNCTIONS
+# ═══════════════════════════════════════════════════════════════════════════════
+
+
+def run_trufflehog_scan(
+    content,
+    config_file=None,
+    rules_file=None,
+    exclude_detectors=None,
+    include_detectors=None,
+    concurrency=8,
+    depth=100,
+    archive_scan=False,
+    verified_only=False,
+    no_verification=False,
+    entropy_threshold=3.0,
+    verbose=False,
+):
+    """
+    Run TruffleHog scan on content and return found secrets.
+
+    Args:
+        content (str): Content to scan for secrets
+        config_file (str): Path to TruffleHog config file
+        rules_file (str): Path to custom rules file
+        exclude_detectors (list): List of detectors to exclude
+        include_detectors (list): List of detectors to include
+        concurrency (int): Number of concurrent workers
+        depth (int): Maximum scan depth
+        archive_scan (bool): Enable archive scanning
+        verified_only (bool): Only return verified secrets
+        no_verification (bool): Skip verification
+        entropy_threshold (float): Minimum entropy threshold
+        verbose (bool): Verbose output
+
+    Returns:
+        list: List of found secrets with metadata
+    """
+    try:
+        import tempfile
+        import json
+
+        # Create temporary file with content
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".txt", delete=False
+        ) as tmp_file:
+            tmp_file.write(content)
+            tmp_file_path = tmp_file.name
+
+        # Build TruffleHog command
+        cmd = ["trufflehog", "filesystem", tmp_file_path]
+
+        # Add configuration options
+        if config_file:
+            cmd.extend(["--config", config_file])
+
+        if rules_file:
+            cmd.extend(["--rules", rules_file])
+
+        if exclude_detectors:
+            for detector in exclude_detectors:
+                cmd.extend(["--exclude-detectors", detector])
+
+        if include_detectors:
+            for detector in include_detectors:
+                cmd.extend(["--include-detectors", detector])
+
+        cmd.extend(["--concurrency", str(concurrency)])
+
+        if archive_scan:
+            cmd.append("--archive")
+
+        if verified_only:
+            cmd.append("--only-verified")
+
+        if no_verification:
+            cmd.append("--no-verification")
+
+        # Always use JSON output for parsing
+        cmd.append("--json")
+
+        if verbose:
+            click.echo(f"🔍 [TRUFFLEHOG] Running: {' '.join(cmd)}")
+
+        # Execute TruffleHog
+        result = subprocess.run(
+            cmd, capture_output=True, text=True, timeout=300  # 5 minute timeout
+        )
+
+        # Clean up temp file
+        Path(tmp_file_path).unlink(missing_ok=True)
+
+        if result.returncode != 0:
+            if verbose:
+                click.echo(f"⚠️ [TRUFFLEHOG] Warning: {result.stderr}")
+            return []
+
+        # Parse JSON results
+        secrets = []
+        for line in result.stdout.strip().split("\n"):
+            if line.strip():
+                try:
+                    secret_data = json.loads(line)
+
+                    # Apply entropy filtering - check if entropy field exists
+                    entropy = 0
+                    if "entropy" in secret_data:
+                        entropy = secret_data.get("entropy", 0)
+                    elif isinstance(secret_data.get("Raw"), str):
+                        # Calculate basic entropy for the raw secret
+                        raw_secret = secret_data.get("Raw", "")
+                        if raw_secret and len(raw_secret) > 1:
+                            # Simple entropy calculation without math import
+                            char_counts = {}
+                            for c in raw_secret:
+                                char_counts[c] = char_counts.get(c, 0) + 1
+
+                            entropy = 0
+                            total_chars = len(raw_secret)
+                            for count in char_counts.values():
+                                p = count / total_chars
+                                if p > 0:
+                                    # Use natural log approximation
+                                    entropy -= p * (p**0.5)  # Simple approximation
+
+                    if entropy < entropy_threshold:
+                        continue
+
+                    # Extract relevant information
+                    secret_info = {
+                        "detector_name": secret_data.get("DetectorName", "unknown"),
+                        "detector_type": secret_data.get("DetectorType", "unknown"),
+                        "raw_secret": secret_data.get("Raw", ""),
+                        "redacted": secret_data.get("Redacted", ""),
+                        "entropy": entropy,
+                        "verified": secret_data.get("Verified", False),
+                        "source_metadata": secret_data.get("SourceMetadata", {}),
+                        "extra_data": secret_data.get("ExtraData", {}),
+                        "structured_data": secret_data.get("StructuredData", {}),
+                    }
+
+                    secrets.append(secret_info)
+
+                except json.JSONDecodeError:
+                    continue
+
+        if verbose:
+            click.echo(f"✅ [TRUFFLEHOG] Found {len(secrets)} secrets")
+
+        return secrets
+
+    except subprocess.TimeoutExpired:
+        if verbose:
+            click.echo("⏱️ [TRUFFLEHOG] Scan timeout reached")
+        return []
+    except subprocess.CalledProcessError as e:
+        if verbose:
+            click.echo(f"❌ [TRUFFLEHOG] Scan failed: {e}")
+        return []
+    except FileNotFoundError:
+        if verbose:
+            click.echo(
+                "❌ [TRUFFLEHOG] TruffleHog not found in PATH. Install with: pip install trufflehog"
+            )
+        return []
+    except Exception as e:
+        if verbose:
+            click.echo(f"❌ [TRUFFLEHOG] Unexpected error: {e}")
+        return []
+
+
+def process_trufflehog_results(
+    secrets, auto_tag_enabled=False, risk_scoring_enabled=False
+):
+    """
+    Process TruffleHog results and convert to ExtractorCLI format.
+
+    Args:
+        secrets (list): List of secrets from TruffleHog
+        auto_tag_enabled (bool): Whether to apply auto-tagging
+        risk_scoring_enabled (bool): Whether to apply risk scoring
+
+    Returns:
+        list: Processed secrets in ExtractorCLI format
+    """
+    processed_secrets = []
+
+    detector_risk_map = {
+        "aws": 9,
+        "github": 8,
+        "google": 8,
+        "slack": 7,
+        "stripe": 8,
+        "twilio": 7,
+        "mailgun": 6,
+        "sendgrid": 6,
+        "discord": 5,
+        "telegram": 5,
+        "private_key": 9,
+        "ssh_key": 8,
+        "jwt": 6,
+        "database": 9,
+        "openai": 8,
+        "anthropic": 8,
+        "azure": 8,
+        "gcp": 8,
+        "docker": 7,
+        "heroku": 7,
+        "cloudflare": 7,
+    }
+
+    for secret in secrets:
+        detector = secret["detector_name"].lower()
+
+        # Calculate risk score
+        base_risk = detector_risk_map.get(detector, 5)
+        entropy_bonus = (
+            min(2, int(secret["entropy"] - 3)) if secret["entropy"] > 3 else 0
+        )
+        verification_bonus = 2 if secret["verified"] else 0
+
+        risk_score = min(10, base_risk + entropy_bonus + verification_bonus)
+
+        # Generate tags
+        tags = ["secret", "trufflehog"]
+        if secret["verified"]:
+            tags.append("verified")
+        if secret["entropy"] > 4.5:
+            tags.append("high_entropy")
+        if detector in ["aws", "github", "google", "azure", "gcp"]:
+            tags.append("cloud_service")
+        if detector in ["private_key", "ssh_key"]:
+            tags.append("cryptographic_key")
+        if detector in ["database", "mongodb", "mysql", "postgres"]:
+            tags.append("database_credential")
+
+        # Auto-tag if enabled
+        if auto_tag_enabled:
+            tags.extend(["sensitive", "credential"])
+
+        processed_secret = {
+            "content": secret["redacted"] or secret["raw_secret"][:50] + "...",
+            "raw_content": secret["raw_secret"],
+            "detector": secret["detector_name"],
+            "detector_type": secret["detector_type"],
+            "entropy": secret["entropy"],
+            "verified": secret["verified"],
+            "tags": tags,
+            "risk_level": risk_score if risk_scoring_enabled else 0,
+            "source_metadata": secret["source_metadata"],
+            "extra_data": secret["extra_data"],
+            "structured_data": secret["structured_data"],
+        }
+
+        processed_secrets.append(processed_secret)
+
+    return processed_secrets
 
 
 @click.command(name="extractorcli")
@@ -321,6 +1052,126 @@ API_ENDPOINT_SECRET_REGEX = re.compile(
     default="medium",
     help="Detection sensitivity: low,medium,high,paranoid",
 )
+@click.option(
+    "--entropy",
+    is_flag=True,
+    help="Calculate and display Shannon entropy for extracted values",
+)
+@click.option("--jwt", is_flag=True, help="Detect and decode JWT tokens")
+@click.option("--base64", is_flag=True, help="Detect and decode Base64 encoded strings")
+@click.option("--har", is_flag=True, help="Parse HAR files and extract HTTP requests")
+@click.option("--postman", is_flag=True, help="Parse Postman collection files")
+@click.option(
+    "--ws", is_flag=True, help="Detect WebSocket endpoints (ws:// and wss://)"
+)
+@click.option(
+    "--emails", is_flag=True, help="Enhanced email detection with source tracking"
+)
+@click.option(
+    "--auto-tag",
+    is_flag=True,
+    help="Automatically tag findings using intelligent classification",
+)
+@click.option(
+    "--tag-rules",
+    type=click.Path(exists=True),
+    help="JSON file with custom tagging rules",
+)
+@click.option(
+    "--tag-output",
+    type=click.Path(),
+    help="Save tagged results to separate file (JSON format)",
+)
+@click.option("--risk-scoring", is_flag=True, help="Enable risk scoring for findings")
+@click.option(
+    "--hex-dump",
+    is_flag=True,
+    help="Generate hex dumps of input files using xxd and include in report",
+)
+@click.option(
+    "--strings",
+    is_flag=True,
+    help="Extract ASCII/UTF-8 strings from binary files using Python",
+)
+@click.option(
+    "--zip",
+    is_flag=True,
+    help="Extract and scan .zip/.jar/.apk archives with ExtractorCLI",
+)
+@click.option(
+    "--cors",
+    is_flag=True,
+    help="Detect Access-Control-Allow-Origin: * vulnerabilities in headers",
+)
+@click.option(
+    "--csp",
+    is_flag=True,
+    help="Analyze Content-Security-Policy headers and highlight unsafe directives",
+)
+# TruffleHog Integration Options
+@click.option(
+    "--trufflehog",
+    is_flag=True,
+    help="Enable TruffleHog secret scanning integration",
+)
+@click.option(
+    "--trufflehog-config",
+    type=click.Path(exists=True),
+    help="Path to TruffleHog configuration file",
+)
+@click.option(
+    "--trufflehog-rules",
+    type=click.Path(exists=True),
+    help="Path to custom TruffleHog rules file",
+)
+@click.option(
+    "--trufflehog-exclude",
+    multiple=True,
+    help="Detectors to exclude from TruffleHog scan (can be used multiple times)",
+)
+@click.option(
+    "--trufflehog-include",
+    multiple=True,
+    help="Only run specified detectors in TruffleHog scan (can be used multiple times)",
+)
+@click.option(
+    "--trufflehog-concurrency",
+    type=int,
+    default=8,
+    help="Number of concurrent TruffleHog workers (default: 8)",
+)
+@click.option(
+    "--trufflehog-depth",
+    type=int,
+    default=100,
+    help="Maximum depth for TruffleHog scanning (default: 100)",
+)
+@click.option(
+    "--trufflehog-archive",
+    is_flag=True,
+    help="Enable TruffleHog scanning of archive files (zip, tar, etc.)",
+)
+@click.option(
+    "--trufflehog-json",
+    is_flag=True,
+    help="Output TruffleHog results in JSON format",
+)
+@click.option(
+    "--trufflehog-verified",
+    is_flag=True,
+    help="Only show verified secrets from TruffleHog",
+)
+@click.option(
+    "--trufflehog-filter-entropy",
+    type=float,
+    default=3.0,
+    help="Minimum entropy threshold for TruffleHog secrets (default: 3.0)",
+)
+@click.option(
+    "--trufflehog-no-verification",
+    is_flag=True,
+    help="Skip verification of found secrets (faster but less accurate)",
+)
 def extractor(
     input,
     input_file,
@@ -399,6 +1250,35 @@ def extractor(
     watch_dir,
     scan_cloud,
     sensitivity,
+    entropy,
+    jwt,
+    base64,
+    har,
+    postman,
+    ws,
+    emails,
+    auto_tag,
+    tag_rules,
+    tag_output,
+    risk_scoring,
+    hex_dump,
+    strings,
+    zip,
+    cors,
+    csp,
+    # TruffleHog parameters
+    trufflehog,
+    trufflehog_config,
+    trufflehog_rules,
+    trufflehog_exclude,
+    trufflehog_include,
+    trufflehog_concurrency,
+    trufflehog_depth,
+    trufflehog_archive,
+    trufflehog_json,
+    trufflehog_verified,
+    trufflehog_filter_entropy,
+    trufflehog_no_verification,
 ):
     """
     🧲 ExtractorCLI v2.0 - Advanced Data Extraction & Security Analysis Tool
@@ -550,6 +1430,12 @@ def extractor(
             "crypto",  # New: Cryptocurrency addresses
             "social",  # New: Social media handles/links
             "pii",  # New: Personally Identifiable Information
+            "jwt",  # New: JWT tokens
+            "base64_enhanced",  # New: Enhanced Base64 detection
+            "websocket",  # New: WebSocket endpoints
+            "email_enhanced",  # New: Enhanced email detection
+            "har",  # New: HAR file requests
+            "postman",  # New: Postman collection requests
         ]
     }
 
@@ -567,10 +1453,10 @@ def extractor(
                 click.echo(f"   📌 Found {len(urls)} URLs")
 
         if "email" in selected:
-            emails = EMAIL_REGEX.findall(text)
-            results["email"].update(emails)
-            if verbose and emails:
-                click.echo(f"   📧 Found {len(emails)} emails")
+            email_list = EMAIL_REGEX.findall(text)
+            results["email"].update(email_list)
+            if verbose and email_list:
+                click.echo(f"   📧 Found {len(email_list)} emails")
 
         if "form" in selected:
             forms = FORM_REGEX.findall(text)
@@ -801,6 +1687,101 @@ def extractor(
             if verbose and all_secrets:
                 click.echo(f"   🔑 Found {len(all_secrets)} potential secrets")
 
+            # ═══════════════════════════════════════════════════════════════════════════════
+            # 🔍 TRUFFLEHOG INTEGRATION
+            # ═══════════════════════════════════════════════════════════════════════════════
+
+            if trufflehog:
+                if verbose:
+                    click.echo("🔍 [TRUFFLEHOG] Starting enhanced secret scanning...")
+
+                # Run TruffleHog scan
+                trufflehog_secrets = run_trufflehog_scan(
+                    content=text,
+                    config_file=trufflehog_config,
+                    rules_file=trufflehog_rules,
+                    exclude_detectors=trufflehog_exclude,
+                    include_detectors=trufflehog_include,
+                    concurrency=trufflehog_concurrency,
+                    depth=trufflehog_depth,
+                    archive_scan=trufflehog_archive,
+                    verified_only=trufflehog_verified,
+                    no_verification=trufflehog_no_verification,
+                    entropy_threshold=trufflehog_filter_entropy,
+                    verbose=verbose,
+                )
+
+                if trufflehog_secrets:
+                    # Process TruffleHog results
+                    processed_secrets = process_trufflehog_results(
+                        trufflehog_secrets,
+                        auto_tag_enabled=auto_tag,
+                        risk_scoring_enabled=risk_scoring,
+                    )
+
+                    # Add to results with special formatting
+                    if "trufflehog_secrets" not in results:
+                        results["trufflehog_secrets"] = set()
+
+                    for secret in processed_secrets:
+                        # Create enhanced secret entry
+                        secret_entry = {
+                            "content": secret["content"],
+                            "detector": secret["detector"],
+                            "detector_type": secret["detector_type"],
+                            "entropy": secret["entropy"],
+                            "verified": secret["verified"],
+                            "tags": secret["tags"],
+                            "risk_level": secret["risk_level"],
+                            "raw_content": (
+                                secret["raw_content"]
+                                if not trufflehog_verified
+                                else None
+                            ),
+                            "source_metadata": secret["source_metadata"],
+                            "extra_data": secret["extra_data"],
+                        }
+
+                        results["trufflehog_secrets"].add(
+                            json.dumps(secret_entry, sort_keys=True)
+                        )
+
+                    if verbose:
+                        verified_count = sum(
+                            1 for s in processed_secrets if s["verified"]
+                        )
+                        high_risk_count = sum(
+                            1 for s in processed_secrets if s["risk_level"] >= 7
+                        )
+                        click.echo(
+                            f"✅ [TRUFFLEHOG] Found {len(processed_secrets)} secrets"
+                        )
+                        click.echo(
+                            f"   📊 Verified: {verified_count}, High Risk: {high_risk_count}"
+                        )
+
+                        # Show top detectors
+                        detector_counts = {}
+                        for secret in processed_secrets:
+                            detector = secret["detector"]
+                            detector_counts[detector] = (
+                                detector_counts.get(detector, 0) + 1
+                            )
+
+                        if detector_counts:
+                            top_detectors = sorted(
+                                detector_counts.items(),
+                                key=lambda x: x[1],
+                                reverse=True,
+                            )[:5]
+                            click.echo(
+                                f"   🔍 Top Detectors: {', '.join([f'{d}({c})' for d, c in top_detectors])}"
+                            )
+
+                else:
+                    if verbose:
+                        click.echo("ℹ️ [TRUFFLEHOG] No secrets found")
+
         # New extraction categories
         if "phone" in selected:
             phones = PHONE_REGEX.findall(text)
@@ -881,6 +1862,154 @@ def extractor(
             results["base64"].update(base64_strings)
             if verbose and base64_strings:
                 click.echo(f"   📊 Found {len(base64_strings)} base64 strings")
+
+        # New JWT detection
+        if jwt or "jwt" in selected:
+            jwt_tokens = JWT_REGEX.findall(text)
+            results["jwt"] = results.get("jwt", set())
+            results["jwt"].update(jwt_tokens)
+            if verbose and jwt_tokens:
+                click.echo(f"   🎫 Found {len(jwt_tokens)} JWT tokens")
+
+        # Enhanced Base64 detection
+        if base64 or "base64_enhanced" in selected:
+            base64_strings = BASE64_REGEX.findall(text)
+            results["base64_enhanced"] = results.get("base64_enhanced", set())
+            results["base64_enhanced"].update(base64_strings)
+            if verbose and base64_strings:
+                click.echo(f"   🔓 Found {len(base64_strings)} Base64 strings")
+
+        # WebSocket endpoints
+        if ws or "websocket" in selected:
+            ws_endpoints = WS_REGEX.findall(text)
+            results["websocket"] = results.get("websocket", set())
+            results["websocket"].update(ws_endpoints)
+            if verbose and ws_endpoints:
+                click.echo(f"   🔌 Found {len(ws_endpoints)} WebSocket endpoints")
+
+        # Enhanced email detection
+        if emails or "email_enhanced" in selected:
+            email_addresses = EMAIL_REGEX.findall(text)
+            results["email_enhanced"] = results.get("email_enhanced", set())
+            results["email_enhanced"].update(email_addresses)
+            if verbose and email_addresses:
+                click.echo(f"   📬 Found {len(email_addresses)} email addresses")
+
+    def decode_jwt_token(jwt_token):
+        """Decode JWT token and return header and payload"""
+        import base64
+        import json
+
+        try:
+            parts = jwt_token.split(".")
+            if len(parts) != 3:
+                return None
+
+            header_encoded, payload_encoded, signature = parts
+
+            # Add padding if needed
+            header_encoded += "=" * (4 - len(header_encoded) % 4)
+            payload_encoded += "=" * (4 - len(payload_encoded) % 4)
+
+            # Decode
+            header = base64.urlsafe_b64decode(header_encoded)
+            payload = base64.urlsafe_b64decode(payload_encoded)
+
+            return {
+                "header": json.loads(header.decode("utf-8")),
+                "payload": json.loads(payload.decode("utf-8")),
+                "signature": signature,
+            }
+        except Exception:
+            return None
+
+    def decode_base64_string(base64_string):
+        """Decode Base64 string and try to parse as JSON"""
+        import base64
+        import json
+
+        try:
+            # Add padding if needed
+            base64_string += "=" * (4 - len(base64_string) % 4)
+            decoded = base64.b64decode(base64_string)
+            decoded_str = decoded.decode("utf-8")
+
+            # Try to parse as JSON
+            try:
+                json_data = json.loads(decoded_str)
+                return {"decoded": decoded_str, "json": json_data, "is_json": True}
+            except json.JSONDecodeError:
+                return {"decoded": decoded_str, "is_json": False}
+        except Exception:
+            return None
+
+    def parse_har_file(file_path):
+        """Parse HAR file and extract HTTP requests"""
+        import json
+
+        try:
+            with open(file_path, "r", encoding="utf-8") as f:
+                har_data = json.load(f)
+
+            requests_data = []
+            entries = har_data.get("log", {}).get("entries", [])
+
+            for entry in entries:
+                request = entry.get("request", {})
+                requests_data.append(
+                    {
+                        "url": request.get("url", ""),
+                        "method": request.get("method", ""),
+                        "headers": {
+                            h["name"]: h["value"] for h in request.get("headers", [])
+                        },
+                        "source": "har_file",
+                    }
+                )
+
+            return requests_data
+        except Exception:
+            return []
+
+    def parse_postman_collection(file_path):
+        """Parse Postman collection and extract requests"""
+        import json
+
+        try:
+            with open(file_path, "r", encoding="utf-8") as f:
+                collection = json.load(f)
+
+            requests_data = []
+
+            def extract_from_items(items):
+                for item in items:
+                    if "request" in item:
+                        request = item["request"]
+                        if isinstance(request, dict):
+                            url = request.get("url", {})
+                            if isinstance(url, dict):
+                                url_str = url.get("raw", "")
+                            else:
+                                url_str = str(url)
+
+                            requests_data.append(
+                                {
+                                    "name": item.get("name", ""),
+                                    "url": url_str,
+                                    "method": request.get("method", ""),
+                                    "source": "postman_collection",
+                                }
+                            )
+
+                    if "item" in item:
+                        extract_from_items(item["item"])
+
+            if "item" in collection:
+                extract_from_items(collection["item"])
+
+            return requests_data
+        except Exception:
+            return []
 
     def fetch_url_content(url):
         """Fetch content from URL with proper error handling"""
@@ -1014,6 +2143,37 @@ def extractor(
     def process_file(path):
         """Enhanced file processing with type detection"""
         try:
+            # Special handling for HAR files
+            if har and path.suffix.lower() == ".har":
+                if verbose:
+                    click.echo(f"🗂️  [HAR] Parsing HAR file: {path}")
+                har_requests = parse_har_file(str(path))
+                results["har"] = results.get("har", set())
+                for req in har_requests:
+                    results["har"].add(f"{req['method']} {req['url']}")
+                    # Also extract URLs for further processing
+                    results["url"].add(req["url"])
+                if verbose and har_requests:
+                    click.echo(f"   📊 Found {len(har_requests)} HAR requests")
+                return
+
+            # Special handling for Postman collections
+            if postman and path.suffix.lower() == ".json":
+                if verbose:
+                    click.echo(f"📮 [POSTMAN] Parsing collection: {path}")
+                postman_requests = parse_postman_collection(str(path))
+                if postman_requests:  # Only if it's actually a Postman collection
+                    results["postman"] = results.get("postman", set())
+                    for req in postman_requests:
+                        results["postman"].add(f"{req['method']} {req['url']}")
+                        # Also extract URLs for further processing
+                        results["url"].add(req["url"])
+                    if verbose:
+                        click.echo(
+                            f"   📊 Found {len(postman_requests)} Postman requests"
+                        )
+                    return
+
             content = path.read_text(encoding="utf-8", errors="ignore")
 
             if smart_detect:
@@ -1124,8 +2284,453 @@ def extractor(
                 )
             process_urls_concurrent(urls_to_fetch)
 
+    # ═══════════════════════════════════════════════════════════════════════════════
+    # 🔍 POST-PROCESSING: JWT DECODING, BASE64 ANALYSIS, ENTROPY DETECTION
+    # ═══════════════════════════════════════════════════════════════════════════════
+
+    # JWT token decoding
+    if jwt and "jwt" in results:
+        jwt_decoded = []
+        for token in results["jwt"]:
+            decoded = decode_jwt_token(token)
+            if decoded:
+                jwt_decoded.append(
+                    {
+                        "token": token,
+                        "header": decoded["header"],
+                        "payload": decoded["payload"],
+                    }
+                )
+                if verbose:
+                    click.echo(f"🎫 [JWT-DECODED] {token[:20]}...")
+
+        # Store decoded JWT data for output
+        if jwt_decoded:
+            results["jwt_decoded"] = set()
+            for item in jwt_decoded:
+                results["jwt_decoded"].add(
+                    f"JWT: {item['token'][:30]}... | Header: {item['header']} | Payload: {item['payload']}"
+                )
+
+    # Enhanced Base64 decoding
+    if base64 and "base64_enhanced" in results:
+        base64_decoded = []
+        for b64_string in results["base64_enhanced"]:
+            if len(b64_string) >= 20:  # Only process longer strings
+                decoded = decode_base64_string(b64_string)
+                if decoded:
+                    base64_decoded.append(
+                        {
+                            "original": b64_string,
+                            "decoded": decoded["decoded"],
+                            "is_json": decoded["is_json"],
+                            "json_data": decoded.get("json"),
+                        }
+                    )
+                    if verbose:
+                        click.echo(f"🔓 [BASE64-DECODED] {b64_string[:20]}...")
+
+        # Store decoded Base64 data for output
+        if base64_decoded:
+            results["base64_decoded"] = set()
+            for item in base64_decoded:
+                if item["is_json"]:
+                    results["base64_decoded"].add(
+                        f"Base64 JSON: {item['original'][:30]}... -> {item['json_data']}"
+                    )
+                else:
+                    results["base64_decoded"].add(
+                        f"Base64: {item['original'][:30]}... -> {item['decoded'][:50]}..."
+                    )
+
+    # High-entropy string detection
+    if entropy:
+        all_strings = []
+        for category, items in results.items():
+            all_strings.extend(list(items))
+
+        high_entropy_strings = detect_entropy_strings(
+            all_strings, threshold=4.0, min_length=20
+        )
+        if high_entropy_strings:
+            results["high_entropy"] = set()
+            for item in high_entropy_strings:
+                results["high_entropy"].add(
+                    f"High Entropy: {item['value']} (H={item['entropy']})"
+                )
+            if verbose:
+                click.echo(
+                    f"🔥 [ENTROPY] Found {len(high_entropy_strings)} high-entropy strings"
+                )
+
+    # ═══════════════════════════════════════════════════════════════════════════════
+    # 🏷️ INTELLIGENT TAGGING AND CLASSIFICATION
+    # ═══════════════════════════════════════════════════════════════════════════════
+
+    tagged_results = []
+    custom_rules = {}
+
+    if auto_tag or tag_rules or tag_output or risk_scoring:
+        if verbose:
+            click.echo("🏷️ [TAGGING] Starting intelligent classification...")
+
+        # Load custom rules if provided
+        if tag_rules:
+            custom_rules = load_custom_rules(tag_rules)
+            if verbose:
+                click.echo(f"📜 [TAGGING] Loaded {len(custom_rules)} custom rules")
+
+        # Create tagged entries for all findings
+        for category, items in results.items():
+            if not items:
+                continue
+
+            for item in items:
+                # Create entry structure compatible with tagger
+                if category in ["url", "email", "domain"]:
+                    # Extract domain from URL/email
+                    if category == "url":
+                        try:
+                            from urllib.parse import urlparse
+
+                            domain = urlparse(item).netloc
+                        except:
+                            domain = item
+                    elif category == "email":
+                        domain = item.split("@")[-1] if "@" in item else item
+                    else:
+                        domain = item
+
+                    entry = {
+                        "domain": domain,
+                        "original_value": item,
+                        "category": category,
+                        "source": "extractorcli",
+                        "ip": "",  # No IP resolution in extractor
+                        "tags": [],
+                    }
+
+                    # Apply auto-tagging
+                    if auto_tag:
+                        try:
+                            auto_tags = tagger_auto_tag(entry)
+                            entry["tags"].extend(auto_tags)
+                        except Exception:
+                            # Fallback if tagger module not available
+                            pass
+
+                    # Apply custom rules
+                    if custom_rules:
+                        additional_tags = apply_custom_rules(entry, custom_rules)
+                        entry["tags"].extend(additional_tags)
+
+                    # Add category-based tags
+                    category_tags = {
+                        "graphql": ["api", "graphql"],
+                        "swagger": ["api", "documentation"],
+                        "api": ["api"],
+                        "auth": ["security", "authentication"],
+                        "secret": ["security", "credentials"],
+                        "jwt": ["security", "token"],
+                        "websocket": ["api", "realtime"],
+                        "admin": ["security", "admin"],
+                        "database": ["database"],
+                        "har": ["testing", "http"],
+                        "postman": ["testing", "api"],
+                    }
+
+                    if category in category_tags:
+                        entry["tags"].extend(category_tags[category])
+
+                    # Remove duplicates
+                    entry["tags"] = list(set(entry["tags"]))
+
+                    # Calculate risk score
+                    if risk_scoring:
+                        entry["risk_score"] = calculate_risk_score(
+                            domain, entry["tags"]
+                        )
+
+                    tagged_results.append(entry)
+                else:
+                    # For non-domain items, create simplified entries
+                    entry = {
+                        "value": item,
+                        "category": category,
+                        "source": "extractorcli",
+                        "tags": category_tags.get(category, [category]),
+                    }
+
+                    if risk_scoring:
+                        # Simple risk scoring for non-domain items
+                        risk_map = {
+                            "secret": 9,
+                            "jwt": 8,
+                            "auth": 7,
+                            "api": 5,
+                            "graphql": 6,
+                            "swagger": 4,
+                            "base64": 3,
+                        }
+                        entry["risk_score"] = risk_map.get(category, 1)
+
+                    tagged_results.append(entry)
+
+        if verbose:
+            click.echo(f"🎯 [TAGGING] Tagged {len(tagged_results)} findings")
+
+        # Save tagged results if requested
+        if tag_output:
+            with open(tag_output, "w", encoding="utf-8") as f:
+                json.dump(tagged_results, f, indent=2, ensure_ascii=False)
+            click.echo(f"🏷️ [TAGGING] Saved tagged results to {tag_output}")
+
     # Filter out empty results and prepare final output
     final = {k: sorted(list(v)) for k, v in results.items() if v}
+
+    # ═══════════════════════════════════════════════════════════════════════════════
+    # 📊 HEX DUMP GENERATION
+    # ═══════════════════════════════════════════════════════════════════════════════
+
+    hex_dumps = []
+    if hex_dump:
+        click.echo("🔍 [HEX] Generating hex dumps...")
+        files_to_dump = []
+
+        # Collect files to dump based on input source
+        source_type, source_data = input_source
+
+        if source_type == "file" and source_data:
+            files_to_dump.append(source_data)
+        elif source_type == "list" and source_data:
+            # Read file list and add those files
+            try:
+                with open(source_data, "r", encoding="utf-8") as f:
+                    for line in f:
+                        line = line.strip()
+                        if line and os.path.exists(line):
+                            files_to_dump.append(line)
+            except Exception as e:
+                click.echo(f"⚠️ [HEX] Error reading file list: {e}")
+
+        # Also include any files found during directory scanning
+        if recursive and watch_dir:
+            for root, dirs, files in os.walk(watch_dir):
+                for file in files:
+                    file_path = os.path.join(root, file)
+                    if os.path.isfile(file_path):
+                        files_to_dump.append(file_path)
+
+        # Generate hex dumps with size limit (1KB by default)
+        if files_to_dump:
+            hex_dumps = generate_hex_dumps_for_files(files_to_dump, max_bytes=1024)
+            click.echo(f"🔍 [HEX] Generated {len(hex_dumps)} hex dumps")
+
+            # Add hex dumps to final results
+            if hex_dumps:
+                final["hex_dumps"] = hex_dumps
+
+    # ═══════════════════════════════════════════════════════════════════════════════
+    # 🔤 STRING EXTRACTION FROM BINARIES
+    # ═══════════════════════════════════════════════════════════════════════════════
+
+    string_results = []
+    if strings:
+        click.echo("🔤 [STRINGS] Extracting strings from binary files...", err=True)
+        files_to_scan = []
+
+        # Collect files to scan based on input source
+        source_type, source_data = input_source
+
+        if source_type == "file" and source_data:
+            files_to_scan.append(source_data)
+        elif source_type == "list" and source_data:
+            try:
+                with open(source_data, "r", encoding="utf-8") as f:
+                    for line in f:
+                        line = line.strip()
+                        if line and os.path.exists(line):
+                            files_to_scan.append(line)
+            except Exception as e:
+                click.echo(f"⚠️ [STRINGS] Error reading file list: {e}")
+
+        # Extract strings from files
+        if files_to_scan:
+            for file_path in files_to_scan:
+                string_result = extract_strings_from_file(file_path, min_length=4)
+                if string_result["strings"]:
+                    string_results.append(string_result)
+                    click.echo(
+                        f"🔤 [STRINGS] {file_path}: {string_result['count']} strings found",
+                        err=True,
+                    )
+                elif string_result["error"]:
+                    click.echo(f"⚠️ [STRINGS] {string_result['error']}", err=True)
+
+            # Add extracted strings to final results
+            if string_results:
+                final["extracted_strings"] = string_results
+
+    # ═══════════════════════════════════════════════════════════════════════════════
+    # 📦 ZIP/JAR/APK EXTRACTION AND SCANNING
+    # ═══════════════════════════════════════════════════════════════════════════════
+
+    zip_results = []
+    if zip:
+        click.echo("📦 [ZIP] Extracting and scanning archives...")
+        archives_to_scan = []
+
+        # Collect archive files to scan
+        source_type, source_data = input_source
+
+        if source_type == "file" and source_data:
+            if source_data.lower().endswith((".zip", ".jar", ".apk")):
+                archives_to_scan.append(source_data)
+        elif source_type == "list" and source_data:
+            try:
+                with open(source_data, "r", encoding="utf-8") as f:
+                    for line in f:
+                        line = line.strip()
+                        if (
+                            line
+                            and os.path.exists(line)
+                            and line.lower().endswith((".zip", ".jar", ".apk"))
+                        ):
+                            archives_to_scan.append(line)
+            except Exception as e:
+                click.echo(f"⚠️ [ZIP] Error reading file list: {e}")
+
+        # Extract and scan archives
+        if archives_to_scan:
+            for archive_path in archives_to_scan:
+                zip_result = extract_and_scan_zip(archive_path)
+                if zip_result["scan_results"]:
+                    zip_results.append(zip_result)
+                    click.echo(
+                        f"📦 [ZIP] {archive_path}: {len(zip_result['extracted_files'])} files extracted"
+                    )
+                elif zip_result["error"]:
+                    click.echo(f"⚠️ [ZIP] {zip_result['error']}")
+
+            # Add ZIP results to final results
+            if zip_results:
+                final["zip_extractions"] = zip_results
+
+    # ═══════════════════════════════════════════════════════════════════════════════
+    # 🌐 CORS VULNERABILITY DETECTION
+    # ═══════════════════════════════════════════════════════════════════════════════
+
+    cors_issues = []
+    if cors:
+        click.echo("🌐 [CORS] Checking for CORS vulnerabilities...", err=True)
+
+        # Check headers in file content and extracted results
+        content_to_check = ""
+
+        # Add file content if available
+        source_type, source_data = input_source
+        if source_type == "file" and source_data and os.path.exists(source_data):
+            try:
+                with open(source_data, "r", encoding="utf-8", errors="ignore") as f:
+                    content_to_check += f.read() + "\n"
+            except Exception:
+                pass
+
+        # Also check extracted results
+        for category, items in final.items():
+            for item in items:
+                if isinstance(item, str):
+                    content_to_check += item + "\n"
+
+        cors_result = check_cors_headers(content_to_check)
+        if cors_result["vulnerabilities"]:
+            cors_issues = cors_result["vulnerabilities"]
+            for vuln in cors_result["vulnerabilities"]:
+                severity_color = (
+                    "🔴"
+                    if vuln["severity"] == "CRITICAL"
+                    else "🟡" if vuln["severity"] == "HIGH" else "🟢"
+                )
+                click.echo(f"{severity_color} [CORS] {vuln['type']}: {vuln['header']}")
+                click.echo(f"    └─ {vuln['description']}")
+
+            # Add CORS issues to final results
+            final["cors_vulnerabilities"] = cors_issues
+
+    # ═══════════════════════════════════════════════════════════════════════════════
+    # 🛡️ CONTENT SECURITY POLICY ANALYSIS
+    # ═══════════════════════════════════════════════════════════════════════════════
+
+    csp_analysis = []
+    if csp:
+        click.echo("🛡️ [CSP] Analyzing Content-Security-Policy headers...", err=True)
+
+        # Check CSP headers in file content and extracted results
+        content_to_check = ""
+
+        # Add file content if available
+        source_type, source_data = input_source
+        if source_type == "file" and source_data and os.path.exists(source_data):
+            try:
+                with open(source_data, "r", encoding="utf-8", errors="ignore") as f:
+                    content_to_check += f.read() + "\n"
+            except Exception:
+                pass
+
+        # Also check extracted results
+        for category, items in final.items():
+            for item in items:
+                if isinstance(item, str):
+                    content_to_check += item + "\n"
+
+        # Find CSP headers
+        csp_headers = []
+        lines = content_to_check.split("\n")
+        for line in lines:
+            if "content-security-policy" in line.lower():
+                # Extract CSP value
+                if ":" in line:
+                    csp_value = line.split(":", 1)[1].strip()
+                    csp_headers.append(csp_value)
+
+        if csp_headers:
+            for i, csp_header in enumerate(csp_headers):
+                csp_result = analyze_csp_header(csp_header)
+                csp_analysis.append(
+                    {
+                        "header_index": i + 1,
+                        "header_value": csp_header,
+                        "analysis": csp_result,
+                    }
+                )
+
+                click.echo(
+                    f"🛡️ [CSP] Found CSP header with {len(csp_result['directives'])} directives"
+                )
+
+                # Show sources
+                if csp_result["sources"]:
+                    unique_sources = list(set(csp_result["sources"]))
+                    click.echo(
+                        f"    📍 Sources: {', '.join(unique_sources[:10])}{'...' if len(unique_sources) > 10 else ''}"
+                    )
+
+                # Show issues
+                for issue in csp_result["issues"]:
+                    click.echo(f"    {issue}")
+
+                # Highlight dangerous items
+                for unsafe_item in csp_result["unsafe_items"]:
+                    severity_color = "🔴" if unsafe_item["severity"] == "HIGH" else "🟡"
+                    click.echo(
+                        f"    {severity_color} {unsafe_item['directive']}: {unsafe_item['value']} ({unsafe_item['type']})"
+                    )
+        else:
+            click.echo("🛡️ [CSP] No Content-Security-Policy headers found", err=True)
+
+        # Add CSP analysis to final results
+        if csp_analysis:
+            final["csp_analysis"] = csp_analysis
 
     # ═══════════════════════════════════════════════════════════════════════════════
     # 🔄 DEDUPLICATION AND MERGING LOGIC
@@ -1349,8 +2954,38 @@ def extractor(
             k: sorted(v, key=lambda x: -calculate_score(x, k)) for k, v in final.items()
         }
 
+    def find_tags_for_item(value, category):
+        """Find tags for a specific item from tagged results"""
+        if not tagged_results:
+            return []
+
+        for tagged_item in tagged_results:
+            if (
+                tagged_item.get("original_value") == value
+                or tagged_item.get("value") == value
+                or tagged_item.get("domain") == value
+            ):
+                return tagged_item.get("tags", [])
+        return []
+
+    def get_risk_score_for_item(value, category):
+        """Get risk score for a specific item from tagged results"""
+        if not tagged_results:
+            return 0
+
+        for tagged_item in tagged_results:
+            if (
+                tagged_item.get("original_value") == value
+                or tagged_item.get("value") == value
+                or tagged_item.get("domain") == value
+            ):
+                return tagged_item.get("risk_score", 0)
+        return 0
+
     # Output formatting
     if to_jsonl:
+        import json
+
         lines = []
         for category, values in final.items():
             for value in values:
@@ -1361,21 +2996,58 @@ def extractor(
                         if "calculate_score" in locals()
                         else 0
                     )
+                if entropy:
+                    entry["entropy"] = shannon_entropy(str(value))
+                if auto_tag:
+                    entry["tags"] = find_tags_for_item(value, category)
+                if risk_scoring:
+                    entry["risk_score"] = get_risk_score_for_item(value, category)
                 lines.append(json.dumps(entry))
         output_data = "\n".join(lines)
 
     elif json_out:
+        import json
+
         if ai_score and "calculate_score" in locals():
             # Add scores to JSON output
             scored_final = {}
             for category, values in final.items():
-                scored_final[category] = [
-                    {"value": value, "score": calculate_score(value, category)}
-                    for value in values
-                ]
+                scored_final[category] = []
+                for value in values:
+                    item_dict = {
+                        "value": value,
+                        "score": calculate_score(value, category),
+                    }
+                    if entropy:
+                        item_dict["entropy"] = shannon_entropy(str(value))
+                    if auto_tag:
+                        item_dict["tags"] = find_tags_for_item(value, category)
+                    if risk_scoring:
+                        item_dict["risk_score"] = get_risk_score_for_item(
+                            value, category
+                        )
+                    scored_final[category].append(item_dict)
             output_data = json.dumps(scored_final, indent=2)
         else:
-            output_data = json.dumps(final, indent=2)
+            if entropy or auto_tag or risk_scoring:
+                # Add entropy/tags to regular JSON output
+                enhanced_final = {}
+                for category, values in final.items():
+                    enhanced_final[category] = []
+                    for value in values:
+                        item_dict = {"value": value}
+                        if entropy:
+                            item_dict["entropy"] = shannon_entropy(str(value))
+                        if auto_tag:
+                            item_dict["tags"] = find_tags_for_item(value, category)
+                        if risk_scoring:
+                            item_dict["risk_score"] = get_risk_score_for_item(
+                                value, category
+                            )
+                        enhanced_final[category].append(item_dict)
+                output_data = json.dumps(enhanced_final, indent=2)
+            else:
+                output_data = json.dumps(final, indent=2)
 
     elif tagged:
         output_data = f"# ExtractorCLI Results - {time.strftime('%Y-%m-%d %H:%M:%S')}\n"
@@ -1386,18 +3058,90 @@ def extractor(
             if items:
                 output_data += f"\n## {category.upper()} ({len(items)} found):\n"
                 for item in items:
-                    if ai_score and "calculate_score" in locals():
-                        score = calculate_score(item, category)
-                        output_data += f"[Score: {score:2d}] {item}\n"
+                    if entropy:
+                        item_entropy = shannon_entropy(str(item))
+                        if ai_score and "calculate_score" in locals():
+                            score = calculate_score(item, category)
+                            output_data += f"[Score: {score:2d}] [ENTROPY] {item} (H={item_entropy}) [{category}]\n"
+                        else:
+                            output_data += (
+                                f"[ENTROPY] {item} (H={item_entropy}) [{category}]\n"
+                            )
                     else:
-                        output_data += f"{item}\n"
+                        if ai_score and "calculate_score" in locals():
+                            score = calculate_score(item, category)
+                            output_data += f"[Score: {score:2d}] {item}\n"
+                        else:
+                            output_data += f"{item}\n"
 
     else:
         # Simple flat output
-        all_items = []
-        for items in final.values():
-            all_items.extend(items)
-        output_data = "\n".join(all_items)
+        if entropy:
+            all_items = []
+            for category, items in final.items():
+                for item in items:
+                    item_entropy = shannon_entropy(str(item))
+                    all_items.append(
+                        f"[ENTROPY] {item} (H={item_entropy}) [{category}]"
+                    )
+            output_data = "\n".join(all_items)
+        else:
+            all_items = []
+            for category, items in final.items():
+                for item in items:
+                    # Handle dictionary items (like hex dumps, strings, zip results, etc.)
+                    if isinstance(item, dict):
+                        if category == "hex_dumps":
+                            file_path = item.get("file_path", "unknown")
+                            file_size = item.get("file_size", 0)
+                            error = item.get("error")
+                            if error:
+                                all_items.append(f"[HEX] {file_path} - Error: {error}")
+                            else:
+                                all_items.append(
+                                    f"[HEX] {file_path} ({file_size} bytes)"
+                                )
+                        elif category == "extracted_strings":
+                            file_path = item.get("file_path", "unknown")
+                            count = item.get("count", 0)
+                            error = item.get("error")
+                            if error:
+                                all_items.append(
+                                    f"[STRINGS] {file_path} - Error: {error}"
+                                )
+                            else:
+                                all_items.append(
+                                    f"[STRINGS] {file_path} ({count} strings)"
+                                )
+                        elif category == "zip_extractions":
+                            archive_path = item.get("archive_path", "unknown")
+                            extracted_count = len(item.get("extracted_files", []))
+                            error = item.get("error")
+                            if error:
+                                all_items.append(
+                                    f"[ZIP] {archive_path} - Error: {error}"
+                                )
+                            else:
+                                all_items.append(
+                                    f"[ZIP] {archive_path} ({extracted_count} files)"
+                                )
+                        elif category == "cors_vulnerabilities":
+                            vuln_type = item.get("type", "Unknown")
+                            severity = item.get("severity", "UNKNOWN")
+                            all_items.append(f"[CORS] {severity}: {vuln_type}")
+                        elif category == "csp_analysis":
+                            header_index = item.get("header_index", 1)
+                            analysis = item.get("analysis", {})
+                            directive_count = len(analysis.get("directives", {}))
+                            all_items.append(
+                                f"[CSP] Header {header_index} ({directive_count} directives)"
+                            )
+                        else:
+                            # For other dictionary items, convert to string
+                            all_items.append(str(item))
+                    else:
+                        all_items.append(str(item))
+            output_data = "\n".join(all_items)
 
     # ═══════════════════════════════════════════════════════════════════════════════
     # 🔥 XSS-VIBES INTEGRATION
@@ -1541,6 +3285,8 @@ def extractor(
     if xss_discover and "url" in final:
         # Regenerate final output data
         if to_jsonl:
+            import json
+
             lines = []
             for category, values in final.items():
                 for value in values:
@@ -1551,21 +3297,41 @@ def extractor(
                             if "calculate_score" in locals()
                             else 0
                         )
+                    if entropy:
+                        entry["entropy"] = shannon_entropy(str(value))
                     lines.append(json.dumps(entry))
             output_data = "\n".join(lines)
 
         elif json_out:
+            import json
+
             if ai_score and "calculate_score" in locals():
                 # Add scores to JSON output
                 scored_final = {}
                 for category, values in final.items():
-                    scored_final[category] = [
-                        {"value": value, "score": calculate_score(value, category)}
-                        for value in values
-                    ]
+                    scored_final[category] = []
+                    for value in values:
+                        item_dict = {
+                            "value": value,
+                            "score": calculate_score(value, category),
+                        }
+                        if entropy:
+                            item_dict["entropy"] = shannon_entropy(str(value))
+                        scored_final[category].append(item_dict)
                 output_data = json.dumps(scored_final, indent=2)
             else:
-                output_data = json.dumps(final, indent=2)
+                if entropy:
+                    # Add entropy to regular JSON output
+                    entropy_final = {}
+                    for category, values in final.items():
+                        entropy_final[category] = []
+                        for value in values:
+                            entropy_final[category].append(
+                                {"value": value, "entropy": shannon_entropy(str(value))}
+                            )
+                    output_data = json.dumps(entropy_final, indent=2)
+                else:
+                    output_data = json.dumps(final, indent=2)
 
         elif tagged:
             output_data = (
@@ -1581,18 +3347,107 @@ def extractor(
                 if items:
                     output_data += f"\n## {category.upper()} ({len(items)} found):\n"
                     for item in items:
-                        if ai_score and "calculate_score" in locals():
-                            score = calculate_score(item, category)
-                            output_data += f"[Score: {score:2d}] {item}\n"
+                        item_line = ""
+                        if entropy:
+                            item_entropy = shannon_entropy(str(item))
+                            if ai_score and "calculate_score" in locals():
+                                score = calculate_score(item, category)
+                                item_line = f"[Score: {score:2d}] [ENTROPY] {item} (H={item_entropy})"
+                            else:
+                                item_line = f"[ENTROPY] {item} (H={item_entropy})"
                         else:
-                            output_data += f"{item}\n"
+                            if ai_score and "calculate_score" in locals():
+                                score = calculate_score(item, category)
+                                item_line = f"[Score: {score:2d}] {item}"
+                            else:
+                                item_line = f"{item}"
+
+                        # Add tags if enabled
+                        if auto_tag:
+                            tags = find_tags_for_item(item, category)
+                            if tags:
+                                item_line += f" [tags: {', '.join(tags)}]"
+
+                        # Add risk score if enabled
+                        if risk_scoring:
+                            risk_score = get_risk_score_for_item(item, category)
+                            item_line += f" (risk: {risk_score})"
+
+                        item_line += f" [{category}]\n"
+                        output_data += item_line
 
         else:
             # Simple flat output
-            all_items = []
-            for items in final.values():
-                all_items.extend(items)
-            output_data = "\n".join(all_items)
+            if entropy or auto_tag or risk_scoring:
+                all_items = []
+                for category, items in final.items():
+                    for item in items:
+                        # Handle dictionary items (like hex dumps, strings, zip results, etc.)
+                        if isinstance(item, dict):
+                            if category == "hex_dumps":
+                                file_path = item.get("file_path", "unknown")
+                                file_size = item.get("file_size", 0)
+                                error = item.get("error")
+                                if error:
+                                    item_line = f"[HEX] {file_path} - Error: {error}"
+                                else:
+                                    item_line = f"[HEX] {file_path} ({file_size} bytes)"
+                            elif category == "extracted_strings":
+                                file_path = item.get("file_path", "unknown")
+                                count = item.get("count", 0)
+                                error = item.get("error")
+                                if error:
+                                    item_line = (
+                                        f"[STRINGS] {file_path} - Error: {error}"
+                                    )
+                                else:
+                                    item_line = (
+                                        f"[STRINGS] {file_path} ({count} strings)"
+                                    )
+                            elif category == "zip_extractions":
+                                archive_path = item.get("archive_path", "unknown")
+                                extracted_count = len(item.get("extracted_files", []))
+                                error = item.get("error")
+                                if error:
+                                    item_line = f"[ZIP] {archive_path} - Error: {error}"
+                                else:
+                                    item_line = f"[ZIP] {archive_path} ({extracted_count} files)"
+                            elif category == "cors_vulnerabilities":
+                                vuln_type = item.get("type", "Unknown")
+                                severity = item.get("severity", "UNKNOWN")
+                                item_line = f"[CORS] {severity}: {vuln_type}"
+                            elif category == "csp_analysis":
+                                header_index = item.get("header_index", 1)
+                                analysis = item.get("analysis", {})
+                                directive_count = len(analysis.get("directives", {}))
+                                item_line = f"[CSP] Header {header_index} ({directive_count} directives)"
+                            else:
+                                item_line = str(item)
+                        else:
+                            item_line = f"{item}"
+                            if entropy:
+                                item_entropy = shannon_entropy(str(item))
+                                item_line = f"[ENTROPY] {item} (H={item_entropy})"
+
+                            # Add tags if enabled
+                            if auto_tag:
+                                tags = find_tags_for_item(item, category)
+                                if tags:
+                                    item_line += f" [tags: {', '.join(tags)}]"
+
+                            # Add risk score if enabled
+                            if risk_scoring:
+                                risk_score = get_risk_score_for_item(item, category)
+                                item_line += f" (risk: {risk_score})"
+
+                        item_line += f" [{category}]"
+                        all_items.append(item_line)
+                output_data = "\n".join(all_items)
+            else:
+                all_items = []
+                for items in final.values():
+                    all_items.extend(items)
+                output_data = "\n".join(all_items)
 
     # Output results
     if output:
@@ -1605,7 +3460,8 @@ def extractor(
             click.echo(
                 f"📊 [STATS] {total_items} items saved across {len(final)} categories"
             )
-    else:
+    elif not report and report_format.lower() == "txt":
+        # Only output to stdout when not generating reports
         click.echo(output_data)
 
     # ═══════════════════════════════════════════════════════════════════════════════
@@ -1701,6 +3557,763 @@ def extractor(
         except Exception as e:
             if verbose:
                 click.echo(f"❌ [DATABASE] Error storing to database: {e}")
+
+    # ═══════════════════════════════════════════════════════════════════════════════
+    # 📊 REPORT GENERATION LOGIC
+    # ═══════════════════════════════════════════════════════════════════════════════
+
+    if (
+        report or report_format.lower() != "txt"
+    ):  # Generate report if --report flag or non-default format
+        from datetime import datetime
+
+        def generate_html_report(
+            final_results,
+            entropy_enabled=False,
+            tagging_enabled=False,
+            risk_scoring_enabled=False,
+        ):
+            """Generate HTML report with results and entropy data"""
+            html_template = f"""
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ExtractorCLI Report - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</title>
+    <!-- DataTables CSS -->
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap5.min.css">
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/buttons/2.4.2/css/buttons.bootstrap5.min.css">
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.bootstrap5.min.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    
+    <style>
+        body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 20px; background-color: #f8f9fa; }}
+        .header {{ background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; border-radius: 15px; margin-bottom: 30px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }}
+        .section {{ background: white; margin: 30px 0; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); }}
+        .category-title {{ color: #333; border-bottom: 3px solid #007bff; padding-bottom: 12px; margin-bottom: 20px; font-weight: 600; }}
+        .item {{ margin: 8px 0; padding: 12px; background-color: #f8f9fa; border-left: 4px solid #007bff; border-radius: 6px; transition: all 0.2s ease; }}
+        .item:hover {{ background-color: #e9ecef; transform: translateX(3px); }}
+        .entropy {{ color: #28a745; font-weight: bold; }}
+        .high-entropy {{ color: #dc3545; font-weight: bold; background: #fff5f5; padding: 2px 6px; border-radius: 4px; }}
+        .stats {{ display: flex; justify-content: space-between; flex-wrap: wrap; gap: 15px; }}
+        .stat-box {{ background: linear-gradient(135deg, #e9ecef 0%, #f8f9fa 100%); padding: 20px; border-radius: 10px; margin: 5px; min-width: 200px; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }}
+        .stat-number {{ font-size: 2.2em; font-weight: 700; color: #495057; margin-bottom: 5px; }}
+        .jwt-decode {{ background: #fff3cd; padding: 12px; margin: 8px 0; border-radius: 6px; border-left: 4px solid #ffc107; }}
+        .base64-decode {{ background: #d1ecf1; padding: 12px; margin: 8px 0; border-radius: 6px; border-left: 4px solid #17a2b8; }}
+        .tags {{ display: inline-block; margin-left: 10px; }}
+        .tag {{ background: #007bff; color: white; padding: 3px 8px; border-radius: 15px; font-size: 0.8em; margin: 0 3px; display: inline-block; }}
+        .risk-low {{ color: #28a745; font-weight: bold; }}
+        .risk-medium {{ color: #ffc107; font-weight: bold; }}
+        .risk-high {{ color: #dc3545; font-weight: bold; }}
+        .risk-critical {{ color: #6f42c1; font-weight: bold; }}
+        .hex-dump {{ background: #f8f9fa; padding: 15px; margin: 10px 0; border-radius: 8px; border-left: 4px solid #6c757d; }}
+        .hex-dump strong {{ color: #495057; }}
+        .hex-dump pre {{ margin: 10px 0 0 0; max-height: 300px; overflow-y: auto; }}
+        
+        /* Enhanced DataTable styling */
+        .dataTables_wrapper {{ margin-top: 20px; }}
+        .dt-buttons {{ margin-bottom: 15px; }}
+        .dt-button {{ margin-right: 5px !important; }}
+        .table-responsive {{ border-radius: 8px; overflow: hidden; }}
+        .findings-table {{ font-size: 0.9em; }}
+        .findings-table th {{ background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; font-weight: 600; }}
+        .collapsible-row {{ cursor: pointer; transition: background-color 0.2s ease; }}
+        .collapsible-row:hover {{ background-color: #f8f9fa; }}
+        .details-row {{ background-color: #f8f9fa; }}
+        .badge-risk-low {{ background-color: #28a745; }}
+        .badge-risk-medium {{ background-color: #ffc107; color: #000; }}
+        .badge-risk-high {{ background-color: #dc3545; }}
+        .badge-risk-critical {{ background-color: #6f42c1; }}
+        .export-section {{ background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); padding: 20px; border-radius: 10px; margin-bottom: 20px; }}
+        .filter-section {{ background: white; padding: 20px; border-radius: 10px; margin-bottom: 20px; border: 1px solid #dee2e6; }}
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🧲 ExtractorCLI Analysis Report</h1>
+        <p>Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p>
+        <p>Input Source: {input_file or input_url or 'stdin'}</p>
+        <p>Types Processed: {types}</p>
+        {'<p>✅ Entropy Analysis: Enabled</p>' if entropy_enabled else ''}
+        {'<p>🏷️ Auto-Tagging: Enabled</p>' if tagging_enabled else ''}
+        {'<p>⚠️ Risk Scoring: Enabled</p>' if risk_scoring_enabled else ''}
+    </div>
+
+    <!-- Export and Filter Controls -->
+    <div class="export-section">
+        <div class="row">
+            <div class="col-md-6">
+                <h5><i class="bi bi-download"></i> Export Options</h5>
+                <div class="btn-group" role="group">
+                    <button type="button" class="btn btn-outline-primary btn-sm" onclick="exportTableData('csv')">
+                        <i class="bi bi-filetype-csv"></i> CSV
+                    </button>
+                    <button type="button" class="btn btn-outline-primary btn-sm" onclick="exportTableData('json')">
+                        <i class="bi bi-filetype-json"></i> JSON
+                    </button>
+                    <button type="button" class="btn btn-outline-primary btn-sm" onclick="exportTableData('excel')">
+                        <i class="bi bi-file-earmark-excel"></i> Excel
+                    </button>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <h5><i class="bi bi-funnel"></i> Quick Filters</h5>
+                <div class="btn-group" role="group">
+                    <button type="button" class="btn btn-outline-success btn-sm" onclick="filterByRisk('all')">All</button>
+                    <button type="button" class="btn btn-outline-warning btn-sm" onclick="filterByRisk('medium')">Medium+</button>
+                    <button type="button" class="btn btn-outline-danger btn-sm" onclick="filterByRisk('high')">High+</button>
+                    <button type="button" class="btn btn-outline-info btn-sm" onclick="toggleHighEntropy()">High Entropy</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>📊 Summary Statistics</h2>
+        <div class="stats">
+            <div class="stat-box">
+                <div class="stat-number">{sum(len(v) for v in final_results.values())}</div>
+                <div>Total Items Found</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-number">{len(final_results)}</div>
+                <div>Categories</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-number">{len([v for v in final_results.values() if 'high_entropy' in str(v)])}</div>
+                <div>High Entropy Items</div>
+            </div>
+        </div>
+    </div>
+"""
+
+            # Add DataTable with all findings
+            html_template += """
+    <div class="section">
+        <h2 class="category-title"><i class="bi bi-table"></i> All Findings</h2>
+        <div class="table-responsive">
+            <table id="findingsTable" class="table table-striped table-hover findings-table">
+                <thead>
+                    <tr>
+                        <th>Category</th>
+                        <th>Value</th>
+                        <th>Entropy</th>
+                        <th>Tags</th>
+                        <th>Risk</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+"""
+
+            # Generate table rows for all findings
+            all_findings = []
+            for category, items in final_results.items():
+                if not items:
+                    continue
+
+                emoji_map = {
+                    "url": "🔗",
+                    "email": "📧",
+                    "form": "📝",
+                    "auth": "🔐",
+                    "api": "🚀",
+                    "secret": "🔑",
+                    "trufflehog_secrets": "🔍",
+                    "jwt": "🎫",
+                    "websocket": "🔌",
+                    "har": "🗂️",
+                    "postman": "📮",
+                    "base64_enhanced": "🔓",
+                    "high_entropy": "🔥",
+                    "jwt_decoded": "🎯",
+                    "base64_decoded": "📋",
+                    "hex_dumps": "🔍",
+                    "extracted_strings": "🔤",
+                    "zip_extractions": "📦",
+                    "cors_vulnerabilities": "🌐",
+                    "csp_analysis": "🛡️",
+                    "ip": "📍",
+                    "domain": "🌐",
+                    "subdomain": "🌍",
+                    "phone": "📞",
+                    "crypto": "₿",
+                    "social": "📱",
+                    "pii": "🆔",
+                    "graphql": "🔗",
+                    "api_docs": "📚",
+                    "tech_stack": "🔧",
+                }
+
+                emoji = emoji_map.get(category, "📄")
+
+                for item in items:
+                    # Handle different item types
+                    if isinstance(item, dict):
+                        if category == "hex_dumps":
+                            value = f"{item.get('file_path', 'unknown')} ({item.get('file_size', 0)} bytes)"
+                            entropy_val = "N/A"
+                            tags = ""
+                            risk_level = 0
+                        elif category == "trufflehog_secrets":
+                            # Special handling for TruffleHog secrets
+                            value = item.get("content", str(item))
+                            entropy_val = f"{item.get('entropy', 0):.2f}"
+                            tags = ",".join(item.get("tags", []))
+                            risk_level = item.get("risk_level", 0)
+                            # Add detector info to display
+                            detector = item.get("detector", "unknown")
+                            verified = item.get("verified", False)
+                            value = f"[{detector}{'✓' if verified else ''}] {value}"
+                        elif category in [
+                            "extracted_strings",
+                            "zip_extractions",
+                            "cors_vulnerabilities",
+                            "csp_analysis",
+                        ]:
+                            value = str(
+                                item.get("file_path", item.get("url", str(item)))
+                            )[:100]
+                            entropy_val = "N/A"
+                            tags = ""
+                            risk_level = 0
+                        else:
+                            # Handle tagged items
+                            value = str(
+                                item.get("content", item.get("value", str(item)))
+                            )
+                            entropy_val = (
+                                f"{item.get('entropy', 0):.2f}"
+                                if "entropy" in item
+                                else "N/A"
+                            )
+                            tags = ",".join(item.get("tags", []))
+                            risk_level = item.get("risk_level", 0)
+                    else:
+                        # Handle TruffleHog JSON strings
+                        if category == "trufflehog_secrets":
+                            try:
+                                import json
+
+                                secret_data = json.loads(item)
+                                value = secret_data.get("content", str(item))
+                                entropy_val = f"{secret_data.get('entropy', 0):.2f}"
+                                tags = ",".join(secret_data.get("tags", []))
+                                risk_level = secret_data.get("risk_level", 0)
+                                detector = secret_data.get("detector", "unknown")
+                                verified = secret_data.get("verified", False)
+                                value = f"[{detector}{'✓' if verified else ''}] {value}"
+                            except:
+                                value = str(item)
+                                entropy_val = "N/A"
+                                tags = ""
+                                risk_level = 0
+                        else:
+                            # Simple string item
+                            value = str(item)
+                            entropy_val = (
+                                f"{shannon_entropy(value):.2f}"
+                                if entropy_enabled
+                                else "N/A"
+                            )
+                            tags = ""
+                            risk_level = 0
+
+                    # Determine risk class
+                    if risk_level >= 8:
+                        risk_class = "critical"
+                        risk_badge = "badge-risk-critical"
+                    elif risk_level >= 6:
+                        risk_class = "high"
+                        risk_badge = "badge-risk-high"
+                    elif risk_level >= 3:
+                        risk_class = "medium"
+                        risk_badge = "badge-risk-medium"
+                    else:
+                        risk_class = "low"
+                        risk_badge = "badge-risk-low"
+
+                    # Escape HTML
+                    safe_value = (
+                        value.replace("&", "&amp;")
+                        .replace("<", "&lt;")
+                        .replace(">", "&gt;")
+                        .replace('"', "&quot;")
+                    )
+                    safe_tags = (
+                        tags.replace("&", "&amp;")
+                        .replace("<", "&lt;")
+                        .replace(">", "&gt;")
+                    )
+
+                    # Truncate long values for table display
+                    display_value = (
+                        safe_value[:80] + "..." if len(safe_value) > 80 else safe_value
+                    )
+
+                    html_template += f"""
+                    <tr class="collapsible-row" data-category="{category}" data-risk="{risk_class}" data-entropy="{entropy_val}">
+                        <td><span title="{category}">{emoji} {category.replace('_', ' ').title()}</span></td>
+                        <td>
+                            <span class="value-cell" title="{safe_value}">{display_value}</span>
+                        </td>
+                        <td class="{'high-entropy' if float(entropy_val.replace('N/A', '0')) > 4.0 else 'entropy'}">{entropy_val}</td>
+                        <td>
+                            {f'<span class="badge bg-primary">{safe_tags}</span>' if tags else '<span class="text-muted">-</span>'}
+                        </td>
+                        <td>
+                            <span class="badge {risk_badge}">{risk_class.title()} ({risk_level})</span>
+                        </td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-primary" onclick="copyToClipboard('{safe_value}')" title="Copy">
+                                <i class="bi bi-clipboard"></i>
+                            </button>
+                        </td>
+                    </tr>
+"""
+
+            html_template += """
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <!-- Legacy sections for special formatting -->
+"""
+
+            # Add detailed results for each category (legacy sections for special items)
+            for category, items in final_results.items():
+                if not items:
+                    continue
+
+                # Only show special formatting sections for complex items
+                if category in [
+                    "hex_dumps",
+                    "extracted_strings",
+                    "zip_extractions",
+                    "cors_vulnerabilities",
+                    "csp_analysis",
+                ]:
+                    emoji_map = {
+                        "hex_dumps": "🔍",
+                        "extracted_strings": "🔤",
+                        "zip_extractions": "📦",
+                        "cors_vulnerabilities": "🌐",
+                        "csp_analysis": "🛡️",
+                    }
+
+                    emoji = emoji_map.get(category, "📄")
+                    html_template += f"""
+    <div class="section">
+        <h2 class="category-title">{emoji} {category.upper().replace('_', ' ')} ({len(items)} found)</h2>
+"""
+
+                for item in sorted(items):
+                    item_html = ""
+                    item_class = "item"
+
+                    # Special handling for different item types
+                    if category == "hex_dumps" and isinstance(item, dict):
+                        # Special formatting for hex dumps
+                        item_class = "hex-dump"
+                        file_path = item.get("file_path", "unknown")
+                        file_size = item.get("file_size", 0)
+                        truncated = item.get("truncated", False)
+                        error = item.get("error")
+                        hex_data = item.get("hex_dump", "")
+
+                        if error:
+                            item_html = f'<strong>{file_path}</strong> <span class="risk-high">(Error: {error})</span>'
+                        else:
+                            status = " (truncated)" if truncated else ""
+                            item_html = f'<strong>{file_path}</strong> ({file_size} bytes{status})<br><pre style="background:#f8f9fa;padding:10px;border-radius:4px;font-family:monospace;font-size:12px;overflow-x:auto;">{hex_data}</pre>'
+                    elif category == "extracted_strings" and isinstance(item, dict):
+                        # Special formatting for string extraction results
+                        item_class = "item"
+                        file_path = item.get("file_path", "unknown")
+                        count = item.get("count", 0)
+                        error = item.get("error")
+
+                        if error:
+                            item_html = f'<strong>{file_path}</strong> <span class="risk-high">(Error: {error})</span>'
+                        else:
+                            strings = item.get("strings", [])
+                            preview = strings[:5] if strings else []
+                            preview_text = "<br>".join(
+                                [
+                                    f"• {s[:50]}{'...' if len(s) > 50 else ''}"
+                                    for s in preview
+                                ]
+                            )
+                            more_text = (
+                                f"<br><em>... and {len(strings) - 5} more strings</em>"
+                                if len(strings) > 5
+                                else ""
+                            )
+                            item_html = f'<strong>{file_path}</strong> ({count} strings found)<br><div style="margin:10px 0;padding:10px;background:#f8f9fa;border-radius:4px;font-family:monospace;font-size:12px;">{preview_text}{more_text}</div>'
+                    elif category == "zip_extractions" and isinstance(item, dict):
+                        # Special formatting for ZIP extraction results
+                        item_class = "item"
+                        archive_path = item.get("archive_path", "unknown")
+                        extracted_files = item.get("extracted_files", [])
+                        error = item.get("error")
+
+                        if error:
+                            item_html = f'<strong>{archive_path}</strong> <span class="risk-high">(Error: {error})</span>'
+                        else:
+                            file_list = extracted_files[:10] if extracted_files else []
+                            file_text = "<br>".join([f"• {f}" for f in file_list])
+                            more_text = (
+                                f"<br><em>... and {len(extracted_files) - 10} more files</em>"
+                                if len(extracted_files) > 10
+                                else ""
+                            )
+                            item_html = f'<strong>{archive_path}</strong> ({len(extracted_files)} files extracted)<br><div style="margin:10px 0;padding:10px;background:#f8f9fa;border-radius:4px;font-size:12px;">{file_text}{more_text}</div>'
+                    elif category == "cors_vulnerabilities" and isinstance(item, dict):
+                        # Special formatting for CORS vulnerabilities
+                        vuln_type = item.get("type", "Unknown")
+                        severity = item.get("severity", "UNKNOWN")
+                        header = item.get("header", "")
+                        description = item.get("description", "")
+
+                        severity_class = (
+                            "risk-critical"
+                            if severity == "CRITICAL"
+                            else "risk-high" if severity == "HIGH" else "risk-medium"
+                        )
+                        item_class = "item"
+                        item_html = f'<span class="{severity_class}">[{severity}]</span> <strong>{vuln_type}</strong><br><code>{header}</code><br><em>{description}</em>'
+                    elif category == "csp_analysis" and isinstance(item, dict):
+                        # Special formatting for CSP analysis
+                        item_class = "item"
+                        header_index = item.get("header_index", 1)
+                        analysis = item.get("analysis", {})
+                        directives = analysis.get("directives", {})
+                        unsafe_items = analysis.get("unsafe_items", [])
+
+                        directive_text = "<br>".join(
+                            [
+                                f"• <strong>{k}:</strong> {' '.join(v)}"
+                                for k, v in directives.items()
+                            ]
+                        )
+                        unsafe_text = ""
+                        if unsafe_items:
+                            unsafe_text = (
+                                "<br><br><strong>⚠️ Security Issues:</strong><br>"
+                            )
+                            unsafe_text += "<br>".join(
+                                [
+                                    f"• <span class=\"risk-high\">{u['directive']}: {u['value']}</span> ({u['type']})"
+                                    for u in unsafe_items
+                                ]
+                            )
+
+                        item_html = f'<strong>CSP Header {header_index}</strong><br><div style="margin:10px 0;padding:10px;background:#f8f9fa;border-radius:4px;font-size:12px;">{directive_text}{unsafe_text}</div>'
+                    elif "entropy" in category.lower() and "H=" in str(item):
+                        item_class = "item high-entropy"
+                        item_html = str(item)
+                    elif "JWT:" in str(item) and "|" in str(item):
+                        item_class = "jwt-decode"
+                        item_html = str(item)
+                    elif "Base64" in str(item) and "->" in str(item):
+                        item_class = "base64-decode"
+                        item_html = str(item)
+                    elif entropy_enabled and len(str(item)) > 15:
+                        item_entropy = shannon_entropy(str(item))
+                        if item_entropy >= 4.0:
+                            item_html = f'<span class="high-entropy">{item}</span> <span class="entropy">(H={item_entropy})</span>'
+                        else:
+                            item_html = f'{item} <span class="entropy">(H={item_entropy})</span>'
+                    else:
+                        item_html = str(item)
+
+                    # Add tags if enabled
+                    if tagging_enabled:
+                        tags = find_tags_for_item(item, category)
+                        if tags:
+                            tags_html = (
+                                '<span class="tags">'
+                                + "".join(
+                                    [f'<span class="tag">{tag}</span>' for tag in tags]
+                                )
+                                + "</span>"
+                            )
+                            item_html += tags_html
+
+                    # Add risk score if enabled
+                    if risk_scoring_enabled:
+                        risk_score = get_risk_score_for_item(item, category)
+                        risk_class = "risk-low"
+                        if risk_score >= 7:
+                            risk_class = "risk-critical"
+                        elif risk_score >= 5:
+                            risk_class = "risk-high"
+                        elif risk_score >= 3:
+                            risk_class = "risk-medium"
+                        item_html += (
+                            f' <span class="{risk_class}">(Risk: {risk_score})</span>'
+                        )
+
+                    html_template += (
+                        f'        <div class="{item_class}">{item_html}</div>\n'
+                    )
+
+                html_template += "    </div>\n"
+
+            html_template += """
+    
+    <!-- JavaScript Libraries -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.2/js/dataTables.buttons.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.bootstrap5.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.html5.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.print.min.js"></script>
+    <script src="https://cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js"></script>
+    <script src="https://cdn.datatables.net/responsive/2.5.0/js/responsive.bootstrap5.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    
+    <script>
+        $(document).ready(function() {
+            // Initialize DataTable
+            const table = $('#findingsTable').DataTable({
+                responsive: true,
+                pageLength: 25,
+                dom: 'Bfrtip',
+                buttons: [
+                    'copy',
+                    'csv', 
+                    'excel',
+                    'print',
+                    {
+                        extend: 'colvis',
+                        text: 'Columns'
+                    }
+                ],
+                order: [[4, 'desc']], // Sort by risk level desc
+                columnDefs: [
+                    {
+                        targets: [2], // Entropy column
+                        type: 'num'
+                    },
+                    {
+                        targets: [4], // Risk column  
+                        render: function(data, type, row) {
+                            if (type === 'sort') {
+                                // Extract risk number for sorting
+                                const match = data.match(/\\((\\d+)\\)/);
+                                return match ? parseInt(match[1]) : 0;
+                            }
+                            return data;
+                        }
+                    }
+                ],
+                language: {
+                    search: "Search findings:",
+                    lengthMenu: "Show _MENU_ findings per page",
+                    info: "Showing _START_ to _END_ of _TOTAL_ findings",
+                    infoEmpty: "No findings available",
+                    infoFiltered: "(filtered from _MAX_ total findings)"
+                }
+            });
+            
+            // Risk level filtering
+            window.filterByRisk = function(level) {
+                if (level === 'all') {
+                    table.column(4).search('').draw();
+                } else if (level === 'high') {
+                    table.column(4).search('(High|Critical)', true, false).draw();
+                } else if (level === 'medium') {
+                    table.column(4).search('(Medium|High|Critical)', true, false).draw();
+                }
+            };
+            
+            // High entropy filtering
+            window.toggleHighEntropy = function() {
+                const currentSearch = table.column(2).search();
+                if (currentSearch) {
+                    table.column(2).search('').draw();
+                } else {
+                    table.column(2).search('[4-9]\\\\.[0-9]', true, false).draw();
+                }
+            };
+            
+            // Export functions
+            window.exportTableData = function(format) {
+                const data = table.data().toArray();
+                const headers = ['Category', 'Value', 'Entropy', 'Tags', 'Risk'];
+                
+                if (format === 'csv') {
+                    exportToCSV(data, headers);
+                } else if (format === 'json') {
+                    exportToJSON(data, headers);
+                } else if (format === 'excel') {
+                    // Use DataTables built-in Excel export
+                    table.button('.buttons-excel').trigger();
+                }
+            };
+            
+            function exportToCSV(data, headers) {
+                let csv = headers.join(',') + '\\n';
+                data.forEach(row => {
+                    const cleanRow = row.map(cell => {
+                        // Remove HTML tags and escape quotes
+                        const clean = cell.replace(/<[^>]*>/g, '').replace(/"/g, '""');
+                        return '"' + clean + '"';
+                    });
+                    csv += cleanRow.join(',') + '\\n';
+                });
+                
+                const blob = new Blob([csv], { type: 'text/csv' });
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'extractorcli_findings.csv';
+                a.click();
+                window.URL.revokeObjectURL(url);
+            }
+            
+            function exportToJSON(data, headers) {
+                const jsonData = data.map(row => {
+                    const obj = {};
+                    headers.forEach((header, index) => {
+                        obj[header.toLowerCase()] = row[index].replace(/<[^>]*>/g, '');
+                    });
+                    return obj;
+                });
+                
+                const blob = new Blob([JSON.stringify(jsonData, null, 2)], { type: 'application/json' });
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'extractorcli_findings.json';
+                a.click();
+                window.URL.revokeObjectURL(url);
+            }
+            
+            // Copy to clipboard function
+            window.copyToClipboard = function(text) {
+                navigator.clipboard.writeText(text).then(function() {
+                    // Show success feedback
+                    const toast = document.createElement('div');
+                    toast.className = 'toast-container position-fixed bottom-0 end-0 p-3';
+                    toast.innerHTML = `
+                        <div class="toast show" role="alert">
+                            <div class="toast-header">
+                                <i class="bi bi-check-circle-fill text-success me-2"></i>
+                                <strong class="me-auto">Copied!</strong>
+                            </div>
+                            <div class="toast-body">
+                                Text copied to clipboard
+                            </div>
+                        </div>
+                    `;
+                    document.body.appendChild(toast);
+                    setTimeout(() => toast.remove(), 3000);
+                }).catch(function(err) {
+                    console.error('Could not copy text: ', err);
+                });
+            };
+            
+            // Row click for expansion (placeholder for future enhancement)
+            $('#findingsTable tbody').on('click', 'tr', function() {
+                $(this).toggleClass('table-active');
+            });
+            
+            // Initialize tooltips
+            var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+            var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+                return new bootstrap.Tooltip(tooltipTriggerEl)
+            });
+        });
+    </script>
+</body>
+</html>
+"""
+            return html_template
+
+        # Check if we need to generate reports at all
+        need_html_for_stdout = (
+            not report
+            and report_format.lower() == "html"
+            and not json_out
+            and not to_jsonl
+        )
+        need_html_for_file = report and report_format.lower() == "html"
+
+        # Only generate HTML if we actually need it
+        if need_html_for_stdout or need_html_for_file:
+            # Generate and save report
+            report_content = generate_html_report(
+                final,
+                entropy_enabled=entropy,
+                tagging_enabled=auto_tag,
+                risk_scoring_enabled=risk_scoring,
+            )
+
+        if report:  # Only generate report files if --report flag was used
+            if report_format.lower() == "html":
+                report_filename = f"extractorcli_report_{int(time.time())}.html"
+                with open(report_filename, "w", encoding="utf-8") as f:
+                    f.write(report_content)
+                click.echo(f"📊 [REPORT] HTML report saved to {report_filename}")
+            elif report_format.lower() == "txt":
+                report_filename = f"extractorcli_report_{int(time.time())}.txt"
+                with open(report_filename, "w", encoding="utf-8") as f:
+                    f.write(
+                        f"ExtractorCLI Report - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n"
+                    )
+                    f.write("=" * 60 + "\n\n")
+                    for category, items in final.items():
+                        if items:
+                            f.write(f"{category.upper()} ({len(items)} found):\n")
+                            for item in sorted(items):
+                                f.write(f"  - {item}\n")
+                            f.write("\n")
+                click.echo(f"📊 [REPORT] Text report saved to {report_filename}")
+
+        if not report:  # Only output to stdout if --report flag was not used
+            if to_jsonl:
+                # JSONL output already handled above, just return
+                return
+            elif json_out:
+                # JSON output already handled above, just return
+                return
+            elif report_format.lower() == "html":
+                # Generate HTML report and output to stdout
+                report_content = generate_html_report(
+                    final,
+                    entropy_enabled=entropy,
+                    tagging_enabled=auto_tag,
+                    risk_scoring_enabled=risk_scoring,
+                )
+                print(report_content)
+                return  # Exit after printing HTML
+            elif report_format.lower() == "json":
+                # Output JSON to stdout
+                import json
+
+                print(json.dumps(final, indent=2, default=str))
+            else:
+                # Default text format to stdout
+                print(
+                    f"# ExtractorCLI Results - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+                )
+                print(f"# Processed: {input_file or input_url or 'stdin'}")
+                print(f"# Types: {types}")
+                print()
+
+                for category, items in final.items():
+                    if items:
+                        print(f"## {category.upper()} ({len(items)} found):")
+                        for item in sorted(items):
+                            print(f"[ENTROPY] {item}")
+                        print()
 
 
 if __name__ == "__main__":
