@@ -175,9 +175,17 @@ class GraphQLCacheManager:
     "--engine",
     default="graphw00f",
     type=click.Choice(
-        ["graphw00f", "graphql-cop", "graphqlmap", "gql", "gql-cli", "all"]
+        [
+            "graphw00f",
+            "graphql-cop",
+            "graphqlmap",
+            "gql",
+            "gql-cli",
+            "param-fuzz",
+            "all",
+        ]
     ),
-    help="Engine to use: graphw00f (default), graphql-cop, graphqlmap, gql, gql-cli, or all",
+    help="Engine to use: graphw00f (default), graphql-cop, graphqlmap, gql, gql-cli, param-fuzz, or all",
 )
 @click.option("--endpoint", help="Custom GraphQL endpoint (e.g. /api/graphql)")
 @click.option("--proxy", help="Proxy (http://127.0.0.1:8080)")
@@ -229,6 +237,34 @@ class GraphQLCacheManager:
 )
 @click.option(
     "--nosqli-test", is_flag=True, help="Test for NoSQL injection vulnerabilities"
+)
+@click.option("--param-fuzz", is_flag=True, help="Enable GraphQL parameter fuzzing")
+@click.option(
+    "--fuzzer",
+    type=click.Choice(["native", "ffuf", "wfuzz", "auto"]),
+    default="native",
+    help="Fuzzing engine to use for parameter testing",
+)
+@click.option(
+    "--fuzz-params",
+    default="gql-params.txt",
+    help="Parameter wordlist file for fuzzing",
+)
+@click.option(
+    "--fuzz-payloads",
+    default=None,
+    help="Custom GraphQL payloads file (default: built-in payloads)",
+)
+@click.option(
+    "--fuzz-methods",
+    default="GET,POST",
+    help="HTTP methods to test during fuzzing (comma-separated)",
+)
+@click.option(
+    "--fuzz-threads",
+    type=int,
+    default=10,
+    help="Number of threads for parameter fuzzing",
 )
 @click.option(
     "--gql-cli", is_flag=True, help="Use gql-cli for enhanced GraphQL operations"
@@ -347,6 +383,12 @@ def graphqlcli(
     rate_limit,
     sqli_test,
     nosqli_test,
+    param_fuzz,
+    fuzzer,
+    fuzz_params,
+    fuzz_payloads,
+    fuzz_methods,
+    fuzz_threads,
     gql_cli,
     print_schema,
     schema_file,
@@ -763,8 +805,12 @@ def graphqlcli(
 
         if engine == "all":
             engines = ["graphw00f", "graphql-cop", "graphqlmap", "gql", "gql-cli"]
+            if param_fuzz:
+                engines.append("param-fuzz")
         else:
             engines = [engine]
+            if param_fuzz and engine != "param-fuzz":
+                engines.append("param-fuzz")
 
         for eng in engines:
             if verbose:
@@ -842,6 +888,19 @@ def graphqlcli(
             elif eng == "graphql-cop":
                 result = run_graphqlcop_enhanced(
                     target_url, header, proxy, tor, endpoint, timeout, verbose
+                )
+            elif eng == "param-fuzz":
+                result = run_param_fuzz_engine(
+                    target_url,
+                    fuzzer,
+                    fuzz_params,
+                    fuzz_payloads,
+                    fuzz_methods,
+                    header,
+                    proxy,
+                    fuzz_threads,
+                    timeout,
+                    verbose,
                 )
             else:
                 click.echo(f"[!] Unknown engine: {eng}")
@@ -2553,6 +2612,527 @@ def parse_graphql_schema_info(schema_text):
     info["total_subscriptions"] = len(info["subscriptions_found"])
 
     return info
+
+
+# ========== GraphQL Parameter Fuzzing ==========
+
+
+def detect_fuzzer():
+    """Auto-detect best available fuzzer"""
+    import shutil
+
+    if shutil.which("ffuf"):
+        return "ffuf"
+    elif shutil.which("wfuzz"):
+        return "wfuzz"
+    else:
+        return "native"
+
+
+def load_fuzz_params(params_file):
+    """Load parameter wordlist from file"""
+    try:
+        if Path(params_file).exists():
+            with open(params_file, "r") as f:
+                return [
+                    line.strip()
+                    for line in f
+                    if line.strip() and not line.startswith("#")
+                ]
+        else:
+            # Default GraphQL parameters if file not found
+            return [
+                "query",
+                "mutation",
+                "graphql",
+                "gql",
+                "operation",
+                "operationName",
+                "variables",
+                "extensions",
+                "batch",
+                "request",
+                "doc",
+                "document",
+                "source",
+                "schema",
+                "introspection",
+                "data",
+            ]
+    except Exception as e:
+        if params_file != "gql-params.txt":  # Only warn if custom file specified
+            print(f"⚠️  [FUZZ] Could not load params file {params_file}: {e}")
+        # Return default params
+        return [
+            "query",
+            "mutation",
+            "graphql",
+            "gql",
+            "operation",
+            "operationName",
+            "variables",
+            "extensions",
+            "batch",
+            "request",
+            "doc",
+            "document",
+            "source",
+            "schema",
+            "introspection",
+            "data",
+        ]
+
+
+def load_fuzz_payloads(payloads_file=None):
+    """Load GraphQL payloads for fuzzing"""
+    default_payloads = [
+        "{__typename}",
+        "{__schema{types{name}}}",
+        "{__schema{queryType{name}}}",
+        "{__schema{mutationType{name}}}",
+        "{__schema{subscriptionType{name}}}",
+        "query{__typename}",
+        "mutation{__typename}",
+        "query{__schema{types{name}}}",
+        "query{__schema{queryType{fields{name}}}}",
+        "query{__schema{mutationType{fields{name}}}}",
+        "{__schema{types{name,fields{name,type{name}}}}}",
+        "query IntrospectionQuery{__schema{types{name}}}",
+        '{"query":"{__typename}"}',
+        '{"query":"query{__typename}"}',
+        '{"query":"{__schema{types{name}}}"}',
+    ]
+
+    if payloads_file and Path(payloads_file).exists():
+        try:
+            with open(payloads_file, "r") as f:
+                custom_payloads = [
+                    line.strip()
+                    for line in f
+                    if line.strip() and not line.startswith("#")
+                ]
+                return custom_payloads if custom_payloads else default_payloads
+        except Exception as e:
+            print(f"⚠️  [FUZZ] Could not load payloads file {payloads_file}: {e}")
+
+    return default_payloads
+
+
+def run_native_param_fuzz(
+    target_url, params, payloads, methods, headers, proxy, threads, timeout, verbose
+):
+    """Native Python GraphQL parameter fuzzer"""
+    import requests
+    import threading
+    import queue
+    from urllib.parse import urljoin, urlparse
+
+    results = {
+        "engine": "param-fuzz-native",
+        "target": target_url,
+        "total_tests": 0,
+        "successful_tests": 0,
+        "graphql_responses": [],
+        "interesting_responses": [],
+        "errors": [],
+    }
+
+    def worker(q, results_list):
+        """Worker thread for fuzzing"""
+        session = requests.Session()
+        if headers:
+            session.headers.update(headers)
+        if proxy:
+            session.proxies = {"http": proxy, "https": proxy}
+
+        while True:
+            try:
+                item = q.get(timeout=1)
+                if item is None:
+                    break
+
+                method, param, payload, test_url = item
+
+                try:
+                    if method.upper() == "GET":
+                        # GET parameter fuzzing
+                        test_url_with_param = f"{test_url}?{param}={payload}"
+                        response = session.get(
+                            test_url_with_param, timeout=timeout, verify=False
+                        )
+                    elif method.upper() == "POST":
+                        # POST form fuzzing
+                        data = {param: payload}
+                        response = session.post(
+                            test_url, data=data, timeout=timeout, verify=False
+                        )
+                    else:
+                        continue
+
+                    results["total_tests"] += 1
+
+                    # Analyze response for GraphQL indicators
+                    response_text = response.text.lower()
+                    graphql_indicators = [
+                        "__typename",
+                        "__schema",
+                        "graphql",
+                        "query",
+                        "mutation",
+                        "subscription",
+                        "introspection",
+                        "extensions",
+                        "errors",
+                    ]
+
+                    if any(
+                        indicator in response_text for indicator in graphql_indicators
+                    ):
+                        results["successful_tests"] += 1
+                        graphql_resp = {
+                            "method": method,
+                            "param": param,
+                            "payload": payload,
+                            "url": (
+                                test_url_with_param
+                                if method.upper() == "GET"
+                                else test_url
+                            ),
+                            "status_code": response.status_code,
+                            "content_length": len(response.text),
+                            "headers": dict(response.headers),
+                            "graphql_indicators": [
+                                ind
+                                for ind in graphql_indicators
+                                if ind in response_text
+                            ],
+                        }
+                        results["graphql_responses"].append(graphql_resp)
+
+                        if verbose:
+                            print(
+                                f"✅ [FUZZ] GraphQL response: {method} {param}={payload[:50]}... -> {response.status_code}"
+                            )
+
+                    # Check for interesting response codes/sizes
+                    if (
+                        response.status_code in [200, 400, 500]
+                        and len(response.text) > 100
+                    ):
+                        interesting_resp = {
+                            "method": method,
+                            "param": param,
+                            "payload": payload,
+                            "url": (
+                                test_url_with_param
+                                if method.upper() == "GET"
+                                else test_url
+                            ),
+                            "status_code": response.status_code,
+                            "content_length": len(response.text),
+                        }
+                        results["interesting_responses"].append(interesting_resp)
+
+                except Exception as e:
+                    results["errors"].append(f"{method} {param}={payload}: {str(e)}")
+                    if verbose:
+                        print(
+                            f"❌ [FUZZ] Error: {method} {param}={payload[:30]}... -> {str(e)[:100]}"
+                        )
+
+            except queue.Empty:
+                continue
+            except Exception as e:
+                results["errors"].append(f"Worker error: {str(e)}")
+                break
+            finally:
+                q.task_done()
+
+    # Prepare work queue
+    work_queue = queue.Queue()
+    methods_list = [m.strip().upper() for m in methods.split(",")]
+
+    for method in methods_list:
+        for param in params:
+            for payload in payloads:
+                work_queue.put((method, param, payload, target_url))
+
+    total_tests = work_queue.qsize()
+    if verbose:
+        print(
+            f"🔍 [FUZZ] Starting native fuzzer: {total_tests} tests ({len(methods_list)} methods × {len(params)} params × {len(payloads)} payloads)"
+        )
+
+    # Start worker threads
+    workers = []
+    for i in range(min(threads, total_tests)):
+        t = threading.Thread(target=worker, args=(work_queue, results))
+        t.daemon = True
+        t.start()
+        workers.append(t)
+
+    # Wait for completion
+    work_queue.join()
+
+    # Stop workers
+    for i in range(len(workers)):
+        work_queue.put(None)
+    for t in workers:
+        t.join()
+
+    if verbose:
+        print(
+            f"🎯 [FUZZ] Native fuzzing completed: {results['successful_tests']}/{results['total_tests']} GraphQL responses found"
+        )
+
+    return results
+
+
+def run_ffuf_param_fuzz(
+    target_url, params_file, payloads, methods, headers, proxy, timeout, verbose
+):
+    """FFUF-based GraphQL parameter fuzzer"""
+    import subprocess
+    import tempfile
+    import json
+
+    results = {
+        "engine": "param-fuzz-ffuf",
+        "target": target_url,
+        "ffuf_results": [],
+        "graphql_responses": [],
+        "errors": [],
+    }
+
+    try:
+        # Create temporary payload file
+        with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".txt") as f:
+            for payload in payloads:
+                f.write(f"{payload}\n")
+            payloads_file = f.name
+
+        methods_list = [m.strip().upper() for m in methods.split(",")]
+
+        for method in methods_list:
+            if verbose:
+                print(f"🔍 [FUZZ] Running ffuf with method {method}...")
+
+            # Create output file
+            with tempfile.NamedTemporaryFile(
+                mode="w", delete=False, suffix=".json"
+            ) as f:
+                output_file = f.name
+
+            if method == "GET":
+                # GET parameter fuzzing
+                cmd = [
+                    "ffuf",
+                    "-u",
+                    f"{target_url}?FUZZ=PAYLOAD",
+                    "-w",
+                    f"{params_file}:FUZZ",
+                    "-w",
+                    f"{payloads_file}:PAYLOAD",
+                    "-mc",
+                    "200,400,403,500",
+                    "-o",
+                    output_file,
+                    "-of",
+                    "json",
+                    "-t",
+                    "10",
+                    "-timeout",
+                    str(timeout),
+                ]
+            elif method == "POST":
+                # POST data fuzzing
+                cmd = [
+                    "ffuf",
+                    "-u",
+                    target_url,
+                    "-w",
+                    f"{params_file}:FUZZ",
+                    "-w",
+                    f"{payloads_file}:PAYLOAD",
+                    "-X",
+                    "POST",
+                    "-d",
+                    "FUZZ=PAYLOAD",
+                    "-H",
+                    "Content-Type: application/x-www-form-urlencoded",
+                    "-mc",
+                    "200,400,403,500",
+                    "-o",
+                    output_file,
+                    "-of",
+                    "json",
+                    "-t",
+                    "10",
+                    "-timeout",
+                    str(timeout),
+                ]
+            else:
+                continue
+
+            if headers:
+                for header_name, header_value in headers.items():
+                    cmd.extend(["-H", f"{header_name}: {header_value}"])
+
+            if proxy:
+                cmd.extend(["-x", proxy])
+
+            # Run ffuf
+            try:
+                if verbose:
+                    print(f"🔧 [FUZZ] Running: {' '.join(cmd[:8])}...")
+
+                result = subprocess.run(
+                    cmd, capture_output=True, text=True, timeout=300
+                )
+
+                if result.returncode == 0:
+                    # Parse ffuf JSON output
+                    try:
+                        with open(output_file, "r") as f:
+                            ffuf_data = json.load(f)
+
+                        if "results" in ffuf_data:
+                            results["ffuf_results"].extend(ffuf_data["results"])
+
+                            # Analyze results for GraphQL indicators
+                            for item in ffuf_data["results"]:
+                                if (
+                                    item.get("length", 0) > 100
+                                ):  # Filter out empty responses
+                                    graphql_resp = {
+                                        "method": method,
+                                        "url": item.get("url", ""),
+                                        "status_code": item.get("status", 0),
+                                        "content_length": item.get("length", 0),
+                                        "words": item.get("words", 0),
+                                        "lines": item.get("lines", 0),
+                                    }
+                                    results["graphql_responses"].append(graphql_resp)
+
+                    except Exception as e:
+                        results["errors"].append(
+                            f"Failed to parse ffuf output: {str(e)}"
+                        )
+
+                else:
+                    results["errors"].append(
+                        f"ffuf failed for method {method}: {result.stderr}"
+                    )
+
+            except subprocess.TimeoutExpired:
+                results["errors"].append(f"ffuf timeout for method {method}")
+            except Exception as e:
+                results["errors"].append(
+                    f"ffuf execution error for method {method}: {str(e)}"
+                )
+            finally:
+                # Cleanup temp files
+                try:
+                    Path(output_file).unlink(missing_ok=True)
+                except:
+                    pass
+
+        # Cleanup payload file
+        try:
+            Path(payloads_file).unlink(missing_ok=True)
+        except:
+            pass
+
+    except Exception as e:
+        results["errors"].append(f"FFUF fuzzer setup error: {str(e)}")
+
+    if verbose:
+        print(
+            f"🎯 [FUZZ] FFUF fuzzing completed: {len(results['graphql_responses'])} responses found"
+        )
+
+    return results
+
+
+def run_param_fuzz_engine(
+    target_url,
+    fuzzer,
+    params_file,
+    payloads_file,
+    methods,
+    headers,
+    proxy,
+    threads,
+    timeout,
+    verbose,
+):
+    """Main parameter fuzzing engine dispatcher"""
+
+    # Auto-detect fuzzer if requested
+    if fuzzer == "auto":
+        fuzzer = detect_fuzzer()
+        if verbose:
+            print(f"🔧 [FUZZ] Auto-detected fuzzer: {fuzzer}")
+
+    # Load parameters and payloads
+    params = load_fuzz_params(params_file)
+    payloads = load_fuzz_payloads(payloads_file)
+
+    if verbose:
+        print(f"🔍 [FUZZ] Loaded {len(params)} parameters and {len(payloads)} payloads")
+
+    # Convert headers to dict if needed
+    headers_dict = {}
+    if headers:
+        if isinstance(headers, list):
+            for h in headers:
+                if ":" in h:
+                    key, value = h.split(":", 1)
+                    headers_dict[key.strip()] = value.strip()
+        elif isinstance(headers, dict):
+            headers_dict = headers
+
+    # Run appropriate fuzzer
+    if fuzzer == "ffuf":
+        return run_ffuf_param_fuzz(
+            target_url,
+            params_file,
+            payloads,
+            methods,
+            headers_dict,
+            proxy,
+            timeout,
+            verbose,
+        )
+    elif fuzzer == "wfuzz":
+        # TODO: Implement wfuzz integration
+        if verbose:
+            print(
+                "⚠️  [FUZZ] WFUZZ integration not yet implemented, falling back to native"
+            )
+        return run_native_param_fuzz(
+            target_url,
+            params,
+            payloads,
+            methods,
+            headers_dict,
+            proxy,
+            threads,
+            timeout,
+            verbose,
+        )
+    else:  # native
+        return run_native_param_fuzz(
+            target_url,
+            params,
+            payloads,
+            methods,
+            headers_dict,
+            proxy,
+            threads,
+            timeout,
+            verbose,
+        )
 
 
 if __name__ == "__main__":

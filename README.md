@@ -53,6 +53,7 @@ reconcli subdocli --domain target.com --bounty-mode --cache --store-db --export 
 - **🆕 Secret Discovery**: 10-120s → Near-instant (10-120x faster)
 - **🆕 Directory Brute Force**: 30-300s → Near-instant (20-150x faster)
 - **🆕 GraphQL Security**: 20-180s → Near-instant (30-200x faster)
+- **🆕 GraphQL Parameter Fuzzing**: 480 comprehensive tests → Near-instant cache results ⭐ **NEW!**
 - **🆕 SQL Injection Testing**: 25-400s → Near-instant (15-300x faster)
 - **🆕 XSS Testing (XSpear)**: 60-300s → Near-instant (25-100x faster)
 
@@ -67,6 +68,7 @@ reconcli subdocli --domain example.com --cache --tools "amass,subfinder" --verbo
 reconcli secretscli --target https://github.com/org/repo --cache --tools all --verbose
 reconcli dirbcli --url https://example.com --cache --tool feroxbuster --wordlist big.txt --verbose  
 reconcli graphqlcli --domain example.com --cache --engine all --threat-matrix --verbose
+reconcli graphqlcli --url https://api.example.com --param-fuzz --cache --verbose  # NEW: Parameter fuzzing
 reconcli vulnsqlicli --url "http://example.com/page.php?id=1" --cache --tool all --ai --verbose
 
 # Cache management commands
@@ -1514,9 +1516,9 @@ reconcli dirbcli --cache-max-age 6                      # 6-hour cache expiry
 - **Cache Hit**: Near-instant results (0.1-0.5 seconds)
 - **Performance Gain**: 20-150x faster for repeated scans
 
-### 🔮 **GraphQL Security Assessment (`graphqlcli`)** (NEW!)
+### 🔮 **GraphQL Security Assessment (`graphqlcli`)** (ENHANCED!)
 
-Advanced GraphQL reconnaissance and security testing with multiple engines, bulk URL processing, and comprehensive vulnerability assessment.
+Advanced GraphQL reconnaissance and security testing with multiple engines, bulk URL processing, parameter fuzzing, and comprehensive vulnerability assessment.
 
 **🛡️ Multi-Engine Support:**
 - **GraphW00F**: GraphQL fingerprinting and engine detection
@@ -1524,26 +1526,51 @@ Advanced GraphQL reconnaissance and security testing with multiple engines, bulk
 - **GraphQLMap**: Interactive testing simulation
 - **GQL**: Python client with introspection analysis
 - **GQL-CLI**: Schema downloading and query execution
+- **� Param-Fuzz**: Native parameter fuzzing engine for comprehensive testing ⭐ **NEW!**
 
-**🚀 NEW: Bulk URL Processing & Advanced Discovery:**
+**🚀 Advanced Discovery & Testing:**
 - **📂 File-based URL Extraction**: Extract URLs from text files with regex patterns
 - **🎯 GraphQL Context Filtering**: Smart filtering for GraphQL-related endpoints
 - **🔍 40+ Common Endpoints**: Comprehensive GraphQL endpoint discovery
 - **⚡ Bulk Testing**: Process multiple targets with all engines simultaneously
 - **🧠 IP Address Detection**: Automatic conversion of IPs to testable URLs
+- **🔥 Parameter Fuzzing**: Native Python fuzzer with 16 parameters × 15 payloads × 2 methods = 480 tests ⭐ **NEW!**
+
+**🔥 NEW: Parameter Fuzzing Engine Features:**
+- **🎯 Native Python Implementation**: Zero external dependencies with GraphQL-aware analysis
+- **📊 16 GraphQL Parameters**: query, mutation, graphql, gql, operation, operationName, variables, extensions, batch, request, doc, document, source, schema, introspection, data
+- **🎪 15 Advanced Payloads**: Schema introspection, mutations, complex queries, batch operations
+- **⚡ Multi-Method Support**: GET and POST parameter fuzzing for complete coverage
+- **🧠 Smart Detection**: Identifies GraphQL responses vs regular errors with status code analysis
+- **⚡ High Performance**: Multi-threaded fuzzing with configurable thread counts
+- **🔧 External Tool Integration**: Optional ffuf and wfuzz integration for advanced fuzzing
 
 ```bash
+# 🔥 NEW: Parameter fuzzing with native engine (468/480 GraphQL responses found)
+reconcli graphqlcli --url https://rickandmortyapi.com/graphql --engine param-fuzz --verbose
+
+# 🔥 NEW: Parameter fuzzing with custom settings
+reconcli graphqlcli --url https://api.example.com --param-fuzz \
+  --fuzz-threads 20 --fuzz-methods GET,POST --verbose
+
+# 🔥 NEW: Parameter fuzzing with external fuzzer integration
+reconcli graphqlcli --url https://api.example.com --param-fuzz \
+  --fuzzer ffuf --fuzz-payloads custom_payloads.txt --verbose
+
+# 🔥 NEW: Complete assessment with all engines including parameter fuzzing
+reconcli graphqlcli --url https://api.example.com --engine all --param-fuzz --cache --verbose
+
 # Complete GraphQL security assessment with caching
 reconcli graphqlcli --domain api.example.com --endpoint /graphql --engine all \
   --threat-matrix --batch-queries --sqli-test --nosqli-test --cache --report
 
-# NEW: Bulk URL extraction and testing from file
+# Bulk URL extraction and testing from file
 reconcli graphqlcli --input targets.txt --extract-urls --filter-graphql \
   --max-urls 10 --engine all --common-endpoints --insecure --cache --verbose
 
-# NEW: Single domain with all 40+ common GraphQL endpoints
+# Single domain with all 40+ common GraphQL endpoints + parameter fuzzing
 reconcli graphqlcli --url https://api.example.com --common-endpoints \
-  --engine all --cache --threat-matrix --verbose
+  --engine all --param-fuzz --cache --threat-matrix --verbose
 
 # Schema download with JSON export
 reconcli graphqlcli --domain api.example.com --schema-json --schema-introspect \

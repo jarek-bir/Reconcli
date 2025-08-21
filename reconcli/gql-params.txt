@@ -1,0 +1,16 @@
+query
+mutation
+graphql
+gql
+operation
+operationName
+variables
+extensions
+batch
+request
+doc
+document
+source
+schema
+introspection
+data
