@@ -1476,7 +1476,7 @@ def format_output(results, output_format, verbose):
         return "\n".join(output)
 
 
-def dump_schema_json(target_url, headers, proxy, verbose, ssl_verify=ssl_verify):
+def dump_schema_json(target_url, headers, proxy, verbose, ssl_verify=True):
     """Dump GraphQL schema to JSON using introspection query"""
 
     header_dict = {}
@@ -1729,7 +1729,7 @@ def run_graphqlmap_enhanced(
     endpoint=None,
     timeout=30,
     verbose=False,
-    ssl_verify=ssl_verify,
+    ssl_verify=True,
 ):
     """Enhanced wrapper for run_graphqlmap with URL support"""
     from urllib.parse import urlparse
@@ -1765,7 +1765,7 @@ def run_graphqlcop_enhanced(
 
 
 def run_graphw00f(
-    domain, headers, proxy, fingerprint, detect_engines, verbose, ssl_verify=ssl_verify
+    domain, headers, proxy, fingerprint, detect_engines, verbose, ssl_verify=True
 ):
     """Run GraphW00F fingerprinting tool"""
     url = f"https://{domain}/graphql"
@@ -1824,7 +1824,7 @@ def run_graphw00f(
         return {"engine": "graphw00f", "url": url, "error": str(e)}
 
 
-def manual_graphql_fingerprinting(domain, headers, proxy, verbose, ssl_verify=ssl_verify):
+def manual_graphql_fingerprinting(domain, headers, proxy, verbose, ssl_verify=True):
     """Manual GraphQL fingerprinting implementation"""
     url = f"https://{domain}/graphql"
 
@@ -2063,7 +2063,13 @@ def run_graphqlcop(
 
 
 def run_graphqlmap(
-    domain, headers, proxy, endpoint=None, timeout=30, verbose=False, ssl_verify=ssl_verify
+    domain,
+    headers,
+    proxy,
+    endpoint=None,
+    timeout=30,
+    verbose=False,
+    ssl_verify=True,
 ):
     """Enhanced GraphQLMap with interactive mode simulation"""
     if endpoint:
@@ -2119,7 +2125,7 @@ def run_graphqlmap(
 
 
 def test_graphqlmap_introspection(
-    url, headers, proxy, timeout, verbose, ssl_verify=ssl_verify
+    url, headers, proxy, timeout, verbose, ssl_verify=True
 ):
     """Test GraphQL introspection manually"""
     header_dict = {}
@@ -2151,7 +2157,7 @@ def test_graphqlmap_introspection(
         return {"error": str(e)}
 
 
-def test_graphqlmap_debug(url, headers, proxy, timeout, verbose, ssl_verify=ssl_verify):
+def test_graphqlmap_debug(url, headers, proxy, timeout, verbose, ssl_verify=True):
     """Test GraphQL debug information"""
     header_dict = {}
     for h in headers:
@@ -2182,7 +2188,7 @@ def test_graphqlmap_debug(url, headers, proxy, timeout, verbose, ssl_verify=ssl_
 
 
 def run_threat_matrix_assessment(
-    url, headers, proxy, timeout, verbose, ssl_verify=ssl_verify
+    url, headers, proxy, timeout, verbose, ssl_verify=True
 ):
     """Run GraphQL Threat Matrix assessment"""
     if verbose:
@@ -2222,7 +2228,7 @@ def run_threat_matrix_assessment(
     }
 
 
-def test_introspection_threat(url, headers, proxies, timeout, ssl_verify=ssl_verify):
+def test_introspection_threat(url, headers, proxies, timeout, ssl_verify=True):
     """Test for introspection vulnerability"""
     query = {"query": "{ __schema { queryType { name } } }"}
     try:
@@ -2243,7 +2249,7 @@ def test_introspection_threat(url, headers, proxies, timeout, ssl_verify=ssl_ver
         return {"error": str(e), "vulnerable": False}
 
 
-def test_deep_recursion_threat(url, headers, proxies, timeout, ssl_verify=ssl_verify):
+def test_deep_recursion_threat(url, headers, proxies, timeout, ssl_verify=True):
     """Test for deep recursion DoS"""
     deep_query = {"query": "{ " + "user { user { " * 50 + "id" + " } }" * 50 + " }"}
     try:
@@ -2267,7 +2273,7 @@ def test_deep_recursion_threat(url, headers, proxies, timeout, ssl_verify=ssl_ve
         return {"error": str(e), "vulnerable": False}
 
 
-def test_field_duplication_threat(url, headers, proxies, timeout, ssl_verify=ssl_verify):
+def test_field_duplication_threat(url, headers, proxies, timeout, ssl_verify=True):
     """Test for field duplication DoS"""
     duplicate_query = {"query": "{ " + "__typename " * 1000 + " }"}
     try:
@@ -2291,7 +2297,7 @@ def test_field_duplication_threat(url, headers, proxies, timeout, ssl_verify=ssl
         return {"error": str(e), "vulnerable": False}
 
 
-def test_alias_overload_threat(url, headers, proxies, timeout, ssl_verify=ssl_verify):
+def test_alias_overload_threat(url, headers, proxies, timeout, ssl_verify=True):
     """Test for alias overload DoS"""
     alias_query = {
         "query": "{ " + " ".join([f"alias{i}: __typename" for i in range(1000)]) + " }"
@@ -2317,7 +2323,7 @@ def test_alias_overload_threat(url, headers, proxies, timeout, ssl_verify=ssl_ve
         return {"error": str(e), "vulnerable": False}
 
 
-def test_directive_overload_threat(url, headers, proxies, timeout, ssl_verify=ssl_verify):
+def test_directive_overload_threat(url, headers, proxies, timeout, ssl_verify=True):
     """Test for directive overload DoS"""
     directive_query = {"query": "{ __typename " + "@include(if: true) " * 1000 + " }"}
     try:
@@ -2341,7 +2347,7 @@ def test_directive_overload_threat(url, headers, proxies, timeout, ssl_verify=ss
         return {"error": str(e), "vulnerable": False}
 
 
-def test_batch_queries(url, headers, proxy, timeout, verbose, ssl_verify=ssl_verify):
+def test_batch_queries(url, headers, proxy, timeout, verbose, ssl_verify=True):
     """Test GraphQL batching capabilities"""
     if verbose:
         click.echo("[+] Testing GraphQL batching...")
@@ -2384,7 +2390,7 @@ def test_batch_queries(url, headers, proxy, timeout, verbose, ssl_verify=ssl_ver
     return {"test_type": "batch_queries", "url": url, "results": batch_tests}
 
 
-def test_sql_injection(url, headers, proxy, timeout, verbose, ssl_verify=ssl_verify):
+def test_sql_injection(url, headers, proxy, timeout, verbose, ssl_verify=True):
     """Test for SQL injection vulnerabilities"""
     if verbose:
         click.echo("[+] Testing SQL injection...")
@@ -2446,7 +2452,7 @@ def test_sql_injection(url, headers, proxy, timeout, verbose, ssl_verify=ssl_ver
     return {"test_type": "sql_injection", "url": url, "results": injection_tests}
 
 
-def test_nosql_injection(url, headers, proxy, timeout, verbose, ssl_verify=ssl_verify):
+def test_nosql_injection(url, headers, proxy, timeout, verbose, ssl_verify=True):
     """Test for NoSQL injection vulnerabilities"""
     if verbose:
         click.echo("[+] Testing NoSQL injection...")
@@ -4476,13 +4482,17 @@ def run_ffuf_param_fuzz(
                 try:
                     Path(output_file).unlink(missing_ok=True)
                 except OSError as e:
-                    click.echo(f"[!] Warning: Could not delete temp file {output_file}: {e}")
+                    click.echo(
+                        f"[!] Warning: Could not delete temp file {output_file}: {e}"
+                    )
 
         # Cleanup payload file
         try:
             Path(payloads_file).unlink(missing_ok=True)
         except OSError as e:
-            click.echo(f"[!] Warning: Could not delete payload file {payloads_file}: {e}")
+            click.echo(
+                f"[!] Warning: Could not delete payload file {payloads_file}: {e}"
+            )
 
     except Exception as e:
         results["errors"].append(f"FFUF fuzzer setup error: {str(e)}")
