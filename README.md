@@ -69,6 +69,7 @@ reconcli secretscli --target https://github.com/org/repo --cache --tools all --v
 reconcli dirbcli --url https://example.com --cache --tool feroxbuster --wordlist big.txt --verbose  
 reconcli graphqlcli --domain example.com --cache --engine all --threat-matrix --verbose
 reconcli graphqlcli --url https://api.example.com --param-fuzz --cache --verbose  # NEW: Parameter fuzzing
+reconcli graphqlcli --url https://api.example.com --security-suite --cache --verbose  # NEW: Complete security suite ⭐
 reconcli vulnsqlicli --url "http://example.com/page.php?id=1" --cache --tool all --ai --verbose
 
 # Cache management commands
@@ -1516,27 +1517,115 @@ reconcli dirbcli --cache-max-age 6                      # 6-hour cache expiry
 - **Cache Hit**: Near-instant results (0.1-0.5 seconds)
 - **Performance Gain**: 20-150x faster for repeated scans
 
-### 🔮 **GraphQL Security Assessment (`graphqlcli`)** (ENHANCED!)
+### 🔮 **GraphQL Security Assessment (`graphqlcli`)** (ENHANCED!) ⭐ **MAJOR UPDATE v2.0**
 
-Advanced GraphQL reconnaissance and security testing with multiple engines, bulk URL processing, parameter fuzzing, and comprehensive vulnerability assessment.
+**🚀 Enterprise GraphQL Security Platform** - Advanced GraphQL reconnaissance and security testing with **4 new major security modules**, multiple engines, bulk URL processing, parameter fuzzing, and comprehensive enterprise-grade vulnerability assessment.
 
-**🛡️ Multi-Engine Support:**
+**� NEW in v2.0 - Complete GraphQL Security Suite:**
+
+**Core Engines (6):**
 - **GraphW00F**: GraphQL fingerprinting and engine detection
-- **GraphQL-Cop**: 12+ security vulnerability tests
-- **GraphQLMap**: Interactive testing simulation
-- **GQL**: Python client with introspection analysis
-- **GQL-CLI**: Schema downloading and query execution
-- **� Param-Fuzz**: Native parameter fuzzing engine for comprehensive testing ⭐ **NEW!**
+- **GraphQL-Cop**: 12+ security vulnerability tests  
+- **GraphQLMap**: Interactive testing and exploitation
+- **GQL**: Python introspection and schema analysis
+- **GQL-CLI**: Command-line schema downloading
+- **Param-Fuzz**: 480 comprehensive parameter fuzzing tests (16 params × 15 payloads × 2 methods)
 
-**🚀 Advanced Discovery & Testing:**
-- **📂 File-based URL Extraction**: Extract URLs from text files with regex patterns
-- **🎯 GraphQL Context Filtering**: Smart filtering for GraphQL-related endpoints
-- **🔍 40+ Common Endpoints**: Comprehensive GraphQL endpoint discovery
-- **⚡ Bulk Testing**: Process multiple targets with all engines simultaneously
-- **🧠 IP Address Detection**: Automatic conversion of IPs to testable URLs
-- **🔥 Parameter Fuzzing**: Native Python fuzzer with 16 parameters × 15 payloads × 2 methods = 480 tests ⭐ **NEW!**
+**🆕 Enterprise Security Modules (4):**
 
-**🔥 NEW: Parameter Fuzzing Engine Features:**
+#### 🔐 **JWT/API Key Testing Engine**
+- **JWT Token Manipulation**: None algorithm attacks, signature bypass, path traversal in 'kid' parameter
+- **API Key Enumeration**: Header and query parameter testing with common keys (X-API-Key, Authorization, api_key, etc.)
+- **Role-Based Access Control**: Test role escalation with admin/guest/user/dev permissions
+- **Authentication Bypass**: 15+ authentication bypass techniques and token validation flaws
+
+#### 💥 **DoS/Performance Testing Suite**  
+- **Query Depth Bombs**: Recursive query testing with 5-100 depth levels
+- **Alias Flooding**: 10-1000 alias attacks for resource exhaustion
+- **Fragment Abuse**: Complex fragment combinations for memory exhaustion
+- **Complexity Analysis**: Query complexity scoring and performance impact assessment
+- **Response Time Analysis**: Automated DoS vulnerability detection based on timing
+
+#### 📚 **Advanced Payload Library System**
+- **1000+ Security Payloads**: Categorized by attack type (introspection, injection, DoS, bypass)
+- **Context-Aware Generation**: Smart payload generation based on target analysis
+- **Custom Payload Import**: JSON and text file payload library support
+- **Mutation/Subscription Attacks**: Specialized payloads for different GraphQL operations
+- **Unicode/Encoding Bypass**: Advanced encoding techniques for WAF evasion
+
+#### 📊 **Enhanced HTML Reporting with Risk Scoring**
+- **CVSS-like Risk Assessment**: Comprehensive security scoring (0-100) with CRITICAL/HIGH/MEDIUM/LOW levels
+- **Compliance Mapping**: OWASP Top 10, NIST CSF, ISO 27001 security standards alignment
+- **Interactive Dashboard**: Bootstrap 5 UI with vulnerability breakdown and metrics
+- **Executive Summaries**: Business-ready reports with remediation priorities
+- **Technical Details**: In-depth analysis with attack vectors and proof-of-concepts
+
+```bash
+# 🔒 NEW: Complete GraphQL Security Suite (ALL features)
+reconcli graphqlcli --url https://api.example.com --security-suite --cache --verbose
+# Activates: JWT testing + DoS testing + Payload library + HTML reporting + Risk assessment + Compliance checking
+
+# 🔐 JWT/API Key authentication testing  
+reconcli graphqlcli --url https://api.example.com --jwt-testing --auth-bypass-test --role-bypass-test --verbose
+
+# 💥 DoS/Performance testing suite
+reconcli graphqlcli --url https://api.example.com --dos-testing --risk-assessment --verbose
+
+# 📚 Advanced payload library with context awareness
+reconcli graphqlcli --url https://api.example.com --payload-library --context-aware --save-payloads security_payloads.json
+
+# 📊 Enhanced HTML reporting with compliance
+reconcli graphqlcli --url https://api.example.com --html-report --compliance-check --risk-assessment --verbose
+
+# 🎯 Custom payload testing
+reconcli graphqlcli --url https://api.example.com --custom-payloads custom_attacks.json --html-report --verbose
+
+# 🔧 Advanced configuration options
+reconcli graphqlcli --url https://api.example.com --security-suite \
+  --save-payloads enterprise_payloads.json \
+  --custom-payloads additional_tests.txt \
+  --cache --ai --ai-provider anthropic \
+  --html-report --risk-assessment --compliance-check --verbose
+```
+
+**🏢 Enterprise Workflow Examples:**
+
+```bash
+# Complete security assessment for enterprise API
+reconcli graphqlcli --url https://enterprise-api.company.com/graphql \
+  --security-suite --engine all --param-fuzz \
+  --jwt-testing --dos-testing --auth-bypass-test --role-bypass-test \
+  --html-report --risk-assessment --compliance-check \
+  --ai --ai-provider openai --cache --verbose
+
+# Custom payload development and testing
+reconcli graphqlcli --url https://api.example.com \
+  --payload-library --context-aware \
+  --save-payloads "company_graphql_payloads.json" \
+  --load-payloads "industry_specific.json" \
+  --html-report --verbose
+
+# Compliance-focused security assessment
+reconcli graphqlcli --url https://api.example.com \
+  --security-suite --compliance-check --risk-assessment \
+  --html-report --ai --ai-context "financial services API" --verbose
+
+# Penetration testing workflow
+reconcli graphqlcli --input graphql_endpoints.txt \
+  --security-suite --engine all --extract-urls --filter-graphql \
+  --jwt-testing --dos-testing --auth-bypass-test \
+  --custom-payloads "pentest_payloads.json" \
+  --html-report --risk-assessment --cache --verbose
+```
+
+**📊 Performance & Results:**
+- **🎯 468/480 GraphQL Responses** detected during Rick & Morty API testing
+- **⚡ Near-Instant Cache Results** for repeated scans (30-200x speed improvement)
+- **🔍 1000+ Security Payloads** across all attack categories
+- **📋 Multi-Standard Compliance** (OWASP Top 10, NIST CSF, ISO 27001)
+- **🎨 Interactive HTML Reports** with executive dashboards and technical details
+
+**🔥 Legacy Parameter Fuzzing Engine Features:**
 - **🎯 Native Python Implementation**: Zero external dependencies with GraphQL-aware analysis
 - **📊 16 GraphQL Parameters**: query, mutation, graphql, gql, operation, operationName, variables, extensions, batch, request, doc, document, source, schema, introspection, data
 - **🎪 15 Advanced Payloads**: Schema introspection, mutations, complex queries, batch operations
@@ -1546,7 +1635,7 @@ Advanced GraphQL reconnaissance and security testing with multiple engines, bulk
 - **🔧 External Tool Integration**: Optional ffuf and wfuzz integration for advanced fuzzing
 
 ```bash
-# 🔥 NEW: Parameter fuzzing with native engine (468/480 GraphQL responses found)
+# 🔥 Parameter fuzzing with native engine (468/480 GraphQL responses found)
 reconcli graphqlcli --url https://rickandmortyapi.com/graphql --engine param-fuzz --verbose
 
 # 🔥 NEW: Parameter fuzzing with custom settings
