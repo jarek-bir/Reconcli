@@ -1,0 +1,2 @@
+https://db.example.com:5432/mydb
+https://api.example.com/graphql

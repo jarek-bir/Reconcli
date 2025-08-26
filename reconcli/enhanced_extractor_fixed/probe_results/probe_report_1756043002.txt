@@ -1,0 +1,32 @@
+ADVANCED URL PROBE REPORT
+==================================================
+
+📊 EXECUTIVE SUMMARY:
+   Total URLs probed: 1622
+   Alive URLs: 940 (57.95%)
+   Dead URLs: 682
+   Average response time: 0.432s
+   Security findings: 213
+
+🔒 SECURITY OVERVIEW:
+   🟠 HIGH: 31 findings
+   🟡 MEDIUM: 126 findings
+   🟢 LOW: 56 findings
+
+🛠️  TECHNOLOGY DETECTION:
+   swagger: 339 instances
+   nginx: 237 instances
+   load_balancer: 97 instances
+   react: 46 instances
+   rails: 42 instances
+   apache: 41 instances
+   graphql: 32 instances
+   docker: 19 instances
+   api_gateway: 16 instances
+   django: 14 instances
+
+📈 STATUS CODE DISTRIBUTION:
+   200: 724 responses
+   401: 57 responses
+   403: 159 responses
+

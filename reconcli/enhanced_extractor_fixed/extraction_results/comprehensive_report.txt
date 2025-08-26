@@ -1,0 +1,33 @@
+ENHANCED FILE EXTRACTION REPORT
+============================================================
+
+📊 EXTRACTION SUMMARY:
+   Total files processed: 5
+   Successful extractions: 5
+   Failed extractions: 0
+   Total processing time: 0.00s
+
+🔍 DATA DISCOVERY:
+   Unique URLs: 180
+   Unique emails: 1
+   Unique IP addresses: 64
+   Unique domains: 399
+   Unique API keys: 0
+   Unique query parameters: 0
+
+🎯 TOP DISCOVERED URLS (first 10):
+   https://docs.github.com/site-policy/github-terms/github-terms-of-service
+   https://github.com/security/advanced-security
+   https://support.github.com?tags=dotcom-footer
+   https://github.githubassets.com/assets/vendors-node_modules_gsap_index_js-23c9606618ce.js
+   https://www.gartner.com/doc/reprints?id=1-2IKO4MPE&amp;ct=240819&amp;st=sb
+   https://github.githubassets.com/assets/primer-primitives-dc7ca6859caf.css
+   https://www.google.com/setprefdomain?prefdom=GB&amp;prev=https://www.google.co.uk/&amp;sig=K_Qy2jXe5A7a6IIy590iuI0_QJ-_M%3D
+   https://github.githubassets.com/assets/packages_microsoft-analytics_microsoft-analytics_ts-9d4ad4565621.js
+   https://github.com/features/actions
+   https://github.githubassets.com/assets/packages_app-uuid_app-uuid_ts-packages_swp-core_schemas_contentful_contentTypes_containerPage-c37df7-5f0da70c565a.js
+
+💡 RECOMMENDATIONS:
+--------------------
+🌐 Consider probing discovered URLs for security assessment
+📋 Regular security audits recommended

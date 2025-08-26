@@ -1,0 +1,86 @@
+{
+  "total_files": 1,
+  "successful_extractions": 1,
+  "failed_extractions": 0,
+  "total_extraction_time": 0.0014727115631103516,
+  "unique_urls": [
+    "https://db.example.com:5432/mydb",
+    "https://api.example.com/graphql"
+  ],
+  "unique_emails": [],
+  "unique_ips": [],
+  "unique_domains": [
+    "api.example.com",
+    "mail.example.com",
+    "db.example.com"
+  ],
+  "unique_api_keys": [],
+  "unique_query_params": [],
+  "security_findings": {
+    "CRITICAL": 0,
+    "HIGH": 0,
+    "MEDIUM": 0,
+    "LOW": 0
+  },
+  "technology_distribution": {},
+  "plugin_data": {
+    "aws": [
+      {
+        "aws_access_keys": "set()",
+        "aws_secret_keys": "set()",
+        "aws_session_tokens": "set()",
+        "s3_buckets": "set()",
+        "s3_urls": "set()",
+        "aws_regions": "set()",
+        "aws_arns": "set()",
+        "ec2_instances": "set()",
+        "lambda_functions": "set()",
+        "rds_endpoints": "set()",
+        "cloudfront_domains": "set()",
+        "aws_account_ids": "set()",
+        "aws_services": "set()"
+      }
+    ],
+    "docker": [
+      {
+        "docker_images": "set()",
+        "docker_registries": "{'api.example.com', '5432', 'api'}",
+        "docker_ports": "set()",
+        "docker_volumes": "set()",
+        "docker_env_vars": "set()",
+        "docker_secrets": "set()",
+        "kubernetes_resources": "set()",
+        "container_commands": "set()",
+        "docker_compose_versions": "set()",
+        "container_vulnerabilities": "set()"
+      }
+    ],
+    "network": [
+      {
+        "ipv4_addresses": "set()",
+        "ipv6_addresses": "set()",
+        "mac_addresses": "set()",
+        "open_ports": "{'5432'}",
+        "ssl_certificates": "set()",
+        "ssl_private_keys": "set()",
+        "jwt_tokens": "set()",
+        "api_keys": "set()",
+        "bearer_tokens": "set()",
+        "basic_auth": "set()",
+        "ssh_connections": "set()",
+        "database_connections": "set()",
+        "ldap_connections": "set()",
+        "network_shares": "set()",
+        "vpn_configurations": "set()",
+        "private_networks": "set()",
+        "security_issues": "{'SSL private keys found in file', 'Database connection strings found'}"
+      }
+    ]
+  },
+  "unique_urls_count": 2,
+  "unique_emails_count": 0,
+  "unique_ips_count": 0,
+  "unique_domains_count": 3,
+  "unique_api_keys_count": 0,
+  "unique_query_params_count": 0
+}
